@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tab Test</title>
+    <style>
+        .tab-btn { padding: 10px; margin: 5px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer; }
+        .tab-btn.active { background: #007cba; color: white; }
+        .tab-content { padding: 20px; margin: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Tab Functionality Test</h1>
+
+    <div class="intelligence-tabs">
+        <button class="tab-btn active" data-tab="overview">AI Agent</button>
+        <button class="tab-btn" data-tab="documents">Documents</button>
+        <button class="tab-btn" data-tab="fcs">FCS</button>
+        <button class="tab-btn" data-tab="lenders">Lenders</button>
+        <button class="tab-btn" data-tab="edit">Edit</button>
+    </div>
+
+    <div id="intelligenceContent">
+        <div class="tab-content">Click tabs above to test functionality</div>
+    </div>
+
+    <script>
+        console.log('🔄 Test page loading...');
+
+        // Simple tab test
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = e.target.dataset.tab;
+                console.log('Tab clicked:', tab);
+
+                // Update active tab
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.tab === tab);
+                });
+
+                // Update content
+                const content = document.getElementById('intelligenceContent');
+                content.innerHTML = '<div class="tab-content"><h3>' + tab.toUpperCase() + ' Tab</h3><p>Tab switching is working!</p></div>';
+            });
+        });
+
+        console.log('✅ Test page ready');
+    </script>
+</body>
+</html>

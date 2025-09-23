@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple API Test</title>
+</head>
+<body>
+    <h1>Simple API Test</h1>
+    <button onclick="testAPI()">Test API Direct</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+
+            try {
+                console.log('Testing direct API call...');
+                const response = await fetch('http://localhost:8082/api/conversations');
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+
+                if (response.status === 404) {
+                    resultDiv.innerHTML = `<h2>❌ 404 Error</h2><p>The API endpoint does not exist</p>`;
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    resultDiv.innerHTML = `<h2>❌ Error ${response.status}</h2><p>${errorText}</p>`;
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Data received:', data);
+
+                resultDiv.innerHTML = `
+                    <h2>✅ Success!</h2>
+                    <p>Received ${data.length} conversations</p>
+                    <pre>${JSON.stringify(data.slice(0, 1), null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<h2>❌ Failed</h2><p>Error: ${error.message}</p>`;
+            }
+        }
+
+        // Test immediately on load
+        window.addEventListener('load', testAPI);
+    </script>
+</body>
+</html>

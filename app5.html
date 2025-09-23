@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Working Capital Application - JMS Global</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            background: white;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+        }
+        
+        .header {
+            background: white;
+            padding: 15px 20px;
+            text-align: center;
+            border-bottom: 2px solid #2c5aa0;
+        }
+        
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2c5aa0;
+            letter-spacing: 2px;
+        }
+        
+        .logo span {
+            color: #5a9fd4;
+        }
+        
+        h1 {
+            font-size: 20px;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .address-info {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        .form-section {
+            margin: 0;
+            border: 1px solid #333;
+            background: white;
+        }
+        
+        .section-header {
+            background: #d4d4d4;
+            padding: 8px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 11px;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .form-content {
+            padding: 0;
+        }
+        
+        .form-row {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            min-height: 30px;
+        }
+        
+        .form-row:last-child {
+            border-bottom: none;
+        }
+        
+        .form-field {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            border-right: 1px solid #ddd;
+            padding: 5px 8px;
+            min-height: 30px;
+        }
+        
+        .form-field:last-child {
+            border-right: none;
+        }
+        
+        .form-field label {
+            font-weight: bold;
+            margin-right: 5px;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+        
+        .form-field input[type="text"] {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 11px;
+            background: transparent;
+            min-width: 0;
+        }
+        
+        .form-field input[type="text"]:focus {
+            background: #f9f9f9;
+        }
+        
+        .form-field input[type="text"]:not(:placeholder-shown) {
+            font-weight: bold;
+        }
+        
+        .form-field select {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 11px;
+            background: transparent;
+        }
+        
+        .form-field select:focus {
+            background: #f9f9f9;
+        }
+        
+        .form-field select[value]:not([value=""]) {
+            font-weight: bold;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal !important;
+            font-size: 10px;
+            margin-right: 0 !important;
+            white-space: nowrap;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal !important;
+            font-size: 10px;
+            margin-right: 0 !important;
+            white-space: nowrap;
+        }
+        
+        .radio-group input[type="radio"] {
+            margin-right: 5px;
+        }
+        
+        .legal-text {
+            padding: 15px;
+            font-size: 9px;
+            text-align: justify;
+            line-height: 1.4;
+            border: 1px solid #333;
+            margin-top: 0;
+            background: white;
+        }
+        
+        .signature-section {
+            display: flex;
+            border: 1px solid #333;
+            background: white;
+            margin-top: 0;
+        }
+        
+        .signature-block {
+            flex: 1;
+            padding: 15px;
+            border-right: 1px solid #333;
+        }
+        
+        .signature-block:last-child {
+            border-right: none;
+        }
+        
+        .signature-label {
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .signature-pad {
+            width: 100%;
+            height: 60px;
+            border: 1px solid #ddd;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .signature-image {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+        
+        #signatureDate {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            font-size: 11px;
+        }
+        
+        .timestamp-info {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            font-size: 9px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        
+        .btn-container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+        }
+        
+        .btn-container button {
+            background: #2c5aa0;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .btn-container button:hover {
+            background: #1a4080;
+        }
+        
+        /* Print-friendly styles */
+        @media print {
+            .btn-container {
+                display: none;
+            }
+            
+            .timestamp-info {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo">JMS<span>⚡</span></div>
+            </div>
+            <h1>Working Capital Application</h1>
+            <div class="address-info">217 Merrick Road, Amityville NY, 11701</div>
+            <div class="address-info">www.jmsglobal.biz</div>
+        </div>
+
+        <form id="applicationForm">
+            <!-- BUSINESS INFORMATION -->
+            <div class="form-section">
+                <div class="section-header">BUSINESS INFORMATION</div>
+                <div class="form-content">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Legal/Corporate Name:</label>
+                            <input type="text" name="legalName" id="legalName" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>DBA:</label>
+                            <input type="text" name="dba" id="dba" value="" placeholder="DBA Name(s)">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Physical Address:</label>
+                            <input type="text" name="address" id="address" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>City:</label>
+                            <input type="text" name="city" id="city" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>State:</label>
+                            <input type="text" name="state" id="state" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Zip:</label>
+                            <input type="text" name="zip" id="zip" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Telephone #:</label>
+                            <input type="text" name="telephone" id="telephone" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Fax #:</label>
+                            <input type="text" name="fax" id="fax" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Federal Tax ID:</label>
+                            <input type="text" name="federalTaxId" id="federalTaxId" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Date Business Started:</label>
+                            <input type="text" name="dateBusinessStarted" id="dateBusinessStarted" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Length of Ownership:</label>
+                            <input type="text" name="lengthOfOwnership" id="lengthOfOwnership" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Website:</label>
+                            <input type="text" name="website" id="website" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Type of Entity:</label>
+                            <input type="text" name="entityType" id="entityType" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Email Address:</label>
+                            <input type="text" name="businessEmail" id="businessEmail" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Type of Business:</label>
+                            <input type="text" name="typeOfBusiness" id="typeOfBusiness" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Product/Service Sold:</label>
+                            <input type="text" name="productService" id="productService" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Requested Amount:</label>
+                            <input type="text" name="requestedAmount" id="requestedAmount" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Use of Funds:</label>
+                            <input type="text" name="useOfFunds" id="useOfFunds" value="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OWNER INFORMATION -->
+            <div class="form-section">
+                <div class="section-header">OWNER/OFFICER INFORMATION (25% or greater ownership)</div>
+                <div class="form-content">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>First Name:</label>
+                            <input type="text" name="ownerFirstName" id="ownerFirstName" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Last Name:</label>
+                            <input type="text" name="ownerLastName" id="ownerLastName" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Title:</label>
+                            <input type="text" name="ownerTitle" id="ownerTitle" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Email:</label>
+                            <input type="text" name="ownerEmail" id="ownerEmail" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Home Address:</label>
+                            <input type="text" name="ownerAddress" id="ownerAddress" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>City:</label>
+                            <input type="text" name="ownerCity" id="ownerCity" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>State:</label>
+                            <input type="text" name="ownerState" id="ownerState" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Zip:</label>
+                            <input type="text" name="ownerZip" id="ownerZip" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Ownership %:</label>
+                            <input type="text" name="ownershipPercentage" id="ownershipPercentage" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Credit Score:</label>
+                            <input type="text" name="creditScore" id="creditScore" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>SSN:</label>
+                            <input type="text" name="ownerSSN" id="ownerSSN" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Date of Birth:</label>
+                            <input type="text" name="ownerDOB" id="ownerDOB" value="" placeholder="MM/DD/YYYY">
+                        </div>
+                        <div class="form-field">
+                            <label>Home #:</label>
+                            <input type="text" name="ownerHomePhone" id="ownerHomePhone" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Cell #:</label>
+                            <input type="text" name="ownerCellPhone" id="ownerCellPhone" value="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PARTNER INFORMATION -->
+            <div class="form-section" id="partnerSection">
+                <div class="section-header">PARTNER INFORMATION (if owner/officer ownership % less than 50%)</div>
+                <div class="form-content">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Partner First Name:</label>
+                            <input type="text" name="partnerFirstName" id="partnerFirstName" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Partner Last Name:</label>
+                            <input type="text" name="partnerLastName" id="partnerLastName" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Partner Email:</label>
+                            <input type="text" name="partnerEmail" id="partnerEmail" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Home Address:</label>
+                            <input type="text" name="partnerAddress" id="partnerAddress" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>City:</label>
+                            <input type="text" name="partnerCity" id="partnerCity" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>State:</label>
+                            <input type="text" name="partnerState" id="partnerState" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Zip:</label>
+                            <input type="text" name="partnerZip" id="partnerZip" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Ownership %:</label>
+                            <input type="text" name="partnerOwnershipPercentage" id="partnerOwnershipPercentage" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Credit Score:</label>
+                            <input type="text" name="partnerCreditScore" id="partnerCreditScore" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>SSN:</label>
+                            <input type="text" name="partnerSSN" id="partnerSSN" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Date of Birth:</label>
+                            <input type="text" name="partnerDOB" id="partnerDOB" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Home #:</label>
+                            <input type="text" name="partnerHomePhone" id="partnerHomePhone" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Cell #:</label>
+                            <input type="text" name="partnerCellPhone" id="partnerCellPhone" value="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BUSINESS DETAILS -->
+            <div class="form-section">
+                <div class="section-header">BUSINESS DETAILS</div>
+                <div class="form-content">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Years in Business:</label>
+                            <input type="text" name="yearsInBusiness" id="yearsInBusiness" value="">
+                        </div>
+                        <div class="form-field">
+                            <label># of Employees:</label>
+                            <input type="text" name="numberOfEmployees" id="numberOfEmployees" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Busy Season:</label>
+                            <input type="text" name="busySeason" id="busySeason" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Slow Season:</label>
+                            <input type="text" name="slowSeason" id="slowSeason" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>What's most important?</label>
+                            <input type="text" name="mostImportant" id="mostImportant" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Card Types Accepted:</label>
+                            <input type="text" name="cardTypesAccepted" id="cardTypesAccepted" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Prior/Current Funding:</label>
+                            <input type="text" name="priorFunding" id="priorFunding" value="">
+                        </div>
+                        <div class="form-field">
+                            <label>Balance:</label>
+                            <input type="text" name="priorBalance" id="priorBalance" value="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BANK INFORMATION -->
+            <div class="form-section">
+                <div class="section-header">BANK INFORMATION</div>
+                <div class="form-content">
+                    <div class="form-row">
+                        <div class="form-field" style="flex: 0.25;">
+                            <label style="font-size: 9px;">Prev Month Deposits:</label>
+                            <span style="margin: 0 2px;">$</span>
+                            <input type="text" name="prevMonthDeposits" id="prevMonthDeposits" value="" style="width: 60px;">
+                        </div>
+                        <div class="form-field" style="flex: 0.25;">
+                            <label style="font-size: 9px;">2 Months Ago:</label>
+                            <span style="margin: 0 2px;">$</span>
+                            <input type="text" name="twoMonthsDeposits" id="twoMonthsDeposits" value="" style="width: 60px;">
+                        </div>
+                        <div class="form-field" style="flex: 0.25;">
+                            <label style="font-size: 9px;">3 Months Ago:</label>
+                            <span style="margin: 0 2px;">$</span>
+                            <input type="text" name="threeMonthsDeposits" id="threeMonthsDeposits" value="" style="width: 60px;">
+                        </div>
+                        <div class="form-field" style="flex: 0.25;">
+                            <label style="font-size: 9px;">4 Months Ago:</label>
+                            <span style="margin: 0 2px;">$</span>
+                            <input type="text" name="fourMonthsDeposits" id="fourMonthsDeposits" value="" style="width: 60px;">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field" style="flex: 0.25;">
+                            <label style="font-size: 9px;">Prev Month Neg Days:</label>
+                            <input type="text" name="prevMonthNegDays" id="prevMonthNegDays" value="" style="width: 40px;">
+                        </div>
+                        <div class="form-field" style="flex: 0.25;">
+                            <label style="font-size: 9px;">2 Mo Neg Days:</label>
+                            <input type="text" name="twoMonthsNegDays" id="twoMonthsNegDays" value="" style="width: 40px;">
+                        </div>
+                        <div class="form-field" style="flex: 0.25;">
+                            <label style="font-size: 9px;">3 Mo Neg Days:</label>
+                            <input type="text" name="threeMonthsNegDays" id="threeMonthsNegDays" value="" style="width: 40px;">
+                        </div>
+                        <div class="form-field" style="flex: 0.25;">
+                            <label style="font-size: 9px;">4 Mo Neg Days:</label>
+                            <input type="text" name="fourMonthsNegDays" id="fourMonthsNegDays" value="" style="width: 40px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEGAL AGREEMENT -->
+            <div class="legal-text">
+                By signing below, the Business and Owner(s)/Partner(s) identified above (individually, an "Applicant") each represents, acknowledges, and agrees that (1) all information and documents provided in connection with this application are true, accurate, and complete; (2) Applicant will immediately notify dba JMS Global Enterprises Inc of any change in the Business financial condition; (3) Applicant understands that JMS Global Enterprises Inc may share this information with its representatives, successors, assignees, affiliates and partners as well as third-party lenders/funders and their servicers and financial institutions ("Recipients"); (4) Applicant authorizes JMS Global Enterprises Inc and Recipients to request and receive any investigative reports, consumer and business credit reports, trade references, statements from creditors or financial institutions, verifications of information, or any other information that JMS Global Enterprises Inc and/or Recipients deem necessary, (5) Applicant waives and releases any claims against JMS Global Enterprises Inc, Recipients and any information-providers arising from any act or omission relating to the requesting, receiving, or release of information, (6) each Owner/Officer represents that he or she is authorized to sign and submit this application on behalf of Business. Additionally, Applicant consents to communications with respect to funding matters from JMS Global Enterprises Inc and Recipients by any medium not prohibited by law, including but not limited to mail, e-mail, cellular phone, text message, facsimile, and other forms of electronic communications.
+            </div>
+
+            <!-- SIGNATURE SECTION -->
+            <div class="signature-section">
+                <div class="signature-block">
+                    <label class="signature-label">Applicant's Signature:</label>
+                    <div class="signature-pad" id="signaturePad">
+                        <img id="signature" class="signature-image" src="" alt="" style="display: block;">
+                    </div>
+                    <div class="signature-label" id="ownerName"></div>
+                </div>
+                <div class="signature-block">
+                    <label class="signature-label">Date:</label>
+                    <input type="text" id="signatureDate" name="signatureDate" value="">
+                </div>
+            </div>
+            
+            <div class="timestamp-info">
+                <span>TimeStamp: <span id="timestamp"></span></span>
+                <span>Customer IP: <span id="customerIP"></span></span>
+            </div>
+            
+        </form>
+    </div>
+</body>
+</html>
