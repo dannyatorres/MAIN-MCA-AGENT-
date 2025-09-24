@@ -710,15 +710,13 @@ export default class IntelligenceTabs {
     }
 
     async generatePDFApplication() {
-        console.log('Generate PDF clicked');
+        console.log('Generate PDF clicked - Client-side generation');
 
         const selectedConversation = this.parent.getSelectedConversation();
         if (!selectedConversation) {
             this.utils.showNotification('No conversation selected', 'error');
             return;
         }
-
-        const currentConvId = this.parent.getCurrentConversationId();
 
         try {
             this.utils.showNotification('Generating Working Capital Application...', 'info');
@@ -764,9 +762,10 @@ export default class IntelligenceTabs {
 
             const ownerName = `${applicationData.ownerFirstName} ${applicationData.ownerLastName}`.trim() || 'Authorized Signatory';
 
-            console.log('Sending data:', { applicationData, ownerName });
+            console.log('Requesting HTML template from server...');
 
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conv.id}/generate-pdf-from-template`, {
+            // Get HTML template from backend
+            const templateResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conv.id}/generate-html-template`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -777,68 +776,165 @@ export default class IntelligenceTabs {
                 })
             });
 
-            console.log('Response status:', response.status, response.statusText);
-
-            if (!response.ok) {
-                const contentType = response.headers.get('content-type');
-                let errorMessage = 'PDF generation failed on server';
-
-                if (contentType && contentType.includes('application/json')) {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorData.message || errorMessage;
-                } else {
-                    const errorText = await response.text();
-                    if (errorText) {
-                        errorMessage = errorText.substring(0, 200);
-                    }
-                }
-
-                throw new Error(errorMessage);
+            if (!templateResponse.ok) {
+                throw new Error('Failed to get HTML template');
             }
 
-            const contentType = response.headers.get('content-type');
-            console.log('Response content-type:', contentType);
+            const htmlContent = await templateResponse.text();
 
-            if (contentType && contentType.includes('application/json')) {
-                const result = await response.json();
-                console.log('Server response:', result);
+            console.log('Received HTML template from server');
 
-                if (!result.success) {
-                    throw new Error(result.error || 'PDF generation failed on server');
+            // Create an iframe for better CSS isolation and rendering
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.left = '-10000px';
+            iframe.style.top = '0';
+            iframe.style.width = '940px';
+            iframe.style.height = '1200px';
+            iframe.style.border = 'none';
+            document.body.appendChild(iframe);
+
+            // Write the HTML to iframe
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(htmlContent);
+            iframeDoc.close();
+
+            // Add CSS to fix text positioning in input fields
+            const style = iframeDoc.createElement('style');
+            style.textContent = `
+                /* Override any height constraints from app5.html */
+                input[type="text"],
+                input[type="email"],
+                input[type="tel"],
+                input[type="number"],
+                input[type="date"],
+                input[type="url"] {
+                    padding: 2px 4px !important;
+                    line-height: 1.2 !important;
+                    height: 24px !important;
+                    min-height: 24px !important;
+                    max-height: none !important;
+                    vertical-align: middle !important;
+                    overflow: visible !important;
                 }
 
-                if (result.document) {
-                    console.log('PDF generated and saved to AWS:', result.document);
-                    this.utils.showNotification(
-                        `PDF application generated and saved successfully!\nFile: ${result.document.filename}`,
-                        'success'
-                    );
-
-                    // Maintain conversation context
-                    if (currentConvId && this.parent.core) {
-                        this.parent.currentConversationId = currentConvId;
-                    }
-
-                    // Refresh documents list
-                    if (this.parent.documents) {
-                        await this.parent.documents.loadDocuments();
-                    }
-
-                    // Switch to documents tab
-                    const documentsTab = document.querySelector('[data-tab="documents"]');
-                    if (documentsTab) {
-                        documentsTab.click();
-                    }
-
-                    return;
-                } else {
-                    throw new Error('Server did not return document information');
+                /* Ensure form fields don't clip content */
+                .form-field {
+                    overflow: visible !important;
+                    height: auto !important;
+                    min-height: 26px !important;
                 }
 
+                .form-field input {
+                    margin-top: -5px !important;
+                }
+
+                /* Override any clipping from parent containers */
+                .form-row {
+                    overflow: visible !important;
+                }
+            `;
+            iframeDoc.head.appendChild(style);
+
+            // Wait for rendering
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            console.log('Converting to PDF with html2canvas...');
+            this.utils.showNotification('Converting to PDF...', 'info');
+
+            // Capture with html2canvas - use the existing styling from app5.html
+            const canvas = await html2canvas(iframeDoc.body, {
+                scale: 2,  // High quality
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                width: 940,
+                height: iframeDoc.body.scrollHeight,
+                onclone: (clonedDoc) => {
+                    // Additional fix in the cloned document
+                    const inputs = clonedDoc.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        if (input.value) {
+                            // Adjust the input styling to ensure text is visible
+                            input.style.lineHeight = 'normal';
+                            input.style.paddingTop = '0';
+                            input.style.paddingBottom = '0';
+                            input.style.height = 'auto';
+                            input.style.overflow = 'visible';
+                        }
+                    });
+                }
+            });
+
+            // Remove iframe
+            document.body.removeChild(iframe);
+
+            // Create PDF
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            const imgWidth = 210;
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
+            const filename = `WCA_${conv.business_name || 'Application'}_${new Date().toISOString().split('T')[0]}.pdf`;
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+
+            console.log('Saving to AWS...');
+            this.utils.showNotification('Saving PDF to documents...', 'info');
+
+            // Save to AWS server
+            const saveResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conv.id}/save-generated-pdf`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    conversationId: conv.id,
+                    pdfBase64: pdfBase64,
+                    filename: filename,
+                    documentId: crypto.randomUUID()
+                })
+            });
+
+            const saveResult = await saveResponse.json();
+
+            if (saveResult.success) {
+                this.utils.showNotification('PDF generated and saved to AWS successfully!', 'success');
+
+                // Refresh documents
+                if (this.parent.documents) {
+                    await this.parent.documents.loadDocuments();
+                }
+
+                // Switch to documents tab
+                const documentsTab = document.querySelector('[data-tab="documents"]');
+                if (documentsTab) {
+                    documentsTab.click();
+                }
             } else {
-                const text = await response.text();
-                console.error('Unexpected response:', text);
-                throw new Error('Server returned unexpected content type');
+                throw new Error(saveResult.error || 'Failed to save PDF to AWS');
             }
 
         } catch (error) {

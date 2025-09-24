@@ -2320,17 +2320,23 @@ app.post('/api/conversations/:id/generate-pdf', async (req, res) => {
         // Launch puppeteer and generate PDF
         const browser = await puppeteer.launch({
             headless: 'new',
+            timeout: 60000,
+            ignoreDefaultArgs: ['--disable-extensions'],
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--disable-features=VizDisplayCompositor',
-                '--disable-extensions',
+                '--disable-accelerated-2d-canvas',
                 '--no-first-run',
-                '--disable-default-apps'
-            ],
-            timeout: 60000
+                '--disable-gpu',
+                '--disable-web-security',
+                '--disable-features=VizDisplayCompositor',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding',
+                '--disable-ipc-flooding-protection',
+                '--memory-pressure-off'
+            ]
         });
         
         const page = await browser.newPage();
@@ -2468,20 +2474,25 @@ app.post('/api/conversations/:id/generate-html-template', async (req, res) => {
         
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
         
-        // Simple string replacement approach instead of cheerio
-        // This ensures we don't break the HTML structure
+        // Fix the replacement logic to preserve labels and properly set values
         if (applicationData && typeof applicationData === 'object') {
             Object.keys(applicationData).forEach(key => {
-            const value = applicationData[key] || '';
-            // Replace value attribute in input fields
-            const regex = new RegExp(`id="${key}"[^>]*value="[^"]*"`, 'g');
-            htmlContent = htmlContent.replace(regex, `id="${key}" value="${value}"`);
-            
-            // Also try to replace empty value attributes
-            const emptyRegex = new RegExp(`id="${key}"([^>]*)>`, 'g');
-            if (!htmlContent.includes(`id="${key}" value="`)) {
-                htmlContent = htmlContent.replace(emptyRegex, `id="${key}"$1 value="${value}">`);
-            }
+                const value = applicationData[key] || '';
+
+                // More specific replacement that preserves the structure
+                // Look for input fields with matching ID and set their value
+                const inputRegex = new RegExp(`(<input[^>]*?id="${key}"[^>]*?)(?:value="[^"]*")?([^>]*?>)`, 'gi');
+
+                htmlContent = htmlContent.replace(inputRegex, (match, before, after) => {
+                    // Check if there's already a value attribute
+                    if (match.includes('value=')) {
+                        // Replace existing value
+                        return match.replace(/value="[^"]*"/, `value="${value}"`);
+                    } else {
+                        // Add value attribute before the closing >
+                        return `${before} value="${value}"${after}`;
+                    }
+                });
             });
         }
         
@@ -2790,7 +2801,26 @@ app.post('/api/conversations/:id/generate-pdf-from-template', async (req, res) =
         );
         console.log('✅ Replaced customer IP');
         console.log('🎯 Ready to launch Puppeteer...');
-        
+
+        // Use client-side PDF generation instead of Puppeteer
+        console.log('📄 Preparing data for client-side PDF generation');
+
+        const documentId = uuidv4();
+        const filename = `application-${conversationId}-${Date.now()}.pdf`;
+
+        // Return data and HTML for frontend to generate PDF
+        res.json({
+            success: true,
+            documentId: documentId,
+            filename: filename,
+            conversationId: conversationId,
+            applicationData: applicationData,
+            ownerName: ownerName,
+            htmlContent: htmlContent,
+            message: 'Ready for client-side PDF generation'
+        });
+        return;
+
         // Generate PDF using Puppeteer
         const puppeteer = require('puppeteer');
         const AWS = require('aws-sdk');
@@ -2809,7 +2839,23 @@ app.post('/api/conversations/:id/generate-pdf-from-template', async (req, res) =
             console.log('🚀 Launching Puppeteer browser...');
             browser = await puppeteer.launch({
                 headless: 'new',
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
+                timeout: 60000, // 60 second timeout for macOS
+                ignoreDefaultArgs: ['--disable-extensions'],
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
+                    '--disable-ipc-flooding-protection',
+                    '--memory-pressure-off'
+                ]
             });
             
             const page = await browser.newPage();
@@ -2906,6 +2952,107 @@ app.get('/api/lenders', async (req, res) => {
         res.status(500).json({ 
             error: 'Failed to fetch lenders',
             details: error.message 
+        });
+    }
+});
+
+// New endpoint to save client-generated PDF
+app.post('/api/conversations/:id/save-generated-pdf', async (req, res) => {
+    try {
+        const conversationId = req.params.id;
+        const { pdfBase64, filename, documentId } = req.body;
+
+        if (!pdfBase64) {
+            return res.status(400).json({ error: 'PDF data is required' });
+        }
+
+        console.log('📤 Saving client-generated PDF:', filename);
+
+        // Convert base64 to buffer
+        console.log('🔄 Converting base64 to buffer...');
+        const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+        console.log('✅ Buffer created, size:', pdfBuffer.length, 'bytes');
+
+        // Upload to S3 if AWS is configured
+        let s3Url = null;
+        if (process.env.AWS_ACCESS_KEY_ID && process.env.S3_DOCUMENTS_BUCKET) {
+            try {
+                console.log('🔄 Loading AWS SDK...');
+                const AWS = require('aws-sdk');
+                console.log('🔄 Updating AWS config...');
+                AWS.config.update({
+                    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                    region: process.env.AWS_REGION,
+                    httpOptions: {
+                        timeout: 30000, // 30 second timeout
+                        connectTimeout: 10000 // 10 second connection timeout
+                    }
+                });
+
+                const s3 = new AWS.S3();
+                const s3Key = `documents/${filename}`;
+
+                const uploadParams = {
+                    Bucket: process.env.S3_DOCUMENTS_BUCKET,
+                    Key: s3Key,
+                    Body: pdfBuffer,
+                    ContentType: 'application/pdf',
+                    ServerSideEncryption: 'AES256'
+                };
+
+                console.log('🔄 Starting S3 upload...');
+                const uploadResult = await Promise.race([
+                    s3.upload(uploadParams).promise(),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('S3 upload timeout')), 45000)
+                    )
+                ]);
+                s3Url = uploadResult.Location;
+                console.log('✅ PDF uploaded to S3:', s3Url);
+            } catch (s3Error) {
+                console.log('⚠️ S3 upload failed:', s3Error.message);
+                console.log('📁 Continuing without S3 upload...');
+                // Continue without S3 upload - save to database only
+            }
+        } else {
+            console.log('📁 Skipping S3 upload (disabled for testing)');
+        }
+
+        // Save to database
+        const db = getDatabase();
+        await db.query(`
+            INSERT INTO documents (
+                id, conversation_id, filename, original_filename, s3_key, s3_url, file_size, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        `, [
+            documentId,
+            conversationId,
+            filename,
+            filename,
+            s3Url ? `documents/${filename}` : null, // Only set s3_key if S3 upload succeeded
+            s3Url,
+            pdfBuffer.length
+        ]);
+
+        console.log('✅ PDF saved to database');
+
+        res.json({
+            success: true,
+            document: {
+                id: documentId,
+                filename: filename,
+                s3_url: s3Url,
+                file_size: pdfBuffer.length
+            },
+            message: 'PDF saved successfully'
+        });
+
+    } catch (error) {
+        console.error('❌ Error saving PDF:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to save PDF: ' + error.message
         });
     }
 });
