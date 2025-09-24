@@ -16,28 +16,23 @@ export default class LendersModule {
         this.lenderFormFields = [
             { id: 'lenderBusinessName', label: 'Business Name', type: 'text', required: false, placeholder: 'Enter business name' },
             { id: 'lenderPosition', label: 'Position', type: 'select', required: true, options: [
+                { value: '', label: 'Select Position...' },
                 { value: '1', label: '1st Position (Preferred)' },
                 { value: '2', label: '2nd Position' },
-                { value: '3', label: '3rd Position' }
+                { value: '3', label: '3rd Position' },
+                { value: '4', label: '4th Position' },
+                { value: '5', label: '5th Position' },
+                { value: '6', label: '6th Position' },
+                { value: '7', label: '7th Position' },
+                { value: '8', label: '8th Position' },
+                { value: '9', label: '9th Position' },
+                { value: '10', label: '10th Position' }
             ]},
             { id: 'lenderStartDate', label: 'Business Start Date', type: 'text', required: true, placeholder: 'MM/DD/YYYY' },
             { id: 'lenderRevenue', label: 'Monthly Revenue', type: 'number', required: true, placeholder: 'Enter monthly revenue' },
             { id: 'lenderFico', label: 'FICO Score', type: 'number', required: true, placeholder: 'Enter FICO score' },
-            { id: 'lenderState', label: 'Business State', type: 'select', required: true, options: [
-                { value: '', label: 'Select State...' },
-                { value: 'CA', label: 'California' },
-                { value: 'NY', label: 'New York' },
-                { value: 'TX', label: 'Texas' },
-                { value: 'FL', label: 'Florida' }
-            ]},
-            { id: 'lenderIndustry', label: 'Industry', type: 'select', required: true, options: [
-                { value: '', label: 'Select Industry...' },
-                { value: 'retail', label: 'Retail' },
-                { value: 'restaurant', label: 'Restaurant' },
-                { value: 'construction', label: 'Construction' },
-                { value: 'healthcare', label: 'Healthcare' },
-                { value: 'other', label: 'Other' }
-            ]},
+            { id: 'lenderState', label: 'Business State', type: 'text', required: true, placeholder: 'Enter business state' },
+            { id: 'lenderIndustry', label: 'Industry', type: 'text', required: true, placeholder: 'Enter business industry' },
             { id: 'lenderDepositsPerMonth', label: 'Deposits Per Month', type: 'number', required: false, placeholder: 'Number of deposits' },
             { id: 'lenderNegativeDays', label: 'Negative Days (Last 90)', type: 'number', required: false, placeholder: 'Days negative' }
         ];
@@ -680,7 +675,7 @@ export default class LendersModule {
     }
 
     // Lender Submission Modal
-    showLenderSubmissionModal() {
+    async showLenderSubmissionModal() {
         console.log('showLenderSubmissionModal called');
 
         let modal = document.getElementById('lenderSubmissionModal');
@@ -692,6 +687,9 @@ export default class LendersModule {
         }
 
         if (modal) {
+            // Load documents first before showing modal
+            await this.ensureDocumentsLoaded();
+
             this.populateSubmissionLenders();
             this.populateSubmissionDocuments();
             this.prefillSubmissionMessage();
@@ -701,24 +699,65 @@ export default class LendersModule {
         }
     }
 
+    async ensureDocumentsLoaded() {
+        const conversationId = this.parent.getCurrentConversationId();
+        if (!conversationId) return;
+
+        // Check if documents are already loaded
+        if (this.parent.documents?.currentDocuments?.length > 0) {
+            return; // Documents already loaded
+        }
+
+        try {
+            console.log('Loading documents for submission modal...');
+            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/documents`);
+            const result = await response.json();
+
+            if (result.success && result.documents) {
+                // Store documents in parent's documents module
+                if (!this.parent.documents) {
+                    this.parent.documents = {};
+                }
+                this.parent.documents.currentDocuments = result.documents;
+                console.log(`Loaded ${result.documents.length} documents`);
+            }
+        } catch (error) {
+            console.error('Error loading documents:', error);
+        }
+    }
+
     createLenderSubmissionModal() {
         const modalHtml = `
             <div id="lenderSubmissionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
                 <div style="background: white; border-radius: 8px; padding: 20px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="margin: 0;">Send to Lenders</h2>
+                        <h2 style="margin: 0;">Send Submissions to Lenders</h2>
                         <button onclick="document.getElementById('lenderSubmissionModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
                     </div>
 
                     <div style="margin-bottom: 20px;">
-                        <h3>Select Lenders</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="margin: 0;">Select Lenders</h3>
+                            <button type="button" id="toggleAllLendersBtn"
+                                    onclick="window.conversationUI.lenders.toggleAllLenders()"
+                                    style="padding: 6px 16px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                                Deselect All
+                            </button>
+                        </div>
                         <div id="lenderSelectionList" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto;">
                             Loading lenders...
                         </div>
                     </div>
 
                     <div style="margin-bottom: 20px;">
-                        <h3>Select Documents</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="margin: 0;">Select Documents</h3>
+                            <button type="button" id="toggleAllDocumentsBtn"
+                                    onclick="window.conversationUI.lenders.toggleAllDocuments()"
+                                    style="padding: 6px 16px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                                Select All
+                            </button>
+                        </div>
                         <div id="submissionDocumentList" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto;">
                             Loading documents...
                         </div>
@@ -782,29 +821,29 @@ export default class LendersModule {
         });
 
         lenderList.innerHTML = html;
+
+        // Set initial button text since all start checked
+        const toggleBtn = document.getElementById('toggleAllLendersBtn');
+        if (toggleBtn) {
+            toggleBtn.textContent = 'Deselect All';
+        }
     }
 
     populateSubmissionDocuments() {
         const docList = document.getElementById('submissionDocumentList');
-
         if (!docList) return;
 
-        if (!this.parent.documents || !this.parent.documents.currentDocuments) {
-            docList.innerHTML = '<p style="color: #f59e0b;">Loading documents...</p>';
-            this.loadDocumentsForSubmission();
-            return;
-        }
+        // Check if documents are loaded
+        const documents = this.parent.documents?.currentDocuments;
 
-        const documents = this.parent.documents.currentDocuments;
-
-        if (documents.length === 0) {
+        if (!documents || documents.length === 0) {
             docList.innerHTML = '<p style="color: #6b7280;">No documents available.</p>';
             return;
         }
 
         let html = '';
         documents.forEach(doc => {
-            const icon = this.parent.documents?.getDocumentIconCompact(doc.mimeType, doc.documentType) || '📄';
+            const icon = '📄'; // Simplified icon
             const isImportant = doc.documentType === 'Bank Statement' ||
                               doc.documentType === 'Signed Application' ||
                               doc.originalFilename?.toLowerCase().includes('application');
@@ -812,12 +851,26 @@ export default class LendersModule {
             html += `
                 <label style="display: flex; align-items: center; padding: 6px; cursor: pointer;">
                     <input type="checkbox" class="document-checkbox" value="${doc.id}" ${isImportant ? 'checked' : ''} style="margin-right: 8px;">
-                    <span>${icon} ${doc.originalFilename || doc.filename}</span>
+                    <span>${icon} ${doc.originalFilename || doc.filename || 'Unknown Document'}</span>
                 </label>
             `;
         });
 
         docList.innerHTML = html;
+
+        // Update button text based on initial state
+        const toggleBtn = document.getElementById('toggleAllDocumentsBtn');
+        if (toggleBtn) {
+            const checkboxes = document.querySelectorAll('#submissionDocumentList input[type="checkbox"]');
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            if (checkedCount === checkboxes.length) {
+                toggleBtn.textContent = 'Deselect All';
+            } else {
+                toggleBtn.textContent = 'Select All';
+            }
+        }
+
+        console.log(`Populated ${documents.length} documents in submission modal`);
     }
 
     async loadDocumentsForSubmission() {
@@ -1058,8 +1111,6 @@ Best regards`;
     createLenderHeader() {
         return `
             <div class="lender-header">
-                <h3>Lender Qualification System</h3>
-                <p>Find qualified lenders based on merchant criteria</p>
             </div>
         `;
     }
@@ -1071,7 +1122,7 @@ Best regards`;
         return `
             <div class="lender-form-content">
                 <form id="lenderForm" class="lender-form">
-                    <div class="form-row">
+                    <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
                         ${this.lenderFormFields.map(field => {
                             let value = '';
                             if (field.id === 'lenderBusinessName') value = businessName;
@@ -1080,25 +1131,25 @@ Best regards`;
                         }).join('')}
                     </div>
 
-                    <div class="checkbox-group">
+                    <div class="checkbox-group" style="display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; padding: 16px; background: #f8fafc; border-radius: 8px;">
                         ${this.lenderFormCheckboxes.map(field => this.createCheckboxField(field)).join('')}
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group" style="grid-column: 1 / -1;">
+                    <div class="form-row" style="margin-top: 16px;">
+                        <div class="form-group" style="width: 100%;">
                             <label for="lenderCurrentPositions">Current Positions</label>
-                            <input type="text" id="lenderCurrentPositions" placeholder="e.g., OnDeck $500 daily, Forward $750 weekly" class="form-input">
+                            <input type="text" id="lenderCurrentPositions" placeholder="e.g., OnDeck $500 daily, Forward $750 weekly" class="form-input" style="width: 100%; padding: 8px 12px;">
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group" style="grid-column: 1 / -1;">
+                    <div class="form-row" style="margin-top: 16px;">
+                        <div class="form-group" style="width: 100%;">
                             <label for="lenderAdditionalNotes">Additional Notes</label>
-                            <textarea id="lenderAdditionalNotes" placeholder="Any additional notes..." class="form-input"></textarea>
+                            <textarea id="lenderAdditionalNotes" placeholder="Any additional notes..." class="form-input" style="width: 100%; padding: 8px 12px; min-height: 80px;"></textarea>
                         </div>
                     </div>
 
-                    <div class="form-actions">
+                    <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
                         <button type="submit" class="process-btn">Process Lenders</button>
                         <button type="button" class="clear-cache-btn" id="clearLenderCacheBtn">Clear Cache</button>
                     </div>
@@ -1117,9 +1168,19 @@ Best regards`;
 
         if (field.type === 'select') {
             return `
-                <div class="form-group">
+                <div class="form-group" style="width: 100%;">
                     <label for="${field.id}">${field.label} ${requiredMark}</label>
-                    <select id="${field.id}" class="form-input" ${field.required ? 'required' : ''}>
+                    <select id="${field.id}"
+                            class="form-input"
+                            ${field.required ? 'required' : ''}
+                            style="width: 100%;
+                                   height: 40px;
+                                   padding: 8px 12px;
+                                   font-size: 14px;
+                                   box-sizing: border-box;
+                                   text-overflow: ellipsis;
+                                   white-space: nowrap;
+                                   overflow: hidden;">
                         ${field.options.map(opt =>
                             `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`
                         ).join('')}
@@ -1129,13 +1190,18 @@ Best regards`;
         }
 
         return `
-            <div class="form-group">
+            <div class="form-group" style="width: 100%;">
                 <label for="${field.id}">${field.label} ${requiredMark}</label>
                 <input type="${field.type}"
                        id="${field.id}"
                        class="form-input"
                        value="${value}"
                        placeholder="${field.placeholder || ''}"
+                       style="width: 100%;
+                              height: 40px;
+                              padding: 8px 12px;
+                              font-size: 14px;
+                              box-sizing: border-box;"
                        ${field.required ? 'required' : ''}>
                 ${field.id === 'lenderStartDate' ? '<div id="lenderTibDisplay" class="tib-display" style="display: none;"></div>' : ''}
             </div>
@@ -1177,5 +1243,293 @@ Best regards`;
                 </div>
             </div>
         `;
+    }
+
+    // Modal CRUD Functions
+    showAddLenderModal() {
+        const existingModal = document.getElementById('addLenderModal');
+        if (existingModal) existingModal.remove();
+
+        const modalHtml = `
+            <div id="addLenderModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 999999; display: flex; align-items: center; justify-content: center;">
+                <div style="background: white; border-radius: 8px; padding: 0; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                    <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
+                        <h3 style="margin: 0;">Add New Lender</h3>
+                    </div>
+                    <div style="padding: 20px;">
+                        <input type="text" id="newLenderName" placeholder="Lender Name *" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <input type="email" id="newLenderEmail" placeholder="Email *" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <input type="text" id="newLenderPhone" placeholder="Phone" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <input type="text" id="newLenderCompany" placeholder="Company" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <input type="number" id="newLenderMinAmount" placeholder="Min Amount" style="width: 48%; margin-bottom: 10px; padding: 8px;">
+                        <input type="number" id="newLenderMaxAmount" placeholder="Max Amount" style="width: 48%; margin-bottom: 10px; padding: 8px; float: right;">
+                        <input type="text" id="newLenderIndustries" placeholder="Industries (comma-separated)" style="width: 100%; margin-bottom: 10px; padding: 8px; clear: both;">
+                        <input type="text" id="newLenderStates" placeholder="States (comma-separated)" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <textarea id="newLenderNotes" rows="3" placeholder="Notes" style="width: 100%; padding: 8px;"></textarea>
+                    </div>
+                    <div style="padding: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
+                        <button onclick="document.getElementById('addLenderModal').remove()">Cancel</button>
+                        <button onclick="window.conversationUI.lenders.saveLender()" style="background: #059669; color: white; padding: 8px 16px; border-radius: 4px;">Save</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async saveLender() {
+        const name = document.getElementById('newLenderName').value.trim();
+        const email = document.getElementById('newLenderEmail').value.trim();
+        const phone = document.getElementById('newLenderPhone').value.trim();
+        const company = document.getElementById('newLenderCompany').value.trim();
+        const minAmount = document.getElementById('newLenderMinAmount').value;
+        const maxAmount = document.getElementById('newLenderMaxAmount').value;
+        const industriesText = document.getElementById('newLenderIndustries').value.trim();
+        const statesText = document.getElementById('newLenderStates').value.trim();
+        const notes = document.getElementById('newLenderNotes').value.trim();
+
+        if (!name || !email) {
+            this.utils.showNotification('Name and email are required', 'error');
+            return;
+        }
+
+        const industries = industriesText ? industriesText.split(',').map(i => i.trim()) : [];
+        const states = statesText ? statesText.split(',').map(s => s.trim().toUpperCase()) : [];
+
+        const lenderData = {
+            name,
+            email,
+            phone: phone || null,
+            company: company || null,
+            min_amount: minAmount ? parseFloat(minAmount) : null,
+            max_amount: maxAmount ? parseFloat(maxAmount) : null,
+            industries,
+            states,
+            notes: notes || null
+        };
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/lenders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(lenderData)
+            });
+
+            if (response.ok) {
+                this.utils.showNotification('Lender added successfully', 'success');
+                document.getElementById('addLenderModal').remove();
+                this.loadLendersList();
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to add lender');
+            }
+        } catch (error) {
+            console.error('Error adding lender:', error);
+            this.utils.showNotification('Failed to add lender: ' + error.message, 'error');
+        }
+    }
+
+    async editLender(lenderId) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/lenders/${lenderId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch lender data');
+            }
+
+            const lender = await response.json();
+            this.showEditLenderModal(lender);
+
+        } catch (error) {
+            console.error('Error fetching lender:', error);
+            this.utils.showNotification('Failed to load lender data', 'error');
+        }
+    }
+
+    showEditLenderModal(lender) {
+        const existingModal = document.getElementById('editLenderModal');
+        if (existingModal) existingModal.remove();
+
+        const industriesStr = Array.isArray(lender.industries) ? lender.industries.join(', ') : '';
+        const statesStr = Array.isArray(lender.states) ? lender.states.join(', ') : '';
+
+        const modalHtml = `
+            <div id="editLenderModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 999999; display: flex; align-items: center; justify-content: center;">
+                <div style="background: white; border-radius: 8px; padding: 0; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                    <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
+                        <h3 style="margin: 0;">Edit Lender</h3>
+                    </div>
+                    <div style="padding: 20px;">
+                        <input type="text" id="editLenderName" value="${lender.name || ''}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <input type="email" id="editLenderEmail" value="${lender.email || ''}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <input type="text" id="editLenderPhone" value="${lender.phone || ''}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <input type="text" id="editLenderCompany" value="${lender.company || ''}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <input type="number" id="editLenderMinAmount" value="${lender.min_amount || 0}" style="width: 48%; margin-bottom: 10px; padding: 8px;">
+                        <input type="number" id="editLenderMaxAmount" value="${lender.max_amount || 0}" style="width: 48%; margin-bottom: 10px; padding: 8px; float: right;">
+                        <input type="text" id="editLenderIndustries" value="${industriesStr}" style="width: 100%; margin-bottom: 10px; padding: 8px; clear: both;">
+                        <input type="text" id="editLenderStates" value="${statesStr}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+                        <textarea id="editLenderNotes" rows="3" style="width: 100%; padding: 8px;">${lender.notes || ''}</textarea>
+                    </div>
+                    <div style="padding: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
+                        <button onclick="document.getElementById('editLenderModal').remove()">Cancel</button>
+                        <button onclick="window.conversationUI.lenders.updateLender('${lender.id}')" style="background: #3b82f6; color: white; padding: 8px 16px; border-radius: 4px;">Update</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async updateLender(lenderId) {
+        const name = document.getElementById('editLenderName').value.trim();
+        const email = document.getElementById('editLenderEmail').value.trim();
+        const phone = document.getElementById('editLenderPhone').value.trim();
+        const company = document.getElementById('editLenderCompany').value.trim();
+        const minAmount = document.getElementById('editLenderMinAmount').value;
+        const maxAmount = document.getElementById('editLenderMaxAmount').value;
+        const industriesText = document.getElementById('editLenderIndustries').value.trim();
+        const statesText = document.getElementById('editLenderStates').value.trim();
+        const notes = document.getElementById('editLenderNotes').value.trim();
+
+        if (!name || !email) {
+            this.utils.showNotification('Name and email are required', 'error');
+            return;
+        }
+
+        const industries = industriesText ? industriesText.split(',').map(i => i.trim()) : [];
+        const states = statesText ? statesText.split(',').map(s => s.trim().toUpperCase()) : [];
+
+        const lenderData = {
+            name,
+            email,
+            phone: phone || null,
+            company: company || null,
+            min_amount: minAmount ? parseFloat(minAmount) : null,
+            max_amount: maxAmount ? parseFloat(maxAmount) : null,
+            industries,
+            states,
+            notes: notes || null
+        };
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/lenders/${lenderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(lenderData)
+            });
+
+            if (response.ok) {
+                this.utils.showNotification('Lender updated successfully', 'success');
+                document.getElementById('editLenderModal').remove();
+                this.loadLendersList();
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update lender');
+            }
+        } catch (error) {
+            console.error('Error updating lender:', error);
+            this.utils.showNotification('Failed to update lender: ' + error.message, 'error');
+        }
+    }
+
+    async deleteLender(lenderId, lenderName) {
+        if (!confirm(`Are you sure you want to delete lender "${lenderName}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/lenders/${lenderId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                this.utils.showNotification('Lender deleted successfully', 'success');
+                this.loadLendersList();
+            } else {
+                throw new Error('Failed to delete lender');
+            }
+        } catch (error) {
+            console.error('Error deleting lender:', error);
+            this.utils.showNotification('Failed to delete lender', 'error');
+        }
+    }
+
+    refreshLendersList() {
+        this.loadLendersList();
+    }
+
+    toggleAllLenders() {
+        const checkboxes = document.querySelectorAll('#lenderSelectionList input[type="checkbox"]');
+        const toggleBtn = document.getElementById('toggleAllLendersBtn');
+
+        if (!checkboxes.length) {
+            console.log('No checkboxes found');
+            return;
+        }
+
+        if (!toggleBtn) {
+            console.log('Toggle button not found');
+            return;
+        }
+
+        // Check current state - are any checked?
+        const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const allChecked = checkedCount === checkboxes.length;
+
+        // Determine new state
+        let newState;
+        if (allChecked) {
+            // If all are checked, uncheck all
+            newState = false;
+            toggleBtn.textContent = 'Select All';
+        } else {
+            // If some or none are checked, check all
+            newState = true;
+            toggleBtn.textContent = 'Deselect All';
+        }
+
+        // Apply new state to all checkboxes
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = newState;
+        });
+
+        console.log(`Toggled ${checkboxes.length} lenders to ${newState ? 'selected' : 'deselected'}`);
+    }
+
+    toggleAllDocuments() {
+        const checkboxes = document.querySelectorAll('#submissionDocumentList input[type="checkbox"]');
+        const toggleBtn = document.getElementById('toggleAllDocumentsBtn');
+
+        if (!checkboxes.length) {
+            console.log('No document checkboxes found');
+            return;
+        }
+
+        if (!toggleBtn) {
+            console.log('Toggle documents button not found');
+            return;
+        }
+
+        // Check current state
+        const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const allChecked = checkedCount === checkboxes.length;
+
+        // Determine new state
+        let newState;
+        if (allChecked) {
+            newState = false;
+            toggleBtn.textContent = 'Select All';
+        } else {
+            newState = true;
+            toggleBtn.textContent = 'Deselect All';
+        }
+
+        // Apply new state to all checkboxes
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = newState;
+        });
+
+        console.log(`Toggled ${checkboxes.length} documents to ${newState ? 'selected' : 'deselected'}`);
     }
 }

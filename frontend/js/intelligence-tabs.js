@@ -24,21 +24,42 @@ export default class IntelligenceTabs {
         });
     }
 
-    async loadConversationIntelligence() {
-        const conversationId = this.parent.getCurrentConversationId();
-        if (!conversationId) return;
+    async loadConversationIntelligence(conversationId = null) {
+        // Use passed conversationId or fall back to parent's current
+        const convId = conversationId || this.parent.getCurrentConversationId() || this.parent.currentConversationId;
+
+        if (!convId) {
+            console.error('No conversation ID available for loading intelligence');
+            return;
+        }
 
         try {
-            console.log(`Loading intelligence for conversation: ${conversationId}`);
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}`);
+            console.log(`Loading intelligence for conversation: ${convId}`);
+            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${convId}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
-            console.log(`Loaded intelligence data for: ${data.conversation?.business_name || 'Unknown'}`);
+            const conversationData = data.conversation || data;
 
+            console.log(`Loaded intelligence data for: ${conversationData.business_name || 'Unknown'}`);
+
+            // Update parent's selected conversation with fresh data
+            if (this.parent) {
+                this.parent.selectedConversation = conversationData;
+                this.parent.currentConversationId = convId;
+
+                // Also update core's references if available
+                if (this.parent.core) {
+                    this.parent.core.selectedConversation = conversationData;
+                    this.parent.core.currentConversationId = convId;
+                    this.parent.core.conversations.set(convId, conversationData);
+                }
+            }
+
+            // Now render with the fresh data
             this.renderIntelligenceData(data);
         } catch (error) {
             console.error('Error loading intelligence data:', error);
@@ -51,7 +72,7 @@ export default class IntelligenceTabs {
                         <div class="error-icon">⚠️</div>
                         <h3>Conversation Details Failed to Load</h3>
                         <p>${error.message}</p>
-                        <button onclick="window.conversationUI.intelligence.loadConversationIntelligence()" class="retry-btn">
+                        <button onclick="window.conversationUI.intelligence.loadConversationIntelligence('${convId}')" class="retry-btn">
                             Retry
                         </button>
                     </div>
@@ -61,23 +82,32 @@ export default class IntelligenceTabs {
     }
 
     renderIntelligenceData(data) {
-        // Update selectedConversation with detailed data from API
-        if (data.conversation && this.parent.core) {
-            console.log('Updating selectedConversation with detailed data:', data.conversation);
-            this.parent.selectedConversation = { ...this.parent.getSelectedConversation(), ...data.conversation };
+        const conversationData = data.conversation || data;
 
-            // Also update the conversation in the main conversations map
-            const conversationId = this.parent.getCurrentConversationId();
-            if (conversationId && this.parent.core) {
-                this.parent.core.conversations.set(conversationId, this.parent.selectedConversation);
+        // Ensure we have the conversation ID
+        const convId = conversationData.id || this.parent.getCurrentConversationId() || this.parent.currentConversationId;
+
+        // Update all references with fresh data
+        if (this.parent) {
+            this.parent.selectedConversation = conversationData;
+            this.parent.currentConversationId = convId;
+
+            if (this.parent.core) {
+                this.parent.core.selectedConversation = conversationData;
+                this.parent.core.currentConversationId = convId;
+                this.parent.core.conversations.set(convId, conversationData);
+
+                // Update the conversation header with fresh data
+                this.parent.core.showConversationDetails();
             }
-
-            // Update the conversation header now that we have detailed data
-            this.parent.core.showConversationDetails();
         }
 
-        // Default to AI assistant tab
-        this.switchIntelligenceTab('ai-assistant');
+        // Preserve current tab or default to AI assistant tab
+        const currentActiveTab = document.querySelector('.tab-btn.active');
+        const currentTab = currentActiveTab?.dataset.tab || 'ai-assistant';
+        console.log(`Rendering intelligence tab: ${currentTab} for conversation: ${convId}`);
+
+        this.switchIntelligenceTab(currentTab);
     }
 
     switchIntelligenceTab(tab) {
@@ -134,10 +164,7 @@ export default class IntelligenceTabs {
         const conversation = this.parent.getSelectedConversation();
         content.innerHTML = this.templates.overviewTab(conversation);
 
-        // Initialize AI chat if available
-        if (this.parent.ai) {
-            this.parent.ai.initializeAIChat();
-        }
+        // AI chat initialization is handled in AI Assistant tab
     }
 
     renderAIAssistantTab(content) {

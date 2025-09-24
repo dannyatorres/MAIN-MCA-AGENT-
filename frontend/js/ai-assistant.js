@@ -10,6 +10,7 @@ export default class AIAssistant {
         this.aiContext = [];
         this.isTyping = false;
         this.currentConversationId = null;
+        this.isInitialized = false;
 
         this.init();
     }
@@ -21,64 +22,39 @@ export default class AIAssistant {
     initializeAIChat() {
         console.log('Initializing AI chat interface');
 
-        // Use a slight delay to ensure DOM is ready
+        const conversationId = this.parent.getCurrentConversationId();
+
+        // Reset initialization for new conversations
+        if (this.currentConversationId !== conversationId) {
+            this.isInitialized = false;
+            this.currentConversationId = conversationId;
+        }
+
+        // Prevent multiple initializations for same conversation
+        if (this.isInitialized) {
+            console.log('AI chat already initialized for this conversation, skipping...');
+            return;
+        }
+
+        this.isInitialized = true;
+
+        // Clear messages container immediately
+        const messagesContainer = document.getElementById('aiChatMessages');
+        if (messagesContainer) {
+            messagesContainer.innerHTML = '';
+        }
+
+        // Show welcome message immediately, then try to load history
+        this.showWelcomeMessage();
+
+        // Try to load history and replace welcome if found
         setTimeout(() => {
             this.loadChatHistory();
-            const chatInput = document.getElementById('aiChatInput');
-            const sendButton = document.getElementById('aiChatSend');
+        }, 100);
 
-            console.log('Found elements:', { input: !!chatInput, button: !!sendButton });
-
-            if (chatInput) {
-                // Clear any existing event listeners
-                chatInput.removeEventListener('input', this.handleInput);
-                chatInput.removeEventListener('keydown', this.handleKeydown);
-
-                // Auto-resize textarea
-                const handleInput = (e) => {
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
-                };
-
-                // Handle Enter key
-                const handleKeydown = (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        console.log('Enter key pressed, sending message');
-                        this.sendAIMessage();
-                    }
-                };
-
-                chatInput.addEventListener('input', handleInput);
-                chatInput.addEventListener('keydown', handleKeydown);
-            }
-
-            if (sendButton) {
-                // Clear any existing event listeners
-                const oldHandler = sendButton.onclick;
-                sendButton.onclick = null;
-
-                const handleSendClick = (e) => {
-                    e.preventDefault();
-                    console.log('Send button clicked via event listener');
-                    this.sendAIMessage();
-                };
-
-                sendButton.addEventListener('click', handleSendClick);
-
-                // Also add inline onclick as backup with bound context
-                sendButton.onclick = (e) => {
-                    e.preventDefault();
-                    console.log('Send button clicked via onclick backup');
-                    this.sendAIMessage();
-                    return false;
-                };
-            } else {
-                console.error('Send button not found!');
-            }
-
-            this.loadAIContext();
-        }, 200);
+        // Setup event handlers
+        this.setupEventHandlers();
+        this.loadAIContext();
     }
 
     askQuestion(question) {
@@ -270,38 +246,43 @@ export default class AIAssistant {
         const conversationId = this.parent.getCurrentConversationId();
         if (!conversationId) return;
 
-        // Only reload if conversation has changed
-        if (this.currentConversationId === conversationId) {
-            console.log('Chat history already loaded for conversation:', conversationId);
-            return;
-        }
-
-        this.currentConversationId = conversationId;
         console.log('📚 Loading chat history for conversation:', conversationId);
+
+        const messagesContainer = document.getElementById('aiChatMessages');
+        if (!messagesContainer) return;
 
         try {
             // Try to load from database first
             const response = await fetch(`${this.apiBaseUrl}/api/ai/chat/${conversationId}`);
             if (response.ok) {
-                const chatHistory = await response.json();
-                console.log('✅ Loaded chat history from database:', chatHistory.length, 'messages');
-                this.renderChatHistory(chatHistory);
-                return;
-            } else {
-                console.warn('⚠️ Failed to load from database:', response.status);
+                const data = await response.json();
+                if (data.messages && data.messages.length > 0) {
+                    console.log('✅ Loaded chat history from database:', data.messages.length, 'messages');
+                    // Clear welcome message and show history
+                    messagesContainer.innerHTML = '';
+                    this.renderChatHistory(data.messages);
+                    return;
+                } else {
+                    console.log('📝 No messages in response, keeping welcome message');
+                    return; // Keep welcome message
+                }
             }
         } catch (error) {
-            console.error('❌ Error loading AI chat history from database:', error);
+            console.log('📝 Failed to load history, keeping welcome message:', error.message);
         }
 
         // Fallback to memory storage
         if (this.memoryMessages && this.memoryMessages.has(conversationId)) {
             const memoryHistory = this.memoryMessages.get(conversationId);
-            console.log('📝 Loaded chat history from memory:', memoryHistory.length, 'messages');
-            this.renderChatHistory(memoryHistory);
-        } else {
-            console.log('📝 No chat history found in memory for this conversation');
+            if (memoryHistory && memoryHistory.length > 0) {
+                console.log('📝 Loaded chat history from memory:', memoryHistory.length, 'messages');
+                messagesContainer.innerHTML = '';
+                this.renderChatHistory(memoryHistory);
+                return;
+            }
         }
+
+        console.log('📝 No chat history found, welcome message remains');
     }
 
     renderChatHistory(messages) {
@@ -309,9 +290,24 @@ export default class AIAssistant {
         if (!messagesContainer) return;
 
         messagesContainer.innerHTML = '';
+
+        // Ensure messages is an array
+        if (!Array.isArray(messages)) {
+            console.warn('Expected messages to be an array, got:', typeof messages, messages);
+            return;
+        }
+
         messages.forEach(message => {
             this.addMessageToChat(message.role, message.content, false);
         });
+    }
+
+    showWelcomeMessage() {
+        const conversation = this.parent.getSelectedConversation();
+        const businessName = conversation?.business_name || 'this lead';
+        const welcomeMessage = `Hi! I'm here to help you with **${businessName}**. Ask me anything about:\n\n• Lead qualification and next steps\n• How to handle this conversation\n• Document requirements\n• Best follow-up strategies\n\nWhat would you like to know?`;
+
+        this.addMessageToChat('assistant', welcomeMessage, false);
     }
 
     async saveMessageToDatabase(role, content) {
@@ -369,6 +365,49 @@ export default class AIAssistant {
         });
 
         console.log('💭 Stored AI message in memory as fallback');
+    }
+
+    setupEventHandlers() {
+        const chatInput = document.getElementById('aiChatInput');
+        const sendButton = document.getElementById('aiChatSend');
+
+        console.log('Setting up event handlers:', { input: !!chatInput, button: !!sendButton });
+
+        if (chatInput) {
+            // Remove existing listeners by cloning the element
+            const newInput = chatInput.cloneNode(true);
+            chatInput.parentNode.replaceChild(newInput, chatInput);
+
+            // Auto-resize textarea
+            newInput.addEventListener('input', (e) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
+            });
+
+            // Handle Enter key
+            newInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    console.log('Enter key pressed, sending message');
+                    this.sendAIMessage();
+                }
+            });
+        }
+
+        if (sendButton) {
+            // Remove existing listeners by cloning the element
+            const newButton = sendButton.cloneNode(true);
+            sendButton.parentNode.replaceChild(newButton, sendButton);
+
+            // Add click handler
+            newButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Send button clicked');
+                this.sendAIMessage();
+            });
+        } else {
+            console.error('Send button not found!');
+        }
     }
 
     loadAIContext() {

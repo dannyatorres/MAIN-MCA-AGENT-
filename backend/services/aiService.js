@@ -1,14 +1,28 @@
 const OpenAI = require('openai');
+const axios = require('axios');
 
 class AIService {
     constructor() {
+        // Initialize OpenAI with timeout configuration
         this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY
+            apiKey: process.env.OPENAI_API_KEY,
+            timeout: 20000, // 20 second timeout
+            maxRetries: 2,
         });
-        
+
         this.model = process.env.OPENAI_MODEL || 'gpt-4';
         this.maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS) || 500;
         this.temperature = parseFloat(process.env.OPENAI_TEMPERATURE) || 0.7;
+
+        // Fallback axios client for direct API calls if needed
+        this.axiosClient = axios.create({
+            baseURL: 'https://api.openai.com/v1',
+            timeout: 20000, // 20 second timeout
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
     }
 
     async generateResponse(query, conversationContext = null) {
@@ -18,7 +32,72 @@ class AIService {
             }
 
             const systemPrompt = this.buildSystemPrompt(conversationContext);
-            
+
+            // Add timeout wrapper using Promise.race
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('OpenAI request timeout after 20 seconds')), 20000);
+            });
+
+            const apiCallPromise = this.makeOpenAICall(systemPrompt, query);
+
+            // Race between API call and timeout
+            const response = await Promise.race([apiCallPromise, timeoutPromise]);
+
+            return {
+                success: true,
+                response: response.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response.',
+                usage: response.usage
+            };
+
+        } catch (error) {
+            console.error('AI Service Error:', error.message);
+
+            // Handle timeout specifically
+            if (error.message.includes('timeout')) {
+                console.log('⏱️ OpenAI request timed out, using fallback');
+                return {
+                    success: false,
+                    error: 'Request timed out. The AI service is taking too long to respond.',
+                    fallback: this.getFallbackResponse(query)
+                };
+            }
+
+            if (error.code === 'insufficient_quota') {
+                return {
+                    success: false,
+                    error: 'OpenAI API quota exceeded. Please check your billing.',
+                    fallback: this.getFallbackResponse(query)
+                };
+            }
+
+            if (error.code === 'invalid_api_key') {
+                return {
+                    success: false,
+                    error: 'Invalid OpenAI API key. Please check your configuration.',
+                    fallback: this.getFallbackResponse(query)
+                };
+            }
+
+            // Handle network errors
+            if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
+                return {
+                    success: false,
+                    error: 'Network error connecting to OpenAI. Please check your internet connection.',
+                    fallback: this.getFallbackResponse(query)
+                };
+            }
+
+            return {
+                success: false,
+                error: error.message,
+                fallback: this.getFallbackResponse(query)
+            };
+        }
+    }
+
+    async makeOpenAICall(systemPrompt, query) {
+        try {
+            // Try using the OpenAI SDK first
             const response = await this.openai.chat.completions.create({
                 model: this.model,
                 messages: [
@@ -35,35 +114,35 @@ class AIService {
                 temperature: this.temperature
             });
 
-            return {
-                success: true,
-                response: response.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response.',
-                usage: response.usage
-            };
-        } catch (error) {
-            console.error('AI Service Error:', error);
-            
-            if (error.code === 'insufficient_quota') {
-                return {
-                    success: false,
-                    error: 'OpenAI API quota exceeded. Please check your billing.',
-                    fallback: this.getFallbackResponse(query)
-                };
+            return response;
+
+        } catch (sdkError) {
+            console.log('SDK call failed, trying axios fallback:', sdkError.message);
+
+            // Fallback to axios if SDK fails
+            try {
+                const axiosResponse = await this.axiosClient.post('/chat/completions', {
+                    model: this.model,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: systemPrompt
+                        },
+                        {
+                            role: 'user',
+                            content: query
+                        }
+                    ],
+                    max_tokens: this.maxTokens,
+                    temperature: this.temperature
+                });
+
+                return axiosResponse.data;
+
+            } catch (axiosError) {
+                // If both fail, throw the original SDK error
+                throw sdkError;
             }
-            
-            if (error.code === 'invalid_api_key') {
-                return {
-                    success: false,
-                    error: 'Invalid OpenAI API key. Please check your configuration.',
-                    fallback: this.getFallbackResponse(query)
-                };
-            }
-            
-            return {
-                success: false,
-                error: error.message,
-                fallback: this.getFallbackResponse(query)
-            };
         }
     }
 

@@ -1,17 +1,43 @@
 // Working MCA Command Center Server - Minimal version with CSV import
 console.log('Starting MCA Command Center Server...');
+console.log('Node version:', process.version);
+console.log('Current directory:', __dirname);
+console.log('Environment variables loaded:', Object.keys(process.env).filter(k => !k.includes('SECRET') && !k.includes('PASSWORD') && !k.includes('KEY')).length);
+
+// Add startup timeout to detect hangs
+const startupTimeout = setTimeout(() => {
+    console.error('🚨 STARTUP TIMEOUT: Server failed to start within 30 seconds');
+    console.error('💥 Last checkpoint reached - likely hanging during module loading or database connection');
+    process.exit(1);
+}, 30000);
+
+console.log('📦 Loading express module...');
 const express = require('express');
+console.log('✅ Express loaded');
+
+console.log('📦 Loading http module...');
 const http = require('http');
+console.log('✅ HTTP loaded');
+
+console.log('📦 Loading socket.io...');
 const { Server } = require('socket.io');
+console.log('✅ Socket.io loaded');
+
+console.log('📦 Loading other dependencies...');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const csvParser = require('csv-parser');
 const { v4: uuidv4 } = require('uuid');
+console.log('✅ Dependencies loaded');
+
 // const fcsService = require('./services/fcsService'); // Lazy load to avoid startup hang
 // const lenderMatcher = require('./services/lender-matcher'); // Lazy load to avoid startup hang
+
+console.log('📦 Loading environment variables...');
 require('dotenv').config();
+console.log('✅ Environment variables loaded');
 
 // Email service - will be loaded on first use
 let emailService = null;
@@ -1710,43 +1736,51 @@ app.put('/api/conversations/:conversationId/documents/:documentId', async (req, 
     try {
         database = getDatabase();
     } catch (error) {
-        return res.status(500).json({ error: 'Database not available: ' + error.message });
+        return res.status(500).json({
+            success: false,
+            error: 'Database not available: ' + error.message
+        });
     }
-    
+
     try {
         const { conversationId, documentId } = req.params;
-        const { filename } = req.body;
+        const { filename, originalFilename, documentType } = req.body;
         
         console.log('📝 UPDATE REQUEST:', {
             conversationId,
             documentId,
-            newFilename: filename
+            newFilename: filename || originalFilename
         });
-        
-        if (!filename) {
-            return res.status(400).json({ error: 'Filename is required' });
+
+        const inputFilename = filename || originalFilename;
+
+        if (!inputFilename) {
+            return res.status(400).json({
+                success: false,
+                error: 'Filename is required'
+            });
         }
-        
+
         // Get current document to preserve extension
         const currentDoc = await database.query(`
-            SELECT original_filename FROM documents 
+            SELECT original_filename FROM documents
             WHERE id = $1 AND conversation_id = $2
         `, [documentId, conversationId]);
-        
+
         if (currentDoc.rows.length === 0) {
             console.log('❌ Document not found:', { documentId, conversationId });
             return res.status(404).json({ error: 'Document not found' });
         }
-        
+
         // Preserve the original extension
         const originalName = currentDoc.rows[0].original_filename;
         const originalExt = path.extname(originalName);
-        const newNameWithoutExt = path.parse(filename).name;
+        const newNameWithoutExt = path.parse(inputFilename).name;
         const finalFilename = newNameWithoutExt + originalExt;
         
         console.log(`📝 Renaming document from "${originalName}" to "${finalFilename}"`);
         
-        // Update document in database
+        // Simple document update with trigger error handling
         let result;
         try {
             result = await database.query(`
@@ -1756,32 +1790,19 @@ app.put('/api/conversations/:conversationId/documents/:documentId', async (req, 
                 RETURNING *
             `, [finalFilename, documentId, conversationId]);
         } catch (dbError) {
-            console.warn('⚠️ Document update failed due to trigger issue:', dbError.message);
-            // If trigger fails, try updating without triggering any triggers
-            // We'll use a simpler update that won't trigger the updated_at trigger
-            try {
+            // If trigger fails, drop the trigger and try again
+            if (dbError.message.includes('updated_at')) {
+                console.warn('⚠️ Document update failed due to trigger issue, dropping trigger and retrying...');
+                await database.query('DROP TRIGGER IF EXISTS update_documents_updated_at ON documents');
                 result = await database.query(`
                     UPDATE documents
                     SET original_filename = $1
                     WHERE id = $2 AND conversation_id = $3
                     RETURNING *
                 `, [finalFilename, documentId, conversationId]);
-                console.log('✅ Document updated successfully using fallback method');
-            } catch (fallbackError) {
-                console.warn('⚠️ Fallback update also failed, returning current document:', fallbackError.message);
-                // If even the fallback fails, just return the current document
-                result = await database.query(`
-                    SELECT * FROM documents
-                    WHERE id = $1 AND conversation_id = $2
-                `, [documentId, conversationId]);
-
-                if (result.rows.length === 0) {
-                    return res.status(404).json({ error: 'Document not found after update attempt' });
-                }
-
-                // Manually set the filename in the response since we couldn't update the DB
-                result.rows[0].original_filename = finalFilename;
-                console.log('📝 Manually updated filename in response:', finalFilename);
+                console.log('✅ Document updated successfully after dropping trigger');
+            } else {
+                throw dbError;
             }
         }
         
@@ -1808,59 +1829,72 @@ app.put('/api/documents/:documentId', async (req, res) => {
     try {
         database = getDatabase();
     } catch (error) {
-        return res.status(500).json({ error: 'Database not available: ' + error.message });
+        return res.status(500).json({
+            success: false,
+            error: 'Database not available: ' + error.message
+        });
     }
-    
+
     try {
         const { documentId } = req.params;
-        const { filename, documentType } = req.body;
-        
-        console.log(`📝 Document edit request - ID: ${documentId}, filename: ${filename}, type: ${documentType}`);
-        
+        const { filename } = req.body;
+
+        console.log(`📝 Renaming document ${documentId} to: ${filename}`);
+
         if (!filename) {
-            return res.status(400).json({ error: 'Filename is required' });
+            return res.status(400).json({
+                success: false,
+                error: 'Filename is required'
+            });
         }
-        
-        // Get current document to preserve extension
-        const currentDoc = await database.query(`
-            SELECT original_filename FROM documents WHERE id = $1
-        `, [documentId]);
-        
-        if (currentDoc.rows.length === 0) {
-            return res.status(404).json({ error: 'Document not found' });
+
+        // Simple update without updated_at - just update the filename
+        let result;
+        try {
+            result = await database.query(
+                `UPDATE documents
+                 SET original_filename = $1
+                 WHERE id = $2
+                 RETURNING *`,
+                [filename, documentId]
+            );
+        } catch (dbError) {
+            // If trigger fails, drop the trigger and try again
+            if (dbError.message.includes('updated_at')) {
+                console.warn('⚠️ Document update failed due to trigger issue, dropping trigger and retrying...');
+                await database.query('DROP TRIGGER IF EXISTS update_documents_updated_at ON documents');
+                result = await database.query(
+                    `UPDATE documents
+                     SET original_filename = $1
+                     WHERE id = $2
+                     RETURNING *`,
+                    [filename, documentId]
+                );
+            } else {
+                throw dbError;
+            }
         }
-        
-        // Preserve the original extension
-        const originalName = currentDoc.rows[0].original_filename;
-        const originalExt = path.extname(originalName);
-        const newNameWithoutExt = path.parse(filename).name;
-        const finalFilename = newNameWithoutExt + originalExt;
-        
-        console.log(`📝 Renaming document from "${originalName}" to "${finalFilename}"`);
-        
-        // Update document in database (only update filename since we don't have documentType column)
-        const result = await database.query(`
-            UPDATE documents 
-            SET original_filename = $1 
-            WHERE id = $2
-            RETURNING *
-        `, [finalFilename, documentId]);
-        
+
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Document not found' });
+            return res.status(404).json({
+                success: false,
+                error: 'Document not found'
+            });
         }
-        
+
+        console.log('✅ Document renamed successfully');
+
         res.json({
             success: true,
-            message: 'Document updated successfully',
             document: result.rows[0]
         });
-        
+
     } catch (error) {
-        console.log('📁 Document update error:', error);
-        res.status(500).json({ 
+        console.error('📝 Document update error:', error);
+        res.status(500).json({
             success: false,
-            error: 'Failed to update document' 
+            error: error.message,
+            detail: error.detail
         });
     }
 });
@@ -2819,24 +2853,40 @@ app.post('/api/conversations/:id/generate-pdf-from-template', async (req, res) =
             htmlContent: htmlContent,
             message: 'Ready for client-side PDF generation'
         });
-        return;
 
-        // Generate PDF using Puppeteer
-        const puppeteer = require('puppeteer');
-        const AWS = require('aws-sdk');
-        
-        // Configure AWS
-        AWS.config.update({
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-            region: process.env.AWS_REGION
+    } catch (error) {
+        console.error('❌ PDF generation preparation failed:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to prepare PDF generation',
+            details: error.stack
         });
-        
-        const s3 = new AWS.S3();
-        
-        let browser;
-        try {
-            console.log('🚀 Launching Puppeteer browser...');
+    }
+});
+
+// Debug endpoint to check document data directly from database
+app.get('/api/debug/document/:documentId', async (req, res) => {
+    const { documentId } = req.params;
+    const database = getDatabase();
+
+    try {
+        const result = await database.query(
+            'SELECT id, original_filename, filename, created_at, updated_at FROM documents WHERE id = $1',
+            [documentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Document not found' });
+        }
+
+        res.json({
+            document: result.rows[0],
+            query_time: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
             browser = await puppeteer.launch({
                 headless: 'new',
                 timeout: 60000, // 60 second timeout for macOS
@@ -2934,6 +2984,30 @@ app.post('/api/conversations/:id/generate-pdf-from-template', async (req, res) =
             error: error.message,
             details: error.stack
         });
+    }
+});
+
+// Debug endpoint to check document data directly from database
+app.get('/api/debug/document/:documentId', async (req, res) => {
+    const { documentId } = req.params;
+    const database = getDatabase();
+
+    try {
+        const result = await database.query(
+            'SELECT id, original_filename, filename, created_at, updated_at FROM documents WHERE id = $1',
+            [documentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Document not found' });
+        }
+
+        res.json({
+            document: result.rows[0],
+            query_time: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -3521,24 +3595,45 @@ app.get('/api/email/test', async (req, res) => {
 let aiService = null;
 function getAIService() {
     if (!aiService) {
+        console.log('🤖 Initializing timeout-protected AI service...');
         aiService = require('./services/aiService');
-        console.log('✅ AI service initialized');
+        console.log('✅ AI service initialized with timeout protection');
     }
     return aiService;
 }
 
 // AI chat endpoint - FIXED VERSION
 app.post('/api/ai/chat', async (req, res) => {
+    console.log('🤖 AI Chat request started at:', new Date().toISOString());
+
+    let responseCompleted = false; // Flag to track if response has been sent
+
+    // Set a timeout for the entire operation
+    const timeout = setTimeout(() => {
+        console.error('❌ AI request timeout after 30 seconds');
+        if (!res.headersSent && !responseCompleted) {
+            responseCompleted = true;
+            res.status(504).json({
+                success: false,
+                error: 'Request timeout',
+                fallback: 'The AI service is taking too long to respond. Please try again.'
+            });
+        }
+    }, 30000); // 30 second timeout
+
     try {
         const { query, conversationId } = req.body;
+        console.log('📝 Query received:', query?.substring(0, 100));
 
         if (!query) {
+            clearTimeout(timeout);
             return res.status(400).json({
                 success: false,
                 error: 'Query is required'
             });
         }
 
+        console.log('🔄 Getting AI service...');
         const aiService = getAIService();
 
         // Get conversation context if conversationId is provided
@@ -3623,13 +3718,17 @@ app.post('/api/ai/chat', async (req, res) => {
                         console.log('⚠️ Lead details not available:', err.message);
                     }
 
-                    // Format messages for AI context - reverse to show chronologically (oldest first)
-                    const formattedMessages = messagesResult.rows.reverse().map(msg => ({
-                        direction: msg.direction,
-                        content: msg.content,
-                        timestamp: msg.message_time,
-                        sent_by: msg.sent_by || (msg.direction === 'inbound' ? 'customer' : 'agent')
-                    }));
+                    // Format messages for AI context - limit context size to prevent huge payloads
+                    const MAX_CONTEXT_MESSAGES = 20;
+                    const formattedMessages = messagesResult.rows
+                        .slice(0, MAX_CONTEXT_MESSAGES)
+                        .reverse()
+                        .map(msg => ({
+                            direction: msg.direction,
+                            content: msg.content?.substring(0, 500) || '', // Limit message length
+                            timestamp: msg.message_time,
+                            sent_by: msg.sent_by || (msg.direction === 'inbound' ? 'customer' : 'agent')
+                        }));
 
                     // Count outbound messages and get last outbound timestamp
                     const outboundMessages = formattedMessages.filter(msg => msg.direction === 'outbound');
@@ -3683,10 +3782,16 @@ app.post('/api/ai/chat', async (req, res) => {
             }
         }
 
+        console.log('✅ Context loaded at:', new Date().toISOString());
+        console.log('🔄 Calling AI service at:', new Date().toISOString());
+
         const startTime = Date.now();
         const result = await aiService.generateResponse(query, conversationContext);
         const endTime = Date.now();
         const responseTime = endTime - startTime;
+
+        console.log('✅ AI response received at:', new Date().toISOString());
+        console.log(`⏱️ AI response time: ${responseTime}ms`);
 
         // Save AI messages to database
         if (conversationId) {
@@ -3719,31 +3824,67 @@ app.post('/api/ai/chat', async (req, res) => {
             }
         }
 
-        if (result.success) {
-            res.json({
-                success: true,
-                response: result.response,
-                usage: result.usage,
-                contextUsed: !!conversationContext,
-                messageCount: conversationContext?.message_count || 0
-            });
-        } else {
-            res.json({
-                success: false,
-                error: result.error,
-                fallback: result.fallback,
-                contextUsed: !!conversationContext
-            });
+        // Clear timeout on successful completion
+        clearTimeout(timeout);
+
+        if (!responseCompleted) {
+            responseCompleted = true;
+            if (result.success) {
+                res.json({
+                    success: true,
+                    response: result.response,
+                    usage: result.usage,
+                    contextUsed: !!conversationContext,
+                    messageCount: conversationContext?.message_count || 0
+                });
+            } else {
+                res.json({
+                    success: false,
+                    error: result.error,
+                    fallback: result.fallback,
+                    contextUsed: !!conversationContext
+                });
+            }
         }
 
     } catch (error) {
+        // Clear timeout on error
+        clearTimeout(timeout);
+
         console.error('AI Chat Error:', error);
         console.error('Stack trace:', error.stack);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error',
-            fallback: 'I apologize, but I encountered an error processing your request. Please try again.'
-        });
+
+        if (!res.headersSent && !responseCompleted) {
+            responseCompleted = true;
+            res.status(500).json({
+                success: false,
+                error: 'Internal server error',
+                fallback: 'I apologize, but I encountered an error processing your request. Please try again.'
+            });
+        }
+    }
+});
+
+// AI Service Test endpoint to isolate AI service issues
+app.get('/api/ai/test', async (req, res) => {
+    console.log('🧪 AI Test endpoint called at:', new Date().toISOString());
+
+    try {
+        const aiService = getAIService();
+        console.log('✅ AI service obtained');
+
+        const testResult = await Promise.race([
+            aiService.generateResponse('Hello, this is a test', null),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Test timeout after 5 seconds')), 5000)
+            )
+        ]);
+
+        console.log('✅ AI test response received');
+        res.json({ success: true, result: testResult });
+    } catch (error) {
+        console.error('❌ AI test failed:', error.message);
+        res.json({ success: false, error: error.message });
     }
 });
 
@@ -4001,8 +4142,12 @@ app.post('/api/ai/chat/:conversationId/messages', async (req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`MCA Command Center Server running on port ${PORT}`);
-    console.log(`Socket.io WebSocket server ready on port ${PORT}`);
-    console.log(`CSV Import: http://localhost:${PORT}/api/csv-import/upload`);
-    console.log(`Conversations: http://localhost:${PORT}/api/conversations`);
+    // Clear the startup timeout - server started successfully
+    clearTimeout(startupTimeout);
+
+    console.log(`🚀 MCA Command Center Server running on port ${PORT}`);
+    console.log(`🔗 Socket.io WebSocket server ready on port ${PORT}`);
+    console.log(`📁 CSV Import: http://localhost:${PORT}/api/csv-import/upload`);
+    console.log(`💬 Conversations: http://localhost:${PORT}/api/conversations`);
+    console.log('✅ Server startup completed successfully!');
 });

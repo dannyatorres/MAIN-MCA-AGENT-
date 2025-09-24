@@ -50,18 +50,18 @@ export default class MessagingModule {
         }
     }
 
-    async loadConversationMessages() {
+    async loadConversationMessages(conversationId = null) {
         console.log('🔄 loadConversationMessages called');
-        const conversationId = this.parent.getCurrentConversationId();
-        console.log('🔄 Current conversation ID:', conversationId);
-        if (!conversationId) {
+        const convId = conversationId || this.parent.getCurrentConversationId();
+        console.log('🔄 Current conversation ID:', convId);
+        if (!convId) {
             console.log('❌ No conversation ID found, returning');
             return;
         }
 
         try {
-            console.log(`📨 Loading messages for conversation: ${conversationId}`);
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/messages`);
+            console.log(`📨 Loading messages for conversation: ${convId}`);
+            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${convId}/messages`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);

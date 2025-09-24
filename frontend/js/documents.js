@@ -462,18 +462,44 @@ export default class DocumentsModule {
             }
         }
 
-        // Update the UI immediately
-        this.renderDocumentsList();
-        document.getElementById('editDocumentModal').remove();
-        this.utils.showNotification('Document name updated locally', 'success');
+        // Save to server instead of just locally
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/documents/${documentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    filename: newName
+                })
+            });
 
-        // Note: Server-side update is disabled due to database constraints
-        // In a production environment, you would implement proper backend support
-        console.log('Document updated locally:', {
-            documentId,
-            newName,
-            newType
-        });
+            const result = await response.json();
+
+            if (result.success) {
+                // Update the UI after successful server update
+                this.renderDocumentsList();
+                document.getElementById('editDocumentModal').remove();
+                this.utils.showNotification('Document updated successfully', 'success');
+
+                // Reload documents from server to ensure consistency
+                await this.loadDocuments();
+            } else {
+                throw new Error(result.error || 'Failed to update document');
+            }
+        } catch (error) {
+            console.error('Error updating document:', error);
+            this.utils.showNotification(`Failed to update document: ${error.message}`, 'error');
+
+            // Revert the local changes on error
+            if (this.currentDocuments) {
+                const docIndex = this.currentDocuments.findIndex(d => d.id === documentId);
+                if (docIndex !== -1) {
+                    // Reload from server to get original data
+                    await this.loadDocuments();
+                }
+            }
+        }
     }
 
     enableInlineEdit(documentId) {
@@ -502,16 +528,10 @@ export default class DocumentsModule {
             nameElement.style.backgroundColor = '';
 
             if (newName && newName !== originalName) {
-                // Update local data immediately
-                if (this.currentDocuments) {
-                    const doc = this.currentDocuments.find(d => d.id === documentId);
-                    if (doc) {
-                        doc.originalFilename = newName;
-                    }
-                }
-                this.utils.showNotification('Document name updated locally', 'success');
-                console.log('Document renamed locally:', { documentId, oldName: originalName, newName });
+                // Save to backend - don't revert here
+                this.saveDocumentRename(documentId, newName, originalName, nameElement);
             } else {
+                // Only revert if name is empty or unchanged
                 nameElement.textContent = originalName;
             }
         };
@@ -526,6 +546,49 @@ export default class DocumentsModule {
                 nameElement.blur();
             }
         });
+    }
+
+    async saveDocumentRename(documentId, newName, originalName, nameElement) {
+        try {
+            nameElement.style.opacity = '0.6';
+            this.utils.showNotification('Renaming document...', 'info');
+
+            // Try the simple endpoint first (more reliable)
+            const response = await fetch(`${this.apiBaseUrl}/api/documents/${documentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    filename: newName
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success || response.ok) {
+                // Update local cache immediately
+                const docIndex = this.currentDocuments.findIndex(d => d.id === documentId);
+                if (docIndex !== -1) {
+                    this.currentDocuments[docIndex].originalFilename = newName;
+                    this.currentDocuments[docIndex].original_filename = newName;
+                }
+
+                // Update the DOM element
+                nameElement.textContent = newName;
+                nameElement.style.opacity = '1';
+
+                this.utils.showNotification('Document renamed successfully', 'success');
+
+            } else {
+                throw new Error(result.error || result.message || 'Failed to rename document');
+            }
+        } catch (error) {
+            console.error('Error renaming document:', error);
+            nameElement.textContent = originalName;
+            nameElement.style.opacity = '1';
+            this.utils.showNotification(`Failed to rename: ${error.message}`, 'error');
+        }
     }
 
     async previewDocument(documentId) {

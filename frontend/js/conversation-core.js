@@ -221,6 +221,11 @@ export default class ConversationCore {
         this.unreadMessages.delete(conversationId);
         this.currentConversationId = conversationId;
 
+        // Update parent reference immediately
+        if (this.parent) {
+            this.parent.currentConversationId = conversationId;
+        }
+
         // Fix gap issue permanently
         const centerPanel = document.querySelector('.center-panel');
         if (centerPanel) {
@@ -232,32 +237,52 @@ export default class ConversationCore {
             console.log('Fetching detailed conversation data for:', conversationId);
             const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}`);
             if (response.ok) {
-                this.selectedConversation = await response.json();
+                const data = await response.json();
+                // Handle both wrapped and unwrapped responses
+                this.selectedConversation = data.conversation || data;
                 console.log('Loaded detailed conversation data:', this.selectedConversation);
+
+                // Update parent reference
+                if (this.parent) {
+                    this.parent.selectedConversation = this.selectedConversation;
+                }
+
+                // Update the conversations map with detailed data
                 this.conversations.set(conversationId, this.selectedConversation);
             } else {
                 console.error('Failed to load detailed conversation data');
                 this.selectedConversation = this.conversations.get(conversationId);
+                if (this.parent) {
+                    this.parent.selectedConversation = this.selectedConversation;
+                }
             }
         } catch (error) {
             console.error('Error fetching detailed conversation:', error);
             this.selectedConversation = this.conversations.get(conversationId);
+            if (this.parent) {
+                this.parent.selectedConversation = this.selectedConversation;
+            }
         }
 
         // Update UI
         this.updateConversationSelection();
         this.showConversationDetails();
 
-        // Load messages and intelligence
-        console.log('🔄 Checking messaging module:', !!this.parent.messaging);
-        if (this.parent.messaging) {
-            console.log('📨 Calling loadConversationMessages...');
-            await this.parent.messaging.loadConversationMessages();
-        } else {
-            console.log('❌ No messaging module found!');
-        }
-        if (this.parent.intelligence) {
-            await this.parent.intelligence.loadConversationIntelligence();
+        // Load messages and intelligence IN SEQUENCE with proper context
+        try {
+            // First load messages
+            if (this.parent.messaging) {
+                console.log('Loading messages for conversation:', conversationId);
+                await this.parent.messaging.loadConversationMessages(conversationId);
+            }
+
+            // Then load intelligence with the updated conversation data
+            if (this.parent.intelligence) {
+                console.log('Loading intelligence for conversation:', conversationId);
+                await this.parent.intelligence.loadConversationIntelligence(conversationId);
+            }
+        } catch (error) {
+            console.error('Error loading conversation details:', error);
         }
 
         // Show message input
