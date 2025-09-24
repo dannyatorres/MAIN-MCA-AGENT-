@@ -133,8 +133,20 @@ export default class LendersModule {
                 if (tib > 0) {
                     const years = Math.floor(tib / 12);
                     const months = tib % 12;
-                    tibDisplay.textContent = `${tib} months (${years} years, ${months} months) in business`;
+
+                    // Simple format: just "5 years, 5 months"
+                    if (years > 0 && months > 0) {
+                        tibDisplay.textContent = `${years} year${years > 1 ? 's' : ''}, ${months} month${months > 1 ? 's' : ''}`;
+                    } else if (years > 0) {
+                        tibDisplay.textContent = `${years} year${years > 1 ? 's' : ''}`;
+                    } else {
+                        tibDisplay.textContent = `${months} month${months > 1 ? 's' : ''}`;
+                    }
+
                     tibDisplay.style.display = 'block';
+                    tibDisplay.style.fontSize = '12px';
+                    tibDisplay.style.color = '#6b7280';
+                    tibDisplay.style.marginTop = '4px';
                 } else {
                     tibDisplay.style.display = 'none';
                 }
@@ -266,7 +278,16 @@ export default class LendersModule {
                 if (tibDisplay && tib > 0) {
                     const years = Math.floor(tib / 12);
                     const months = tib % 12;
-                    tibDisplay.textContent = `${tib} months (${years} years, ${months} months) in business`;
+
+                    // Simple format: just "5 years, 5 months"
+                    if (years > 0 && months > 0) {
+                        tibDisplay.textContent = `${years} year${years > 1 ? 's' : ''}, ${months} month${months > 1 ? 's' : ''}`;
+                    } else if (years > 0) {
+                        tibDisplay.textContent = `${years} year${years > 1 ? 's' : ''}`;
+                    } else {
+                        tibDisplay.textContent = `${months} month${months > 1 ? 's' : ''}`;
+                    }
+
                     tibDisplay.style.display = 'block';
                 }
             }
@@ -280,53 +301,58 @@ export default class LendersModule {
     displayLenderResults(data, criteria) {
         console.log('displayLenderResults called with:', { data, criteria });
 
-        const { qualified, nonQualified, autoDropped, summary } = data;
+        const { qualified, nonQualified, autoDropped } = data;
 
         this.qualifiedLenders = qualified || [];
         this.lastLenderCriteria = criteria;
 
-        console.log('Qualified lenders stored:', this.qualifiedLenders);
-
         let html = '';
 
-        // Criteria info
+        // Wrap everything in a scrollable container
+        html = `<div style="max-height: 600px; overflow-y: auto; padding: 10px;">`;
+
+        // Simple Summary - just the numbers
         html += `
-            <div class="criteria-info">
-                <h4>📊 Merchant Criteria</h4>
-                <div class="info-grid">
-                    <div class="info-item"><strong>Business:</strong> ${criteria.businessName}</div>
-                    <div class="info-item"><strong>Position:</strong> ${criteria.requestedPosition}</div>
-                    <div class="info-item"><strong>TIB:</strong> ${criteria.tib} months</div>
-                    <div class="info-item"><strong>Revenue:</strong> ${criteria.monthlyRevenue.toLocaleString()}</div>
-                    <div class="info-item"><strong>FICO:</strong> ${criteria.fico}</div>
-                    <div class="info-item"><strong>State:</strong> ${criteria.state}</div>
-                    <div class="info-item"><strong>Industry:</strong> ${criteria.industry}</div>
+            <div style="display: flex; justify-content: center; gap: 40px; margin: 20px 0; padding: 20px; background: #f9fafb; border-radius: 8px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: #10b981;">${qualified?.length || 0}</div>
+                    <div style="font-size: 0.875rem; color: #6b7280; text-transform: uppercase;">Qualified</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: #ef4444;">${nonQualified?.length || 0}</div>
+                    <div style="font-size: 0.875rem; color: #6b7280; text-transform: uppercase;">Non-Qualified</div>
                 </div>
             </div>
         `;
 
-        // Summary
-        html += `
-            <div class="summary">
-                <div class="summary-item">
-                    <div class="summary-number">${qualified?.length || 0}</div>
-                    <div class="summary-label">Qualified</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-number">${nonQualified?.length || 0}</div>
-                    <div class="summary-label">Non-Qualified</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-number">${autoDropped || 0}</div>
-                    <div class="summary-label">Auto-Dropped</div>
-                </div>
-            </div>
-        `;
-
-        // Qualified lenders
+        // Send to Lenders button - always visible if qualified lenders exist
         if (qualified && qualified.length > 0) {
-            html += '<div class="results-section"><h3>✅ Qualified Lenders</h3>';
+            html += `
+                <div style="margin: 20px 0; text-align: center;">
+                    <button id="sendToLendersBtn"
+                            style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;"
+                            onclick="window.conversationUI.lenders.showLenderSubmissionModal()">
+                        📧 Send to Lenders
+                    </button>
+                </div>
+            `;
 
+            // Qualified lenders - collapsible section
+            html += `
+                <div style="margin-top: 20px;">
+                    <button id="toggleQualified"
+                            onclick="window.conversationUI.lenders.toggleQualifiedSection()"
+                            style="width: 100%; padding: 12px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #16a34a; font-weight: 600;">
+                            ✅ View Qualified Lenders (${qualified.length})
+                        </span>
+                        <span id="toggleQualifiedIcon" style="color: #16a34a;">▼</span>
+                    </button>
+
+                    <div id="qualifiedSection" style="display: none; margin-top: 10px; padding: 15px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px;">
+                        <div style="max-height: 400px; overflow-y: auto;">`;
+
+            // Group by tiers
             const tiers = {};
             qualified.forEach(lender => {
                 const tier = lender.Tier || 'Unknown';
@@ -335,61 +361,143 @@ export default class LendersModule {
             });
 
             Object.keys(tiers).sort().forEach(tier => {
-                html += `<div class="tier-group">`;
-                html += `<div class="tier-title">Tier ${tier}</div>`;
-                html += `<div class="lender-list">`;
+                html += `<div style="margin-bottom: 16px;">`;
+                html += `<div style="font-weight: 600; padding: 8px; background: white; border-radius: 4px;">Tier ${tier}</div>`;
+                html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; padding: 8px;">`;
 
                 tiers[tier].forEach(lender => {
-                    const preferred = lender.isPreferred ? ' preferred' : '';
                     const star = lender.isPreferred ? '⭐' : '';
-                    html += `<div class="lender-item${preferred}">${lender['Lender Name']}${star}</div>`;
+                    html += `<div style="padding: 8px; background: white; border: 1px solid #d1fae5; border-radius: 4px;">${lender['Lender Name']}${star}</div>`;
                 });
 
                 html += `</div></div>`;
             });
 
             html += `
-                <div style="margin-top: 20px; text-align: center;">
-                    <button id="sendToLendersBtn" class="btn btn-primary"
-                            onclick="window.conversationUI.lenders.showLenderSubmissionModal()">
-                        📧 Send to Lenders
-                    </button>
+                        </div>
+                    </div>
                 </div>
             `;
-            html += '</div>';
         }
 
-        // Non-qualified lenders
+        // Non-qualified lenders - collapsible section
         if (nonQualified && nonQualified.length > 0) {
-            html += '<div class="results-section"><h3>❌ Non-Qualified Lenders</h3>';
-            const displayCount = Math.min(nonQualified.length, 20);
-            nonQualified.slice(0, displayCount).forEach(item => {
-                html += `
-                    <div class="non-qualified-item">
-                        <div class="lender-name">${item.lender}</div>
-                        <div class="blocking-reason">${item.blockingRule}</div>
+            html += `
+                <div style="margin-top: 30px; margin-bottom: 30px;">
+                    <button id="toggleNonQualified"
+                            onclick="window.conversationUI.lenders.toggleNonQualifiedSection()"
+                            style="width: 100%; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #dc2626; font-weight: 600;">
+                            ❌ View Non-Qualified Lenders (${nonQualified.length})
+                        </span>
+                        <span id="toggleNonQualifiedIcon" style="color: #dc2626;">▼</span>
+                    </button>
+
+                    <div id="nonQualifiedSection" style="display: none; margin-top: 10px; padding: 15px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;">
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            ${nonQualified.map(item => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 6px; background: white; border-radius: 4px;">
+                                    <div style="font-weight: 500; color: #374151; min-width: 200px;">${item.lender}</div>
+                                    <div style="font-size: 0.875rem; color: #dc2626; text-align: right; flex: 1; margin-left: 10px;">
+                                        ${item.blockingRule}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
-                `;
-            });
-            if (nonQualified.length > 20) {
-                html += `<p style="color: #6b7280; text-align: center;">... and ${nonQualified.length - 20} more</p>`;
-            }
-            html += '</div>';
+                </div>
+            `;
         }
+
+        // Close the scrollable container
+        html += `</div>`;
 
         const resultsEl = document.getElementById('lenderResults');
         if (resultsEl) {
             resultsEl.innerHTML = html;
             resultsEl.classList.add('active');
 
-            // Cache results
+            // Ensure the results element itself is properly styled
+            resultsEl.style.maxHeight = '70vh';
+            resultsEl.style.overflowY = 'auto';
+            resultsEl.style.paddingBottom = '20px';
+
+            // Clear and update cache
             const conversationId = this.parent.getCurrentConversationId();
             if (conversationId) {
+                this.lenderResultsCache.delete(conversationId);
                 this.lenderResultsCache.set(conversationId, {
                     html: html,
                     data: data,
                     criteria: criteria
                 });
+            }
+        }
+    }
+
+    // Clear lender results cache when needed
+    clearLenderResultsCache() {
+        this.lenderResultsCache.clear();
+        const resultsEl = document.getElementById('lenderResults');
+        if (resultsEl) {
+            resultsEl.innerHTML = '';
+            resultsEl.classList.remove('active');
+        }
+
+        // Make sure loading is hidden by default
+        const loadingEl = document.getElementById('lenderLoading');
+        if (loadingEl) {
+            loadingEl.style.display = 'none';
+        }
+    }
+
+    // Toggle qualified lenders section
+    toggleQualifiedSection() {
+        const section = document.getElementById('qualifiedSection');
+        const icon = document.getElementById('toggleQualifiedIcon');
+        const button = document.getElementById('toggleQualified');
+
+        if (section) {
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                if (icon) icon.textContent = '▲';
+                if (button) {
+                    const count = this.qualifiedLenders?.length || 0;
+                    button.querySelector('span').innerHTML = `✅ Hide Qualified Lenders (${count})`;
+                }
+            } else {
+                section.style.display = 'none';
+                if (icon) icon.textContent = '▼';
+                if (button) {
+                    const count = this.qualifiedLenders?.length || 0;
+                    button.querySelector('span').innerHTML = `✅ View Qualified Lenders (${count})`;
+                }
+            }
+        }
+    }
+
+    // Toggle non-qualified lenders section
+    toggleNonQualifiedSection() {
+        const section = document.getElementById('nonQualifiedSection');
+        const icon = document.getElementById('toggleNonQualifiedIcon');
+        const button = document.getElementById('toggleNonQualified');
+
+        if (section) {
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                if (icon) icon.textContent = '▲';
+                if (button) {
+                    const span = button.querySelector('span');
+                    if (span) span.innerHTML = '❌ Hide Non-Qualified Lenders';
+                }
+            } else {
+                section.style.display = 'none';
+                if (icon) icon.textContent = '▼';
+                if (button) {
+                    const span = button.querySelector('span');
+                    const count = document.querySelectorAll('#nonQualifiedSection > div > div').length;
+                    if (span) span.innerHTML = `❌ View Non-Qualified Lenders (${count})`;
+                }
             }
         }
     }
@@ -436,7 +544,7 @@ export default class LendersModule {
                 });
 
                 console.log('Lender form data restored from cache');
-                this.utils.showNotification('Form data restored from cache', 'info');
+                // this.utils.showNotification('Form data restored from cache', 'info');
             }
         } catch (error) {
             console.error('Error restoring cached lender form data:', error);
@@ -625,7 +733,7 @@ export default class LendersModule {
                 console.log('Lender form cache restored successfully');
                 const lenderTab = document.querySelector('.nav-tab[data-tab="lenders"]');
                 if (lenderTab && lenderTab.classList.contains('active')) {
-                    this.utils.showNotification(`Form data restored (${restored} fields)`, 'info');
+                    // this.utils.showNotification(`Form data restored (${restored} fields)`, 'info');
                 }
             } else if (missing > 0 && retryCount < maxRetries) {
                 console.log('No fields restored, retrying...');
@@ -678,13 +786,17 @@ export default class LendersModule {
     async showLenderSubmissionModal() {
         console.log('showLenderSubmissionModal called');
 
-        let modal = document.getElementById('lenderSubmissionModal');
-
-        if (!modal) {
-            console.log('Modal not found, creating dynamically...');
-            this.createLenderSubmissionModal();
-            modal = document.getElementById('lenderSubmissionModal');
+        // Always remove existing modal to ensure fresh HTML
+        let existingModal = document.getElementById('lenderSubmissionModal');
+        if (existingModal) {
+            console.log('Removing existing modal to refresh HTML...');
+            existingModal.remove();
         }
+
+        // Create fresh modal
+        console.log('Creating fresh modal...');
+        this.createLenderSubmissionModal();
+        let modal = document.getElementById('lenderSubmissionModal');
 
         if (modal) {
             // Load documents first before showing modal
@@ -1069,20 +1181,25 @@ Best regards`;
             return;
         }
 
+        // Sort lenders alphabetically by name (A-Z)
+        const sortedLenders = [...lenders].sort((a, b) =>
+            a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+        );
+
         container.innerHTML = `
-            <table class="lenders-table">
+            <table class="lenders-table" style="width: 100%;">
                 <thead>
                     <tr>
-                        <th>Lender Name</th>
-                        <th>Actions</th>
+                        <th style="text-align: left; padding: 12px; font-size: 16px; font-weight: 600;">Lender Name</th>
+                        <th style="text-align: right; padding: 12px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${lenders.map(lender => `
+                    ${sortedLenders.map(lender => `
                         <tr>
-                            <td style="font-weight: 500;">${lender.name}</td>
-                            <td>
-                                <div class="action-buttons">
+                            <td style="text-align: left; padding: 12px; font-weight: 500; font-size: 15px;">${lender.name}</td>
+                            <td style="text-align: right; padding: 12px;">
+                                <div class="action-buttons" style="display: inline-flex; gap: 8px;">
                                     <button class="action-btn edit" onclick="window.conversationUI.lenders.editLender('${lender.id}')">
                                         Edit
                                     </button>
@@ -1101,7 +1218,7 @@ Best regards`;
     // Templates
     createLenderFormTemplate(conversationData = {}) {
         return `
-            <div class="lender-qualification-system">
+            <div class="lender-qualification-system" style="height: calc(100vh - 200px); overflow: hidden;">
                 ${this.createLenderHeader()}
                 ${this.createLenderForm(conversationData)}
             </div>
@@ -1120,7 +1237,7 @@ Best regards`;
         const revenue = conversationData?.monthly_revenue || '';
 
         return `
-            <div class="lender-form-content">
+            <div class="lender-form-content" style="height: 100%; overflow-y: auto; padding-bottom: 100px;">
                 <form id="lenderForm" class="lender-form">
                     <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
                         ${this.lenderFormFields.map(field => {
@@ -1135,30 +1252,60 @@ Best regards`;
                         ${this.lenderFormCheckboxes.map(field => this.createCheckboxField(field)).join('')}
                     </div>
 
-                    <div class="form-row" style="margin-top: 16px;">
-                        <div class="form-group" style="width: 100%;">
-                            <label for="lenderCurrentPositions">Current Positions</label>
-                            <input type="text" id="lenderCurrentPositions" placeholder="e.g., OnDeck $500 daily, Forward $750 weekly" class="form-input" style="width: 100%; padding: 8px 12px;">
-                        </div>
+                    <div style="margin-top: 16px;">
+                        <label for="lenderCurrentPositions" style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Current Positions</label>
+                        <input type="text"
+                               id="lenderCurrentPositions"
+                               placeholder="e.g., OnDeck $500 daily, Forward $750 weekly"
+                               class="form-input"
+                               style="width: 100%; padding: 12px; font-size: 14px; border: 1px solid #e5e7eb; border-radius: 6px;">
                     </div>
 
-                    <div class="form-row" style="margin-top: 16px;">
-                        <div class="form-group" style="width: 100%;">
-                            <label for="lenderAdditionalNotes">Additional Notes</label>
-                            <textarea id="lenderAdditionalNotes" placeholder="Any additional notes..." class="form-input" style="width: 100%; padding: 8px 12px; min-height: 80px;"></textarea>
-                        </div>
+                    <div style="margin-top: 16px;">
+                        <label for="lenderAdditionalNotes" style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Additional Notes</label>
+                        <textarea id="lenderAdditionalNotes"
+                                  placeholder="Any additional notes or special circumstances..."
+                                  class="form-input"
+                                  style="width: 100%; padding: 12px; min-height: 120px; font-size: 14px; resize: vertical; border: 1px solid #e5e7eb; border-radius: 6px;"></textarea>
                     </div>
 
-                    <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button type="submit" class="process-btn">Process Lenders</button>
-                        <button type="button" class="clear-cache-btn" id="clearLenderCacheBtn">Clear Cache</button>
+                    <div class="form-actions" style="margin-top: 30px; margin-bottom: 40px; display: flex; gap: 15px; justify-content: center;">
+                        <button type="submit" class="process-btn" style="
+                            padding: 14px 32px;
+                            background: #3b82f6;
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                            transition: all 0.2s;">
+                            Process Lenders
+                        </button>
+                        <button type="button" class="clear-cache-btn" id="clearLenderCacheBtn" style="
+                            padding: 14px 24px;
+                            background: white;
+                            color: #6b7280;
+                            border: 2px solid #e5e7eb;
+                            border-radius: 8px;
+                            font-size: 15px;
+                            font-weight: 500;
+                            cursor: pointer;
+                            transition: all 0.2s;">
+                            Clear Cache
+                        </button>
                     </div>
 
-                    <div class="loading" id="lenderLoading">Processing lenders...</div>
-                    <div class="error" id="lenderErrorMsg"></div>
+                    <div class="loading" id="lenderLoading" style="display: none; text-align: center; margin: 20px 0; font-size: 16px; color: #6b7280;">
+                        <span style="display: inline-block; padding: 12px 24px; background: #f3f4f6; border-radius: 8px;">
+                            Processing lenders...
+                        </span>
+                    </div>
+                    <div class="error" id="lenderErrorMsg" style="display: none; margin: 20px 0; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626;"></div>
                 </form>
 
-                <div class="results" id="lenderResults"></div>
+                <div class="results" id="lenderResults" style="margin-bottom: 50px;"></div>
             </div>
         `;
     }
@@ -1219,14 +1366,14 @@ Best regards`;
 
     createLenderManagementTemplate() {
         return `
-            <div class="lender-management-system">
-                <div class="lender-mgmt-header">
+            <div class="lender-management-system" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
+                <div class="lender-mgmt-header" style="flex-shrink: 0;">
                     <h3>Lender Management</h3>
                     <p>Add, edit, and manage your lender database</p>
                 </div>
 
-                <div class="lender-mgmt-content">
-                    <div class="mgmt-actions">
+                <div class="lender-mgmt-content" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+                    <div class="mgmt-actions" style="flex-shrink: 0; padding: 16px 0;">
                         <button class="mgmt-btn primary" onclick="window.conversationUI.lenders.showAddLenderModal()">
                             Add New Lender
                         </button>
@@ -1235,7 +1382,7 @@ Best regards`;
                         </button>
                     </div>
 
-                    <div id="lendersTableContainer">
+                    <div id="lendersTableContainer" style="flex: 1; overflow-y: auto; padding-bottom: 50px;">
                         <div class="loading-state">
                             Loading lenders...
                         </div>

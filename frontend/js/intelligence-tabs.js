@@ -460,11 +460,15 @@ export default class IntelligenceTabs {
                     ${this.createFinancialSection(conv, leadDetails)}
                     ${this.createOwnerSection(conv, leadDetails)}
 
-                    <div class="form-actions">
-                        <button type="button" class="generate-pdf-btn" id="generateApplicationBtn">
+                    <div class="form-actions" style="display: flex; gap: 16px; justify-content: center; margin-top: 30px; padding: 20px;">
+                        <button type="button" class="generate-pdf-btn" id="generateApplicationBtn"
+                                style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
                             Generate Application
                         </button>
-                        <button type="submit" class="update-btn">Update Lead</button>
+                        <button type="submit" class="update-btn"
+                                style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                            Update Lead
+                        </button>
                     </div>
                 </form>
             </div>
