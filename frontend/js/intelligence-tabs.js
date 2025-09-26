@@ -261,16 +261,63 @@ export default class IntelligenceTabs {
             return;
         }
 
-        content.innerHTML = this.createEditFormTemplate(conversation);
+        // Simple button to open the modal instead of inline form
+        content.innerHTML = `
+            <div style="padding: 40px; text-align: center;">
+                <h3 style="margin-bottom: 20px;">Edit Lead Information</h3>
+                <p style="margin-bottom: 30px; color: #6b7280;">
+                    Update business details, financial information, and owner data for<br>
+                    <strong>${conversation.business_name || 'this lead'}</strong>
+                </p>
+                <button id="openEditModalBtn" class="btn btn-primary" style="padding: 12px 30px; font-size: 16px;">
+                    <i class="fas fa-edit"></i> Edit Lead Details
+                </button>
+            </div>
+        `;
 
-        // Add form submission handler
-        const form = content.querySelector('#editLeadForm');
+        // Set up the button to open modal
+        const openBtn = content.querySelector('#openEditModalBtn');
+        if (openBtn) {
+            openBtn.addEventListener('click', () => this.openEditModal());
+        }
+    }
+
+    openEditModal() {
+        const conversation = this.parent.getSelectedConversation();
+        if (!conversation) return;
+
+        const modal = document.getElementById('editLeadInlineModal');
+        const modalContent = document.getElementById('editLeadInlineContent');
+
+        // Insert the form into the modal
+        modalContent.innerHTML = this.createEditFormTemplate(conversation);
+
+        // Show the modal
+        modal.style.display = 'flex';
+
+        // Set up form handlers
+        const form = modalContent.querySelector('#editLeadForm');
         if (form) {
             form.addEventListener('submit', (e) => this.handleEditFormSubmit(e));
         }
 
-        // Add Generate Application button handler
-        this.setupGenerateApplicationButton(content);
+        // Set up Generate Application button
+        this.setupGenerateApplicationButton(modalContent);
+
+        // Set up close button
+        const closeBtn = document.getElementById('closeEditLeadInlineModal');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+        }
+
+        // Close on outside click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
     }
 
     renderFCSTab(content) {
@@ -294,34 +341,90 @@ export default class IntelligenceTabs {
     }
 
     renderLendersTab(content) {
-        if (this.parent.lenders) {
-            content.innerHTML = this.parent.lenders.createLenderFormTemplate(
-                this.parent.getSelectedConversation()
-            );
-            this.parent.lenders.initializeLenderForm();
-            setTimeout(() => this.parent.lenders.populateLenderForm(), 100);
-            setTimeout(() => this.parent.lenders.restoreLenderFormCacheIfNeeded(), 200);
+        const conversation = this.parent.getSelectedConversation();
+        if (!conversation) {
+            content.innerHTML = '<div class="empty-state">No conversation selected</div>';
+            return;
+        }
 
-            // Check for cached results
-            const conversationId = this.parent.getCurrentConversationId();
-            if (conversationId && this.parent.lenders.lenderResultsCache) {
-                const cached = this.parent.lenders.lenderResultsCache.get(conversationId);
-                if (cached) {
-                    const resultsEl = document.getElementById('lenderResults');
-                    if (resultsEl) {
-                        resultsEl.innerHTML = cached.html;
-                        resultsEl.classList.add('active');
-                    }
+        if (!this.parent.lenders) {
+            content.innerHTML = '<div class="empty-state">Lenders module not available</div>';
+            return;
+        }
 
-                    if (cached.data && cached.data.qualified) {
-                        this.parent.lenders.qualifiedLenders = cached.data.qualified;
-                        this.parent.lenders.lastLenderCriteria = cached.criteria;
-                    }
-                } else {
-                    this.parent.lenders.loadLenderData();
+        // Simple button to open the modal instead of inline form
+        content.innerHTML = `
+            <div style="padding: 40px; text-align: center;">
+                <h3 style="margin-bottom: 20px;">Lender Qualification & Submission</h3>
+                <p style="margin-bottom: 30px; color: #6b7280;">
+                    Qualify and submit <strong>${conversation.business_name || 'this lead'}</strong><br>
+                    to matching lenders based on business profile and financing needs
+                </p>
+                <button id="openLendersModalBtn" class="btn btn-primary" style="padding: 12px 30px; font-size: 16px;">
+                    <i class="fas fa-university"></i> Open Lender Tools
+                </button>
+            </div>
+        `;
+
+        // Set up the button to open modal
+        const openBtn = content.querySelector('#openLendersModalBtn');
+        if (openBtn) {
+            openBtn.addEventListener('click', () => this.openLendersModal());
+        }
+    }
+
+    openLendersModal() {
+        const conversation = this.parent.getSelectedConversation();
+        if (!conversation || !this.parent.lenders) return;
+
+        const modal = document.getElementById('lendersInlineModal');
+        const modalContent = document.getElementById('lendersInlineContent');
+
+        // Insert the lender form into the modal
+        modalContent.innerHTML = this.parent.lenders.createLenderFormTemplate(conversation);
+
+        // Show the modal
+        modal.style.display = 'flex';
+
+        // Initialize all the lender form functionality (preserving all original logic)
+        this.parent.lenders.initializeLenderForm();
+        setTimeout(() => this.parent.lenders.populateLenderForm(), 100);
+        setTimeout(() => this.parent.lenders.restoreLenderFormCacheIfNeeded(), 200);
+
+        // Check for cached results and restore them
+        const conversationId = this.parent.getCurrentConversationId();
+        if (conversationId && this.parent.lenders.lenderResultsCache) {
+            const cached = this.parent.lenders.lenderResultsCache.get(conversationId);
+            if (cached) {
+                const resultsEl = modalContent.querySelector('#lenderResults');
+                if (resultsEl) {
+                    resultsEl.innerHTML = cached.html;
+                    resultsEl.classList.add('active');
                 }
+
+                if (cached.data && cached.data.qualified) {
+                    this.parent.lenders.qualifiedLenders = cached.data.qualified;
+                    this.parent.lenders.lastLenderCriteria = cached.criteria;
+                }
+            } else {
+                this.parent.lenders.loadLenderData();
             }
         }
+
+        // Set up close button
+        const closeBtn = document.getElementById('closeLendersInlineModal');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+        }
+
+        // Close on outside click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
     }
 
     renderLenderManagementTab(content) {
@@ -695,6 +798,12 @@ export default class IntelligenceTabs {
 
             if (result.success || response.ok) {
                 this.utils.showNotification('Lead data updated successfully', 'success');
+
+                // Close the modal
+                const modal = document.getElementById('editLeadInlineModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
 
                 // Update local conversation object
                 const selectedConversation = this.parent.getSelectedConversation();

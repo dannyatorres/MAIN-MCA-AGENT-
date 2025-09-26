@@ -249,6 +249,238 @@
                 max-width: none;
             }
         }
+
+        /* Edit Form Responsive Styles */
+        .edit-form-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Responsive form rows with max field widths */
+        .edit-form-row,
+        .edit-form-container .form-row {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 350px));
+        }
+
+        /* Different grid layouts based on number of fields needed */
+        .edit-form-row-2 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 350px));
+        }
+
+        .edit-form-row-3 {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 280px));
+        }
+
+        .edit-form-row-4 {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 250px));
+        }
+
+        .edit-form-row-5 {
+            grid-template-columns: repeat(auto-fit, minmax(140px, 220px));
+        }
+
+        .edit-form-row-6 {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 200px));
+        }
+
+        /* Ensure form inputs don't stretch beyond reasonable widths */
+        .edit-form-container .form-group input,
+        .edit-form-container .form-group select,
+        .edit-form-container .form-group textarea {
+            width: 100%;
+            max-width: 350px;
+        }
+
+        /* For fields that should be full width */
+        .form-group.full-width input,
+        .form-group.full-width textarea {
+            max-width: 100% !important;
+        }
+
+        /* Section headers stay full width */
+        .form-section h3 {
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        /* Responsive behavior for smaller screens */
+        @media (max-width: 1400px) {
+            .edit-form-container {
+                max-width: 1000px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .edit-form-container {
+                max-width: 900px;
+            }
+
+            .edit-form-row-6 {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .edit-form-container {
+                padding: 16px;
+            }
+
+            .edit-form-row-2,
+            .edit-form-row-3,
+            .edit-form-row-4,
+            .edit-form-row-5,
+            .edit-form-row-6 {
+                grid-template-columns: 1fr;
+            }
+
+            .edit-form-container .form-group input,
+            .edit-form-container .form-group select,
+            .edit-form-container .form-group textarea {
+                max-width: 100%;
+            }
+        }
+
+        /* Fix for Edit tab form field widths */
+        .edit-form-container {
+            max-width: 1400px;
+            padding: 20px;
+        }
+
+        .edit-form-container .form-row-six {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 220px));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .edit-form-container .form-group {
+            width: 100%;
+        }
+
+        .edit-form-container .form-group input,
+        .edit-form-container .form-group select,
+        .edit-form-container .form-group textarea {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Ensure the grid doesn't stretch beyond reasonable sizes */
+        .edit-form-container .form-section {
+            margin-bottom: 24px;
+        }
+
+        .edit-form-container .form-section h4 {
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        /* For wider screens, limit the grid expansion */
+        @media (min-width: 1400px) {
+            .edit-form-container .form-row-six {
+                grid-template-columns: repeat(6, minmax(150px, 200px));
+            }
+        }
+
+        /* For medium screens */
+        @media (max-width: 1200px) {
+            .edit-form-container .form-row-six {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+
+        /* For small screens */
+        @media (max-width: 768px) {
+            .edit-form-container .form-row-six {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Fix for ALL Edit tab form fields and rows */
+        #intelligenceContent .edit-form-container .form-group,
+        #intelligenceContent .form-group {
+            display: inline-block;
+            vertical-align: top;
+            margin-right: 16px;
+            margin-bottom: 16px;
+            min-width: 150px;
+            max-width: 220px;
+        }
+
+        #intelligenceContent .edit-form-container input,
+        #intelligenceContent .edit-form-container select,
+        #intelligenceContent .edit-form-container textarea,
+        #intelligenceContent input[type="text"],
+        #intelligenceContent input[type="number"],
+        #intelligenceContent input[type="email"],
+        #intelligenceContent input[type="tel"],
+        #intelligenceContent input[type="url"],
+        #intelligenceContent input[type="date"],
+        #intelligenceContent select {
+            width: 100% !important;
+            max-width: 200px !important;
+            box-sizing: border-box;
+        }
+
+        /* Target all form rows regardless of class name */
+        #intelligenceContent .form-row,
+        #intelligenceContent .form-row-two,
+        #intelligenceContent .form-row-three,
+        #intelligenceContent .form-row-four,
+        #intelligenceContent .form-row-five,
+        #intelligenceContent .form-row-six,
+        #intelligenceContent [class*="form-row"] {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        /* Ensure form sections don't stretch */
+        #intelligenceContent .form-section {
+            max-width: 1400px;
+            margin-bottom: 24px;
+        }
+
+        /* Override any inherited width styles */
+        #intelligenceContent .form-section .form-group {
+            flex: 0 0 auto !important;
+            width: auto !important;
+            max-width: 220px !important;
+        }
+
+        /* Specific handling for different row types */
+        #intelligenceContent .form-row-six .form-group {
+            flex: 0 1 calc(16.666% - 16px);
+            min-width: 140px;
+            max-width: 200px;
+        }
+
+        /* Ensure dropdowns don't stretch */
+        #intelligenceContent select.form-input,
+        #intelligenceContent .form-select {
+            max-width: 220px !important;
+        }
+
+        /* For any row that doesn't have a specific class */
+        #intelligenceContent .edit-form-container > div {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        #intelligenceContent .edit-form-container > div > .form-group {
+            flex: 0 0 auto;
+            max-width: 220px;
+        }
     </style>
 </head>
 <body>
@@ -813,8 +1045,9 @@
                 <button class="modal-close" id="closeEditLeadModal">×</button>
             </div>
             <div class="modal-body">
-                <!-- Business Information Section -->
-                <div class="form-section">
+                <div class="edit-form-container">
+                    <!-- Business Information Section -->
+                    <div class="form-section">
                     <div class="section-header" onclick="toggleSection('editBusinessInfo')">
                         <h4>📊 Business Information</h4>
                         <span class="section-toggle">−</span>
@@ -1099,10 +1332,38 @@
                         </div>
                     </div>
                 </div>
+                </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="cancelEditLead">Cancel</button>
                 <button class="btn btn-primary" id="saveEditLead">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Lead Inline Modal -->
+    <div class="modal" id="editLeadInlineModal" style="display: none;">
+        <div class="modal-content" style="max-width: 1200px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Edit Lead Information</h3>
+                <button class="modal-close" id="closeEditLeadInlineModal">&times;</button>
+            </div>
+            <div class="modal-body" id="editLeadInlineContent">
+                <!-- Form content will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Lenders Inline Modal -->
+    <div class="modal" id="lendersInlineModal" style="display: none;">
+        <div class="modal-content" style="max-width: 1400px; width: 95%; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Lender Qualification & Submission</h3>
+                <button class="modal-close" id="closeLendersInlineModal">&times;</button>
+            </div>
+            <div class="modal-body" id="lendersInlineContent">
+                <!-- Lender form content will be injected here -->
             </div>
         </div>
     </div>

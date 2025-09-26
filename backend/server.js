@@ -20,8 +20,8 @@ const http = require('http');
 console.log('✅ HTTP loaded');
 
 console.log('📦 Loading socket.io...');
-const { Server } = require('socket.io');
-console.log('✅ Socket.io loaded');
+// const { Server } = require('socket.io');
+console.log('✅ Socket.io skipped (temporarily disabled)');
 
 console.log('📦 Loading other dependencies...');
 const cors = require('cors');
@@ -2716,44 +2716,46 @@ app.post('/webhook/sms', async (req, res) => {
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
-// Initialize Socket.io with CORS configuration
+// Initialize Socket.io with CORS configuration (temporarily disabled)
 console.log('Setting up Socket.io...');
-const io = new Server(server, {
-    cors: {
-        origin: ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:8000', 'http://127.0.0.1:8080', 'http://127.0.0.1:3001', 'http://127.0.0.1:8000'],
-        methods: ['GET', 'POST'],
-        credentials: true
-    },
-    transports: ['websocket', 'polling'],
-    allowEIO3: true
-});
+// const io = new Server(server, {
+//     cors: {
+//         origin: ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:8000', 'http://127.0.0.1:8080', 'http://127.0.0.1:3001', 'http://127.0.0.1:8000'],
+//         methods: ['GET', 'POST'],
+//         credentials: true
+//     },
+//     transports: ['websocket', 'polling'],
+//     allowEIO3: true
+// });
 
-// Socket.io connection handling
+// Socket.io connection handling (temporarily disabled)
+/*
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
-    
+
     // Join conversation room for real-time updates
     socket.on('join-conversation', (conversationId) => {
         socket.join(`conversation-${conversationId}`);
         console.log(`👥 Client ${socket.id} joined conversation: ${conversationId}`);
     });
-    
+
     // Leave conversation room
     socket.on('leave-conversation', (conversationId) => {
         socket.leave(`conversation-${conversationId}`);
         console.log(`👋 Client ${socket.id} left conversation: ${conversationId}`);
     });
-    
+
     // Handle disconnect
     socket.on('disconnect', (reason) => {
         console.log('Client disconnected:', socket.id, 'Reason:', reason);
     });
-    
+
     // Handle connection errors
     socket.on('connect_error', (error) => {
         console.error('Socket connection error:', error);
     });
 });
+*/
 
 // Server-side PDF generation endpoint using Puppeteer
 app.post('/api/conversations/:id/generate-pdf-from-template', async (req, res) => {
@@ -2885,105 +2887,6 @@ app.get('/api/debug/document/:documentId', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
-    }
-});
-            browser = await puppeteer.launch({
-                headless: 'new',
-                timeout: 60000, // 60 second timeout for macOS
-                ignoreDefaultArgs: ['--disable-extensions'],
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--disable-gpu',
-                    '--disable-web-security',
-                    '--disable-features=VizDisplayCompositor',
-                    '--disable-background-timer-throttling',
-                    '--disable-backgrounding-occluded-windows',
-                    '--disable-renderer-backgrounding',
-                    '--disable-ipc-flooding-protection',
-                    '--memory-pressure-off'
-                ]
-            });
-            
-            const page = await browser.newPage();
-            await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-            
-            console.log('📄 Generating PDF...');
-            const pdfBuffer = await page.pdf({
-                format: 'A4',
-                printBackground: true,
-                margin: {
-                    top: '0.5in',
-                    right: '0.5in',
-                    bottom: '0.5in',
-                    left: '0.5in'
-                }
-            });
-            
-            // Generate unique filename
-            const filename = `application-${conversationId}-${Date.now()}.pdf`;
-            const s3Key = `documents/${filename}`;
-            
-            console.log('📤 Uploading PDF to S3...');
-            const uploadParams = {
-                Bucket: process.env.S3_DOCUMENTS_BUCKET,
-                Key: s3Key,
-                Body: pdfBuffer,
-                ContentType: 'application/pdf',
-                ServerSideEncryption: 'AES256'
-            };
-            
-            const uploadResult = await s3.upload(uploadParams).promise();
-            
-            // Save document record to database
-            const db = getDatabase();
-            const documentId = uuidv4();
-            
-            console.log('💾 Saving document record to database...');
-            await db.query(`
-                INSERT INTO documents (
-                    id, conversation_id, filename, original_filename, s3_key, s3_url, file_size, upload_date
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-            `, [
-                documentId,
-                conversationId,
-                filename,
-                filename, // original_filename same as filename for generated PDFs
-                s3Key,
-                uploadResult.Location,
-                pdfBuffer.length
-            ]);
-            
-            console.log('✅ PDF generated and saved successfully');
-            
-            res.json({
-                success: true,
-                document: {
-                    id: documentId,
-                    filename: filename,
-                    s3_url: uploadResult.Location,
-                    s3_key: s3Key,
-                    file_size: pdfBuffer.length
-                },
-                message: 'PDF generated and saved successfully'
-            });
-            
-        } finally {
-            if (browser) {
-                await browser.close();
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ PDF generation failed:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            details: error.stack
-        });
     }
 });
 
