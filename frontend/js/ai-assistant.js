@@ -38,23 +38,14 @@ export default class AIAssistant {
 
         this.isInitialized = true;
 
-        // Clear messages container immediately
-        const messagesContainer = document.getElementById('aiChatMessages');
-        if (messagesContainer) {
-            messagesContainer.innerHTML = '';
-        }
-
-        // Show welcome message immediately, then try to load history
-        this.showWelcomeMessage();
-
-        // Try to load history and replace welcome if found
-        setTimeout(() => {
-            this.loadChatHistory();
-        }, 100);
+        // Loading dots are already in the initial HTML template, just proceed to load history
 
         // Setup event handlers
         this.setupEventHandlers();
         this.loadAIContext();
+
+        // Load history first, THEN show welcome only if no history
+        this.loadChatHistory();
     }
 
     askQuestion(question) {
@@ -190,6 +181,14 @@ export default class AIAssistant {
         if (saveToDatabase) {
             this.saveMessageToDatabase(role, content);
         }
+
+        // Trigger cache update for tab switching (immediate for better reliability)
+        if (this.parent.intelligence && this.parent.intelligence.saveAIChatState) {
+            // Use requestAnimationFrame for better timing
+            requestAnimationFrame(() => {
+                this.parent.intelligence.saveAIChatState();
+            });
+        }
     }
 
     formatAIResponse(content) {
@@ -251,6 +250,9 @@ export default class AIAssistant {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
+        // Keep loading state while we check all sources
+        let hasHistory = false;
+
         try {
             // Try to load from database first
             const response = await fetch(`${this.apiBaseUrl}/api/ai/chat/${conversationId}`);
@@ -258,31 +260,32 @@ export default class AIAssistant {
                 const data = await response.json();
                 if (data.messages && data.messages.length > 0) {
                     console.log('✅ Loaded chat history from database:', data.messages.length, 'messages');
-                    // Clear welcome message and show history
-                    messagesContainer.innerHTML = '';
+                    messagesContainer.innerHTML = '';  // Clear loading state
                     this.renderChatHistory(data.messages);
-                    return;
-                } else {
-                    console.log('📝 No messages in response, keeping welcome message');
-                    return; // Keep welcome message
+                    hasHistory = true;
                 }
             }
         } catch (error) {
-            console.log('📝 Failed to load history, keeping welcome message:', error.message);
+            console.log('🔍 Failed to load history from database:', error.message);
         }
 
-        // Fallback to memory storage
-        if (this.memoryMessages && this.memoryMessages.has(conversationId)) {
+        // Only check memory if database didn't have messages
+        if (!hasHistory && this.memoryMessages && this.memoryMessages.has(conversationId)) {
             const memoryHistory = this.memoryMessages.get(conversationId);
             if (memoryHistory && memoryHistory.length > 0) {
-                console.log('📝 Loaded chat history from memory:', memoryHistory.length, 'messages');
-                messagesContainer.innerHTML = '';
+                console.log('💭 Loaded chat history from memory:', memoryHistory.length, 'messages');
+                messagesContainer.innerHTML = '';  // Clear loading state
                 this.renderChatHistory(memoryHistory);
-                return;
+                hasHistory = true;
             }
         }
 
-        console.log('📝 No chat history found, welcome message remains');
+        // Only show welcome message if no history found anywhere
+        if (!hasHistory) {
+            console.log('🆕 No chat history found, showing welcome message');
+            messagesContainer.innerHTML = '';  // Clear loading state
+            this.showWelcomeMessage();
+        }
     }
 
     renderChatHistory(messages) {

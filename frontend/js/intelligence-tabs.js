@@ -7,6 +7,9 @@ export default class IntelligenceTabs {
         this.utils = parent.utils;
         this.templates = parent.templates;
 
+        // Cache for AI chat content per conversation
+        this.aiChatCache = new Map();
+
         this.init();
     }
 
@@ -116,6 +119,13 @@ export default class IntelligenceTabs {
             this.parent.core.syncConversationContext();
         }
 
+        // Cache AI chat content before switching away from ai-assistant tab
+        const currentActiveTab = document.querySelector('.tab-btn.active');
+        if (currentActiveTab && currentActiveTab.dataset.tab === 'ai-assistant' && tab !== 'ai-assistant') {
+            console.log(`🔄 Switching from AI Assistant to ${tab} - saving state`);
+            this.saveAIChatState();
+        }
+
         // Update tab buttons
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
@@ -174,48 +184,73 @@ export default class IntelligenceTabs {
             return;
         }
 
+        const conversationId = this.parent.getCurrentConversationId();
+        console.log(`Rendering AI Assistant tab for conversation: ${conversationId}`);
+
+        // Check if we have cached content for this conversation
+        if (this.aiChatCache.has(conversationId)) {
+            const cachedContent = this.aiChatCache.get(conversationId);
+            console.log(`🔄 Found cache for conversation: ${conversationId} (${cachedContent.messageCount} messages, ${Math.round((Date.now() - cachedContent.timestamp) / 1000)}s ago)`);
+
+            // Check if current content is different from cached content
+            const currentAISection = content.querySelector('.ai-assistant-section');
+            const shouldRestore = !currentAISection ||
+                                currentAISection.dataset.conversationId !== conversationId ||
+                                content.innerHTML !== cachedContent.html;
+
+            if (shouldRestore) {
+                console.log('📋 Restoring AI chat from cache');
+                content.innerHTML = cachedContent.html;
+
+                // Restore event handlers with better timing
+                setTimeout(() => {
+                    if (this.parent.ai) {
+                        this.parent.ai.setupEventHandlers();
+                        this.parent.ai.currentConversationId = conversationId;
+                        this.parent.ai.isInitialized = true;
+                        console.log('✅ AI chat restored and handlers setup');
+                    }
+                }, 50);
+                return;
+            } else {
+                console.log('✨ AI assistant already properly rendered');
+                return;
+            }
+        }
+
         // Create full-screen AI assistant interface
         content.innerHTML = `
-            <div class="ai-assistant-section" style="height: 100%; display: flex; flex-direction: column;">
-                <div class="ai-chat-interface" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
-                    <div class="ai-chat-header" style="background: #667eea; color: white; padding: 16px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 24px;">🤖</span>
-                            <div>
-                                <div style="font-weight: 600;">AI Assistant</div>
-                                <div style="font-size: 12px; opacity: 0.8;">
-                                    Chat about ${conversation.business_name || 'this lead'}
-                                </div>
-                            </div>
+            <div class="ai-assistant-section" data-conversation-id="${conversationId}" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
+                <div class="ai-chat-interface" style="height: 100%; display: flex; flex-direction: column; background: #f9fafb; border-radius: 8px; max-height: 100%;">
+                    <div class="ai-chat-header" style="padding: 12px 16px; background: transparent; border-bottom: 1px solid #e5e7eb;">
+                        <div style="display: flex; align-items: center; justify-content: center;">
+                            <span style="font-weight: 600; color: #374151; font-size: 15px;">Chat about ${conversation.business_name || 'this project'}</span>
+                        </div>
+                    </div>
+                    <div class="ai-chat-messages" id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 24px; background: transparent; min-height: 0;">
+                        <div class="ai-loading-state" style="text-align: center; padding: 20px; color: #9ca3af;">
+                            <div class="typing-dot" style="display: inline-block; width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; margin: 0 2px;"></div>
+                            <div class="typing-dot" style="display: inline-block; width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; animation-delay: 0.2s; margin: 0 2px;"></div>
+                            <div class="typing-dot" style="display: inline-block; width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; animation-delay: 0.4s; margin: 0 2px;"></div>
                         </div>
                     </div>
 
-                    <div class="ai-chat-messages" id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 20px; background: #f9fafb;">
-                        <div class="ai-chat-message assistant">
-                            <div class="message-bubble" style="background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #e5e7eb;">
-                                Hi! I'm here to help you with <strong>${conversation.business_name || 'this lead'}</strong>.
-                                <br><br>
-                                Ask me anything about the lead, what actions to take next, or how to handle this conversation.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="ai-chat-input-area" style="padding: 16px; background: white; border-top: 1px solid #e5e7eb;">
-                        <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                    <div class="ai-chat-input-area" style="padding: 20px; background: white; border-radius: 0 0 8px 8px; flex-shrink: 0; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                             <button onclick="console.log('Test button clicked'); window.conversationUI?.ai?.askQuestion('What should I do next?');"
-                                    style="padding: 6px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                    style="padding: 8px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.2s; font-weight: 500;">
                                 What's next?
                             </button>
                             <button onclick="window.conversationUI.ai.askQuestion('Analyze this lead')"
-                                    style="padding: 6px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                    style="padding: 8px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.2s; font-weight: 500;">
                                 Analyze
                             </button>
                             <button onclick="window.conversationUI.ai.askQuestion('Generate follow-up message')"
-                                    style="padding: 6px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                    style="padding: 8px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.2s; font-weight: 500;">
                                 Follow-up
                             </button>
                             <button onclick="window.conversationUI.ai.askQuestion('What documents do I need?')"
-                                    style="padding: 6px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                    style="padding: 8px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.2s; font-weight: 500;">
                                 Documents
                             </button>
                         </div>
@@ -242,6 +277,8 @@ export default class IntelligenceTabs {
         setTimeout(() => {
             if (this.parent.ai) {
                 this.parent.ai.initializeAIChat();
+                // Cache the initial state after initialization
+                setTimeout(() => this.saveAIChatState(), 200);
             }
         }, 100);
     }
@@ -1080,6 +1117,42 @@ export default class IntelligenceTabs {
         } catch (error) {
             console.error('Error generating PDF:', error);
             this.utils.showNotification('Failed to generate PDF: ' + error.message, 'error');
+        }
+    }
+
+    saveAIChatState() {
+        const conversationId = this.parent.getCurrentConversationId();
+        if (!conversationId) {
+            console.log('❌ No conversation ID for saving AI chat state');
+            return;
+        }
+
+        const content = document.getElementById('intelligenceContent');
+        const aiSection = content?.querySelector('.ai-assistant-section');
+
+        if (aiSection) {
+            // Only save if there are actual messages (not just welcome message)
+            const messagesContainer = aiSection.querySelector('#aiChatMessages');
+            const messages = messagesContainer?.querySelectorAll('.ai-chat-message');
+
+            console.log(`💾 Saving AI chat state for conversation: ${conversationId} (${messages?.length || 0} messages)`);
+            this.aiChatCache.set(conversationId, {
+                html: content.innerHTML,
+                timestamp: Date.now(),
+                messageCount: messages?.length || 0
+            });
+        } else {
+            console.log('⚠️ No AI section found to save');
+        }
+    }
+
+    clearAIChatCache(conversationId = null) {
+        if (conversationId) {
+            this.aiChatCache.delete(conversationId);
+            console.log('Cleared AI chat cache for conversation:', conversationId);
+        } else {
+            this.aiChatCache.clear();
+            console.log('Cleared all AI chat cache');
         }
     }
 }

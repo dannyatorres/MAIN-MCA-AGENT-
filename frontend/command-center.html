@@ -190,6 +190,11 @@
             100% { transform: rotate(360deg); }
         }
 
+        @keyframes typing {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+
         .processing-text {
             font-size: 16px;
             font-weight: 600;
@@ -574,7 +579,7 @@
                 <div class="panel-header">
                     <h2>Lead Intelligence</h2>
                     <div class="intelligence-tabs" id="intelligenceTabs">
-                        <button class="tab-btn active" data-tab="ai-assistant">AI Assistant</button>
+                        <button class="tab-btn active" data-tab="ai-assistant">AI Agent</button>
                         <button class="tab-btn" data-tab="documents">Documents</button>
                         <button class="tab-btn" data-tab="edit">Edit</button>
                         <button class="tab-btn" data-tab="fcs">FCS</button>

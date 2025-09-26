@@ -232,6 +232,12 @@ export default class ConversationCore {
             centerPanel.style.gap = '0';
         }
 
+        // Reset to AI Assistant tab when switching conversations
+        const aiAssistantTab = document.querySelector('.tab-btn[data-tab="ai-assistant"]');
+        if (aiAssistantTab && !aiAssistantTab.classList.contains('active')) {
+            aiAssistantTab.click();
+        }
+
         // Fetch detailed conversation data
         try {
             console.log('Fetching detailed conversation data for:', conversationId);
