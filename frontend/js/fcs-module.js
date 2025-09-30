@@ -6,11 +6,21 @@ class FCSModule {
         this.apiBaseUrl = parent.apiBaseUrl;
         this.utils = parent.utils;
         this.templates = parent.templates;
+        this._fcsGenerationInProgress = false;
+        this._initialized = false;  // Add this flag
 
         this.init();
     }
 
     init() {
+        if (this._initialized) {
+            console.warn('🔄 FCS Module already initialized, skipping duplicate init()');
+            return;
+        }
+
+        console.log('🚀 Initializing FCS Module for the first time');
+        this._initialized = true;
+
         this.setupFCSButtonDelegation();
         this.setupModalEventListeners();
     }
@@ -18,13 +28,29 @@ class FCSModule {
     setupFCSButtonDelegation() {
         console.log('Setting up FCS button event delegation');
 
-        // Use event delegation on document body with proper event capturing
-        document.body.addEventListener('click', async (event) => {
+        // Remove any existing listener first
+        if (this._clickHandler) {
+            document.body.removeEventListener('click', this._clickHandler, true);
+        }
+
+        this._clickHandler = async (event) => {
             // Check if the clicked element or any parent is the FCS button
             const button = event.target.closest('#generateFCSBtn');
 
             if (button) {
-                console.log('✅ Generate FCS button clicked via delegation');
+                console.trace('FCS button clicked - Call stack:');
+
+                // Prevent duplicate clicks during generation
+                if (this._fcsGenerationInProgress) {
+                    console.log('⚠️ FCS generation already in progress, BLOCKING duplicate click');
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return false;
+                }
+
+                console.log('✅ ALLOWING first FCS button click via delegation');
+                this._fcsGenerationInProgress = true;
+
                 event.preventDefault();
                 event.stopPropagation();
 
@@ -42,19 +68,32 @@ class FCSModule {
                     await this.showFCSModal();
                 } catch (error) {
                     console.error('Error calling showFCSModal:', error);
+                } finally {
+                    // Reset flag after modal is shown with a short cooldown
+                    setTimeout(() => {
+                        this._fcsGenerationInProgress = false;
+                    }, 1000);
                 }
                 return false;
             }
-        }, true);
+        };
 
-        console.log('FCS button event delegation setup complete');
+        // Add the new click handler with event capturing
+        document.body.addEventListener('click', this._clickHandler, true);
+
+        console.log('FCS button event delegation setup complete with proper cleanup');
     }
 
     setupModalEventListeners() {
         console.log('Setting up FCS modal event listeners');
 
-        // Set up modal button event listeners using delegation
-        document.body.addEventListener('click', (event) => {
+        // Remove any existing modal listener first
+        if (this._modalClickHandler) {
+            document.body.removeEventListener('click', this._modalClickHandler);
+        }
+
+        // Store the handler so we can remove it later
+        this._modalClickHandler = (event) => {
             if (event.target.id === 'confirmFcs') {
                 console.log('✅ Confirm FCS button clicked');
                 event.preventDefault();
@@ -66,15 +105,15 @@ class FCSModule {
                 event.preventDefault();
                 this.hideFCSModal();
             }
-        });
+        };
 
-        console.log('FCS modal event listeners setup complete');
+        document.body.addEventListener('click', this._modalClickHandler);
+
+        console.log('FCS modal event listeners setup complete with proper cleanup');
     }
 
     async showFCSModal() {
         console.log('showFCSModal called');
-        console.log('Current conversation ID:', this.parent.getCurrentConversationId());
-        console.log('Selected conversation:', this.parent.getSelectedConversation()?.id);
 
         const modal = document.getElementById('fcsModal');
         if (!modal) {
@@ -86,56 +125,53 @@ class FCSModule {
             return;
         }
 
-        // Try to get conversation ID from multiple sources
-        const conversationId = this.parent.getCurrentConversationId() ||
-                              this.parent.getSelectedConversation()?.id ||
-                              document.querySelector('.conversation-item.selected')?.dataset?.conversationId;
+        // CRITICAL: Get conversation ID from the CURRENTLY SELECTED conversation item in the UI
+        const selectedElement = document.querySelector('.conversation-item.selected');
+        const conversationId = selectedElement?.dataset?.conversationId;
 
         if (!conversationId) {
-            console.error('No conversation context available');
+            console.error('No conversation selected');
             this.parent.utils?.showNotification('Please select a conversation first', 'error');
             return;
         }
 
-        // Set the conversation ID if it wasn't set
-        if (!this.parent.currentConversationId) {
-            this.parent.currentConversationId = conversationId;
-        }
+        // FORCE update the parent's current conversation ID
+        this.parent.currentConversationId = conversationId;
 
-        console.log('Opening FCS modal with conversation ID:', conversationId);
+        console.log('Opening FCS modal for conversation:', conversationId);
+        console.log('Selected conversation element:', selectedElement?.querySelector('.conversation-business')?.textContent);
 
-        // Reset the confirm button state BEFORE showing modal
+        // Reset modal state
         const confirmBtn = document.getElementById('confirmFcs');
         if (confirmBtn) {
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = 'Generate Report';
-            console.log('Reset FCS button state');
         }
 
         modal.style.display = 'flex';
 
-        // Fetch and display documents
-        await this.fetchAndDisplayFCSDocuments();
+        // ALWAYS fetch fresh documents - don't rely on cached data
+        await this.fetchAndDisplayFCSDocuments(conversationId);
 
-        console.log('FCS modal opened with fresh documents');
+        console.log('FCS modal opened with fresh documents for conversation:', conversationId);
     }
 
-    async fetchAndDisplayFCSDocuments() {
+    async fetchAndDisplayFCSDocuments(conversationId) {
         const documentSelection = document.getElementById('fcsDocumentSelection');
         if (!documentSelection) return;
 
-        documentSelection.innerHTML = '<div style="padding: 20px;">Loading documents...</div>';
-
-        const conversationId = this.parent.getCurrentConversationId() ||
-                               this.parent.getSelectedConversation()?.id;
-
+        // Don't use fallback IDs - use exactly what was passed in
         if (!conversationId) {
+            console.error('No conversation ID provided to fetchAndDisplayFCSDocuments');
             documentSelection.innerHTML = '<div style="padding: 20px; color: red;">No conversation selected</div>';
             return;
         }
 
+        documentSelection.innerHTML = '<div style="padding: 20px;">Loading documents...</div>';
+
+        console.log('Fetching documents for conversation:', conversationId);
+
         try {
-            console.log('Fetching fresh documents for FCS modal...');
             const response = await fetch(
                 `${this.apiBaseUrl}/api/conversations/${conversationId}/documents?t=${Date.now()}`
             );
@@ -145,15 +181,19 @@ class FCSModule {
             }
 
             const result = await response.json();
-            console.log('Fresh documents received:', result);
+            console.log('Documents fetched for', conversationId, ':', result.documents?.length || 0, 'documents');
+
+            // Log first document to verify it's for the right conversation
+            if (result.documents && result.documents.length > 0) {
+                console.log('First document:', result.documents[0].original_filename);
+            }
 
             if (result.success && result.documents) {
-                // Update the cache for consistency
+                // Clear cached documents
                 if (this.parent.documents) {
                     this.parent.documents.currentDocuments = result.documents;
                 }
 
-                // Display fresh documents
                 documentSelection.innerHTML = result.documents.map((doc, index) => `
                     <div class="document-checkbox" style="padding: 12px; border-bottom: 1px solid #f1f5f9;">
                         <input type="checkbox"
@@ -166,7 +206,7 @@ class FCSModule {
                     </div>
                 `).join('');
 
-                console.log('Documents displayed successfully');
+                console.log('✅ Documents displayed successfully for conversation:', conversationId);
             } else {
                 throw new Error(result.error || 'No documents in response');
             }
@@ -228,17 +268,70 @@ class FCSModule {
     }
 
     async triggerFCS() {
+        // Generate a unique execution ID
+        const executionId = Math.random().toString(36).substring(7);
+
+        console.log('====================================');
+        console.log(`TRIGGER FCS CALLED - Execution ID: ${executionId}`);
+        console.log('Call stack:', new Error().stack);
+        console.log('====================================');
+
+        // Add a global counter to detect duplicates
+        if (!window._fcsExecutionCount) {
+            window._fcsExecutionCount = 0;
+        }
+        window._fcsExecutionCount++;
+
+        console.log(`Total FCS executions so far: ${window._fcsExecutionCount}`);
+
+        // If this is a duplicate within 1 second, block it
+        const now = Date.now();
+        if (window._lastFCSExecution && (now - window._lastFCSExecution) < 1000) {
+            console.error(`🚫 BLOCKED DUPLICATE EXECUTION within ${now - window._lastFCSExecution}ms`);
+            return;
+        }
+        window._lastFCSExecution = now;
+
+        console.log('=== TRIGGER FCS DEBUG ===');
         console.log('🎯 FCS generation triggered');
 
-        const conversationId = this.parent.getCurrentConversationId();
-        if (!conversationId) return;
+        // ALWAYS get conversation ID from DOM, never from cache
+        const selectedElement = document.querySelector('.conversation-item.selected');
+        const conversationId = selectedElement?.dataset?.conversationId;
 
-        const selectedConversation = this.parent.getSelectedConversation();
-        const businessName = selectedConversation?.business_name || 'Auto-Generated Business';
+        console.log('Selected element:', selectedElement);
+        console.log('Fresh conversation ID from DOM:', conversationId);
+        console.log('Cached parent ID (IGNORE):', this.parent.currentConversationId);
 
-        // Get selected documents
+        const selectedConv = this.parent.getSelectedConversation();
+        console.log('TRIGGER FCS - Selected conversation:', selectedConv?.id, selectedConv?.business_name);
+
+        if (conversationId !== selectedConv?.id) {
+            console.error('❌ MISMATCH: Fresh DOM ID does not match cached conversation!');
+            console.error('DOM:', conversationId, 'vs Cached:', selectedConv?.id);
+        }
+
+        console.log('===========================');
+
+        if (!conversationId) {
+            console.error('❌ No conversation ID found from DOM');
+            this.utils.showNotification('No conversation selected', 'error');
+            return;
+        }
+
+        // Update cache for consistency
+        this.parent.currentConversationId = conversationId;
+
+        // Get business name from fresh DOM element
+        const businessName = selectedElement?.querySelector('.conversation-business')?.textContent || 'Auto-Generated Business';
+
+        // Get selected document IDs from modal checkboxes
         const selectedDocuments = Array.from(document.querySelectorAll('#fcsDocumentSelection input[type="checkbox"]:checked'))
             .map(checkbox => checkbox.value);
+
+        console.log('Business name from DOM:', businessName);
+        console.log('Selected document IDs:', selectedDocuments);
+        console.log('Sending to conversation:', conversationId);
 
         if (selectedDocuments.length === 0) {
             this.utils.showNotification('Please select at least one bank statement', 'error');
@@ -259,7 +352,8 @@ class FCSModule {
             confirmBtn.innerHTML = '<div class="loading-spinner-small"></div> Generating FCS...';
 
             try {
-                console.log(`Starting FCS generation with ${selectedDocuments.length} selected documents`);
+                console.log(`🚀 Posting to: /api/conversations/${conversationId}/generate-fcs`);
+                console.log('📦 Payload:', { businessName, selectedDocuments });
 
                 const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/generate-fcs`, {
                     method: 'POST',
@@ -303,12 +397,35 @@ class FCSModule {
 
     async loadFCSData() {
         const conversationId = this.parent.getCurrentConversationId();
-        if (!conversationId) return;
+
+        console.log('=== FCS DATA LOADING DEBUG ===');
+        console.log('Current conversation ID:', conversationId);
+        console.log('Selected conversation:', this.parent.getSelectedConversation()?.id);
+        console.log('Selected element data:', document.querySelector('.conversation-item.selected')?.dataset?.conversationId);
+        console.log('Parent current ID:', this.parent.currentConversationId);
+        console.log('Parent selected conv:', this.parent.selectedConversation?.id);
+        console.log('================================');
+
+        if (!conversationId) {
+            console.warn('No conversation ID found, cannot load FCS data');
+            return;
+        }
 
         const fcsContent = document.getElementById('fcsContent');
-        if (!fcsContent) return;
+        if (!fcsContent) {
+            console.error('fcsContent element not found');
+            return;
+        }
 
         console.log(`Loading FCS data for conversation ${conversationId}`);
+
+        // Show loading state
+        fcsContent.innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <div class="loading-spinner"></div>
+                <p>Loading FCS report...</p>
+            </div>
+        `;
 
         try {
             const cacheBuster = new Date().getTime();
@@ -330,68 +447,129 @@ class FCSModule {
             }
 
             if (!response.ok) {
-                throw new Error('Failed to load FCS data');
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const result = await response.json();
             console.log(`FCS API result:`, result);
 
             if (result.success && result.report) {
+                // Check if report has actual content
+                if (!result.report.report_content || result.report.report_content.trim() === '') {
+                    throw new Error('FCS report has no content');
+                }
+
                 console.log(`Calling displayFCSReport with report data`);
                 this.displayFCSReport(result.report);
             } else {
-                fcsContent.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📊</div>
-                        <h4>No FCS Report Available</h4>
-                        <p>Generate an FCS report from the Documents tab</p>
-                    </div>
-                `;
+                throw new Error(result.error || 'No report data returned');
             }
 
         } catch (error) {
             console.error('Error loading FCS data:', error);
+            console.error('Error stack:', error.stack);
             fcsContent.innerHTML = `
                 <div style="text-align: center; padding: 20px; color: #ef4444;">
                     <p>Failed to load FCS data</p>
+                    <p style="font-size: 0.8em; color: #666;">Error: ${error.message}</p>
+                    <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry Loading</button>
                 </div>
             `;
         }
     }
 
     displayFCSReport(report) {
-        const fcsContent = document.getElementById('fcsContent');
-        if (!fcsContent) return;
+        try {
+            console.log('=== displayFCSReport DEBUG ===');
+            console.log('Full report object:', report);
+            console.log('report.report_content:', report.report_content);
+            console.log('Type of report_content:', typeof report.report_content);
+            console.log('Is null?', report.report_content === null);
+            console.log('Is undefined?', report.report_content === undefined);
+            console.log('==============================');
 
-        const reportDate = new Date(report.generated_at).toLocaleDateString();
-        const processedContent = this.formatFCSContent(report.report_content);
+            const fcsContent = document.getElementById('fcsContent');
+            if (!fcsContent) {
+                console.error('fcsContent element not found');
+                return;
+            }
 
-        fcsContent.innerHTML = `
-            <div class="fcs-report">
-                <div class="fcs-header" style="background: #f0f9ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h4 style="color: #0369a1; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                📊 FCS Financial Analysis Report
-                            </h4>
-                            <p style="color: #475569; font-size: 0.875rem; margin: 5px 0 0 0;">Generated on ${reportDate}</p>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn btn-primary" onclick="window.conversationUI.fcs.downloadFCSReport()" style="padding: 6px 12px; font-size: 0.875rem;">
-                                📥 Download
-                            </button>
+            // Check if report has content
+            if (!report || !report.report_content) {
+                console.error('Report or report_content is missing:', report);
+                fcsContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        <p>FCS Report has no content</p>
+                        <p style="font-size: 0.9em; color: #666;">The report data is missing from the response.</p>
+                        <pre style="text-align: left; font-size: 11px; background: #f3f4f6; padding: 10px; border-radius: 4px; max-height: 200px; overflow: auto;">${JSON.stringify(report, null, 2)}</pre>
+                        <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Handle null/undefined date gracefully
+            let reportDate = 'Unknown Date';
+            if (report.generated_at) {
+                try {
+                    reportDate = new Date(report.generated_at).toLocaleDateString();
+                } catch (dateError) {
+                    console.warn('Error parsing date:', dateError);
+                    reportDate = 'Invalid Date';
+                }
+            }
+
+            console.log('About to call formatFCSContent with:', report.report_content.substring(0, 100) + '...');
+            const processedContent = this.formatFCSContent(report.report_content);
+
+            fcsContent.innerHTML = `
+                <div class="fcs-report">
+                    <div class="fcs-header" style="background: #f0f9ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h4 style="color: #0369a1; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    FCS Financial Analysis Report
+                                </h4>
+                                <p style="color: #475569; font-size: 0.875rem; margin: 5px 0 0 0;">Generated on ${reportDate}</p>
+                                ${report.status ? `<p style="color: #475569; font-size: 0.875rem; margin: 5px 0 0 0;">Status: ${report.status}</p>` : ''}
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-primary" onclick="window.conversationUI.fcs.downloadFCSReport()" style="padding: 6px 12px; font-size: 0.875rem;">
+                                    📥 Download
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="fcs-content" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
-                    ${processedContent}
+                    <div class="fcs-content" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+                        ${processedContent}
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+            console.log('FCS report displayed successfully');
+        } catch (error) {
+            console.error('Error in displayFCSReport:', error);
+            console.error('Error stack:', error.stack);
+            const fcsContent = document.getElementById('fcsContent');
+            if (fcsContent) {
+                fcsContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #ef4444;">
+                        <p>Error displaying FCS report</p>
+                        <p style="font-size: 0.8em; color: #666;">Error: ${error.message}</p>
+                        <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry Loading</button>
+                    </div>
+                `;
+            }
+        }
     }
 
     formatFCSContent(content) {
+        // Handle null/undefined content
+        if (!content || typeof content !== 'string') {
+            console.error('Invalid content passed to formatFCSContent:', content);
+            return '<div style="padding: 20px; text-align: center; color: #666;">No content available</div>';
+        }
+
         const sections = content.split('\n\n');
         let formattedHTML = '';
 
