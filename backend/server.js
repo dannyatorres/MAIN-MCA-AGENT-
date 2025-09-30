@@ -1138,7 +1138,7 @@ app.post('/api/conversations/:id/documents/upload', documentUpload.array('docume
     }
 });
 
-// Document download endpoint - streams from AWS S3
+// Document download endpoint - FIXED VERSION with improved S3 error handling
 app.get('/api/conversations/:conversationId/documents/:documentId/download', async (req, res) => {
     let database;
     try {
@@ -1146,140 +1146,93 @@ app.get('/api/conversations/:conversationId/documents/:documentId/download', asy
     } catch (error) {
         return res.status(500).json({ error: 'Database not available: ' + error.message });
     }
-    
+
     try {
         const { conversationId, documentId } = req.params;
-        
-        // Get document info from database
+
+        console.log('Download request for document:', documentId, 'in conversation:', conversationId);
+
         const result = await database.query(`
-            SELECT * FROM documents 
+            SELECT * FROM documents
             WHERE id = $1 AND conversation_id = $2
         `, [documentId, conversationId]);
-        
+
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Document not found' });
+            console.error('Document not found');
+            return res.status(404).send('Document not found');
         }
-        
+
         const doc = result.rows[0];
-        
-        // Always stream through backend for security (instead of direct S3 access)
-        
-        // If no S3 URL but has S3 key, stream from S3
+        const filename = doc.original_filename || doc.filename || 'document.pdf';
+
+        console.log('Found document:', filename);
+
+        // Try S3 first if available
         if (doc.s3_key) {
-            console.log('📤 Streaming from S3 for download:', doc.original_filename);
-            
-            const AWS = require('aws-sdk');
-            AWS.config.update({
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-                region: process.env.AWS_REGION
-            });
-            
-            const s3 = new AWS.S3();
-            const stream = s3.getObject({
-                Bucket: process.env.S3_DOCUMENTS_BUCKET,
-                Key: doc.s3_key
-            }).createReadStream();
-            
-            // Set appropriate headers for download
-            res.setHeader('Content-Disposition', `attachment; filename="${doc.original_filename}"`);
-            res.setHeader('Content-Type', 'application/octet-stream');
-            
-            // Handle stream errors
-            stream.on('error', (error) => {
-                console.error('📁 S3 stream error:', error);
-                if (!res.headersSent) {
-                    res.status(500).json({ error: 'Failed to download from S3' });
-                }
-            });
-            
-            // Stream the file from S3
-            stream.pipe(res);
-        } else if (doc.filename) {
-            // Legacy document without S3 key - migrate to S3 first
-            console.log('🔄 Legacy document detected for download, migrating to S3:', doc.original_filename);
-            
-            const path = require('path');
-            const fs = require('fs');
-            const AWS = require('aws-sdk');
-            
-            AWS.config.update({
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-                region: process.env.AWS_REGION
-            });
-            
-            const s3 = new AWS.S3();
-            const localFilePath = path.join(__dirname, 'uploads', doc.filename);
-            
-            // Check if local file exists
-            if (!fs.existsSync(localFilePath)) {
-                return res.status(404).json({ error: 'Document file not found' });
-            }
-            
+            console.log('Attempting S3 download from key:', doc.s3_key);
             try {
-                // Read the local file
-                const fileBuffer = fs.readFileSync(localFilePath);
-                
-                // Generate S3 key for the document
-                const s3Key = `documents/${doc.filename}`;
-                
-                // Upload to S3
-                const uploadParams = {
+                const AWS = require('aws-sdk');
+                AWS.config.update({
+                    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                    region: process.env.AWS_REGION
+                });
+
+                const s3 = new AWS.S3();
+                const params = {
                     Bucket: process.env.S3_DOCUMENTS_BUCKET,
-                    Key: s3Key,
-                    Body: fileBuffer,
-                    ContentType: 'application/pdf',
-                    ServerSideEncryption: 'AES256'
+                    Key: doc.s3_key
                 };
-                
-                const uploadResult = await s3.upload(uploadParams).promise();
-                console.log('✅ Document migrated to S3 for download:', uploadResult.Location);
-                
-                // Update database with S3 information
-                try {
-                    await database.query(`
-                        UPDATE documents
-                        SET s3_key = $1, s3_url = $2
-                        WHERE id = $3
-                    `, [s3Key, uploadResult.Location, doc.id]);
-                    console.log('✅ Database updated with S3 info');
-                } catch (dbError) {
-                    console.warn('⚠️ Database update failed but S3 upload succeeded:', dbError.message);
-                    // Continue execution even if database update fails since S3 upload worked
-                }
-                
-                // Now stream the file from S3 for download
-                const stream = s3.getObject({
-                    Bucket: process.env.S3_DOCUMENTS_BUCKET,
-                    Key: s3Key
-                }).createReadStream();
-                
-                // Set appropriate headers for download
-                res.setHeader('Content-Disposition', `attachment; filename="${doc.original_filename}"`);
+
+                // Check if file exists
+                await s3.headObject(params).promise();
+                console.log('S3 file exists, streaming...');
+
+                const stream = s3.getObject(params).createReadStream();
+
+                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
                 res.setHeader('Content-Type', 'application/octet-stream');
-                
+
                 stream.on('error', (error) => {
-                    console.error('📁 S3 stream error after migration:', error);
+                    console.error('📛 S3 stream error:', error);
                     if (!res.headersSent) {
-                        res.status(500).json({ error: 'Failed to download from S3' });
+                        return res.status(500).send('Failed to stream file from S3');
                     }
                 });
-                
-                stream.pipe(res);
-                
-            } catch (migrationError) {
-                console.error('❌ Document migration failed for download:', migrationError);
-                return res.status(500).json({ error: 'Failed to migrate document to S3' });
+
+                return stream.pipe(res);
+
+            } catch (s3Error) {
+                console.error('⚠️ S3 download failed:', s3Error.message);
+                // Fall through to local file attempt
             }
-            
-        } else {
-            return res.status(404).json({ error: 'Document not found' });
         }
-        
+
+        // Fallback to local file
+        if (doc.filename) {
+            const fs = require('fs');
+            const path = require('path');
+            const localFilePath = path.join(__dirname, 'uploads', doc.filename);
+
+            console.log('Attempting local file download:', localFilePath);
+
+            if (fs.existsSync(localFilePath)) {
+                console.log('Local file exists, sending...');
+                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                res.setHeader('Content-Type', 'application/octet-stream');
+                return res.sendFile(localFilePath);
+            } else {
+                console.error('Local file not found:', localFilePath);
+            }
+        }
+
+        // No file found anywhere
+        console.error('Document file not found anywhere');
+        return res.status(404).send('Document file not found on server or S3');
+
     } catch (error) {
-        console.error('📁 Document download error:', error);
-        res.status(500).json({ error: 'Failed to download document' });
+        console.error('📛 Document download error:', error);
+        res.status(500).send('Failed to download document: ' + error.message);
     }
 });
 
@@ -1902,81 +1855,7 @@ app.put('/api/conversations/:conversationId/documents/:documentId', async (req, 
     }
 });
 
-// Alternative endpoint for document edit (in case frontend uses different URL)
-app.put('/api/documents/:documentId', async (req, res) => {
-    let database;
-    try {
-        database = getDatabase();
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            error: 'Database not available: ' + error.message
-        });
-    }
-
-    try {
-        const { documentId } = req.params;
-        const { filename } = req.body;
-
-        console.log(`📝 Renaming document ${documentId} to: ${filename}`);
-
-        if (!filename) {
-            return res.status(400).json({
-                success: false,
-                error: 'Filename is required'
-            });
-        }
-
-        // Simple update without updated_at - just update the filename
-        let result;
-        try {
-            result = await database.query(
-                `UPDATE documents
-                 SET original_filename = $1
-                 WHERE id = $2
-                 RETURNING *`,
-                [filename, documentId]
-            );
-        } catch (dbError) {
-            // If trigger fails, drop the trigger and try again
-            if (dbError.message.includes('updated_at')) {
-                console.warn('⚠️ Document update failed due to trigger issue, dropping trigger and retrying...');
-                await database.query('DROP TRIGGER IF EXISTS update_documents_updated_at ON documents');
-                result = await database.query(
-                    `UPDATE documents
-                     SET original_filename = $1
-                     WHERE id = $2
-                     RETURNING *`,
-                    [filename, documentId]
-                );
-            } else {
-                throw dbError;
-            }
-        }
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Document not found'
-            });
-        }
-
-        console.log('✅ Document renamed successfully');
-
-        res.json({
-            success: true,
-            document: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error('📝 Document update error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            detail: error.detail
-        });
-    }
-});
+// Conflicting endpoint removed - use /api/conversations/:conversationId/documents/:documentId instead
 
 // Document delete endpoint
 app.delete('/api/conversations/:conversationId/documents/:documentId', async (req, res) => {

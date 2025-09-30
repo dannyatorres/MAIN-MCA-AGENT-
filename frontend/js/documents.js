@@ -422,20 +422,59 @@ class DocumentsModule {
                         </div>
                     </div>
                     <div style="padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; justify-content: flex-end;">
-                        <button onclick="document.getElementById('editDocumentModal').remove()" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">Cancel</button>
-                        <button onclick="window.conversationUI.documents.saveDocumentEdit('${documentId}')" style="padding: 8px 16px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer;">Save Changes</button>
+                        <button id="cancelEditModal" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">Cancel</button>
+                        <button id="saveDocumentEdit" data-document-id="${documentId}" style="padding: 8px 16px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer;">Save Changes</button>
                     </div>
                 </div>
             </div>
         `;
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Add event listeners after modal is inserted
+        const modal = document.getElementById('editDocumentModal');
+        const closeBtn = document.getElementById('closeEditModal');
+        const cancelBtn = document.getElementById('cancelEditModal');
+        const saveBtn = document.getElementById('saveDocumentEdit');
+
+        const closeModal = () => {
+            modal.remove();
+        };
+
+        // Close button (if exists)
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeModal);
+        }
+
+        // Cancel button
+        cancelBtn.addEventListener('click', closeModal);
+
+        // Click outside modal
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Save button - THIS IS THE KEY FIX
+        saveBtn.addEventListener('click', () => {
+            console.log('Save button clicked for document:', documentId);
+            this.saveDocumentEdit(documentId);
+        });
     }
 
     async saveDocumentEdit(documentId) {
+        console.log('saveDocumentEdit called with documentId:', documentId);
+
         const nameInput = document.getElementById('editDocumentName');
         const typeSelect = document.getElementById('editDocumentType');
         const extensionInput = document.getElementById('editDocumentExtension');
+
+        console.log('Form elements found:', {
+            nameInput: !!nameInput,
+            typeSelect: !!typeSelect,
+            extensionInput: !!extensionInput
+        });
 
         if (!nameInput || !typeSelect) {
             this.utils.showNotification('Required form elements not found', 'error');
@@ -445,6 +484,12 @@ class DocumentsModule {
         const newNameWithoutExtension = nameInput.value.trim();
         const fileExtension = extensionInput ? extensionInput.value : '';
         const newType = typeSelect.value;
+
+        console.log('Form values:', {
+            newNameWithoutExtension,
+            fileExtension,
+            newType
+        });
 
         if (!newNameWithoutExtension) {
             this.utils.showNotification('Document name cannot be empty', 'error');
@@ -462,27 +507,42 @@ class DocumentsModule {
             }
         }
 
-        // Save to server instead of just locally
+        // Get conversation ID from current context
+        const conversation = this.parent.getSelectedConversation();
+
+        console.log('Conversation context:', {
+            hasConversation: !!conversation,
+            conversationId: conversation?.id
+        });
+
+        if (!conversation) {
+            this.utils.showNotification('No conversation selected', 'error');
+            return;
+        }
+
+        // Save to server with correct endpoint
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/documents/${documentId}`, {
+            console.log('Sending update request...');
+            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversation.id}/documents/${documentId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    filename: newName
+                    filename: newName,
+                    documentType: newType
                 })
             });
 
+            console.log('Response status:', response.status);
             const result = await response.json();
+            console.log('Response data:', result);
 
             if (result.success) {
                 // Update the UI after successful server update
                 this.renderDocumentsList();
                 document.getElementById('editDocumentModal').remove();
                 this.utils.showNotification('Document updated successfully', 'success');
-
-                // Reload documents from server to ensure consistency
                 await this.loadDocuments();
             } else {
                 throw new Error(result.error || 'Failed to update document');
@@ -651,33 +711,33 @@ class DocumentsModule {
             return;
         }
 
+        console.log('Downloading document:', documentId, 'from conversation:', conversationId);
+
         try {
-            // First check if download is available
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/download`);
-            const result = await response.json();
-
-            if (!result.success) {
-                this.utils.showNotification(result.message || 'File not available for download', 'warning');
-                return;
-            }
-
-            // If successful, proceed with download
+            // Build the download URL
             const downloadUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/download`;
+
+            console.log('Download URL:', downloadUrl);
+
+            // Create a temporary link and trigger download
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = '';
+            link.download = ''; // Let the server set the filename via Content-Disposition
             link.style.display = 'none';
+
             document.body.appendChild(link);
             link.click();
 
+            // Clean up
             setTimeout(() => {
                 document.body.removeChild(link);
             }, 100);
 
             this.utils.showNotification('Download started', 'success');
+
         } catch (error) {
             console.error('Download error:', error);
-            this.utils.showNotification('Download failed: File not available on server', 'error');
+            this.utils.showNotification('Download failed: ' + error.message, 'error');
         }
     }
 
