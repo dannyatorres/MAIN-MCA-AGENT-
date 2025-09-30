@@ -1,6 +1,6 @@
 // conversation-core.js - Complete core conversation management
 
-export default class ConversationCore {
+class ConversationCore {
     constructor(parent, wsManager) {
         this.parent = parent;
         this.wsManager = wsManager;
@@ -160,26 +160,29 @@ export default class ConversationCore {
 
     async loadConversations() {
         try {
-            console.log('Fetching conversations from:', `${this.apiBaseUrl}/api/conversations`);
+            console.log('🔄 Starting loadConversations()');
+            console.log('🌐 Fetching conversations from:', `${this.apiBaseUrl}/api/conversations`);
             const response = await fetch(`${this.apiBaseUrl}/api/conversations`);
-            console.log('Response status:', response.status, response.statusText);
+            console.log('📡 Response status:', response.status, response.statusText);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const conversations = await response.json();
-            console.log('Received conversations:', conversations.length);
+            console.log('📋 Received conversations:', conversations.length);
 
             this.conversations.clear();
             conversations.forEach(conv => {
                 this.conversations.set(conv.id, conv);
             });
-            console.log('Stored conversations in memory:', this.conversations.size);
+            console.log('💾 Stored conversations in memory:', this.conversations.size);
 
+            console.log('🎨 About to call renderConversationsList()');
             this.renderConversationsList();
-            console.log('Rendered conversations list');
+            console.log('✅ loadConversations completed successfully');
         } catch (error) {
+            console.error('❌ Error in loadConversations:', error);
             this.utils.handleError(error, 'Error loading conversations', null, false);
             throw error;
         }

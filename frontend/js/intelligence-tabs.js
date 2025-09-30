@@ -1,6 +1,6 @@
 // intelligence-tabs.js - Complete intelligence panel tab management
 
-export default class IntelligenceTabs {
+class IntelligenceTabs {
     constructor(parent) {
         this.parent = parent;
         this.apiBaseUrl = parent.apiBaseUrl;

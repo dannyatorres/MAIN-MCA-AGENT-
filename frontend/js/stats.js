@@ -1,6 +1,6 @@
 // stats.js - Statistics module for tracking application metrics
 
-export default class StatsModule {
+class StatsModule {
     constructor(parent) {
         this.parent = parent;
         this.apiBaseUrl = parent.apiBaseUrl;

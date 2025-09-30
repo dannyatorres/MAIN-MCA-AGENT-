@@ -1,6 +1,6 @@
 // websocket.js - Complete WebSocket connection management
 
-export default class WebSocketManager {
+class WebSocketManager {
     constructor(parent) {
         this.parent = parent;
         this.ws = null;

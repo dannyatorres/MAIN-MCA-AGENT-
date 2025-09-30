@@ -627,26 +627,6 @@
     </div>
 
     <!-- Modals -->
-    <div class="modal" id="fcsModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Trigger FCS Processing</h3>
-                <button class="modal-close" id="closeFcsModal">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Select Bank Statements for Analysis</label>
-                    <div class="document-selection compact-documents" id="fcsDocumentSelection" style="max-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px; font-size: 12px; line-height: 1.3;">
-                        <!-- Documents will be populated here -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelFcs">Cancel</button>
-                <button class="btn btn-primary" id="confirmFcs">Start FCS Processing</button>
-            </div>
-        </div>
-    </div>
 
     <div class="modal" id="lenderModal" style="display: none;">
         <div class="modal-content">
@@ -1494,9 +1474,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
-    <!-- <script src="js/websocket.js"></script> -->
-    <!-- <script type="module" src="js/conversation-ui.js"></script> -->
-    <!-- <script src="js/state-manager.js"></script> -->
+    <!-- 1. Utilities FIRST (no dependencies) -->
+    <script src="js/templates-utilities.js"></script>
+
+    <!-- 2. WebSocket (no dependencies on other modules) -->
+    <script src="js/websocket.js"></script>
+
+    <!-- 3. Core modules (depend on utilities) -->
+    <script src="js/conversation-core.js"></script>
+    <script src="js/messaging.js"></script>
+    <script src="js/documents.js"></script>
+    <script src="js/intelligence-tabs.js"></script>
+    <script src="js/fcs-module.js"></script>
+    <script src="js/lenders.js"></script>
+    <script src="js/ai-assistant.js"></script>
+    <script src="js/stats.js"></script>
+
+    <!-- 4. Main app LAST (depends on everything) -->
     <script src="js/command-center.js"></script>
     <script>
         // Comprehensive CRM Form Functions
@@ -2875,7 +2869,7 @@
     </script>
 
     <!-- FCS Generation Modal -->
-    <div id="fcsModal" class="modal" style="display: none;">
+    <div id="fcsModal" class="modal fcs-modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Generate FCS Report</h3>

@@ -1,6 +1,6 @@
 // ai-assistant.js - Fixed AI assistant chat functionality
 
-export default class AIAssistant {
+class AIAssistant {
     constructor(parent) {
         this.parent = parent;
         this.apiBaseUrl = parent.apiBaseUrl;
@@ -103,7 +103,10 @@ export default class AIAssistant {
 
             console.log('Sending AI request for conversation:', conversationId);
 
-            // Call the AI API endpoint
+            // Refresh AI context before sending (to get latest FCS data)
+            await this.loadAIContext();
+
+            // Call the AI API endpoint with enhanced context
             const response = await fetch(`${this.apiBaseUrl}/api/ai/chat`, {
                 method: 'POST',
                 headers: {
@@ -111,7 +114,8 @@ export default class AIAssistant {
                 },
                 body: JSON.stringify({
                     query: message,
-                    conversationId: conversationId
+                    conversationId: conversationId,
+                    context: this.aiContext // Include FCS-enhanced context
                 })
             });
 
@@ -413,13 +417,92 @@ export default class AIAssistant {
         }
     }
 
-    loadAIContext() {
+    async loadAIContext() {
         const conversation = this.parent.getSelectedConversation();
         if (!conversation) return;
 
+        console.log('🧠 Loading AI context with FCS data for conversation:', conversation.id);
+
+        // Start with basic conversation context
         this.aiContext = [{
             role: 'system',
             content: `AI Assistant for lead: ${conversation.business_name || 'Unknown'}`
         }];
+
+        // Try to load FCS data to enhance AI context
+        try {
+            const conversationId = this.parent.getCurrentConversationId();
+            const fcsResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/fcs-report`);
+
+            if (fcsResponse.ok) {
+                const fcsData = await fcsResponse.json();
+
+                if (fcsData.success && fcsData.report) {
+                    console.log('✅ FCS data loaded for AI context');
+
+                    // Check if we have AWS file URL for additional data
+                    let fcsDetails = fcsData.report.report_content;
+
+                    // If there's an AWS file URL, try to fetch additional FCS details
+                    const rawAnalysis = fcsData.report.raw_analysis;
+                    if (rawAnalysis) {
+                        try {
+                            const parsedAnalysis = JSON.parse(rawAnalysis);
+                            if (parsedAnalysis.aws_file_url) {
+                                console.log('📁 Found AWS FCS file URL:', parsedAnalysis.aws_file_url);
+
+                                // Fetch detailed FCS data from AWS
+                                const awsResponse = await fetch(parsedAnalysis.aws_file_url);
+                                if (awsResponse.ok) {
+                                    const awsFcsData = await awsResponse.text();
+                                    fcsDetails = awsFcsData;
+                                    console.log('✅ Enhanced FCS data loaded from AWS');
+                                }
+                            }
+                        } catch (parseError) {
+                            console.log('📄 Using database FCS summary (AWS data unavailable)');
+                        }
+                    }
+
+                    // Enhanced AI context with FCS data
+                    this.aiContext = [
+                        {
+                            role: 'system',
+                            content: `AI Assistant for ${fcsData.report.business_name || conversation.business_name || 'Unknown Business'}
+
+CONVERSATION CONTEXT:
+- Business Name: ${conversation.business_name || 'Unknown'}
+- Contact: ${conversation.first_name} ${conversation.last_name}
+- Phone: ${conversation.phone || 'Not provided'}
+- Email: ${conversation.email || 'Not provided'}
+- Requested Amount: ${conversation.requested_amount || 'Not specified'}
+
+FINANCIAL ANALYSIS (FCS REPORT):
+${fcsDetails}
+
+INSTRUCTIONS:
+You are an expert MCA (Merchant Cash Advance) advisor with access to this business's financial analysis. Use this FCS data to provide:
+- Lead qualification insights
+- Revenue and cash flow analysis
+- Risk assessment recommendations
+- Next steps for underwriting
+- Document requirements
+- Follow-up strategies
+
+Always reference specific financial metrics from the FCS when making recommendations. Be professional, helpful, and focus on actionable business insights.`
+                        }
+                    ];
+                } else {
+                    console.log('📄 No FCS report available - using basic context');
+                }
+            } else {
+                console.log('📄 FCS report not found - using basic context');
+            }
+        } catch (error) {
+            console.log('⚠️ Failed to load FCS context:', error.message);
+            console.log('📄 Continuing with basic AI context');
+        }
+
+        console.log('🧠 AI context loaded with', this.aiContext.length, 'system messages');
     }
 }

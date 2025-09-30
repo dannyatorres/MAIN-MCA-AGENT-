@@ -1,6 +1,6 @@
 // documents.js - Complete document management functionality
 
-export default class DocumentsModule {
+class DocumentsModule {
     constructor(parent) {
         this.parent = parent;
         this.apiBaseUrl = parent.apiBaseUrl;

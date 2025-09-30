@@ -3463,6 +3463,28 @@ textarea.message-input:focus,
     margin-top: 16px;
 }
 
+/* FCS Modal Improvements */
+.fcs-modal .modal-content {
+    max-width: 800px;
+    width: 95%;
+}
+
+.fcs-modal .document-checkbox {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.fcs-modal .document-checkbox label {
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    margin-left: 8px !important;
+    line-height: 1.4 !important;
+}
+
+.fcs-modal .document-checkbox input[type="checkbox"] {
+    transform: scale(0.9);
+}
+
 /* Prompt Management Styles */
 .large-modal .modal-content {
     max-width: 900px;

@@ -317,8 +317,8 @@ app.get('/api/lookups', (req, res) => {
 
 // Test endpoint for debugging
 app.get('/api/test', (req, res) => {
-    res.json({ 
-        status: 'OK', 
+    res.json({
+        status: 'OK',
         message: 'Server is working correctly',
         timestamp: new Date().toISOString(),
         endpoints_available: [
@@ -327,6 +327,46 @@ app.get('/api/test', (req, res) => {
             '/health'
         ]
     });
+});
+
+// Test S3 connection
+app.get('/api/test-s3', async (req, res) => {
+    try {
+        const AWS = require('aws-sdk');
+        AWS.config.update({
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            region: process.env.AWS_REGION
+        });
+
+        const s3 = new AWS.S3();
+        const bucket = process.env.S3_DOCUMENTS_BUCKET;
+
+        // Try to list objects (just to test connection)
+        const result = await s3.listObjectsV2({
+            Bucket: bucket,
+            MaxKeys: 5
+        }).promise();
+
+        res.json({
+            success: true,
+            message: 'S3 connection successful',
+            bucket: bucket,
+            objectsFound: result.Contents.length,
+            config: {
+                hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+                hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+                region: process.env.AWS_REGION,
+                bucket: bucket
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            code: error.code
+        });
+    }
 });
 
 // CSV Import endpoint
@@ -1006,7 +1046,7 @@ app.get('/api/conversations/:id/documents', async (req, res) => {
     }
 });
 
-// Document upload endpoint
+// Document upload endpoint - WITH S3 UPLOAD
 app.post('/api/conversations/:id/documents/upload', documentUpload.array('documents'), async (req, res) => {
     let database;
     try {
@@ -1014,45 +1054,84 @@ app.post('/api/conversations/:id/documents/upload', documentUpload.array('docume
     } catch (error) {
         return res.status(500).json({ error: 'Database not available: ' + error.message });
     }
-    
+
     try {
         const { id } = req.params;
         const uploadedFiles = req.files;
-        
+
         if (!uploadedFiles || uploadedFiles.length === 0) {
             return res.status(400).json({ error: 'No files provided' });
         }
-        
+
+        // Initialize AWS S3
+        const AWS = require('aws-sdk');
+        AWS.config.update({
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            region: process.env.AWS_REGION
+        });
+
+        const s3 = new AWS.S3();
+        const bucket = process.env.S3_DOCUMENTS_BUCKET;
         const results = [];
-        
+
         for (const file of uploadedFiles) {
             const documentId = uuidv4();
-            
-            // Insert document record
+
+            // Read the file buffer
+            const fileBuffer = fs.readFileSync(file.path);
+            const s3Key = `documents/${file.filename}`;
+
+            // Upload to S3
+            let s3Url = null;
+            try {
+                const uploadResult = await s3.upload({
+                    Bucket: bucket,
+                    Key: s3Key,
+                    Body: fileBuffer,
+                    ContentType: file.mimetype || 'application/pdf',
+                    ServerSideEncryption: 'AES256'
+                }).promise();
+
+                s3Url = uploadResult.Location;
+                console.log(`✅ Uploaded to S3: ${s3Url}`);
+            } catch (s3Error) {
+                console.error('❌ S3 upload failed:', s3Error);
+                // Continue without S3 URL - still save to database
+            }
+
+            // Insert document record with S3 info
             const result = await database.query(`
                 INSERT INTO documents (
-                    id, conversation_id, original_filename, filename, 
-                    file_size, created_at
-                ) VALUES ($1, $2, $3, $4, $5, NOW())
+                    id, conversation_id, original_filename, filename,
+                    file_size, s3_key, s3_url, created_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
                 RETURNING *
             `, [
                 documentId,
                 id,
                 file.originalname,
                 file.filename,
-                file.size
+                file.size,
+                s3Url ? s3Key : null,
+                s3Url
             ]);
-            
+
             results.push(result.rows[0]);
+
+            // Optional: Delete local file after S3 upload succeeds
+            // if (s3Url) {
+            //     fs.unlinkSync(file.path);
+            // }
         }
-        
+
         console.log(`📁 Uploaded ${results.length} documents for conversation ${id}`);
-        res.json({ 
+        res.json({
             success: true,
             message: 'Documents uploaded successfully',
-            documents: results 
+            documents: results
         });
-        
+
     } catch (error) {
         console.log('📁 Document upload error:', error);
         res.status(500).json({ error: 'Failed to upload documents' });
@@ -1951,7 +2030,7 @@ app.delete('/api/conversations/:conversationId/documents/:documentId', async (re
     }
 });
 
-// FCS Generation endpoint
+// FCS Generation endpoint - FIXED VERSION
 app.post('/api/conversations/:conversationId/generate-fcs', async (req, res) => {
     let database;
     try {
@@ -1959,65 +2038,118 @@ app.post('/api/conversations/:conversationId/generate-fcs', async (req, res) => 
     } catch (error) {
         return res.status(500).json({ error: 'Database not available: ' + error.message });
     }
-    
+
     try {
         const { conversationId } = req.params;
-        console.log(`🎯 Starting FCS generation for conversation: ${conversationId}`);
-        
+        console.log(`🎯 Starting FCS generation via n8n for conversation: ${conversationId}`);
+
+        // Get documents with S3 info
         const docResult = await database.query(`
-            SELECT * FROM documents 
-            WHERE conversation_id = $1 
+            SELECT id, filename, original_filename, s3_key, s3_url, file_size, created_at
+            FROM documents
+            WHERE conversation_id = $1
             ORDER BY created_at ASC
         `, [conversationId]);
-        
+
+        if (docResult.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No documents found for this conversation'
+            });
+        }
+
         const convResult = await database.query(`
-            SELECT c.*, c.business_name, c.first_name, c.last_name
-            FROM conversations c
-            WHERE c.id = $1
+            SELECT business_name, first_name, last_name
+            FROM conversations WHERE id = $1
         `, [conversationId]);
-        
+
         const conversation = convResult.rows[0];
-        const businessName = conversation?.business_name || `${conversation?.first_name || 'Unknown'} ${conversation?.last_name || 'Business'}`.trim();
-        
-        // Lazy load FCS service to avoid startup hang
-        const fcsService = require('./services/fcsService');
-        const fcsResult = await fcsService.generateFCS(
-            docResult.rows,
-            businessName,
-            conversationId
-        );
-        
+        const businessName = conversation?.business_name ||
+                            `${conversation?.first_name || ''} ${conversation?.last_name || ''}`.trim() ||
+                            'Unknown Business';
+
+        // Build S3 URLs for documents
+        const bucket = process.env.S3_DOCUMENTS_BUCKET || 'mca-command-center-documents';
+        const region = process.env.AWS_REGION || 'us-east-1';
+
+        const documents = docResult.rows.map(doc => {
+            // Build URL from s3_url or construct from s3_key
+            let finalUrl = doc.s3_url;
+
+            if (!finalUrl && doc.s3_key) {
+                // Construct URL from s3_key
+                finalUrl = `https://${bucket}.s3.${region}.amazonaws.com/${doc.s3_key}`;
+                console.log(`📝 Constructed URL for ${doc.original_filename}: ${finalUrl}`);
+            }
+
+            if (!finalUrl) {
+                // Neither s3_url nor s3_key exists - document not in S3
+                console.error(`❌ Document ${doc.id} (${doc.original_filename}) has no S3 URL or key`);
+                throw new Error(`Document "${doc.original_filename || doc.filename}" is not uploaded to S3. Please re-upload this document.`);
+            }
+
+            return {
+                id: doc.id,
+                filename: doc.original_filename || doc.filename,
+                url: finalUrl,  // ✅ This will now have a value
+                bucket: bucket,
+                key: doc.s3_key,
+                size: doc.file_size,
+                uploadedAt: doc.created_at
+            };
+        });
+
+        // Prepare webhook payload
+        const webhookPayload = {
+            conversationId: conversationId,
+            businessName: businessName,
+            documents: documents,
+            callbackUrl: `${req.protocol}://${req.get('host')}/api/webhooks/n8n/fcs-complete`,
+            timestamp: new Date().toISOString()
+        };
+
+        console.log('📤 Webhook payload being sent:');
+        console.log(JSON.stringify(webhookPayload, null, 2));
+
+        // Send to n8n
+        const n8nWebhookUrl = process.env.N8N_FCS_WEBHOOK_URL ||
+                             'https://dannyatorres.app.n8n.cloud/webhook/mca-fcs-app';
+
+        const webhookResponse = await fetch(n8nWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload)
+        });
+
+        if (!webhookResponse.ok) {
+            const errorText = await webhookResponse.text();
+            console.error('❌ n8n webhook error:', errorText);
+            throw new Error(`n8n webhook failed: ${webhookResponse.status} - ${errorText}`);
+        }
+
+        const webhookResult = await webhookResponse.json();
+        console.log('✅ n8n accepted request');
+
+        // Update database status
         await database.query(`
-            INSERT INTO fcs_results (
-                conversation_id, 
-                business_name,
-                summary,
-                raw_analysis
-            ) VALUES ($1, $2, $3, $4)
-            ON CONFLICT (conversation_id) DO UPDATE SET
-                business_name = EXCLUDED.business_name,
-                summary = EXCLUDED.summary,
-                raw_analysis = EXCLUDED.raw_analysis
-        `, [
-            conversationId, 
-            fcsResult.extractedBusinessName,
-            fcsResult.analysis,
-            JSON.stringify(fcsResult)
-        ]);
-        
+            INSERT INTO fcs_results (conversation_id, business_name, status)
+            VALUES ($1, $2, 'processing')
+            ON CONFLICT (conversation_id) DO UPDATE SET status = 'processing'
+        `, [conversationId, businessName]);
+
         res.json({
             success: true,
-            fcs: fcsResult.analysis,
-            businessName: fcsResult.extractedBusinessName,
-            statementCount: fcsResult.statementCount,
-            generatedAt: fcsResult.generatedAt
+            message: 'FCS generation started',
+            conversationId: conversationId,
+            documentsCount: documents.length,
+            status: 'processing'
         });
 
     } catch (error) {
         console.error('❌ FCS generation error:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to generate FCS report'
+            error: error.message
         });
     }
 });
@@ -2066,6 +2198,121 @@ app.get('/api/conversations/:conversationId/fcs-report', async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to fetch FCS report'
+        });
+    }
+});
+
+// n8n Webhook receiver for FCS completion
+app.post('/api/webhooks/n8n/fcs-complete', async (req, res) => {
+    let database;
+    try {
+        database = getDatabase();
+    } catch (error) {
+        return res.status(500).json({ error: 'Database not available: ' + error.message });
+    }
+
+    try {
+        console.log('🔄 Received FCS completion webhook from n8n');
+        console.log('Webhook payload:', JSON.stringify(req.body, null, 2));
+
+        const {
+            conversationId,
+            success,
+            fcsReport,
+            awsFileUrl,
+            businessName,
+            statementCount,
+            error: fcsError
+        } = req.body;
+
+        if (!conversationId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing conversationId in webhook payload'
+            });
+        }
+
+        if (!success) {
+            // Handle FCS generation failure
+            await database.query(`
+                UPDATE fcs_results
+                SET status = $1, summary = $2, raw_analysis = $3, updated_at = NOW()
+                WHERE conversation_id = $4
+            `, [
+                'failed',
+                'FCS generation failed: ' + (fcsError || 'Unknown error'),
+                JSON.stringify({
+                    status: 'failed',
+                    error: fcsError,
+                    completed_at: new Date().toISOString()
+                }),
+                conversationId
+            ]);
+
+            console.log(`❌ FCS generation failed for conversation ${conversationId}: ${fcsError}`);
+
+            return res.json({
+                success: true,
+                message: 'FCS failure recorded'
+            });
+        }
+
+        // Handle successful FCS generation
+        const updateData = {
+            status: 'completed',
+            summary: fcsReport || 'FCS report generated successfully',
+            raw_analysis: JSON.stringify({
+                status: 'completed',
+                aws_file_url: awsFileUrl,
+                business_name: businessName,
+                statement_count: statementCount,
+                fcs_report: fcsReport,
+                completed_at: new Date().toISOString()
+            }),
+            aws_file_url: awsFileUrl // Store AWS file URL for AI Agent access
+        };
+
+        // Add aws_file_url column if it doesn't exist (for backward compatibility)
+        try {
+            await database.query(`
+                ALTER TABLE fcs_results
+                ADD COLUMN IF NOT EXISTS aws_file_url TEXT,
+                ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'completed'
+            `);
+        } catch (alterError) {
+            console.log('Column might already exist or permission issue:', alterError.message);
+        }
+
+        await database.query(`
+            UPDATE fcs_results
+            SET status = $1, summary = $2, raw_analysis = $3, aws_file_url = $4, updated_at = NOW()
+            WHERE conversation_id = $5
+        `, [
+            updateData.status,
+            updateData.summary,
+            updateData.raw_analysis,
+            updateData.aws_file_url,
+            conversationId
+        ]);
+
+        console.log(`✅ FCS completion recorded for conversation ${conversationId}`);
+        console.log(`📁 AWS file URL: ${awsFileUrl}`);
+
+        // Optional: Trigger real-time notification to frontend (if you have WebSocket)
+        // this.notifyFrontend(conversationId, 'fcs_completed', { awsFileUrl, businessName });
+
+        res.json({
+            success: true,
+            message: 'FCS completion processed successfully',
+            conversationId: conversationId,
+            awsFileUrl: awsFileUrl
+        });
+
+    } catch (error) {
+        console.error('❌ n8n webhook processing error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to process FCS completion webhook: ' + error.message
         });
     }
 });
@@ -4040,6 +4287,88 @@ app.post('/api/ai/chat/:conversationId/messages', async (req, res) => {
         res.status(500).json({
             success: false,
             error: error.message
+        });
+    }
+});
+
+// Database migration endpoint - add missing columns to fcs_results
+app.post('/api/migrate/add-timestamp-columns', async (req, res) => {
+    try {
+        console.log('🔧 Running migration: Adding timestamp columns to fcs_results table...');
+
+        const database = getDatabase();
+
+        // Check existing columns
+        const existingColumns = await database.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'fcs_results'
+        `);
+
+        const columnNames = existingColumns.rows.map(row => row.column_name);
+        const migrations = [];
+
+        // Add updated_at column if missing
+        if (!columnNames.includes('updated_at')) {
+            await database.query(`
+                ALTER TABLE fcs_results
+                ADD COLUMN updated_at TIMESTAMP DEFAULT NOW()
+            `);
+            migrations.push('updated_at column added');
+            console.log('✅ updated_at column added successfully');
+        }
+
+        // Add created_at column if missing
+        if (!columnNames.includes('created_at')) {
+            await database.query(`
+                ALTER TABLE fcs_results
+                ADD COLUMN created_at TIMESTAMP DEFAULT NOW()
+            `);
+            migrations.push('created_at column added');
+            console.log('✅ created_at column added successfully');
+        }
+
+        // Create or replace the trigger function for auto-updating updated_at
+        await database.query(`
+            CREATE OR REPLACE FUNCTION update_fcs_results_updated_at()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.updated_at = NOW();
+                RETURN NEW;
+            END;
+            $$ language 'plpgsql'
+        `);
+
+        // Drop existing trigger and create new one
+        await database.query(`
+            DROP TRIGGER IF EXISTS trigger_fcs_results_updated_at ON fcs_results
+        `);
+
+        await database.query(`
+            CREATE TRIGGER trigger_fcs_results_updated_at
+                BEFORE UPDATE ON fcs_results
+                FOR EACH ROW
+                EXECUTE FUNCTION update_fcs_results_updated_at()
+        `);
+
+        migrations.push('auto-update trigger created');
+        console.log('✅ Auto-update trigger for updated_at created');
+
+        if (migrations.length === 0) {
+            migrations.push('All timestamp columns already exist');
+        }
+
+        res.json({
+            success: true,
+            message: 'Timestamp columns migration completed successfully',
+            migrations: migrations
+        });
+
+    } catch (error) {
+        console.error('❌ Migration error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Migration failed: ' + error.message
         });
     }
 });

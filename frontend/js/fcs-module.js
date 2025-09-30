@@ -1,6 +1,6 @@
 // fcs-module.js - Complete FCS (Financial Cash Statement) functionality
 
-export default class FCSModule {
+class FCSModule {
     constructor(parent) {
         this.parent = parent;
         this.apiBaseUrl = parent.apiBaseUrl;
@@ -18,18 +18,18 @@ export default class FCSModule {
     setupFCSButtonDelegation() {
         console.log('Setting up FCS button event delegation');
 
-        // Use event delegation on document body to catch dynamically generated FCS buttons
-        document.body.addEventListener('click', (event) => {
-            console.log('🖱️ Body click detected:', event.target.id, event.target.tagName, event.target.className);
+        // Use event delegation on document body with proper event capturing
+        document.body.addEventListener('click', async (event) => {
+            // Check if the clicked element or any parent is the FCS button
+            const button = event.target.closest('#generateFCSBtn');
 
-            if (event.target && event.target.id === 'generateFCSBtn') {
-                console.log('✅ FCS Generate button clicked via event delegation!');
-
+            if (button) {
+                console.log('✅ Generate FCS button clicked via delegation');
                 event.preventDefault();
                 event.stopPropagation();
 
-                // Get conversation ID from button's data attribute
-                const buttonConvId = event.target.dataset.conversationId;
+                // Get conversation ID from button's data attribute or parent
+                const buttonConvId = button.dataset.conversationId;
                 console.log('Button conversation ID:', buttonConvId);
 
                 // Ensure conversation context is set
@@ -37,17 +37,12 @@ export default class FCSModule {
                     this.parent.currentConversationId = buttonConvId;
                 }
 
-                // Fallback to selected conversation
-                if (!this.parent.getCurrentConversationId() && this.parent.getSelectedConversation()) {
-                    this.parent.currentConversationId = this.parent.getSelectedConversation().id;
-                }
-
+                // Show the modal
                 try {
-                    this.showFCSModal();
+                    await this.showFCSModal();
                 } catch (error) {
                     console.error('Error calling showFCSModal:', error);
                 }
-
                 return false;
             }
         }, true);
@@ -83,7 +78,11 @@ export default class FCSModule {
 
         const modal = document.getElementById('fcsModal');
         if (!modal) {
-            console.error('FCS Modal not found in DOM');
+            console.error('❌ FCS Modal element not found in DOM');
+            console.log('Available modals:', Array.from(document.querySelectorAll('[id$="Modal"]')).map(m => m.id));
+
+            // Try to create modal if it doesn't exist
+            this.createFCSModalIfMissing();
             return;
         }
 
@@ -94,6 +93,7 @@ export default class FCSModule {
 
         if (!conversationId) {
             console.error('No conversation context available');
+            this.parent.utils?.showNotification('Please select a conversation first', 'error');
             return;
         }
 
@@ -103,6 +103,14 @@ export default class FCSModule {
         }
 
         console.log('Opening FCS modal with conversation ID:', conversationId);
+
+        // Reset the confirm button state BEFORE showing modal
+        const confirmBtn = document.getElementById('confirmFcs');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = 'Generate Report';
+            console.log('Reset FCS button state');
+        }
 
         modal.style.display = 'flex';
 
@@ -169,10 +177,59 @@ export default class FCSModule {
     }
 
     hideFCSModal() {
-        this.utils.hideModal('fcsModal');
+        const modal = document.getElementById('fcsModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+
+        // Reset button state when closing
+        const confirmBtn = document.getElementById('confirmFcs');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = 'Generate Report';
+            console.log('Reset FCS button state on modal close');
+        }
+
+        // Clear document selection
+        const docSelection = document.getElementById('fcsDocumentSelection');
+        if (docSelection) {
+            docSelection.innerHTML = '';
+        }
+    }
+
+    createFCSModalIfMissing() {
+        console.log('Creating FCS modal dynamically...');
+
+        const modalHtml = `
+            <div id="fcsModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Generate FCS Report</h3>
+                        <button class="modal-close" onclick="window.commandCenter.fcs.hideFCSModal()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Select bank statements to analyze:</p>
+                        <div id="fcsDocumentSelection" style="max-height: 300px; overflow-y: auto;">
+                            Loading documents...
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="cancelFcs" class="btn-secondary">Cancel</button>
+                        <button id="confirmFcs" class="btn-primary">Generate Report</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Now show it
+        setTimeout(() => this.showFCSModal(), 100);
     }
 
     async triggerFCS() {
+        console.log('🎯 FCS generation triggered');
+
         const conversationId = this.parent.getCurrentConversationId();
         if (!conversationId) return;
 
@@ -190,7 +247,14 @@ export default class FCSModule {
 
         const confirmBtn = document.getElementById('confirmFcs');
         if (confirmBtn) {
-            const originalText = confirmBtn.innerHTML;
+            // Get original text, but handle case where button might already be in loading state
+            let originalText = confirmBtn.innerHTML;
+            if (originalText.includes('Generating FCS') || originalText.includes('loading-spinner')) {
+                originalText = 'Generate Report'; // Reset to default if already in loading state
+                console.log('Button was already in loading state, resetting to default text');
+            }
+
+            // Set loading state
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = '<div class="loading-spinner-small"></div> Generating FCS...';
 
@@ -227,8 +291,12 @@ export default class FCSModule {
                 console.error('FCS generation error:', error);
                 this.utils.showNotification(`FCS Generation failed: ${error.message}`, 'error');
             } finally {
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = originalText;
+                // Always ensure button is properly reset
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = originalText;
+                    console.log('FCS button state reset to:', originalText);
+                }
             }
         }
     }

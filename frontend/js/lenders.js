@@ -1,6 +1,6 @@
 // lenders.js - Complete lender qualification and management functionality
 
-export default class LendersModule {
+class LendersModule {
     constructor(parent) {
         this.parent = parent;
         this.apiBaseUrl = parent.apiBaseUrl;

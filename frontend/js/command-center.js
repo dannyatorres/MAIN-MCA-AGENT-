@@ -1,29 +1,115 @@
 // MCA Command Center Main Application
 class CommandCenter {
     constructor() {
-        this.wsManager = null;
-        this.conversationUI = null;
-        this.stateManager = null;
+        // Basic properties first
+        this.wsUrl = 'ws://localhost:3001';
+        this.userId = 'default';
+        this.apiBaseUrl = 'http://localhost:3001';
         this.isInitialized = false;
 
+        // Initialize utilities FIRST (they have no dependencies)
+        this.utils = new Utilities(this);
+        this.templates = new Templates(this);
+
+        // Set these to null initially
+        this.wsManager = null;
+        this.conversationUI = null;
+        this.messaging = null;
+        this.intelligence = null;
+        this.documents = null;
+        this.lenders = null;
+        this.fcs = null;
+        this.ai = null;
+        this.stats = null;
+        this.stateManager = null;
+
+        // Core properties
+        this.currentConversationId = null;
+        this.selectedConversation = null;
+
+        // Now initialize
         this.init();
     }
 
     async init() {
-        console.log('= Initializing MCA Command Center...');
+        console.log('=== Initializing MCA Command Center ===');
 
         try {
-            // Initialize WebSocket Manager
-            this.wsManager = new WebSocketManager();
+            // 1. WebSocket Manager
+            console.log('1. Initializing WebSocket...');
+            this.wsManager = new WebSocketManager(this);
 
-            // Initialize State Manager if available
-            if (typeof StateManager !== 'undefined') {
-                this.stateManager = new StateManager();
+            // 2. Conversation Core (depends on wsManager)
+            console.log('2. Initializing Conversation Core...');
+            if (typeof ConversationCore !== 'undefined') {
+                this.conversationUI = new ConversationCore(this, this.wsManager);
+                this.core = this.conversationUI; // Alias for compatibility
+            } else {
+                console.error('ConversationCore class not found!');
             }
 
-            // Initialize Conversation UI
-            if (typeof ConversationUI !== 'undefined') {
-                this.conversationUI = new ConversationUI(this.wsManager);
+            // 3. Messaging Module
+            console.log('3. Initializing Messaging...');
+            if (typeof MessagingModule !== 'undefined') {
+                this.messaging = new MessagingModule(this);
+            } else {
+                console.error('MessagingModule class not found!');
+            }
+
+            // 4. Documents Module
+            console.log('4. Initializing Documents...');
+            if (typeof DocumentsModule !== 'undefined') {
+                this.documents = new DocumentsModule(this);
+            } else {
+                console.error('DocumentsModule class not found!');
+            }
+
+            // 5. Intelligence/Tabs Module
+            console.log('5. Initializing Intelligence...');
+            if (typeof IntelligenceTabs !== 'undefined') {
+                this.intelligence = new IntelligenceTabs(this);
+            } else {
+                console.error('IntelligenceTabs class not found!');
+            }
+
+            // 6. FCS Module
+            console.log('6. Initializing FCS...');
+            if (typeof FCSModule !== 'undefined') {
+                this.fcs = new FCSModule(this);
+            } else {
+                console.error('FCSModule class not found!');
+            }
+
+            // 7. Lenders Module
+            console.log('7. Initializing Lenders...');
+            if (typeof LendersModule !== 'undefined') {
+                this.lenders = new LendersModule(this);
+            } else {
+                console.error('LendersModule class not found!');
+            }
+
+            // 8. AI Assistant
+            console.log('8. Initializing AI Assistant...');
+            if (typeof AIAssistant !== 'undefined') {
+                this.ai = new AIAssistant(this);
+            } else {
+                console.error('AIAssistant class not found!');
+            }
+
+            // 9. Stats Module
+            console.log('9. Initializing Stats...');
+            if (typeof StatsModule !== 'undefined') {
+                this.stats = new StatsModule(this);
+            } else {
+                console.error('StatsModule class not found!');
+            }
+
+            // 10. State Manager if available
+            console.log('10. Initializing State Manager...');
+            if (typeof StateManager !== 'undefined') {
+                this.stateManager = new StateManager(this);
+            } else {
+                console.warn('StateManager class not found (optional)');
             }
 
             // Setup global keyboard shortcuts
@@ -33,10 +119,20 @@ class CommandCenter {
             this.setupErrorHandling();
 
             this.isInitialized = true;
-            console.log(' MCA Command Center initialized successfully');
+            console.log('✅ MCA Command Center initialized successfully');
+            console.log('Loaded modules:', {
+                conversationUI: !!this.conversationUI,
+                messaging: !!this.messaging,
+                documents: !!this.documents,
+                intelligence: !!this.intelligence,
+                fcs: !!this.fcs,
+                lenders: !!this.lenders,
+                ai: !!this.ai,
+                stats: !!this.stats
+            });
 
         } catch (error) {
-            console.error('L Failed to initialize MCA Command Center:', error);
+            console.error('❌ Failed to initialize MCA Command Center:', error);
         }
     }
 
@@ -49,83 +145,51 @@ class CommandCenter {
 
             // Tab switching shortcuts (1-6 keys)
             if (event.key >= '1' && event.key <= '6') {
-                const tabs = ['overview', 'documents', 'fcs', 'lenders', 'lender-management', 'edit'];
                 const tabIndex = parseInt(event.key) - 1;
-                if (tabs[tabIndex] && this.conversationUI) {
-                    this.conversationUI.switchIntelligenceTab(tabs[tabIndex]);
+                const tabs = document.querySelectorAll('.tab-button');
+                if (tabs[tabIndex]) {
+                    tabs[tabIndex].click();
                     event.preventDefault();
                 }
             }
 
-            // Escape key to clear selections
-            if (event.key === 'Escape') {
-                // Clear any modals or selections
-                document.querySelectorAll('.modal').forEach(modal => {
-                    modal.style.display = 'none';
-                });
-            }
-
-            // Ctrl/Cmd + R for refresh
-            if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
+            // Refresh shortcut (R key)
+            if (event.key === 'r' || event.key === 'R') {
                 if (this.conversationUI && this.conversationUI.loadConversations) {
-                    event.preventDefault();
+                    console.log('Refreshing conversations via keyboard shortcut...');
                     this.conversationUI.loadConversations();
                 }
+                event.preventDefault();
             }
         });
     }
 
     setupErrorHandling() {
-        // Global error handler
         window.addEventListener('error', (event) => {
-            console.error('Global error:', event.error);
-            this.handleGlobalError(event.error);
+            console.error('Global error caught:', event.error);
         });
 
-        // Unhandled promise rejection handler
         window.addEventListener('unhandledrejection', (event) => {
             console.error('Unhandled promise rejection:', event.reason);
-            this.handleGlobalError(event.reason);
         });
     }
 
-    handleGlobalError(error) {
-        // Basic error notification (you can enhance this)
-        if (error.message && error.message.includes('fetch')) {
-            console.warn('Network error detected - check if backend is running');
-        }
+    // Add helper methods for modules to access
+    getCurrentConversationId() {
+        return this.conversationUI?.currentConversationId || this.currentConversationId;
     }
 
-    // Public methods
-    getStatus() {
-        return {
-            isInitialized: this.isInitialized,
-            wsConnected: this.wsManager?.isConnected || false,
-            conversationUIReady: !!this.conversationUI,
-            stateManagerReady: !!this.stateManager
-        };
+    getSelectedConversation() {
+        return this.conversationUI?.selectedConversation || this.selectedConversation;
     }
 
-    restart() {
-        console.log('= Restarting Command Center...');
-
-        // Disconnect WebSocket
-        if (this.wsManager) {
-            this.wsManager.disconnect();
-        }
-
-        // Re-initialize
-        setTimeout(() => {
-            this.init();
-        }, 1000);
+    getConversations() {
+        return this.conversationUI?.conversations || new Map();
     }
 }
 
-// Initialize when DOM is loaded
+// Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('= DOM loaded, initializing Command Center...');
+    console.log('DOM loaded, initializing MCA Command Center...');
     window.commandCenter = new CommandCenter();
 });
-
-// Make it globally available
-window.CommandCenter = CommandCenter;

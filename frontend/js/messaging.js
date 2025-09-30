@@ -1,6 +1,6 @@
 // messaging.js - Complete messaging functionality
 
-export default class MessagingModule {
+class MessagingModule {
     constructor(parent) {
         this.parent = parent;
         this.apiBaseUrl = parent.apiBaseUrl;

@@ -1,6 +1,6 @@
 // templates-utilities.js - Complete utility functions and template generators
 
-export class Utilities {
+class Utilities {
     constructor(parent) {
         this.parent = parent;
     }
@@ -314,7 +314,7 @@ export class Utilities {
     }
 }
 
-export class Templates {
+class Templates {
     constructor(parent) {
         this.parent = parent;
         this.utils = parent.utils;
