@@ -2167,7 +2167,7 @@ app.post('/api/conversations/:conversationId/generate-fcs', async (req, res) => 
                 INSERT INTO fcs_results (conversation_id, business_name, summary, status, created_at, updated_at)
                 VALUES ($1, $2, $3, 'completed', NOW(), NOW())
                 ON CONFLICT (conversation_id) DO UPDATE
-                SET summary = $3, status = 'completed', updated_at = NOW()
+                SET summary = $3, status = 'completed', created_at = NOW(), updated_at = NOW()
             `, [conversationId, businessName, reportContent]);
 
             console.log('✅ FCS report saved to database successfully');

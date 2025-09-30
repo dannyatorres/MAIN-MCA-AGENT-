@@ -506,24 +506,13 @@ ${conversationContext.outbound_message_count === 0 ?
 ${conversationContext.fcs_report ? `
 ### FCS REPORT ANALYSIS
 **Report Date**: ${conversationContext.fcs_report.generated_at || 'N/A'}
-**Period Analyzed**: ${conversationContext.fcs_report.period || 'N/A'}
+**Business Name**: ${conversationContext.fcs_report.business_name || 'N/A'}
 **Statements Reviewed**: ${conversationContext.fcs_report.statement_count || 0}
 
-#### Financial Metrics
-- **Average Monthly Revenue**: ${conversationContext.fcs_report.avg_monthly_revenue || 'N/A'}
-- **Average Daily Balance**: ${conversationContext.fcs_report.avg_daily_balance || 'N/A'}
-- **NSF Count**: ${conversationContext.fcs_report.nsf_count || 'N/A'}
-- **Negative Days**: ${conversationContext.fcs_report.negative_days || 'N/A'}
-- **Revenue Trend**: ${conversationContext.fcs_report.revenue_trend || 'N/A'}
+#### FULL FCS REPORT CONTENT
+${conversationContext.fcs_report.report_content || 'No report content available'}
 
-#### Funding Capacity
-- **Estimated Max Advance**: ${conversationContext.fcs_report.max_advance || 'N/A'}
-- **Recommended Advance**: ${conversationContext.fcs_report.recommended_advance || 'N/A'}
-- **Risk Score**: ${conversationContext.fcs_report.risk_score || 'N/A'}
-- **Approval Probability**: ${conversationContext.fcs_report.approval_probability || 'N/A'}
-
-#### Key Findings
-${conversationContext.fcs_report.key_findings || 'No detailed findings available'}
+**IMPORTANT**: The above FCS report contains ALL financial metrics, position details, revenue analysis, negative days, MCA positions, and recommendations. Use this complete report to answer any questions about the business's finances, qualifications, or funding capacity.
 ` : ''}
 
 ### CONVERSATION HISTORY
