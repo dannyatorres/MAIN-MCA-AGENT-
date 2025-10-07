@@ -239,9 +239,10 @@ body {
 }
 
 .right-panel {
-    flex: 1 1 auto;
+    flex: 3 0 450px;
     border-right: none;
-    min-width: 400px;
+    min-width: 450px;
+    max-width: 700px;
     height: calc(100vh - var(--header-height));
     display: flex;
     flex-direction: column;
@@ -4151,6 +4152,7 @@ textarea.message-input:focus,
 .right-panel {
     border-right: none !important;
     height: 100% !important; /* Override the calc height */
+    max-width: 700px !important;
 }
 
 /* Set proper proportional widths */
@@ -4165,8 +4167,9 @@ textarea.message-input:focus,
 }
 
 .right-panel {
-    flex: 1 1 auto !important;
-    min-width: 500px !important;
+    flex: 3 0 450px !important;
+    min-width: 450px !important;
+    max-width: 700px !important;
 }
 
 /* Standardize ALL panel headers to same height */
@@ -4210,6 +4213,9 @@ textarea.message-input:focus,
     min-height: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     scrollbar-width: none !important; /* Firefox */
     -ms-overflow-style: none !important; /* IE and Edge */
 }
@@ -4286,13 +4292,14 @@ textarea.message-input:focus,
 /* Messaging panel - increase width */
 .center-panel {
     flex: 3 1 400px !important;
-    min-width: 400px !important;
+    min-width: 350px !important;
 }
 
 /* Lead Intelligence panel - reduce width */
 .right-panel {
-    flex: 1 1 auto !important;
+    flex: 3 0 450px !important;
     min-width: 450px !important;
+    max-width: 700px !important;
 }
 
 /* Update the root variable for consistency */
@@ -4566,24 +4573,52 @@ textarea.message-input:focus,
     height: 100%;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .ai-chat-interface {
     flex: 1;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .ai-chat-messages {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
+    min-width: 0; /* Allow flex items to shrink below content size */
+    max-width: 100%; /* Prevent expansion beyond container */
+    width: 100%; /* Force full width constraint */
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
 .ai-chat-messages::-webkit-scrollbar {
     display: none;
+}
+
+/* Force proper text wrapping in AI chat messages */
+.ai-chat-message {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.message-bubble {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    max-width: 70% !important;
+    box-sizing: border-box !important;
 }
 
 /* Quick action buttons hover effect */

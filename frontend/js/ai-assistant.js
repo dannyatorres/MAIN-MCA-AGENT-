@@ -162,8 +162,8 @@ class AIAssistant {
         const messageBubble = document.createElement('div');
         messageBubble.className = 'message-bubble';
         messageBubble.style.cssText = role === 'user'
-            ? 'background: #667eea; color: white; padding: 10px 14px; border-radius: 18px; max-width: 70%; margin-left: auto; text-align: right;'
-            : 'background: white; color: #1f2937; padding: 10px 14px; border-radius: 18px; max-width: 70%; border: 1px solid #e5e7eb;';
+            ? 'background: #667eea; color: white; padding: 10px 14px; border-radius: 18px; max-width: 70%; margin-left: auto; text-align: right; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap;'
+            : 'background: white; color: #1f2937; padding: 10px 14px; border-radius: 18px; max-width: 70%; border: 1px solid #e5e7eb; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap;';
 
         // Format the content (convert line breaks, etc)
         messageBubble.innerHTML = this.formatAIResponse(content);

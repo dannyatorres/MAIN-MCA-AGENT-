@@ -118,6 +118,16 @@ class Utilities {
         }).format(num);
     }
 
+    // Phone number formatting
+    formatPhone(value) {
+        if (!value) return '';
+        const digits = String(value).replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+        return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+
     // Modal utilities
     showModal(modalId) {
         const modal = document.getElementById(modalId);
@@ -330,8 +340,8 @@ class Templates {
 
         // Add display_id to dataset as well
         const displayIdData = conversation.display_id ? ` data-display-id="${conversation.display_id}"` : '';
-        const displayIdBadge = conversation.display_id
-            ? `<span class="conversation-id-badge">#${conversation.display_id}</span>`
+        const displayIdText = conversation.display_id
+            ? `<span class="conversation-id-badge">CID# ${conversation.display_id}</span>`
             : '';
 
         return `
@@ -348,11 +358,11 @@ class Templates {
                             ${conversation.business_name || 'Unknown Business'}
                             ${hasUnread ? '<span class="new-message-dot"></span>' : ''}
                         </h4>
-                        ${displayIdBadge}
                         <span class="time-ago">${timeAgo}</span>
                     </div>
                     <div class="conversation-meta">
-                        <span class="phone-number">${conversation.lead_phone || conversation.phone}</span>
+                        <span class="phone-number">${this.utils.formatPhone(conversation.lead_phone || conversation.phone)}</span>
+                        ${displayIdText ? `<br>${displayIdText}` : ''}
                     </div>
                 </div>
             </div>

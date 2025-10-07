@@ -239,14 +239,14 @@ class IntelligenceTabs {
 
         // Create full-screen AI assistant interface
         content.innerHTML = `
-            <div class="ai-assistant-section" data-conversation-id="${conversationId}" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
-                <div class="ai-chat-interface" style="height: 100%; display: flex; flex-direction: column; background: #f9fafb; border-radius: 8px; max-height: 100%;">
+            <div class="ai-assistant-section" data-conversation-id="${conversationId}" style="height: calc(100vh - 200px); display: flex; flex-direction: column; width: 100%; max-width: 100%; overflow: hidden;">
+                <div class="ai-chat-interface" style="height: 100%; display: flex; flex-direction: column; background: #f9fafb; border-radius: 8px; max-height: 100%; width: 100%; max-width: 100%; overflow: hidden;">
                     <div class="ai-chat-header" style="padding: 12px 16px; background: transparent; border-bottom: 1px solid #e5e7eb;">
                         <div style="display: flex; align-items: center; justify-content: center;">
                             <span style="font-weight: 600; color: #374151; font-size: 15px;">Chat about ${conversation.business_name || 'this project'}</span>
                         </div>
                     </div>
-                    <div class="ai-chat-messages" id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 24px; background: transparent; min-height: 0; scrollbar-width: none; -ms-overflow-style: none;">
+                    <div class="ai-chat-messages" id="aiChatMessages" style="flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px; background: transparent; min-height: 0; min-width: 0; width: 100%; max-width: 100%; scrollbar-width: none; -ms-overflow-style: none;">
                         <div class="ai-loading-state" style="text-align: center; padding: 20px; color: #9ca3af;">
                             <div class="typing-dot" style="display: inline-block; width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; margin: 0 2px;"></div>
                             <div class="typing-dot" style="display: inline-block; width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; animation-delay: 0.2s; margin: 0 2px;"></div>

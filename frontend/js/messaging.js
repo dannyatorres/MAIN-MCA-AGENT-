@@ -140,9 +140,6 @@ class MessagingModule {
         // Clear input immediately
         messageInput.value = '';
 
-        // Show sending indicator
-        this.utils.showNotification('Sending message...', 'info');
-
         try {
             const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/messages`, {
                 method: 'POST',
@@ -156,8 +153,6 @@ class MessagingModule {
             });
 
             if (response.ok) {
-                this.utils.showNotification('Message sent successfully', 'success');
-
                 // Reload messages in current conversation
                 await this.loadConversationMessages();
 
