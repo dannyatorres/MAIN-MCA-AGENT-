@@ -1258,8 +1258,8 @@ body {
 
 /* Comprehensive modal styles - Compact for Add Lead Modal */
 .comprehensive-modal {
-    width: 1400px;
-    max-width: 98vw;
+    width: 1400px !important;
+    max-width: 98vw !important;
     max-height: 95vh;
     line-height: 1.2;
     overflow-x: auto;
@@ -1505,12 +1505,21 @@ body {
 .form-input,
 .form-select {
     width: 100%;
-    padding: 3px 6px;
+    padding: 6px 8px;
     border: 1px solid var(--gray-300);
     border-radius: var(--border-radius);
-    font-size: 12px;
-    height: 26px;
-    line-height: 1.2;
+    font-size: 13px;
+    height: 34px;
+    line-height: 1.4;
+}
+
+.form-select {
+    padding-right: 28px;
+    background-position: right 8px center;
+    background-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 /* Special handling for textareas */
@@ -4564,4 +4573,141 @@ textarea.message-input:focus,
     background: #e5e7eb !important;
     transform: translateY(-1px);
     transition: all 0.2s ease;
+}
+
+/* Conversation ID Badge */
+.conversation-id-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    margin-left: auto;
+    margin-right: 8px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    flex-shrink: 0;
+}
+
+.conversation-item.selected .conversation-id-badge {
+    background: #0ea5e9;
+    color: white;
+}
+
+.conversation-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.conversation-header .business-name {
+    flex: 1;
+    min-width: 0; /* Allow text truncation */
+}
+
+/* ===== Button Enhancements ===== */
+/* Button base styles */
+.btn {
+    cursor: pointer !important;
+    transition: all 0.15s ease-in-out;
+    user-select: none;
+    outline: none;
+    position: relative;
+}
+
+/* Hover feedback */
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Active/click feedback */
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Primary button styles */
+.btn-primary {
+    background: #3b82f6 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-primary:hover {
+    background: #2563eb !important;
+}
+
+.btn-primary:active {
+    background: #1d4ed8 !important;
+}
+
+/* Secondary button styles */
+.btn-secondary {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    color: #374151 !important;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-secondary:hover {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+}
+
+.btn-secondary:active {
+    background: #e5e7eb !important;
+}
+
+/* Modal close button */
+.modal-close {
+    cursor: pointer !important;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    transition: color 0.15s ease;
+    padding: 4px 8px;
+}
+
+.modal-close:hover {
+    color: #374151;
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+.modal-close:active {
+    color: #111827;
+    background: #e5e7eb;
+}
+
+/* Ensure pointer cursor on all clickable elements */
+button, .btn, [onclick] {
+    cursor: pointer !important;
+}
+
+/* Disable transitions when button is disabled */
+.btn:disabled,
+button:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.5;
+    transform: none !important;
+}
+
+.btn:disabled:hover,
+button:disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Spin animation for loading spinners */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

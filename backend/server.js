@@ -511,6 +511,158 @@ app.post('/api/csv-import/upload', upload.single('csvFile'), async (req, res) =>
     }
 });
 
+// Create new conversation/lead - COMPREHENSIVE VERSION
+app.post('/api/conversations', async (req, res) => {
+    let database;
+    try {
+        database = getDatabase();
+    } catch (error) {
+        return res.status(500).json({ error: 'Database not available: ' + error.message });
+    }
+
+    try {
+        const data = req.body;
+
+        console.log('=== CREATE NEW LEAD REQUEST ===');
+        console.log('📥 Received data:', JSON.stringify(data, null, 2));
+
+        // Validation - require at minimum company name and phone
+        const companyName = data.companyName || data.businessName || data.business_name;
+        const primaryPhone = data.primaryPhone || data.primary_phone || data.lead_phone;
+
+        if (!companyName) {
+            return res.status(400).json({
+                success: false,
+                error: 'Company name is required'
+            });
+        }
+
+        if (!primaryPhone) {
+            return res.status(400).json({
+                success: false,
+                error: 'Phone number is required'
+            });
+        }
+
+        // Map Edit modal fields to database columns
+        const fieldMapping = {
+            // Business Information
+            companyName: 'business_name',
+            dbaName: 'dba_name',
+            primaryPhone: 'lead_phone',
+            businessPhone: 'cell_phone',
+            website: 'website',
+            federalTaxId: 'tax_id_encrypted',
+            entityType: 'entity_type',
+            industryType: 'business_type',
+            timeInBusiness: 'time_in_business',
+            requestedAmount: 'funding_amount',
+            monthlyRevenue: 'monthly_revenue',
+            annualRevenue: 'annual_revenue',
+            businessAddress: 'address',
+            businessCity: 'city',
+            businessState: 'us_state',
+            businessZip: 'zip',
+            leadSource: 'lead_source',
+            priority: 'priority',
+
+            // Owner Information
+            owner1FirstName: 'first_name',
+            owner1LastName: 'last_name',
+            owner1Email: 'owner_email',
+            owner1Phone: 'owner_cell_phone',
+            owner1OwnershipPercentage: 'ownership_percent',
+            owner1DateOfBirth: 'date_of_birth',
+            owner1HomeAddress: 'owner_home_address',
+            owner1HomeCity: 'owner_home_city',
+            owner1HomeState: 'owner_home_state',
+            owner1HomeZip: 'owner_home_zip',
+            owner1SSN: 'ssn_encrypted',
+
+            // Partner Information
+            owner2FirstName: 'partner_first_name',
+            owner2LastName: 'partner_last_name',
+            owner2Email: 'partner_email',
+            owner2Phone: 'partner_phone',
+            owner2OwnershipPercentage: 'partner_ownership',
+            owner2DateOfBirth: 'partner_dob',
+            owner2HomeAddress: 'partner_address',
+            owner2HomeCity: 'partner_city',
+            owner2HomeState: 'partner_state',
+            owner2HomeZip: 'partner_zip',
+            owner2SSN: 'partner_ssn',
+
+            // Marketing & Notes
+            marketingNotification: 'marketing_notification',
+            notes: 'notes'
+        };
+
+        // Generate new conversation ID
+        const conversationId = uuidv4();
+        const timestamp = new Date().toISOString();
+
+        // Build insert data
+        const insertData = {
+            id: conversationId,
+            created_at: timestamp,
+            updated_at: timestamp,
+            state: 'NEW',
+            current_step: 'initial_contact',
+            priority: data.priority || 'medium',
+            business_name: companyName,
+            lead_phone: primaryPhone
+        };
+
+        // Map all provided fields
+        for (const [frontendField, value] of Object.entries(data)) {
+            // Check if it's a mapped camelCase field
+            const dbField = fieldMapping[frontendField];
+            if (dbField && value !== null && value !== undefined && value !== '') {
+                insertData[dbField] = value;
+            }
+            // Also accept direct snake_case database field names
+            else if (frontendField.includes('_') && value !== null && value !== undefined && value !== '') {
+                insertData[frontendField] = value;
+            }
+        }
+
+        console.log('📊 Data to insert:', insertData);
+
+        // Build dynamic INSERT query
+        const fields = Object.keys(insertData);
+        const values = Object.values(insertData);
+        const placeholders = fields.map((_, i) => `$${i + 1}`);
+
+        const query = `
+            INSERT INTO conversations (${fields.join(', ')})
+            VALUES (${placeholders.join(', ')})
+            RETURNING *
+        `;
+
+        console.log('🔧 Executing insert query...');
+        const result = await database.query(query, values);
+        const newConversation = result.rows[0];
+
+        console.log('✅ Conversation created with ID:', conversationId);
+        console.log('=== CREATE LEAD SUCCESS ===');
+
+        res.status(201).json({
+            success: true,
+            message: 'Lead created successfully',
+            conversation: newConversation
+        });
+
+    } catch (error) {
+        console.error('❌ Create lead error:', error.message);
+        console.error('Stack:', error.stack);
+
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create lead: ' + error.message
+        });
+    }
+});
+
 // Get conversations endpoint
 app.get('/api/conversations', async (req, res) => {
     let database;

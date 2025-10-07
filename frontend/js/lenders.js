@@ -11,6 +11,7 @@ class LendersModule {
         this.qualifiedLenders = [];
         this.lastLenderCriteria = null;
         this.lenderResultsCache = new Map();
+        this.modalListenersAttached = false;
 
         // Form field configurations
         this.lenderFormFields = [
@@ -155,9 +156,26 @@ class LendersModule {
 
         // Form submission
         const lenderForm = document.getElementById('lenderForm');
-        if (lenderForm) {
+        if (lenderForm && !lenderForm.dataset.listenerAttached) {
+            lenderForm.dataset.listenerAttached = 'true'; // Mark as having listener
             lenderForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+
+                // Get button and add immediate visual feedback
+                const submitBtn = document.getElementById('processLendersBtn');
+                const btnText = document.getElementById('processLendersText');
+                const btnSpinner = document.getElementById('processLendersSpinner');
+
+                // Disable button and show loading state
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.7';
+                    submitBtn.style.transform = 'scale(0.98)';
+                    submitBtn.style.cursor = 'not-allowed';
+                }
+
+                if (btnText) btnText.style.display = 'none';
+                if (btnSpinner) btnSpinner.style.display = 'inline';
 
                 const startDate = document.getElementById('lenderStartDate').value;
                 const tib = calculateTIB(startDate) || 0;
@@ -216,7 +234,18 @@ class LendersModule {
                     errorEl.textContent = 'Error processing request. Please try again.';
                     errorEl.classList.add('active');
                 } finally {
+                    // Reset button state
                     loadingEl.classList.remove('active');
+
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                        submitBtn.style.transform = 'scale(1)';
+                        submitBtn.style.cursor = 'pointer';
+                    }
+
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnSpinner) btnSpinner.style.display = 'none';
                 }
             });
         }
@@ -299,12 +328,16 @@ class LendersModule {
     }
 
     displayLenderResults(data, criteria) {
-        console.log('displayLenderResults called with:', { data, criteria });
+        console.log('=== displayLenderResults called ===');
+        console.log('Data received:', data);
+        console.log('Criteria:', criteria);
 
         const { qualified, nonQualified, autoDropped } = data;
 
         this.qualifiedLenders = qualified || [];
         this.lastLenderCriteria = criteria;
+
+        console.log('Qualified lenders stored:', this.qualifiedLenders.length);
 
         let html = '';
 
@@ -327,11 +360,11 @@ class LendersModule {
 
         // Send to Lenders button - always visible if qualified lenders exist
         if (qualified && qualified.length > 0) {
+            console.log('Adding Send to Lenders button');
             html += `
                 <div style="margin: 20px 0; text-align: center;">
                     <button id="sendToLendersBtn"
-                            style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;"
-                            onclick="window.conversationUI.lenders.showLenderSubmissionModal()">
+                            style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;">
                         📧 Send to Lenders
                     </button>
                 </div>
@@ -341,7 +374,7 @@ class LendersModule {
             html += `
                 <div style="margin-top: 20px;">
                     <button id="toggleQualified"
-                            onclick="window.conversationUI.lenders.toggleQualifiedSection()"
+                            data-action="toggle-qualified"
                             style="width: 100%; padding: 12px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: #16a34a; font-weight: 600;">
                             ✅ View Qualified Lenders (${qualified.length})
@@ -378,6 +411,8 @@ class LendersModule {
                     </div>
                 </div>
             `;
+        } else {
+            console.log('No qualified lenders - button not added');
         }
 
         // Non-qualified lenders - collapsible section
@@ -385,7 +420,7 @@ class LendersModule {
             html += `
                 <div style="margin-top: 30px; margin-bottom: 30px;">
                     <button id="toggleNonQualified"
-                            onclick="window.conversationUI.lenders.toggleNonQualifiedSection()"
+                            data-action="toggle-non-qualified"
                             style="width: 100%; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: #dc2626; font-weight: 600;">
                             ❌ View Non-Qualified Lenders (${nonQualified.length})
@@ -416,22 +451,72 @@ class LendersModule {
         if (resultsEl) {
             resultsEl.innerHTML = html;
             resultsEl.classList.add('active');
+            console.log('Results HTML inserted');
+
+            // Capture reference to this LendersModule instance
+            const lendersModule = this;
+
+            // Add event listener to Send to Lenders button after it's in the DOM
+            const sendButton = document.getElementById('sendToLendersBtn');
+            if (sendButton) {
+                console.log('Attaching click handler to Send to Lenders button');
+
+                sendButton.addEventListener('click', (e) => {
+                    console.log('=== Send to Lenders Button Clicked ===');
+                    console.log('Event:', e);
+                    console.log('lendersModule:', lendersModule);
+                    console.log('lendersModule.showLenderSubmissionModal:', typeof lendersModule.showLenderSubmissionModal);
+
+                    try {
+                        // Call directly on the captured module instance
+                        lendersModule.showLenderSubmissionModal();
+                    } catch (error) {
+                        console.error('Error calling showLenderSubmissionModal:', error);
+                        alert('Error opening modal: ' + error.message);
+                    }
+                });
+
+                console.log('Click handler attached successfully');
+            } else {
+                console.warn('Send to Lenders button not found after HTML insertion');
+            }
+
+            // Add event listeners for toggle buttons
+            const toggleQualifiedBtn = document.getElementById('toggleQualified');
+            if (toggleQualifiedBtn) {
+                toggleQualifiedBtn.addEventListener('click', () => {
+                    lendersModule.toggleQualifiedSection();
+                });
+            }
+
+            const toggleNonQualifiedBtn = document.getElementById('toggleNonQualified');
+            if (toggleNonQualifiedBtn) {
+                toggleNonQualifiedBtn.addEventListener('click', () => {
+                    lendersModule.toggleNonQualifiedSection();
+                });
+            }
 
             // Ensure the results element itself is properly styled
             resultsEl.style.maxHeight = '70vh';
             resultsEl.style.overflowY = 'auto';
             resultsEl.style.paddingBottom = '20px';
 
-            // Clear and update cache
+            console.log('All event listeners attached');
+
+            // Clear and update cache with timestamp
             const conversationId = this.parent.getCurrentConversationId();
             if (conversationId) {
                 this.lenderResultsCache.delete(conversationId);
                 this.lenderResultsCache.set(conversationId, {
                     html: html,
                     data: data,
-                    criteria: criteria
+                    criteria: criteria,
+                    timestamp: Date.now()
                 });
+                console.log('✅ Lender results cached for conversation:', conversationId);
             }
+        } else {
+            console.error('lenderResults element not found!');
         }
     }
 
@@ -458,19 +543,23 @@ class LendersModule {
         const button = document.getElementById('toggleQualified');
 
         if (section) {
-            if (section.style.display === 'none') {
+            const isHidden = section.style.display === 'none';
+
+            if (isHidden) {
                 section.style.display = 'block';
                 if (icon) icon.textContent = '▲';
                 if (button) {
                     const count = this.qualifiedLenders?.length || 0;
-                    button.querySelector('span').innerHTML = `✅ Hide Qualified Lenders (${count})`;
+                    const span = button.querySelector('span');
+                    if (span) span.innerHTML = `✅ Hide Qualified Lenders (${count})`;
                 }
             } else {
                 section.style.display = 'none';
                 if (icon) icon.textContent = '▼';
                 if (button) {
                     const count = this.qualifiedLenders?.length || 0;
-                    button.querySelector('span').innerHTML = `✅ View Qualified Lenders (${count})`;
+                    const span = button.querySelector('span');
+                    if (span) span.innerHTML = `✅ View Qualified Lenders (${count})`;
                 }
             }
         }
@@ -483,12 +572,15 @@ class LendersModule {
         const button = document.getElementById('toggleNonQualified');
 
         if (section) {
-            if (section.style.display === 'none') {
+            const isHidden = section.style.display === 'none';
+
+            if (isHidden) {
                 section.style.display = 'block';
                 if (icon) icon.textContent = '▲';
                 if (button) {
                     const span = button.querySelector('span');
-                    if (span) span.innerHTML = '❌ Hide Non-Qualified Lenders';
+                    const count = document.querySelectorAll('#nonQualifiedSection > div > div').length;
+                    if (span) span.innerHTML = `❌ Hide Non-Qualified Lenders (${count})`;
                 }
             } else {
                 section.style.display = 'none';
@@ -784,31 +876,103 @@ class LendersModule {
 
     // Lender Submission Modal
     async showLenderSubmissionModal() {
-        console.log('showLenderSubmissionModal called');
+        console.log('=== showLenderSubmissionModal called ===');
 
-        // Always remove existing modal to ensure fresh HTML
-        let existingModal = document.getElementById('lenderSubmissionModal');
-        if (existingModal) {
-            console.log('Removing existing modal to refresh HTML...');
-            existingModal.remove();
+        const modal = document.getElementById('lenderSubmissionModal');
+
+        if (!modal) {
+            console.error('❌ Lender submission modal not found in DOM');
+            this.utils.showNotification('Modal not found', 'error');
+            return;
         }
 
-        // Create fresh modal
-        console.log('Creating fresh modal...');
-        this.createLenderSubmissionModal();
-        let modal = document.getElementById('lenderSubmissionModal');
+        console.log('✅ Modal found, loading documents...');
 
-        if (modal) {
-            // Load documents first before showing modal
+        // Load documents
+        try {
             await this.ensureDocumentsLoaded();
+            console.log('✅ Documents loaded');
+        } catch (error) {
+            console.error('❌ Error loading documents:', error);
+        }
 
+        // Populate the modal content
+        try {
             this.populateSubmissionLenders();
             this.populateSubmissionDocuments();
             this.prefillSubmissionMessage();
-            modal.style.display = 'flex';
-        } else {
-            console.error('Failed to create lender submission modal');
+            console.log('✅ Modal content populated');
+        } catch (error) {
+            console.error('❌ Error populating modal:', error);
         }
+
+        // ALWAYS re-attach listeners when modal opens (clean approach)
+        this.attachModalEventListeners();
+
+        // Show modal
+        modal.style.display = 'flex';
+        console.log('✅ Modal displayed successfully');
+    }
+
+    attachModalEventListeners() {
+        console.log('Attaching fresh modal event listeners...');
+        const lendersModule = this;
+        const modal = document.getElementById('lenderSubmissionModal');
+
+        if (!modal) {
+            console.error('Modal not found when attaching listeners');
+            return;
+        }
+
+        // Helper function to attach listener without duplicates
+        const attachListener = (elementId, handler, eventType = 'click') => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                // Remove old listener by cloning
+                const newElement = element.cloneNode(true);
+                element.parentNode.replaceChild(newElement, element);
+
+                // Attach new listener
+                newElement.addEventListener(eventType, handler);
+                console.log(`✅ Listener attached to ${elementId}`);
+                return true;
+            } else {
+                console.warn(`⚠️ Element ${elementId} not found`);
+                return false;
+            }
+        };
+
+        // Close button
+        attachListener('closeLenderSubmissionModal', (e) => {
+            e.preventDefault();
+            modal.style.display = 'none';
+        });
+
+        // Cancel button
+        attachListener('cancelLenderSubmission', (e) => {
+            e.preventDefault();
+            modal.style.display = 'none';
+        });
+
+        // Toggle lenders button
+        attachListener('toggleAllLendersBtn', (e) => {
+            e.preventDefault();
+            lendersModule.toggleAllLenders();
+        });
+
+        // Toggle documents button
+        attachListener('toggleAllDocumentsBtn', (e) => {
+            e.preventDefault();
+            lendersModule.toggleAllDocuments();
+        });
+
+        // Send submissions button
+        attachListener('confirmLenderSubmission', async (e) => {
+            e.preventDefault();
+            await lendersModule.sendLenderSubmissions();
+        });
+
+        console.log('All modal event listeners attached successfully');
     }
 
     async ensureDocumentsLoaded() {
@@ -838,82 +1002,42 @@ class LendersModule {
         }
     }
 
-    createLenderSubmissionModal() {
-        const modalHtml = `
-            <div id="lenderSubmissionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
-                <div style="background: white; border-radius: 8px; padding: 20px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="margin: 0;">Send Submissions to Lenders</h2>
-                        <button onclick="document.getElementById('lenderSubmissionModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
-                    </div>
-
-                    <div style="margin-bottom: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h3 style="margin: 0;">Select Lenders</h3>
-                            <button type="button" id="toggleAllLendersBtn"
-                                    onclick="window.conversationUI.lenders.toggleAllLenders()"
-                                    style="padding: 6px 16px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 14px;">
-                                Deselect All
-                            </button>
-                        </div>
-                        <div id="lenderSelectionList" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto;">
-                            Loading lenders...
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h3 style="margin: 0;">Select Documents</h3>
-                            <button type="button" id="toggleAllDocumentsBtn"
-                                    onclick="window.conversationUI.lenders.toggleAllDocuments()"
-                                    style="padding: 6px 16px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 14px;">
-                                Select All
-                            </button>
-                        </div>
-                        <div id="submissionDocumentList" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto;">
-                            Loading documents...
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom: 20px;">
-                        <h3>Message</h3>
-                        <textarea id="submissionMessage" rows="6" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;"></textarea>
-                    </div>
-
-                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                        <button onclick="document.getElementById('lenderSubmissionModal').style.display='none'" style="padding: 8px 16px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; cursor: pointer;">Cancel</button>
-                        <button onclick="window.conversationUI.lenders.sendLenderSubmissions()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                            <span id="sendSubmissionsText">Send Submissions</span>
-                            <span id="sendSubmissionsLoading" style="display: none;">Sending...</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-    }
 
     populateSubmissionLenders() {
+        console.log('=== populateSubmissionLenders called ===');
+
         const lenderList = document.getElementById('lenderSelectionList');
-        if (!lenderList || !this.qualifiedLenders) {
-            if (lenderList) {
-                lenderList.innerHTML = '<p style="color: #6b7280;">No qualified lenders available.</p>';
-            }
+        console.log('Lender list element:', lenderList);
+        console.log('Qualified lenders:', this.qualifiedLenders);
+
+        if (!lenderList) {
+            console.error('❌ lenderSelectionList element not found!');
             return;
         }
 
-        if (this.qualifiedLenders.length === 0) {
+        if (!this.qualifiedLenders) {
+            console.warn('⚠️ No qualified lenders available');
             lenderList.innerHTML = '<p style="color: #6b7280;">No qualified lenders available.</p>';
             return;
         }
 
+        if (this.qualifiedLenders.length === 0) {
+            console.warn('⚠️ Qualified lenders array is empty');
+            lenderList.innerHTML = '<p style="color: #6b7280;">No qualified lenders available.</p>';
+            return;
+        }
+
+        console.log(`Populating ${this.qualifiedLenders.length} lenders...`);
+
+        // Group by tier
         const lendersByTier = {};
         this.qualifiedLenders.forEach(lender => {
             const tier = lender.Tier || 'Unknown';
             if (!lendersByTier[tier]) lendersByTier[tier] = [];
             lendersByTier[tier].push(lender);
         });
+
+        console.log('Lenders by tier:', lendersByTier);
 
         let html = '';
         Object.keys(lendersByTier).sort().forEach(tier => {
@@ -933,6 +1057,13 @@ class LendersModule {
         });
 
         lenderList.innerHTML = html;
+        console.log('✅ Lenders HTML inserted');
+
+        // Verify checkboxes
+        setTimeout(() => {
+            const checkboxes = lenderList.querySelectorAll('.lender-checkbox');
+            console.log('Lender checkboxes found:', checkboxes.length);
+        }, 50);
 
         // Set initial button text since all start checked
         const toggleBtn = document.getElementById('toggleAllLendersBtn');
@@ -1270,7 +1401,7 @@ Best regards`;
                     </div>
 
                     <div class="form-actions" style="margin-top: 30px; margin-bottom: 40px; display: flex; gap: 15px; justify-content: center;">
-                        <button type="submit" class="process-btn" style="
+                        <button type="submit" class="process-btn" id="processLendersBtn" style="
                             padding: 14px 32px;
                             background: #3b82f6;
                             color: white;
@@ -1280,8 +1411,13 @@ Best regards`;
                             font-weight: 600;
                             cursor: pointer;
                             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                            transition: all 0.2s;">
-                            Process Lenders
+                            transition: all 0.2s;
+                            position: relative;
+                            overflow: hidden;">
+                            <span id="processLendersText">Process Lenders</span>
+                            <span id="processLendersSpinner" style="display: none;">
+                                <span style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-left: 8px;"></span>
+                            </span>
                         </button>
                         <button type="button" class="clear-cache-btn" id="clearLenderCacheBtn" style="
                             padding: 14px 24px;
@@ -1610,73 +1746,99 @@ Best regards`;
         const checkboxes = document.querySelectorAll('#lenderSelectionList input[type="checkbox"]');
         const toggleBtn = document.getElementById('toggleAllLendersBtn');
 
-        if (!checkboxes.length) {
-            console.log('No checkboxes found');
-            return;
-        }
+        if (!checkboxes.length || !toggleBtn) return;
 
-        if (!toggleBtn) {
-            console.log('Toggle button not found');
-            return;
-        }
-
-        // Check current state - are any checked?
         const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
         const allChecked = checkedCount === checkboxes.length;
 
-        // Determine new state
-        let newState;
-        if (allChecked) {
-            // If all are checked, uncheck all
-            newState = false;
-            toggleBtn.textContent = 'Select All';
-        } else {
-            // If some or none are checked, check all
-            newState = true;
-            toggleBtn.textContent = 'Deselect All';
-        }
-
-        // Apply new state to all checkboxes
+        // Toggle all checkboxes
         checkboxes.forEach(checkbox => {
-            checkbox.checked = newState;
+            checkbox.checked = !allChecked;
         });
 
-        console.log(`Toggled ${checkboxes.length} lenders to ${newState ? 'selected' : 'deselected'}`);
+        // Update button text
+        toggleBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
     }
 
     toggleAllDocuments() {
         const checkboxes = document.querySelectorAll('#submissionDocumentList input[type="checkbox"]');
         const toggleBtn = document.getElementById('toggleAllDocumentsBtn');
 
-        if (!checkboxes.length) {
-            console.log('No document checkboxes found');
-            return;
-        }
+        if (!checkboxes.length || !toggleBtn) return;
 
-        if (!toggleBtn) {
-            console.log('Toggle documents button not found');
-            return;
-        }
-
-        // Check current state
         const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
         const allChecked = checkedCount === checkboxes.length;
 
-        // Determine new state
-        let newState;
-        if (allChecked) {
-            newState = false;
-            toggleBtn.textContent = 'Select All';
-        } else {
-            newState = true;
-            toggleBtn.textContent = 'Deselect All';
-        }
-
-        // Apply new state to all checkboxes
+        // Toggle all checkboxes
         checkboxes.forEach(checkbox => {
-            checkbox.checked = newState;
+            checkbox.checked = !allChecked;
         });
 
-        console.log(`Toggled ${checkboxes.length} documents to ${newState ? 'selected' : 'deselected'}`);
+        // Update button text
+        toggleBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
+    }
+
+    // Debug test function
+    testLenderSubmissionFlow() {
+        console.log('=== Testing Lender Submission Flow ===');
+        console.log('1. Check window.conversationUI:', !!window.conversationUI);
+        console.log('2. Check window.conversationUI.lenders:', !!window.conversationUI?.lenders);
+        console.log('3. Check qualified lenders:', this.qualifiedLenders?.length || 0);
+        console.log('4. Check modal exists:', !!document.getElementById('lenderSubmissionModal'));
+        console.log('5. Check send button exists:', !!document.getElementById('sendToLendersBtn'));
+
+        if (window.conversationUI?.lenders) {
+            console.log('Attempting to call showLenderSubmissionModal...');
+            window.conversationUI.lenders.showLenderSubmissionModal();
+        }
+    }
+
+    // Reattach event listeners to cached results
+    reattachResultsEventListeners(data, criteria) {
+        console.log('Reattaching event listeners to cached results');
+        const lendersModule = this;
+
+        // Reattach Send to Lenders button
+        const sendButton = document.getElementById('sendToLendersBtn');
+        if (sendButton) {
+            // Remove old listener by cloning
+            const newButton = sendButton.cloneNode(true);
+            sendButton.parentNode.replaceChild(newButton, sendButton);
+
+            // Attach fresh listener
+            newButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Send to Lenders button clicked (from cache)');
+                lendersModule.showLenderSubmissionModal();
+            });
+            console.log('✅ Send to Lenders button listener reattached');
+        }
+
+        // Reattach toggle qualified button
+        const toggleQualifiedBtn = document.getElementById('toggleQualified');
+        if (toggleQualifiedBtn) {
+            const newToggle = toggleQualifiedBtn.cloneNode(true);
+            toggleQualifiedBtn.parentNode.replaceChild(newToggle, toggleQualifiedBtn);
+            newToggle.addEventListener('click', () => lendersModule.toggleQualifiedSection());
+            console.log('✅ Toggle qualified button listener reattached');
+        }
+
+        // Reattach toggle non-qualified button
+        const toggleNonQualifiedBtn = document.getElementById('toggleNonQualified');
+        if (toggleNonQualifiedBtn) {
+            const newToggle = toggleNonQualifiedBtn.cloneNode(true);
+            toggleNonQualifiedBtn.parentNode.replaceChild(newToggle, toggleNonQualifiedBtn);
+            newToggle.addEventListener('click', () => lendersModule.toggleNonQualifiedSection());
+            console.log('✅ Toggle non-qualified button listener reattached');
+        }
+
+        // Restore qualified lenders data
+        if (data && data.qualified) {
+            this.qualifiedLenders = data.qualified;
+            this.lastLenderCriteria = criteria;
+            console.log('✅ Qualified lenders restored:', this.qualifiedLenders.length);
+        }
+
+        console.log('Event listeners reattached successfully');
     }
 }

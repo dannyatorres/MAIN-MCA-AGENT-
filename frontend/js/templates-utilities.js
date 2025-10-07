@@ -328,9 +328,15 @@ class Templates {
         const unreadCount = this.parent.unreadMessages?.get(conversation.id) || 0;
         const hasUnread = unreadCount > 0 && !isSelected;
 
+        // Add display_id to dataset as well
+        const displayIdData = conversation.display_id ? ` data-display-id="${conversation.display_id}"` : '';
+        const displayIdBadge = conversation.display_id
+            ? `<span class="conversation-id-badge">#${conversation.display_id}</span>`
+            : '';
+
         return `
             <div class="conversation-item ${isSelected ? 'selected' : ''} ${isChecked ? 'checked-for-deletion' : ''} ${hasUnread ? 'has-unread' : ''}"
-                 data-conversation-id="${conversation.id}">
+                 data-conversation-id="${conversation.id}"${displayIdData}>
                 ${hasUnread ? `<div class="unread-badge">${unreadCount}</div>` : ''}
                 <div class="conversation-checkbox">
                     <input type="checkbox" class="delete-checkbox"
@@ -342,6 +348,7 @@ class Templates {
                             ${conversation.business_name || 'Unknown Business'}
                             ${hasUnread ? '<span class="new-message-dot"></span>' : ''}
                         </h4>
+                        ${displayIdBadge}
                         <span class="time-ago">${timeAgo}</span>
                     </div>
                     <div class="conversation-meta">

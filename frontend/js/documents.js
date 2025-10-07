@@ -75,7 +75,17 @@ class DocumentsModule {
 
     async loadDocuments() {
         const conversation = this.parent.getSelectedConversation();
-        if (!conversation) return;
+
+        console.log('=== DOCUMENTS LOADING DEBUG ===');
+        console.log('Selected conversation:', conversation?.id);
+        console.log('Parent current ID:', this.parent.getCurrentConversationId());
+        console.log('Parent selected conv:', this.parent.getSelectedConversation()?.id);
+        console.log('================================');
+
+        if (!conversation) {
+            console.warn('No conversation found, cannot load documents');
+            return;
+        }
 
         try {
             const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversation.id}/documents`);

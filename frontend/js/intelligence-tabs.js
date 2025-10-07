@@ -157,7 +157,26 @@ class IntelligenceTabs {
                 break;
             case 'lenders':
                 this.renderLendersTab(content);
-                setTimeout(() => this.parent.lenders?.restoreLenderFormCacheIfNeeded(), 500);
+                setTimeout(() => {
+                    this.parent.lenders?.restoreLenderFormCacheIfNeeded();
+
+                    // Check if we have cached lender results and restore them
+                    const conversationId = this.parent.getCurrentConversationId();
+                    if (conversationId && this.parent.lenders?.lenderResultsCache.has(conversationId)) {
+                        const cached = this.parent.lenders.lenderResultsCache.get(conversationId);
+
+                        // Restore the cached results
+                        const resultsEl = document.getElementById('lenderResults');
+                        if (resultsEl && cached.html) {
+                            console.log('Restoring cached lender results for conversation:', conversationId);
+                            resultsEl.innerHTML = cached.html;
+                            resultsEl.classList.add('active');
+
+                            // Reattach event listeners for the restored content
+                            this.parent.lenders.reattachResultsEventListeners(cached.data, cached.criteria);
+                        }
+                    }
+                }, 500);
                 break;
             case 'lender-management':
                 this.renderLenderManagementTab(content);

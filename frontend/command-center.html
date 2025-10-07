@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>MCAagent</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/command-center.css">
@@ -508,7 +511,7 @@
             <div class="left-panel">
                 <div class="panel-header">
                     <div class="panel-actions">
-                        <button class="action-button primary" id="addLeadBtn" onclick="openAddLeadModal()">
+                        <button class="action-button primary" id="addLeadBtn" onclick="alert('BUTTON WORKS!'); console.log('INLINE ONCLICK FIRED'); if(window.openLeadModal){window.openLeadModal('create')}else{alert('openLeadModal not found')}">
                             New Lead
                         </button>
                         <button class="action-button secondary" id="csvImportBtn" onclick="window.location.href='csv-import.html'">
@@ -654,211 +657,123 @@
         </div>
     </div>
 
-    <!-- Add Lead Modal -->
-    <div class="modal" id="addLeadModal" style="display: none;">
+    <!-- Add Lead Modal - DEPRECATED: Now using editLeadModal for both create and edit -->
+    <div class="modal" id="addLeadModal" style="display: none !important;">
         <div class="modal-content comprehensive-modal">
             <div class="modal-header">
                 <h3>Add New Lead - Comprehensive CRM</h3>
                 <button class="modal-close" id="closeAddLeadModal">×</button>
             </div>
             <div class="modal-body">
-                <!-- Business Information Section -->
-                <div class="form-section">
+                <div class="edit-form-container">
+                    <!-- Business Information Section -->
+                    <div class="form-section">
                     <div class="section-header" onclick="toggleSection('businessInfo')">
                         <h4>📊 Business Information</h4>
                         <span class="section-toggle">−</span>
                     </div>
                     <div class="section-content" id="businessInfo">
-                        <!-- Row 1: Company Name | DBA | First Name | Last Name | Business Address | Address2 -->
-                        <div class="form-row-six">
+                        <div class="form-row">
                             <div class="form-group">
                                 <label>Company Name <span class="required">*</span></label>
                                 <input type="text" id="companyName" class="form-input" placeholder="ABC Corporation">
                             </div>
                             <div class="form-group">
-                                <label>DBA</label>
-                                <input type="text" id="dbaName" class="form-input" placeholder="ABC Services">
-                            </div>
-                            <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" id="firstName" class="form-input" placeholder="John">
-                            </div>
-                            <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" id="lastName" class="form-input" placeholder="Smith">
-                            </div>
-                            <div class="form-group">
-                                <label>Business Address</label>
-                                <input type="text" id="businessAddress" class="form-input" placeholder="123 Main Street">
-                            </div>
-                            <div class="form-group">
-                                <label>Address Line 2</label>
-                                <input type="text" id="businessAddress2" class="form-input" placeholder="Suite 100">
+                                <label>Doing Business As (DBA)</label>
+                                <input type="text" id="dbaName" class="form-input" placeholder="ABC Corp">
                             </div>
                         </div>
-                        <!-- Row 2: Country | ZIP | City | State | Primary Phone | Cell Phone -->
-                        <div class="form-row-six">
+                        <div class="form-row">
                             <div class="form-group">
-                                <label>Country</label>
-                                <select id="businessCountry" class="form-select">
-                                    <option value="United States">US</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>ZIP Code</label>
-                                <input type="text" id="businessZip" class="form-input" placeholder="10001">
-                            </div>
-                            <div class="form-group">
-                                <label>City</label>
-                                <input type="text" id="businessCity" class="form-input" placeholder="New York">
-                            </div>
-                            <div class="form-group">
-                                <label>State</label>
-                                <select id="businessState" class="form-select">
-                                    <option value="">Select...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Phone <span class="required">*</span></label>
+                                <label>Primary Phone <span class="required">*</span></label>
                                 <input type="tel" id="primaryPhone" class="form-input" placeholder="(555) 123-4567">
                             </div>
                             <div class="form-group">
-                                <label>Cell Phone</label>
-                                <input type="tel" id="cellPhone" class="form-input" placeholder="(555) 987-6543">
+                                <label>Business Phone</label>
+                                <input type="tel" id="businessPhone" class="form-input" placeholder="(555) 987-6543">
                             </div>
                         </div>
-                        <!-- Row 3: Work Phone | Fax | Federal Tax ID | Business Start Date | Length of Ownership | Website -->
-                        <div class="form-row-six">
-                            <div class="form-group">
-                                <label>Work Phone</label>
-                                <input type="tel" id="workPhone" class="form-input" placeholder="(555) 456-7890">
-                            </div>
-                            <div class="form-group">
-                                <label>Fax</label>
-                                <input type="tel" id="faxPhone" class="form-input" placeholder="(555) 234-5678">
-                            </div>
-                            <div class="form-group">
-                                <label>Tax ID (EIN)</label>
-                                <input type="text" id="federalTaxId" class="form-input" placeholder="12-3456789">
-                            </div>
-                            <div class="form-group">
-                                <label>Start Date</label>
-                                <input type="date" id="businessStartDate" class="form-input">
-                            </div>
-                            <div class="form-group">
-                                <label>Length of Ownership</label>
-                                <input type="text" id="lengthOfOwnership" class="form-input" placeholder="3 years">
-                            </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label>Website</label>
-                                <input type="url" id="website" class="form-input" placeholder="www.example.com">
+                                <input type="url" id="website" class="form-input" placeholder="https://www.example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Tax ID (Encrypted)</label>
+                                <input type="text" id="federalTaxId" class="form-input" placeholder="12-3456789">
                             </div>
                         </div>
-                        <!-- Row 4: State of Incorporation | Entity Type | Industry Type -->
-                        <div class="form-row-three">
-                            <div class="form-group">
-                                <label>State of Incorporation</label>
-                                <select id="stateOfIncorporation" class="form-select">
-                                    <option value="">Select...</option>
-                                </select>
-                            </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label>Entity Type</label>
                                 <select id="entityType" class="form-select">
-                                    <option value="">Select...</option>
+                                    <option value="">Select Entity Type...</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label>Industry Type</label>
                                 <select id="industryType" class="form-select">
-                                    <option value="">Select...</option>
+                                    <option value="">Select Industry...</option>
                                 </select>
                             </div>
                         </div>
-                        <!-- Row 5: Business Email | Product Sold | Use of Proceeds -->
-                        <div class="form-row-three">
+                        <div class="form-row">
                             <div class="form-group">
-                                <label>Business Email</label>
-                                <input type="email" id="businessEmail" class="form-input" placeholder="contact@company.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Product Sold</label>
-                                <input type="text" id="productSold" class="form-input" placeholder="Products or services">
-                            </div>
-                            <div class="form-group">
-                                <label>Use of Proceeds</label>
-                                <input type="text" id="useOfProceeds" class="form-input" placeholder="How funds will be used">
-                            </div>
-                        </div>
-                        <!-- Row 6: Annual Revenue | Monthly Revenue | Requested Amount -->
-                        <div class="form-row-three">
-                            <div class="form-group">
-                                <label>Annual Revenue</label>
-                                <input type="number" id="annualRevenue" class="form-input" placeholder="500000" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Monthly Revenue</label>
-                                <input type="number" id="monthlyRevenue" class="form-input" placeholder="40000" min="0">
+                                <label>Time in Business (Months)</label>
+                                <input type="number" id="timeInBusiness" class="form-input" placeholder="24" min="1" max="999">
                             </div>
                             <div class="form-group">
                                 <label>Requested Amount</label>
-                                <input type="number" id="requestedAmount" class="form-input" placeholder="50000" min="0">
+                                <input type="number" id="requestedAmount" class="form-input" placeholder="50000" min="1000" max="10000000" step="1000">
                             </div>
                         </div>
-                        <!-- Row 7: Lead Source | Lead Status | Assigned To -->
-                        <div class="form-row-three">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Monthly Revenue</label>
+                                <input type="number" id="monthlyRevenue" class="form-input" placeholder="25000" min="0" max="50000000" step="1000">
+                            </div>
+                            <div class="form-group">
+                                <label>Annual Revenue</label>
+                                <input type="number" id="annualRevenue" class="form-input" placeholder="300000" min="0" max="500000000" step="10000">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Business Address</label>
+                                <input type="text" id="businessAddress" class="form-input" placeholder="123 Main Street">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>City</label>
+                                <input type="text" id="businessCity" class="form-input" placeholder="Los Angeles">
+                            </div>
+                            <div class="form-group">
+                                <label>State</label>
+                                <select id="businessState" class="form-select">
+                                    <option value="">Select State...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>ZIP Code</label>
+                                <input type="text" id="businessZip" class="form-input" placeholder="90210">
+                            </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label>Lead Source</label>
                                 <select id="leadSource" class="form-select">
-                                    <option value="">Select...</option>
+                                    <option value="">Select Source...</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Lead Status</label>
-                                <select id="leadStatus" class="form-select">
-                                    <option value="SUBMITTED">SUBMITTED</option>
+                                <label>Priority</label>
+                                <select id="priority" class="form-select">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
                                 </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Assigned To</label>
-                                <select id="assignedTo" class="form-select">
-                                    <option value="">Select...</option>
-                                </select>
-                            </div>
-                        </div>
-                        <!-- Row 8: Disposition | Campaign | Opt Out -->
-                        <div class="form-row-three">
-                            <div class="form-group">
-                                <label>Disposition</label>
-                                <input type="text" id="disposition" class="form-input" placeholder="Sale, Contact, etc.">
-                            </div>
-                            <div class="form-group">
-                                <label>Campaign</label>
-                                <input type="text" id="campaign" class="form-input" placeholder="Q4 2024 Campaign">
-                            </div>
-                            <div class="form-group">
-                                <label>Opt Out</label>
-                                <select id="optOutDripCampaign" class="form-select">
-                                    <option value="false">No</option>
-                                    <option value="true">Yes</option>
-                                </select>
-                            </div>
-                        </div>
-                        <!-- Row 9: Marketing Notification -->
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Marketing Notification</label>
-                                <div class="radio-group">
-                                    <label class="radio-label">
-                                        <input type="radio" name="marketingNotification" value="TEXT"> TEXT
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="marketingNotification" value="EMAIL"> EMAIL
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="marketingNotification" value="BOTH" checked> BOTH
-                                    </label>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -884,41 +799,39 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Owner Email</label>
-                                <input type="email" id="owner1Email" class="form-input" placeholder="john@company.com">
+                                <input type="email" id="owner1Email" class="form-input" placeholder="john@example.com">
                             </div>
+                            <div class="form-group">
+                                <label>Owner Phone</label>
+                                <input type="tel" id="owner1Phone" class="form-input" placeholder="(555) 123-4567">
+                            </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label>Owner Ownership %</label>
-                                <input type="number" id="owner1OwnershipPercentage" class="form-input" placeholder="50.00" min="0" max="100" step="0.01">
+                                <input type="number" id="owner1OwnershipPercentage" class="form-input" placeholder="50" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Owner Date of Birth</label>
+                                <input type="date" id="owner1DateOfBirth" class="form-input">
                             </div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group">
+                            <div class="form-group full-width">
                                 <label>Owner Home Address</label>
                                 <input type="text" id="owner1HomeAddress" class="form-input" placeholder="456 Oak Street">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner Address Line 2</label>
-                                <input type="text" id="owner1HomeAddress2" class="form-input" placeholder="Apt 2B">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner Country</label>
-                                <select id="owner1HomeCountry" class="form-select">
-                                    <option value="United States">United States</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Owner State</label>
-                                <select id="owner1HomeState" class="form-select">
-                                    <option value="">Select State...</option>
-                                </select>
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Owner City</label>
                                 <input type="text" id="owner1HomeCity" class="form-input" placeholder="Los Angeles">
+                            </div>
+                            <div class="form-group">
+                                <label>Owner State</label>
+                                <select id="owner1HomeState" class="form-select">
+                                    <option value="">Select State...</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label>Owner ZIP Code</label>
@@ -930,24 +843,17 @@
                                 <label>Owner SSN (Encrypted)</label>
                                 <input type="text" id="owner1SSN" class="form-input" placeholder="123-45-6789" maxlength="11">
                             </div>
-                            <div class="form-group">
-                                <label>Owner Date of Birth</label>
-                                <input type="date" id="owner1DateOfBirth" class="form-input">
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Partner Information Section -->
                 <div class="form-section">
-                    <div class="section-header">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="checkbox" id="addSecondOwner" onchange="toggleOwner2Section()">
-                            <h4>👥 Add Second Owner</h4>
-                        </div>
-                        <span class="section-toggle" id="owner2Toggle" style="display: none;">−</span>
+                    <div class="section-header" onclick="toggleSection('owner2Info')">
+                        <h4>👤 Partner Information (Optional)</h4>
+                        <span class="section-toggle">+</span>
                     </div>
-                    <div class="section-content" id="owner2Info" style="display: none;">
+                    <div class="section-content collapsed" id="owner2Info" style="display: none;">
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Partner First Name</label>
@@ -955,35 +861,39 @@
                             </div>
                             <div class="form-group">
                                 <label>Partner Last Name</label>
-                                <input type="text" id="owner2LastName" class="form-input" placeholder="Doe">
+                                <input type="text" id="owner2LastName" class="form-input" placeholder="Smith">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Partner Email</label>
-                                <input type="email" id="owner2Email" class="form-input" placeholder="jane@company.com">
+                                <input type="email" id="owner2Email" class="form-input" placeholder="jane@example.com">
                             </div>
                             <div class="form-group">
-                                <label>Partner Ownership %</label>
-                                <input type="number" id="owner2OwnershipPercentage" class="form-input" placeholder="50.00" min="0" max="100" step="0.01">
+                                <label>Partner Phone</label>
+                                <input type="tel" id="owner2Phone" class="form-input" placeholder="(555) 987-6543">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
+                                <label>Partner Ownership %</label>
+                                <input type="number" id="owner2OwnershipPercentage" class="form-input" placeholder="50" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Partner Date of Birth</label>
+                                <input type="date" id="owner2DateOfBirth" class="form-input">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group full-width">
                                 <label>Partner Home Address</label>
                                 <input type="text" id="owner2HomeAddress" class="form-input" placeholder="789 Pine Street">
                             </div>
-                            <div class="form-group">
-                                <label>Partner Address Line 2</label>
-                                <input type="text" id="owner2HomeAddress2" class="form-input" placeholder="Unit 5C">
-                            </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Partner Country</label>
-                                <select id="owner2HomeCountry" class="form-select">
-                                    <option value="United States">United States</option>
-                                </select>
+                                <label>Partner City</label>
+                                <input type="text" id="owner2HomeCity" class="form-input" placeholder="Los Angeles">
                             </div>
                             <div class="form-group">
                                 <label>Partner State</label>
@@ -991,28 +901,58 @@
                                     <option value="">Select State...</option>
                                 </select>
                             </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner City</label>
-                                <input type="text" id="owner2HomeCity" class="form-input" placeholder="San Francisco">
-                            </div>
                             <div class="form-group">
                                 <label>Partner ZIP Code</label>
-                                <input type="text" id="owner2HomeZip" class="form-input" placeholder="94102">
+                                <input type="text" id="owner2HomeZip" class="form-input" placeholder="90210">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Partner SSN (Encrypted)</label>
-                                <input type="text" id="owner2SSN" class="form-input" placeholder="987-65-4321" maxlength="11">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner Date of Birth</label>
-                                <input type="date" id="owner2DateOfBirth" class="form-input">
+                                <input type="text" id="owner2SSN" class="form-input" placeholder="123-45-6789" maxlength="11">
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Marketing and Notes Section -->
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection('marketingNotes')">
+                        <h4>📧 Marketing & Notes</h4>
+                        <span class="section-toggle">+</span>
+                    </div>
+                    <div class="section-content collapsed" id="marketingNotes" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Marketing Notifications</label>
+                                <div class="radio-group">
+                                    <label class="radio-label">
+                                        <input type="radio" name="marketingNotification" value="TEXT">
+                                        <span class="radio-indicator"></span>
+                                        Text Only
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="marketingNotification" value="EMAIL">
+                                        <span class="radio-indicator"></span>
+                                        Email Only
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="marketingNotification" value="BOTH" checked>
+                                        <span class="radio-indicator"></span>
+                                        Both Text & Email
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Notes</label>
+                                <textarea id="notes" class="form-textarea" rows="4" placeholder="Additional notes about this lead..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1882,85 +1822,36 @@
             }
         }
         
-        // Simple backup functions that ALWAYS work
-        function openAddLeadModal() {
-            try {
-                console.log('🖱️ Add Lead button clicked - opening modal');
-                const modal = document.getElementById('addLeadModal');
-                
-                if (!modal) {
-                    console.error('❌ Modal element not found in DOM');
-                    alert('Modal not found - check console');
-                    return;
-                }
-                
-                console.log('✅ Modal element found');
-                
-                // Ensure dropdowns are populated before opening modal
-                if (!lookupData || !lookupData.states || lookupData.states.length === 0) {
-                    console.log('🔧 Lookup data not ready, loading now...');
-                    loadLookupData().catch((error) => {
-                        console.error('❌ Failed to load lookup data:', error);
-                        // Continue opening modal even if lookup fails
-                    });
+        // DEPRECATED - These functions are replaced by the event listener in DOMContentLoaded
+        // See line ~3260 for the new Add Lead button handler
+        /*
+        function showEditModalForNewLead() { ... }
+        function openAddLeadModal() { ... }
+        */
+
+        // Clear edit form function
+        function clearEditForm() {
+            const modal = document.getElementById('editLeadModal');
+            if (!modal) return;
+
+            console.log('🧹 Clearing edit form...');
+
+            const inputs = modal.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                if (input.type === 'radio') {
+                    input.checked = input.value === 'BOTH' && input.name === 'editMarketingNotification';
+                } else if (input.type === 'checkbox') {
+                    input.checked = false;
                 } else {
-                    console.log('✅ Lookup data already loaded');
+                    input.value = '';
                 }
-                
-                // Open the modal
-                modal.style.display = 'flex';
-                console.log('✅ Modal display set to flex');
-                
-                // Clear any previous form data safely
-                try {
-                    clearComprehensiveForm();
-                    console.log('✅ Form cleared successfully');
-                } catch (clearError) {
-                    console.error('⚠️ Error clearing form, skipping clear:', clearError);
-                    // Continue even if clearing fails - don't let this prevent modal opening
-                }
-                
-                console.log('🎉 Modal opened successfully');
-                
-            } catch (error) {
-                console.error('🚨 Critical error in openAddLeadModal:', error);
-                console.error('Error stack:', error.stack);
-                alert('Error opening modal: ' + error.message);
-            }
+            });
+
+            console.log('✅ Form cleared');
         }
         
-        function testSimpleAdd() {
-            console.log('🚀 Quick Add clicked - testing API');
-            const businessName = prompt('Enter business name:');
-            if (!businessName) return;
-            
-            const phone = prompt('Enter phone number:');
-            if (!phone) return;
-            
-            // Simple API test
-            fetch('http://localhost:3001/api/conversations', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    businessName: businessName,
-                    phone: phone,
-                    message: 'Added via Quick Add button',
-                    priority: 'normal'
-                })
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    alert('✅ Lead added successfully: ' + businessName);
-                    location.reload();
-                } else {
-                    alert('❌ Error: ' + (result.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                alert('❌ Connection error: ' + error.message);
-            });
-        }
+        // DEPRECATED - testSimpleAdd function removed
+        // Use the Add Lead button which opens the Edit modal in create mode
         
         // Enhanced debug logging
         console.log('🔧 Main script loading...');
@@ -2132,9 +2023,9 @@
         // Initialize the command center
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 DOM Content Loaded');
-            
-            // Initialize comprehensive form
-            setTimeout(initializeComprehensiveForm, 100);
+
+            // Initialize comprehensive form - DEPRECATED (using unified Edit modal now)
+            // setTimeout(initializeComprehensiveForm, 100);
             
             // Run debug checks
             setTimeout(debugClasses, 100);
@@ -2187,80 +2078,6 @@
                             window.commandCenter.conversationUI.loadConversations();
                         }
                     }
-                }, 3000);
-                
-                // Direct button testing
-                setTimeout(() => {
-                    console.log('🔧 Testing buttons after initialization...');
-                    
-                    const addLeadBtn = document.getElementById('addLeadBtn');
-                    if (addLeadBtn) {
-                        console.log('✅ Add Lead Button found');
-                        
-                        // Test direct click handler
-                        addLeadBtn.addEventListener('click', (e) => {
-                            console.log('🖱️ Add Lead Button clicked directly!');
-                            e.preventDefault();
-                            e.stopPropagation();
-                            window.testAddLeadButton();
-                        });
-                        
-                        console.log('✅ Direct click handler added to Add Lead Button');
-                    } else {
-                        console.error('❌ Add Lead Button not found');
-                    }
-                    
-                    // Test button functionality
-                    const testBtn = document.getElementById('testAddLeadBtn');
-                    if (testBtn) {
-                        console.log('✅ Test Button found');
-                        
-                        testBtn.addEventListener('click', async () => {
-                            console.log('🖱️ Test button clicked');
-                            
-                            // Test API directly
-                            try {
-                                const response = await fetch('http://localhost:3001/api/conversations', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        businessName: 'Frontend Debug Test',
-                                        phone: '+1555000' + Math.floor(Math.random() * 1000),
-                                        message: 'Debug test from frontend',
-                                        requestedAmount: 30000,
-                                        priority: 'normal'
-                                    })
-                                });
-                                
-                                const result = await response.json();
-                                console.log('🔧 API Test Result:', result);
-                                
-                                if (result.success) {
-                                    alert('✅ API Test Success! Check console for details.');
-                                    setTimeout(() => location.reload(), 1000);
-                                } else {
-                                    alert('❌ API Error: ' + (result.error || 'Unknown error'));
-                                }
-                                
-                            } catch (error) {
-                                console.error('❌ Test API error:', error);
-                                alert('❌ Connection Error: ' + error.message);
-                            }
-                            
-                            // Also test modal
-                            window.testAddLeadButton();
-                        });
-                        console.log('✅ Test button listener added');
-                    } else {
-                        console.error('❌ Test Button not found');
-                    }
-                    
-                    // Final debug report
-                    console.log('🔧 Final Debug Report:');
-                    debugDOM();
-                    
                 }, 3000);
                 
             } catch (error) {
@@ -2483,52 +2300,90 @@
 
         async function populateEditDropdowns() {
             try {
-                const response = await fetch('http://localhost:3001/api/lookups/all');
-                const data = await response.json();
+                console.log('📋 Populating edit dropdowns...');
 
-                if (data.success) {
-                    const lookups = data.data;
-
-                    // Entity Types
-                    const editEntitySelect = document.getElementById('editEntityType');
+                // Entity Types - Static data
+                const entityTypes = [
+                    'LLC', 'Corporation', 'Partnership', 'Sole Proprietorship', 'S-Corp', 'C-Corp', 'Non-Profit', 'Other'
+                ];
+                const editEntitySelect = document.getElementById('editEntityType');
+                if (editEntitySelect) {
                     editEntitySelect.innerHTML = '<option value="">Select Entity Type...</option>';
-                    lookups.entityTypes.forEach(type => {
-                        editEntitySelect.innerHTML += `<option value="${type.id}">${type.name}</option>`;
+                    entityTypes.forEach(type => {
+                        editEntitySelect.innerHTML += `<option value="${type}">${type}</option>`;
                     });
+                }
 
-                    // Industry Types
-                    const editIndustrySelect = document.getElementById('editIndustryType');
+                // Industry Types - Static data
+                const industryTypes = [
+                    'Restaurant', 'Retail', 'Construction', 'Healthcare', 'Professional Services',
+                    'Manufacturing', 'Transportation', 'Real Estate', 'Technology', 'Hospitality',
+                    'Education', 'Finance', 'Other'
+                ];
+                const editIndustrySelect = document.getElementById('editIndustryType');
+                if (editIndustrySelect) {
                     editIndustrySelect.innerHTML = '<option value="">Select Industry...</option>';
-                    lookups.industryTypes.forEach(type => {
-                        editIndustrySelect.innerHTML += `<option value="${type.id}">${type.name}</option>`;
+                    industryTypes.forEach(type => {
+                        editIndustrySelect.innerHTML += `<option value="${type}">${type}</option>`;
                     });
+                }
 
-                    // Lead Sources
-                    const editLeadSourceSelect = document.getElementById('editLeadSource');
+                // Lead Sources - Static data
+                const leadSources = [
+                    'Website', 'Referral', 'Cold Call', 'Email Campaign', 'Social Media',
+                    'Trade Show', 'Partner', 'Advertisement', 'Direct Mail', 'Other'
+                ];
+                const editLeadSourceSelect = document.getElementById('editLeadSource');
+                if (editLeadSourceSelect) {
                     editLeadSourceSelect.innerHTML = '<option value="">Select Source...</option>';
-                    lookups.leadSources.forEach(source => {
-                        editLeadSourceSelect.innerHTML += `<option value="${source.id}">${source.name}</option>`;
+                    leadSources.forEach(source => {
+                        editLeadSourceSelect.innerHTML += `<option value="${source}">${source}</option>`;
                     });
+                }
 
-                    // States for business and owners
-                    const states = [
-                        { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' },
-                        { code: 'AZ', name: 'Arizona' }, { code: 'AR', name: 'Arkansas' },
-                        { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
-                        // ... add all states
-                    ];
+                // States for business and owners
+                const states = [
+                    { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' },
+                    { code: 'AZ', name: 'Arizona' }, { code: 'AR', name: 'Arkansas' },
+                    { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+                    { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' },
+                    { code: 'FL', name: 'Florida' }, { code: 'GA', name: 'Georgia' },
+                    { code: 'HI', name: 'Hawaii' }, { code: 'ID', name: 'Idaho' },
+                    { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' },
+                    { code: 'IA', name: 'Iowa' }, { code: 'KS', name: 'Kansas' },
+                    { code: 'KY', name: 'Kentucky' }, { code: 'LA', name: 'Louisiana' },
+                    { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' },
+                    { code: 'MA', name: 'Massachusetts' }, { code: 'MI', name: 'Michigan' },
+                    { code: 'MN', name: 'Minnesota' }, { code: 'MS', name: 'Mississippi' },
+                    { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' },
+                    { code: 'NE', name: 'Nebraska' }, { code: 'NV', name: 'Nevada' },
+                    { code: 'NH', name: 'New Hampshire' }, { code: 'NJ', name: 'New Jersey' },
+                    { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' },
+                    { code: 'NC', name: 'North Carolina' }, { code: 'ND', name: 'North Dakota' },
+                    { code: 'OH', name: 'Ohio' }, { code: 'OK', name: 'Oklahoma' },
+                    { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' },
+                    { code: 'RI', name: 'Rhode Island' }, { code: 'SC', name: 'South Carolina' },
+                    { code: 'SD', name: 'South Dakota' }, { code: 'TN', name: 'Tennessee' },
+                    { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' },
+                    { code: 'VT', name: 'Vermont' }, { code: 'VA', name: 'Virginia' },
+                    { code: 'WA', name: 'Washington' }, { code: 'WV', name: 'West Virginia' },
+                    { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' }
+                ];
 
-                    const stateSelects = ['editBusinessState', 'editOwner1HomeState', 'editOwner2HomeState'];
-                    stateSelects.forEach(selectId => {
-                        const select = document.getElementById(selectId);
+                const stateSelects = ['editBusinessState', 'editOwner1HomeState', 'editOwner2HomeState'];
+                stateSelects.forEach(selectId => {
+                    const select = document.getElementById(selectId);
+                    if (select) {
                         select.innerHTML = '<option value="">Select State...</option>';
                         states.forEach(state => {
                             select.innerHTML += `<option value="${state.code}">${state.name}</option>`;
                         });
-                    });
-                }
+                    }
+                });
+
+                console.log('✅ Edit dropdowns populated');
             } catch (error) {
-                console.error('Error loading lookup data for edit form:', error);
+                console.error('❌ Error populating edit dropdowns:', error);
             }
         }
 
@@ -2554,54 +2409,102 @@
         function closeEditModal() {
             const modal = document.getElementById('editLeadModal');
             modal.style.display = 'none';
+
+            // Reset mode back to edit
+            modal.dataset.mode = 'edit';
+
+            // Reset button text
+            const saveBtn = document.getElementById('saveEditLead');
+            if (saveBtn) {
+                saveBtn.textContent = 'Save Changes';
+            }
+
+            // Reset title
+            const modalTitle = modal.querySelector('.modal-header h3');
+            if (modalTitle) {
+                modalTitle.textContent = 'Edit Lead - Comprehensive CRM';
+            }
+
             currentEditingLeadId = null;
         }
 
         async function saveLeadChanges() {
-            if (!currentEditingLeadId) {
+            const modal = document.getElementById('editLeadModal');
+            const mode = modal?.dataset.mode || 'edit';
+
+            console.log('💾 Saving lead in mode:', mode);
+
+            if (mode === 'edit' && !currentEditingLeadId) {
                 showNotification('No lead selected for editing', 'error');
                 return;
             }
 
             try {
                 // Show loading
-                showNotification('Saving changes...', 'info');
+                showNotification(mode === 'create' ? 'Creating lead...' : 'Saving changes...', 'info');
 
                 // Collect form data
                 const leadData = collectEditFormData();
 
-                // Send update request
-                const response = await fetch(`http://localhost:3001/api/conversations/${currentEditingLeadId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(leadData)
-                });
+                console.log('📤 Sending lead data:', leadData);
+
+                let response;
+
+                if (mode === 'create') {
+                    // CREATE mode - POST to /api/conversations
+                    response = await fetch('http://localhost:3001/api/conversations', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(leadData)
+                    });
+                } else {
+                    // EDIT mode - PUT to /api/conversations/:id
+                    response = await fetch(`http://localhost:3001/api/conversations/${currentEditingLeadId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(leadData)
+                    });
+                }
 
                 const result = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(result.error || 'Failed to update lead');
+                    throw new Error(result.error || `Failed to ${mode} lead`);
                 }
 
                 // Success
-                showNotification('Lead updated successfully!', 'success');
+                showNotification(
+                    mode === 'create' ? 'Lead created successfully!' : 'Lead updated successfully!',
+                    'success'
+                );
+
                 closeEditModal();
 
                 // Refresh the conversation list
-                window.commandCenter?.conversationUI?.loadConversations();
+                if (window.commandCenter?.conversationUI) {
+                    await window.commandCenter.conversationUI.loadConversations();
 
-                // If this is the currently selected conversation, refresh it
-                const conversationUI = window.commandCenter?.conversationUI;
-                const selectedConversationId = conversationUI?.currentConversationId;
-                if (selectedConversationId === currentEditingLeadId) {
-                    conversationUI?.selectConversation(selectedConversationId);
+                    // If we created a new lead, select it
+                    if (mode === 'create' && result.conversation?.id) {
+                        setTimeout(() => {
+                            window.commandCenter.conversationUI.selectConversation(result.conversation.id);
+                        }, 500);
+                    } else if (mode === 'edit') {
+                        // If this is the currently selected conversation, refresh it
+                        const selectedConversationId = window.commandCenter.conversationUI.currentConversationId;
+                        if (selectedConversationId === currentEditingLeadId) {
+                            window.commandCenter.conversationUI.selectConversation(selectedConversationId);
+                        }
+                    }
                 }
 
             } catch (error) {
-                console.error('Error saving lead changes:', error);
-                showNotification('Failed to save changes: ' + error.message, 'error');
+                console.error('❌ Error saving lead:', error);
+                showNotification('Failed to save lead: ' + error.message, 'error');
             }
         }
 
@@ -2888,60 +2791,6 @@
         </div>
     </div>
 
-    <!-- Add Lead Modal -->
-    <div id="addLeadModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3>Add New Lead</h3>
-                <button class="modal-close" onclick="window.conversationUI.hideAddLeadModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="addLeadForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="leadBusinessName">Business Name *</label>
-                            <input type="text" id="leadBusinessName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadContactName">Contact Name *</label>
-                            <input type="text" id="leadContactName" required>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="leadPhone">Phone *</label>
-                            <input type="tel" id="leadPhone" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadEmail">Email</label>
-                            <input type="email" id="leadEmail">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="leadAmount">Requested Amount</label>
-                            <input type="number" id="leadAmount" min="0" step="1000">
-                        </div>
-                        <div class="form-group">
-                            <label for="leadSource">Lead Source</label>
-                            <select id="leadSource">
-                                <option value="">Select Source</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="leadNotes">Notes</label>
-                        <textarea id="leadNotes" rows="3" placeholder="Additional notes about this lead..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="window.conversationUI.hideAddLeadModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="window.conversationUI.saveNewLead()">Add Lead</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Processing Indicator -->
     <div id="processingIndicator" class="processing-overlay" style="display: none;">
         <div class="processing-content">
@@ -2956,56 +2805,151 @@
         <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
                 <h2>Send Submissions to Lenders</h2>
-                <span class="close-modal" onclick="window.conversationUI.hideLenderSubmissionModal()">&times;</span>
+                <button class="modal-close" id="closeLenderSubmissionModal">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- Lenders Selection -->
                 <div class="form-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <h3 style="margin: 0;">Select Lenders</h3>
-                        <button id="toggleAllLendersBtn" class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="window.conversationUI.toggleAllLenders()">
-                            Select All
+                        <button type="button" id="toggleAllLendersBtn" class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;">
+                            Deselect All
                         </button>
                     </div>
                     <div id="lenderSelectionList" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
                         <!-- Populated dynamically -->
                     </div>
                 </div>
-                
+
                 <!-- Documents Selection -->
                 <div class="form-section" style="margin-top: 20px;">
-                    <h3>Select Documents</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <h3 style="margin: 0;">Select Documents</h3>
+                        <button type="button" id="toggleAllDocumentsBtn" class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;">
+                            Select All
+                        </button>
+                    </div>
                     <div id="submissionDocumentList" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
                         <!-- Populated dynamically -->
                     </div>
                 </div>
-                
+
                 <!-- Message -->
                 <div class="form-section" style="margin-top: 20px;">
                     <h3>Message</h3>
-                    <textarea id="submissionMessage" rows="6" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px;" placeholder="Enter your message to lenders...">Hello,
-
-Please find attached the funding application and supporting documents for our mutual client.
-
-Business Name: [Business Name]
-Requested Amount: [Amount]
-
-Please review and let me know if you need any additional information.
-
-Best regards</textarea>
+                    <textarea id="submissionMessage" rows="6" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="window.conversationUI.hideLenderSubmissionModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="window.conversationUI.sendLenderSubmissions()">
+                <button class="btn btn-secondary" id="cancelLenderSubmission">Cancel</button>
+                <button class="btn btn-primary" id="confirmLenderSubmission">
                     <span id="sendSubmissionsText">Send Submissions</span>
-                    <span id="sendSubmissionsLoading" style="display: none;">
-                        <i class="fas fa-spinner fa-spin"></i> Sending...
-                    </span>
+                    <span id="sendSubmissionsLoading" style="display: none;">Sending...</span>
                 </button>
             </div>
         </div>
     </div>
+
+    <!-- Global Functions - Loaded BEFORE module script -->
+    <script>
+        console.log('🌐 Loading global openLeadModal function...');
+
+        // Define openLeadModal in global scope IMMEDIATELY
+        window.openLeadModal = function(mode = 'create', conversationData = null) {
+            console.log(`📝 openLeadModal called in ${mode.toUpperCase()} mode`);
+
+            // Wait for intelligence module if not ready
+            if (!window.conversationUI?.intelligence) {
+                console.log('⏳ Intelligence not ready, waiting...');
+                setTimeout(() => window.openLeadModal(mode, conversationData), 100);
+                return;
+            }
+
+            const modal = document.getElementById('editLeadInlineModal');
+            const modalContent = document.getElementById('editLeadInlineContent');
+
+            if (!modal || !modalContent) {
+                console.error('❌ Modal elements not found');
+                return;
+            }
+
+            const intelligence = window.conversationUI.intelligence;
+
+            if (mode === 'create') {
+                console.log('✅ Opening in CREATE mode');
+
+                // Empty conversation data
+                const emptyConversation = {
+                    business_name: '', dba_name: '', lead_phone: '', business_phone: '',
+                    website: '', tax_id: '', entity_type: '', industry_type: '',
+                    business_address: '', business_address2: '', business_city: '',
+                    business_state: '', business_zip: '', business_country: 'United States',
+                    cell_phone: '', work_phone: '', fax_phone: '', annual_revenue: '',
+                    monthly_revenue: '', requested_amount: '', time_in_business: '',
+                    credit_score: '', years_in_business: '', owner_first_name: '',
+                    owner_last_name: '', owner_email: '', owner_home_address: '',
+                    owner_home_address2: '', owner_home_city: '', owner_home_state: '',
+                    owner_home_zip: '', owner_home_country: 'United States',
+                    ownership_percent: '', ssn: '', date_of_birth: '',
+                    business_start_date: '', length_of_ownership: '', product_sold: '',
+                    use_of_proceeds: '', lead_source: '', campaign: '', lead_status: '',
+                    business_email: '', factor_rate: '', term_months: '', funding_date: '',
+                    lead_details: {}
+                };
+
+                const formHTML = intelligence.createEditFormTemplate(emptyConversation);
+                modalContent.innerHTML = formHTML;
+
+                const modalTitle = modal.querySelector('.modal-header h3');
+                if (modalTitle) modalTitle.textContent = 'Add New Lead - Comprehensive CRM';
+
+                const generateBtn = modalContent.querySelector('#generateApplicationBtn');
+                if (generateBtn) generateBtn.style.display = 'none';
+
+                const submitBtn = modalContent.querySelector('.update-btn');
+                if (submitBtn) {
+                    submitBtn.textContent = 'Create Lead';
+                    submitBtn.style.background = '#10b981';
+                }
+
+                console.log('✅ Form generated for CREATE mode');
+            }
+
+            // Close handlers
+            const closeBtn = document.getElementById('closeEditLeadInlineModal');
+            if (closeBtn) {
+                closeBtn.onclick = () => { modal.style.display = 'none'; };
+            }
+
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.style.display = 'none';
+            };
+
+            modal.style.display = 'flex';
+            console.log('✅ Modal displayed');
+        };
+
+        console.log('✅ openLeadModal defined globally');
+
+        // Debug helper to test modal function
+        window.testOpenLeadModal = function() {
+            console.log('🧪 Testing openLeadModal function...');
+            console.log('Function exists:', !!window.openLeadModal);
+            console.log('Function type:', typeof window.openLeadModal);
+
+            if (window.openLeadModal) {
+                console.log('Calling openLeadModal("create")...');
+                try {
+                    window.openLeadModal('create');
+                    console.log('✅ Function executed');
+                } catch (error) {
+                    console.error('❌ Error:', error);
+                }
+            }
+        };
+
+        console.log('💡 Test helper added: window.testOpenLeadModal()');
+    </script>
 
     <!-- Main JavaScript Integration Script -->
     <script type="module">
@@ -3096,6 +3040,82 @@ Best regards</textarea>
                 }
             }
 
+            initializeUI() {
+                console.log('🎯 initializeUI() called');
+
+                // Setup Add Lead button after modules are initialized
+                setTimeout(() => {
+                    console.log('🎯 Timeout fired, looking for addLeadBtn...');
+                    const addLeadBtn = document.getElementById('addLeadBtn');
+                    console.log('🎯 addLeadBtn:', addLeadBtn);
+
+                    if (!addLeadBtn) {
+                        console.error('❌ Add Lead button not found');
+                        // List all buttons to debug
+                        const allButtons = document.querySelectorAll('button');
+                        console.log('All buttons on page:', allButtons);
+                        return;
+                    }
+
+                    console.log('🔧 Setting up Add Lead button...');
+                    console.log('🔧 Button has', addLeadBtn.getEventListeners ? 'listeners' : 'no listener API');
+
+                    // Remove existing listeners by cloning
+                    const cleanBtn = addLeadBtn.cloneNode(true);
+                    addLeadBtn.parentNode.replaceChild(cleanBtn, addLeadBtn);
+                    console.log('🔧 Button cloned and replaced');
+
+                    cleanBtn.addEventListener('click', async (e) => {
+                        console.log('🎯🎯🎯 CLICK EVENT FIRED!!! 🎯🎯🎯');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🆕 Add Lead button clicked');
+
+                        // Wait for modules to be ready with retry logic
+                        let attempts = 0;
+                        const maxAttempts = 20;
+
+                        const waitForModules = () => {
+                            return new Promise((resolve, reject) => {
+                                const checkReady = () => {
+                                    attempts++;
+
+                                    // Log current state
+                                    console.log(`⏳ Attempt ${attempts}/${maxAttempts}:`, {
+                                        conversationUI: !!window.conversationUI,
+                                        intelligence: !!window.conversationUI?.intelligence,
+                                        openLeadModal: !!window.openLeadModal
+                                    });
+
+                                    if (window.conversationUI?.intelligence && window.openLeadModal) {
+                                        console.log('✅ All systems ready!');
+                                        resolve();
+                                    } else if (attempts >= maxAttempts) {
+                                        console.error('❌ Timeout waiting for modules');
+                                        reject(new Error('System initialization timeout'));
+                                    } else {
+                                        setTimeout(checkReady, 100);
+                                    }
+                                };
+
+                                checkReady();
+                            });
+                        };
+
+                        try {
+                            await waitForModules();
+                            console.log('✅ Opening modal in CREATE mode');
+                            window.openLeadModal('create');
+                        } catch (error) {
+                            console.error('❌ Error:', error);
+                            alert('System is still loading. Please wait a moment and try again.');
+                        }
+                    });
+
+                    console.log('✅ Add Lead button configured successfully');
+                }, 1500);
+            }
+
             setupModuleCrossReferences() {
                 // Allow modules to reference each other through parent
                 // This enables modules to call methods on other modules when needed
@@ -3181,15 +3201,313 @@ Best regards</textarea>
             }
         }
 
+        // Helper function to get conversation ID with display ID
+        window.getConversationId = function() {
+            const selected = document.querySelector('.conversation-item.selected');
+            if (selected) {
+                const displayId = selected.dataset.displayId || 'Not set';
+                const uuid = selected.dataset.conversationId;
+
+                console.log('Display ID:', displayId);
+                console.log('UUID:', uuid);
+
+                // Copy display ID to clipboard for easy use
+                if (navigator.clipboard && displayId !== 'Not set') {
+                    navigator.clipboard.writeText(displayId).then(() => {
+                        alert(`Lead ID: #${displayId}\n(Copied to clipboard)`);
+                    }).catch(() => {
+                        alert(`Lead ID: #${displayId}\nUUID: ${uuid}`);
+                    });
+                } else {
+                    alert(`Lead ID: #${displayId}\nUUID: ${uuid}`);
+                }
+
+                return { displayId, uuid };
+            }
+
+            alert('Please select a conversation first');
+            return null;
+        };
+
         // Initialize the application when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 CODE VERSION: 2025-01-06-v6 - HEAVY DEBUG VERSION');
             console.log('🚀 Initializing ConversationUI...');
+
             try {
-                new ConversationUI();
+                const ui = new ConversationUI();
+
+                // Initialize UI and New Lead button with HEAVY DEBUG
+                setTimeout(() => {
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('🔧 NEW LEAD BUTTON SETUP - DEBUG MODE');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                    const addLeadBtn = document.getElementById('addLeadBtn');
+                    console.log('1️⃣ Button element:', addLeadBtn);
+                    console.log('   - Exists:', !!addLeadBtn);
+                    console.log('   - Tag:', addLeadBtn?.tagName);
+                    console.log('   - ID:', addLeadBtn?.id);
+                    console.log('   - Classes:', addLeadBtn?.className);
+                    console.log('   - Text:', addLeadBtn?.textContent?.trim());
+                    console.log('   - Visible:', addLeadBtn ? (addLeadBtn.offsetWidth > 0 && addLeadBtn.offsetHeight > 0) : false);
+                    console.log('   - Disabled:', addLeadBtn?.disabled);
+
+                    if (!addLeadBtn) {
+                        console.error('❌ Add Lead button NOT FOUND in DOM');
+                        console.log('📋 All buttons with "add" or "lead" in ID:');
+                        document.querySelectorAll('button[id*="add"], button[id*="lead"], button[id*="Lead"]').forEach(btn => {
+                            console.log('   -', btn.id, ':', btn.textContent?.trim());
+                        });
+                        return;
+                    }
+
+                    console.log('2️⃣ Checking for existing event listeners...');
+                    console.log('   - onclick:', addLeadBtn.onclick);
+                    console.log('   - Has inline handler:', !!addLeadBtn.getAttribute('onclick'));
+
+                    // DON'T REMOVE INLINE HANDLER - LET IT WORK
+                    console.log('   ℹ️ Keeping inline onclick handler for testing');
+
+                    // DON'T CLONE BUTTON - causes issues
+                    console.log('3️⃣ Skipping button clone - using original button');
+                    const cleanBtn = addLeadBtn; // Just use the original button
+                    console.log('   ✅ Using original button');
+
+                    console.log('4️⃣ Checking global functions...');
+                    console.log('   - window.openLeadModal exists:', !!window.openLeadModal);
+                    console.log('   - window.openLeadModal type:', typeof window.openLeadModal);
+                    console.log('   - window.conversationUI exists:', !!window.conversationUI);
+                    console.log('   - window.conversationUI.intelligence exists:', !!window.conversationUI?.intelligence);
+
+                    console.log('5️⃣ Adding new event listener...');
+
+                    // Add click listener with MAXIMUM debug
+                    cleanBtn.addEventListener('click', (e) => {
+                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        console.log('🎯🎯🎯 BUTTON CLICKED!!! 🎯🎯🎯');
+                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        console.log('Event details:');
+                        console.log('   - Type:', e.type);
+                        console.log('   - Target:', e.target);
+                        console.log('   - CurrentTarget:', e.currentTarget);
+                        console.log('   - TimeStamp:', e.timeStamp);
+
+                        e.preventDefault();
+                        console.log('   ✅ preventDefault() called');
+
+                        e.stopPropagation();
+                        console.log('   ✅ stopPropagation() called');
+
+                        console.log('Checking system state:');
+                        console.log('   - window.openLeadModal:', !!window.openLeadModal);
+                        console.log('   - window.conversationUI:', !!window.conversationUI);
+                        console.log('   - intelligence module:', !!window.conversationUI?.intelligence);
+
+                        if (!window.openLeadModal) {
+                            console.error('❌ openLeadModal function NOT FOUND');
+                            console.log('Available window functions:', Object.keys(window).filter(k => k.includes('Lead') || k.includes('lead') || k.includes('open')));
+                            alert('System is still loading. Please wait a moment and try again.');
+                            return;
+                        }
+
+                        console.log('🚀 Calling window.openLeadModal("create")...');
+                        try {
+                            window.openLeadModal('create');
+                            console.log('✅ openLeadModal() called successfully');
+                        } catch (error) {
+                            console.error('❌ Error calling openLeadModal:', error);
+                            console.error('Stack trace:', error.stack);
+                            alert('Error opening modal: ' + error.message);
+                        }
+                    }, { capture: false, once: false });
+
+                    console.log('   ✅ Event listener added');
+
+                    // Test the button programmatically
+                    console.log('6️⃣ Testing button click programmatically...');
+                    console.log('   Run this in console to test: document.getElementById("addLeadBtn").click()');
+
+                    // Verify the button is interactive
+                    console.log('7️⃣ Final verification:');
+                    console.log('   - Button in DOM:', !!document.getElementById('addLeadBtn'));
+                    console.log('   - Button is same element:', document.getElementById('addLeadBtn') === cleanBtn);
+                    console.log('   - Button parent:', cleanBtn.parentElement?.className);
+                    console.log('   - Button computed style display:', window.getComputedStyle(cleanBtn).display);
+                    console.log('   - Button computed style visibility:', window.getComputedStyle(cleanBtn).visibility);
+                    console.log('   - Button pointer-events:', window.getComputedStyle(cleanBtn).pointerEvents);
+
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('✅ NEW LEAD BUTTON SETUP COMPLETE');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                    // Initialize rest of UI
+                    ui.initializeUI();
+                }, 500);
+
             } catch (error) {
                 console.error('❌ Failed to initialize ConversationUI:', error);
+                console.error('Stack trace:', error.stack);
             }
         });
+
+        // Additional debug helper
+        window.debugNewLeadButton = function() {
+            console.log('🔍 Manual Debug Check:');
+            const btn = document.getElementById('addLeadBtn');
+            console.log('Button:', btn);
+            console.log('Visible:', btn ? (btn.offsetWidth > 0 && btn.offsetHeight > 0) : false);
+            console.log('Disabled:', btn?.disabled);
+            console.log('onclick:', btn?.onclick);
+            console.log('Has listeners:', btn ? 'unknown (no API)' : 'N/A');
+
+            if (btn) {
+                console.log('Attempting manual click...');
+                btn.click();
+            }
+        };
+
+        console.log('💡 Debug helper added: window.debugNewLeadButton()');
+
+        // NOTE: window.openLeadModal is already defined in the global script above (line ~2858)
+        // No need to redefine it here
+
+        async function handleCreateFormSubmit(e) {
+            e.preventDefault();
+            console.log('📤 Creating new lead...');
+
+            const formData = new FormData(e.target);
+            const rawData = Object.fromEntries(formData.entries());
+
+            const createData = {};
+            for (const [field, value] of Object.entries(rawData)) {
+                const snakeCase = field.replace(/([A-Z])/g, '_$1').toLowerCase();
+                if (['annual_revenue', 'monthly_revenue', 'requested_amount', 'credit_score',
+                     'years_in_business', 'ownership_percent', 'factor_rate', 'term_months'].includes(snakeCase)) {
+                    createData[snakeCase] = value ? parseFloat(value.toString().replace(/[$,\s%]/g, '')) : null;
+                } else {
+                    createData[snakeCase] = value || null;
+                }
+            }
+
+            Object.keys(createData).forEach(key => {
+                if (createData[key] === '' || createData[key] === null) delete createData[key];
+            });
+
+            const submitBtn = e.target.querySelector('.update-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Creating...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:3001/api/conversations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(createData)
+                });
+
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Failed to create lead');
+
+                console.log('✅ Lead created successfully:', result);
+
+                if (window.conversationUI?.utils) {
+                    window.conversationUI.utils.showNotification('Lead created successfully!', 'success');
+                }
+
+                const modal = document.getElementById('editLeadInlineModal');
+                if (modal) modal.style.display = 'none';
+
+                if (window.conversationUI?.core) {
+                    await window.conversationUI.core.loadConversations();
+                    const newId = result.conversation?.id || result.id;
+                    if (newId) {
+                        setTimeout(() => window.conversationUI.core.selectConversation(newId), 500);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error creating lead:', error);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                if (window.conversationUI?.utils) {
+                    window.conversationUI.utils.showNotification('Failed to create lead: ' + error.message, 'error');
+                } else {
+                    alert('Failed to create lead: ' + error.message);
+                }
+            }
+        }
+
+        async function handleEditFormSubmit(e) {
+            e.preventDefault();
+            console.log('📤 Updating lead...');
+
+            if (!currentEditingLeadId) {
+                console.error('❌ No lead ID set for editing');
+                return;
+            }
+
+            const formData = new FormData(e.target);
+            const rawData = Object.fromEntries(formData.entries());
+
+            const updateData = {};
+            for (const [field, value] of Object.entries(rawData)) {
+                const snakeCase = field.replace(/([A-Z])/g, '_$1').toLowerCase();
+                if (['annual_revenue', 'monthly_revenue', 'requested_amount', 'credit_score',
+                     'years_in_business', 'ownership_percent', 'factor_rate', 'term_months'].includes(snakeCase)) {
+                    updateData[snakeCase] = value ? parseFloat(value.toString().replace(/[$,\s%]/g, '')) : null;
+                } else {
+                    updateData[snakeCase] = value || null;
+                }
+            }
+
+            Object.keys(updateData).forEach(key => {
+                if (updateData[key] === '' || updateData[key] === null) delete updateData[key];
+            });
+
+            const submitBtn = e.target.querySelector('.update-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Updating...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(`http://localhost:3001/api/conversations/${currentEditingLeadId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Failed to update lead');
+
+                console.log('✅ Lead updated successfully:', result);
+
+                if (window.conversationUI?.utils) {
+                    window.conversationUI.utils.showNotification('Lead updated successfully!', 'success');
+                }
+
+                const modal = document.getElementById('editLeadInlineModal');
+                if (modal) modal.style.display = 'none';
+
+                if (window.conversationUI?.core) {
+                    const currentId = window.conversationUI.core.currentConversationId;
+                    if (currentId === currentEditingLeadId) {
+                        window.conversationUI.core.selectConversation(currentId);
+                    }
+                    await window.conversationUI.core.loadConversations();
+                }
+            } catch (error) {
+                console.error('❌ Error updating lead:', error);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                if (window.conversationUI?.utils) {
+                    window.conversationUI.utils.showNotification('Failed to update lead: ' + error.message, 'error');
+                } else {
+                    alert('Failed to update lead: ' + error.message);
+                }
+            }
+        }
+
+        console.log('✅ Unified lead modal system loaded');
     </script>
 </body>
 </html>

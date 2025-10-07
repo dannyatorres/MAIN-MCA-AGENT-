@@ -44,11 +44,8 @@ class ConversationCore {
             refreshBtn.addEventListener('click', () => this.refreshData());
         }
 
-        // Add Lead button
-        const addLeadBtn = document.getElementById('addLeadBtn');
-        if (addLeadBtn) {
-            addLeadBtn.addEventListener('click', () => this.showAddLeadModal());
-        }
+        // Add Lead button - handled by inline onclick in HTML (calls openAddLeadModal)
+        // Event listener removed to avoid conflict with unified modal system
 
         // Delete selected button
         const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
@@ -220,8 +217,14 @@ class ConversationCore {
     async selectConversation(conversationId) {
         if (this.currentConversationId === conversationId) return;
 
+        console.log('=== Selecting conversation:', conversationId, '===');
+
         // Clear unread count for this conversation
         this.unreadMessages.delete(conversationId);
+
+        // Clear previous conversation state before setting new one
+        this.clearPreviousConversationState();
+
         this.currentConversationId = conversationId;
 
         // Update parent reference immediately
@@ -326,9 +329,17 @@ class ConversationCore {
         const businessName = this.selectedConversation.business_name || this.selectedConversation.company_name || '';
         const phoneNumber = this.selectedConversation.lead_phone || this.selectedConversation.phone || '';
 
+        // Add display ID to conversation header
+        const displayId = this.selectedConversation.display_id
+            ? `<span style="color: #64748b; font-size: 14px; font-weight: 500;">#${this.selectedConversation.display_id}</span>`
+            : '';
+
         conversationInfo.className = 'conversation-info text-style';
         conversationInfo.innerHTML = `
-            <h2 class="owner-name">${ownerName}</h2>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <h2 class="owner-name" style="margin: 0;">${ownerName}</h2>
+                ${displayId}
+            </div>
             ${businessName ? `<p class="business-name-subtitle">${businessName}</p>` : ''}
             ${phoneNumber ? `<p class="phone-number-subtitle">${phoneNumber}</p>` : ''}
         `;
@@ -688,82 +699,10 @@ class ConversationCore {
         }
     }
 
-    // Add Lead Modal
-    showAddLeadModal() {
-        const modal = this.utils.showModal('addLeadModal');
-        if (modal) {
-            document.getElementById('leadBusinessName').value = '';
-            document.getElementById('leadPhone').value = '';
-            document.getElementById('leadMessage').value = '';
-            document.getElementById('leadAmount').value = '';
-            document.getElementById('leadPriority').value = 'normal';
-        }
-    }
-
-    hideAddLeadModal() {
-        this.utils.hideModal('addLeadModal');
-    }
-
-    async addNewLead() {
-        const businessName = document.getElementById('leadBusinessName').value.trim();
-        const phone = document.getElementById('leadPhone').value.trim();
-        const message = document.getElementById('leadMessage').value.trim();
-        const requestedAmount = document.getElementById('leadAmount').value;
-        const priority = document.getElementById('leadPriority').value;
-
-        if (!businessName) {
-            this.utils.showNotification('Business name is required', 'error');
-            return;
-        }
-
-        if (!phone) {
-            this.utils.showNotification('Phone number is required', 'error');
-            return;
-        }
-
-        const phonePattern = /^[\+]?[1-9][\d]{0,15}$/;
-        if (!phonePattern.test(phone.replace(/[-\s\(\)]/g, ''))) {
-            this.utils.showNotification('Please enter a valid phone number', 'error');
-            return;
-        }
-
-        try {
-            const leadData = {
-                businessName,
-                phone,
-                priority
-            };
-
-            if (message) leadData.message = message;
-            if (requestedAmount) leadData.requestedAmount = parseInt(requestedAmount);
-
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(leadData)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                this.hideAddLeadModal();
-                this.utils.showNotification(`Lead added successfully: ${businessName}`, 'success');
-
-                await this.loadConversations();
-
-                setTimeout(() => {
-                    this.selectConversation(result.conversation.id);
-                }, 500);
-            } else {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to add lead');
-            }
-        } catch (error) {
-            this.utils.handleError(error, 'Error adding lead',
-                'Failed to add lead: ' + error.message);
-        }
-    }
+    // Add Lead Modal - DEPRECATED
+    // These functions have been removed and replaced with unified modal system in command-center.html
+    // The Edit Lead Modal is now used for both creating and editing leads
+    // See: openAddLeadModal(), clearEditForm(), saveLeadChanges() in command-center.html
 
     async changeConversationState(newState) {
         if (!this.currentConversationId) return;
@@ -835,6 +774,55 @@ class ConversationCore {
         } catch (error) {
             console.error('Error reloading conversation details:', error);
         }
+    }
+
+    clearPreviousConversationState() {
+        console.log('🧹 Clearing previous conversation state...');
+
+        // Clear previous conversation reference
+        this.selectedConversation = null;
+        if (this.parent) {
+            this.parent.selectedConversation = null;
+        }
+
+        // Clear FCS content
+        const fcsContent = document.getElementById('fcsContent');
+        if (fcsContent) {
+            fcsContent.innerHTML = '<div class="loading">Loading FCS data...</div>';
+        }
+
+        // Clear document list
+        const docList = document.getElementById('documentList');
+        if (docList) {
+            docList.innerHTML = '<div class="loading">Loading documents...</div>';
+        }
+
+        // Clear lenders content
+        const lendersContent = document.getElementById('lendersContent');
+        if (lendersContent) {
+            lendersContent.innerHTML = '<div class="loading">Loading lenders data...</div>';
+        }
+
+        // Clear messages area
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            messagesContainer.innerHTML = '<div class="loading">Loading messages...</div>';
+        }
+
+        // Clear any cached data in modules
+        if (this.parent.documents) {
+            this.parent.documents.currentDocuments = [];
+        }
+
+        if (this.parent.fcs) {
+            this.parent.fcs.currentFCSData = null;
+        }
+
+        if (this.parent.lenders) {
+            this.parent.lenders.currentLendersData = null;
+        }
+
+        console.log('✅ Previous conversation state cleared');
     }
 
     // Export current state getters for other modules
