@@ -545,103 +545,123 @@ app.post('/api/conversations', async (req, res) => {
         }
 
         // Map Edit modal fields to database columns
-        const fieldMapping = {
-            // Business Information
+        // Fields that go into conversations table
+        const conversationFields = {
             companyName: 'business_name',
+            businessName: 'business_name',
             dbaName: 'dba_name',
             primaryPhone: 'lead_phone',
-            businessPhone: 'cell_phone',
-            website: 'website',
-            federalTaxId: 'tax_id_encrypted',
-            entityType: 'entity_type',
-            industryType: 'business_type',
-            timeInBusiness: 'time_in_business',
-            requestedAmount: 'funding_amount',
-            monthlyRevenue: 'monthly_revenue',
-            annualRevenue: 'annual_revenue',
+            cellPhone: 'cell_phone',
+            workPhone: 'work_phone',
+            businessEmail: 'email',
             businessAddress: 'address',
             businessCity: 'city',
-            businessState: 'us_state',
+            businessState: 'state',
             businessZip: 'zip',
             leadSource: 'lead_source',
             priority: 'priority',
+            notes: 'notes',
+            ownerFirstName: 'first_name',
+            ownerLastName: 'last_name',
+            ownerEmail: 'email'
+        };
 
-            // Owner Information
-            owner1FirstName: 'first_name',
-            owner1LastName: 'last_name',
-            owner1Email: 'owner_email',
-            owner1Phone: 'owner_cell_phone',
-            owner1OwnershipPercentage: 'ownership_percent',
-            owner1DateOfBirth: 'date_of_birth',
-            owner1HomeAddress: 'owner_home_address',
-            owner1HomeCity: 'owner_home_city',
-            owner1HomeState: 'owner_home_state',
-            owner1HomeZip: 'owner_home_zip',
-            owner1SSN: 'ssn_encrypted',
-
-            // Partner Information
-            owner2FirstName: 'partner_first_name',
-            owner2LastName: 'partner_last_name',
-            owner2Email: 'partner_email',
-            owner2Phone: 'partner_phone',
-            owner2OwnershipPercentage: 'partner_ownership',
-            owner2DateOfBirth: 'partner_dob',
-            owner2HomeAddress: 'partner_address',
-            owner2HomeCity: 'partner_city',
-            owner2HomeState: 'partner_state',
-            owner2HomeZip: 'partner_zip',
-            owner2SSN: 'partner_ssn',
-
-            // Marketing & Notes
-            marketingNotification: 'marketing_notification',
-            notes: 'notes'
+        // Fields that go into lead_details table
+        const leadDetailsFields = {
+            federalTaxId: 'tax_id_encrypted',
+            ownerSSN: 'ssn_encrypted',
+            industryType: 'business_type',
+            annualRevenue: 'annual_revenue',
+            businessStartDate: 'business_start_date',
+            requestedAmount: 'funding_amount',
+            factorRate: 'factor_rate',
+            fundingDate: 'funding_date',
+            termMonths: 'term_months',
+            campaign: 'campaign',
+            ownerDOB: 'date_of_birth'
         };
 
         // Generate new conversation ID
         const conversationId = uuidv4();
         const timestamp = new Date().toISOString();
 
-        // Build insert data
-        const insertData = {
+        // Build conversation insert data
+        const conversationData = {
             id: conversationId,
             created_at: timestamp,
             updated_at: timestamp,
             state: 'NEW',
             current_step: 'initial_contact',
-            priority: data.priority || 'medium',
+            priority: data.priority || 0,
             business_name: companyName,
             lead_phone: primaryPhone
         };
 
-        // Map all provided fields
+        // Build lead_details insert data
+        const leadDetailsData = {};
+        let hasLeadDetails = false;
+
+        // Map all provided fields to appropriate tables
         for (const [frontendField, value] of Object.entries(data)) {
-            // Check if it's a mapped camelCase field
-            const dbField = fieldMapping[frontendField];
-            if (dbField && value !== null && value !== undefined && value !== '') {
-                insertData[dbField] = value;
+            if (value === null || value === undefined || value === '') continue;
+
+            // Check if it's a conversation field
+            const convField = conversationFields[frontendField];
+            if (convField) {
+                conversationData[convField] = value;
             }
-            // Also accept direct snake_case database field names
-            else if (frontendField.includes('_') && value !== null && value !== undefined && value !== '') {
-                insertData[frontendField] = value;
+
+            // Check if it's a lead_details field
+            const detailField = leadDetailsFields[frontendField];
+            if (detailField) {
+                leadDetailsData[detailField] = value;
+                hasLeadDetails = true;
+            }
+
+            // Also accept direct snake_case database field names for conversations
+            if (frontendField.includes('_') && !convField && !detailField) {
+                conversationData[frontendField] = value;
             }
         }
 
-        console.log('📊 Data to insert:', insertData);
+        console.log('📊 Conversation data:', conversationData);
+        console.log('📊 Lead details data:', leadDetailsData);
 
-        // Build dynamic INSERT query
-        const fields = Object.keys(insertData);
-        const values = Object.values(insertData);
-        const placeholders = fields.map((_, i) => `$${i + 1}`);
+        // Insert into conversations table
+        const convFields = Object.keys(conversationData);
+        const convValues = Object.values(conversationData);
+        const convPlaceholders = convFields.map((_, i) => `$${i + 1}`);
 
-        const query = `
-            INSERT INTO conversations (${fields.join(', ')})
-            VALUES (${placeholders.join(', ')})
+        const convQuery = `
+            INSERT INTO conversations (${convFields.join(', ')})
+            VALUES (${convPlaceholders.join(', ')})
             RETURNING *
         `;
 
-        console.log('🔧 Executing insert query...');
-        const result = await database.query(query, values);
-        const newConversation = result.rows[0];
+        console.log('🔧 Executing conversation insert...');
+        const convResult = await database.query(convQuery, convValues);
+        const newConversation = convResult.rows[0];
+
+        // Insert into lead_details table if we have data
+        if (hasLeadDetails) {
+            leadDetailsData.id = uuidv4();
+            leadDetailsData.conversation_id = conversationId;
+            leadDetailsData.created_at = timestamp;
+            leadDetailsData.updated_at = timestamp;
+            leadDetailsData.created_by = 'manual';
+
+            const detailFields = Object.keys(leadDetailsData);
+            const detailValues = Object.values(leadDetailsData);
+            const detailPlaceholders = detailFields.map((_, i) => `$${i + 1}`);
+
+            const detailQuery = `
+                INSERT INTO lead_details (${detailFields.join(', ')})
+                VALUES (${detailPlaceholders.join(', ')})
+            `;
+
+            console.log('🔧 Executing lead_details insert...');
+            await database.query(detailQuery, detailValues);
+        }
 
         console.log('✅ Conversation created with ID:', conversationId);
         console.log('=== CREATE LEAD SUCCESS ===');
@@ -1715,15 +1735,24 @@ app.put('/api/conversations/:id', express.json(), async (req, res) => {
             // Dates that exist in lead_details table
             ownerDOB: 'date_of_birth',
             owner_dob: 'date_of_birth',
+            owner_d_o_b: 'date_of_birth',  // Handle frontend's weird conversion
             owner_date_of_birth: 'date_of_birth',
             date_of_birth: 'date_of_birth',
             
             // SSN field mappings (maps to 'ssn_encrypted' column in database)
             ownerSSN: 'ssn_encrypted',
             owner_ssn: 'ssn_encrypted',
+            owner_s_s_n: 'ssn_encrypted',  // Handle frontend's weird conversion
             ssn: 'ssn_encrypted',
             ssn_encrypted: 'ssn_encrypted',
-            
+
+            // Tax ID / EIN field mappings
+            federalTaxId: 'tax_id_encrypted',
+            federal_tax_id: 'tax_id_encrypted',
+            taxId: 'tax_id_encrypted',
+            tax_id: 'tax_id_encrypted',
+            tax_id_encrypted: 'tax_id_encrypted',
+
             businessStartDate: 'business_start_date',
             business_start_date: 'business_start_date',
             
@@ -1871,8 +1900,9 @@ app.put('/api/conversations/:id', express.json(), async (req, res) => {
         
         // Get the updated conversation with lead details
         const finalResult = await database.query(`
-            SELECT c.*, ld.date_of_birth, ld.business_start_date, 
-                   ld.business_type, ld.annual_revenue, ld.funding_amount, ld.campaign
+            SELECT c.*, ld.date_of_birth, ld.business_start_date,
+                   ld.business_type, ld.annual_revenue, ld.funding_amount, ld.campaign,
+                   ld.ssn_encrypted, ld.tax_id_encrypted, ld.factor_rate, ld.term_months, ld.funding_date
             FROM conversations c
             LEFT JOIN lead_details ld ON c.id = ld.conversation_id
             WHERE c.id = $1

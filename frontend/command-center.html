@@ -511,7 +511,7 @@
             <div class="left-panel">
                 <div class="panel-header">
                     <div class="panel-actions">
-                        <button class="action-button primary" id="addLeadBtn" onclick="alert('BUTTON WORKS!'); console.log('INLINE ONCLICK FIRED'); if(window.openLeadModal){window.openLeadModal('create')}else{alert('openLeadModal not found')}">
+                        <button class="action-button primary" id="addLeadBtn" onclick="openNewLeadModal()">
                             New Lead
                         </button>
                         <button class="action-button secondary" id="csvImportBtn" onclick="window.location.href='csv-import.html'">
@@ -657,11 +657,11 @@
         </div>
     </div>
 
-    <!-- Add Lead Modal - DEPRECATED: Now using editLeadModal for both create and edit -->
-    <div class="modal" id="addLeadModal" style="display: none !important;">
+    <!-- Add Lead Modal -->
+    <div class="modal" id="addLeadModal" style="display: none;">
         <div class="modal-content comprehensive-modal">
             <div class="modal-header">
-                <h3>Add New Lead - Comprehensive CRM</h3>
+                <h3>Add New Lead</h3>
                 <button class="modal-close" id="closeAddLeadModal">×</button>
             </div>
             <div class="modal-body">
@@ -1430,6 +1430,9 @@
     <script src="js/ai-assistant.js"></script>
     <script src="js/stats.js"></script>
 
+    <!-- New Lead Form Generator -->
+    <script src="js/new-lead-form.js"></script>
+
     <!-- 4. Main app LAST (depends on everything) -->
     <script src="js/command-center.js"></script>
     <script>
@@ -2024,8 +2027,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 DOM Content Loaded');
 
-            // Initialize comprehensive form - DEPRECATED (using unified Edit modal now)
-            // setTimeout(initializeComprehensiveForm, 100);
+            // Initialize comprehensive form - Re-enabled for standalone Add Lead modal
+            setTimeout(initializeComprehensiveForm, 100);
             
             // Run debug checks
             setTimeout(debugClasses, 100);
@@ -2912,7 +2915,42 @@
                     submitBtn.style.background = '#10b981';
                 }
 
+                // Attach form submission handler
+                const form = modalContent.querySelector('#editLeadForm');
+                if (form) {
+                    form.onsubmit = async (e) => {
+                        e.preventDefault();
+                        await handleCreateFormSubmit(e);
+                    };
+                    console.log('✅ Form submit handler attached');
+                }
+
                 console.log('✅ Form generated for CREATE mode');
+            } else if (mode === 'edit') {
+                console.log('✅ Opening in EDIT mode');
+
+                if (!conversationData) {
+                    console.error('❌ No conversation data provided for edit mode');
+                    return;
+                }
+
+                const formHTML = intelligence.createEditFormTemplate(conversationData);
+                modalContent.innerHTML = formHTML;
+
+                const modalTitle = modal.querySelector('.modal-header h3');
+                if (modalTitle) modalTitle.textContent = 'Edit Lead Information';
+
+                // Attach form submission handler for edit
+                const form = modalContent.querySelector('#editLeadForm');
+                if (form) {
+                    form.onsubmit = async (e) => {
+                        e.preventDefault();
+                        await handleEditFormSubmit(e, conversationData.id);
+                    };
+                    console.log('✅ Edit form submit handler attached');
+                }
+
+                console.log('✅ Form generated for EDIT mode');
             }
 
             // Close handlers
@@ -2949,6 +2987,108 @@
         };
 
         console.log('💡 Test helper added: window.testOpenLeadModal()');
+
+        // Handle new lead form submission
+        async function handleNewLeadSubmit(e) {
+            e.preventDefault();
+            console.log('📤 Submitting new lead...');
+
+            const formData = new FormData(e.target);
+            const data = {};
+
+            // Convert form data to object with snake_case keys
+            for (const [key, value] of formData.entries()) {
+                const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+                if (value) {
+                    data[snakeKey] = value;
+                }
+            }
+
+            const submitBtn = e.target.querySelector('[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Creating...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:3001/api/conversations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    alert('✅ Lead created successfully!');
+                    document.getElementById('addLeadModal').style.display = 'none';
+                    location.reload(); // Refresh to show new lead
+                } else {
+                    throw new Error(result.error || 'Failed to create lead');
+                }
+            } catch (error) {
+                console.error('Error creating lead:', error);
+                alert('❌ Error: ' + error.message);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Simple standalone function to open the add lead modal
+        window.openNewLeadModal = function() {
+            console.log('🆕 Opening standalone Add Lead modal');
+            const modal = document.getElementById('addLeadModal');
+            if (!modal) {
+                console.error('❌ Add Lead modal not found');
+                return;
+            }
+
+            // Inject the generated form
+            const modalBody = modal.querySelector('.modal-body');
+            if (modalBody && typeof generateNewLeadForm === 'function') {
+                modalBody.innerHTML = generateNewLeadForm();
+
+                // Attach submit handler
+                const form = document.getElementById('newLeadForm');
+                if (form) {
+                    form.onsubmit = async (e) => {
+                        e.preventDefault();
+                        await handleNewLeadSubmit(e);
+                    };
+                }
+            }
+
+            modal.style.display = 'flex';
+        };
+
+        // Close button handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const closeBtn = document.getElementById('closeAddLeadModal');
+            const cancelBtn = document.getElementById('cancelAddLead');
+            const modal = document.getElementById('addLeadModal');
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    modal.style.display = 'none';
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function() {
+                    modal.style.display = 'none';
+                });
+            }
+
+            // Close on outside click
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            }
+        });
+
+        console.log('✅ openNewLeadModal defined globally');
     </script>
 
     <!-- Main JavaScript Integration Script -->
@@ -3437,11 +3577,13 @@
             }
         }
 
-        async function handleEditFormSubmit(e) {
+        async function handleEditFormSubmit(e, conversationId) {
             e.preventDefault();
             console.log('📤 Updating lead...');
 
-            if (!currentEditingLeadId) {
+            const leadId = conversationId || currentEditingLeadId;
+
+            if (!leadId) {
                 console.error('❌ No lead ID set for editing');
                 return;
             }
@@ -3470,7 +3612,7 @@
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch(`http://localhost:3001/api/conversations/${currentEditingLeadId}`, {
+                const response = await fetch(`http://localhost:3001/api/conversations/${leadId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updateData)
@@ -3490,7 +3632,7 @@
 
                 if (window.conversationUI?.core) {
                     const currentId = window.conversationUI.core.currentConversationId;
-                    if (currentId === currentEditingLeadId) {
+                    if (currentId === leadId) {
                         window.conversationUI.core.selectConversation(currentId);
                     }
                     await window.conversationUI.core.loadConversations();

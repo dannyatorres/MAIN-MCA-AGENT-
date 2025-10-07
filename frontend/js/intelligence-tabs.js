@@ -355,6 +355,9 @@ class IntelligenceTabs {
         const form = modalContent.querySelector('#editLeadForm');
         if (form) {
             form.addEventListener('submit', (e) => this.handleEditFormSubmit(e));
+
+            // Attach auto-formatters to form fields
+            this.attachInputFormatters(form);
         }
 
         // Set up Generate Application button
@@ -810,7 +813,13 @@ class IntelligenceTabs {
             if (['annual_revenue', 'monthly_revenue', 'requested_amount', 'credit_score',
                  'years_in_business', 'factor_rate', 'term_months', 'ownership_percent'].includes(snakeCase)) {
                 updateData[snakeCase] = value ? parseFloat(value.toString().replace(/[$,\s%]/g, '')) : null;
-            } else {
+            }
+            // Strip formatting from SSN, phone, and EIN fields
+            else if (['owner_s_s_n', 'owner1_s_s_n', 'owner2_s_s_n', 'primary_phone', 'cell_phone',
+                      'work_phone', 'fax_phone', 'owner1_phone', 'owner2_phone', 'federal_tax_id', 'tax_id'].includes(snakeCase)) {
+                updateData[snakeCase] = value ? value.replace(/\D/g, '') : null;
+            }
+            else {
                 updateData[snakeCase] = value || null;
             }
         }
@@ -861,20 +870,29 @@ class IntelligenceTabs {
                     modal.style.display = 'none';
                 }
 
-                // Update local conversation object
-                const selectedConversation = this.parent.getSelectedConversation();
-                if (selectedConversation) {
-                    for (const [formField, value] of Object.entries(rawData)) {
-                        selectedConversation[formField] = value;
-                        const snakeCaseField = formField.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-                        selectedConversation[snakeCaseField] = value;
-                    }
+                // Reload the full conversation data from server to get updated lead_details
+                try {
+                    const refreshResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}`);
+                    if (refreshResponse.ok) {
+                        const refreshData = await refreshResponse.json();
+                        const updatedConversation = refreshData.conversation || refreshData;
 
-                    // Update the conversations map
-                    if (this.parent.core) {
-                        this.parent.core.conversations.set(conversationId, selectedConversation);
-                        this.parent.core.showConversationDetails();
+                        // Update the local conversation object with fresh server data
+                        if (this.parent) {
+                            this.parent.selectedConversation = updatedConversation;
+
+                            if (this.parent.core) {
+                                this.parent.core.conversations.set(conversationId, updatedConversation);
+                                this.parent.core.selectedConversation = updatedConversation;
+                                this.parent.core.showConversationDetails();
+                                // Refresh the conversation list panel to show updated name
+                                this.parent.core.renderConversationsList();
+                            }
+                        }
                     }
+                } catch (refreshError) {
+                    console.error('Error refreshing conversation data:', refreshError);
+                    // Non-critical error, just log it
                 }
             } else {
                 throw new Error(result.error || result.message || 'Update failed');
@@ -884,6 +902,86 @@ class IntelligenceTabs {
             console.error('Error saving lead data:', error);
             this.utils.showNotification('Failed to save: ' + error.message, 'error');
         }
+    }
+
+    // Auto-formatting helper functions
+    formatSSN(value) {
+        if (!value) return '';
+        const digits = String(value).replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+        return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 9)}`;
+    }
+
+    formatPhone(value) {
+        if (!value) return '';
+        const digits = String(value).replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+        return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+
+    formatEIN(value) {
+        if (!value) return '';
+        const digits = String(value).replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits.length <= 2) return digits;
+        return `${digits.slice(0, 2)}-${digits.slice(2, 9)}`;
+    }
+
+    attachInputFormatters(form) {
+        // SSN fields
+        const ssnFields = form.querySelectorAll('input[name="ownerSSN"], input[name="owner1SSN"], input[name="owner2SSN"]');
+        ssnFields.forEach(field => {
+            // Format existing value on load
+            if (field.value) {
+                field.value = this.formatSSN(field.value);
+            }
+
+            field.addEventListener('input', (e) => {
+                const cursorPos = e.target.selectionStart;
+                const oldLength = e.target.value.length;
+                e.target.value = this.formatSSN(e.target.value);
+                const newLength = e.target.value.length;
+                e.target.setSelectionRange(cursorPos + (newLength - oldLength), cursorPos + (newLength - oldLength));
+            });
+        });
+
+        // Phone fields
+        const phoneFields = form.querySelectorAll('input[name="primaryPhone"], input[name="cellPhone"], input[name="workPhone"], input[name="faxPhone"], input[name="owner1Phone"], input[name="owner2Phone"]');
+        phoneFields.forEach(field => {
+            // Format existing value on load
+            if (field.value) {
+                field.value = this.formatPhone(field.value);
+            }
+
+            field.addEventListener('input', (e) => {
+                const cursorPos = e.target.selectionStart;
+                const oldLength = e.target.value.length;
+                e.target.value = this.formatPhone(e.target.value);
+                const newLength = e.target.value.length;
+                e.target.setSelectionRange(cursorPos + (newLength - oldLength), cursorPos + (newLength - oldLength));
+            });
+        });
+
+        // EIN/Tax ID fields
+        const einFields = form.querySelectorAll('input[name="federalTaxId"], input[name="taxId"]');
+        einFields.forEach(field => {
+            // Format existing value on load
+            if (field.value) {
+                field.value = this.formatEIN(field.value);
+            }
+
+            field.addEventListener('input', (e) => {
+                const cursorPos = e.target.selectionStart;
+                const oldLength = e.target.value.length;
+                e.target.value = this.formatEIN(e.target.value);
+                const newLength = e.target.value.length;
+                e.target.setSelectionRange(cursorPos + (newLength - oldLength), cursorPos + (newLength - oldLength));
+            });
+        });
     }
 
     setupGenerateApplicationButton(content) {
@@ -920,6 +1018,14 @@ class IntelligenceTabs {
             const conv = selectedConversation;
 
             // Prepare application data
+            const rawSSN = conv.ssn || conv.owner_ssn || conv.ssn_encrypted || '';
+            const rawTaxId = conv.tax_id || conv.federal_tax_id || conv.tax_id_encrypted || '';
+
+            console.log('🔍 Raw SSN:', rawSSN);
+            console.log('🔍 Raw Tax ID:', rawTaxId);
+            console.log('🔍 Formatted SSN:', this.formatSSN(rawSSN));
+            console.log('🔍 Formatted Tax ID:', this.formatEIN(rawTaxId));
+
             const applicationData = {
                 legalName: conv.business_name || '',
                 dba: conv.dba_name || conv.business_name || '',
@@ -929,7 +1035,7 @@ class IntelligenceTabs {
                 zip: conv.business_zip || conv.zip || '',
                 telephone: conv.lead_phone || conv.phone || '',
                 fax: conv.fax_phone || '',
-                federalTaxId: conv.tax_id || conv.federal_tax_id || '',
+                federalTaxId: this.formatEIN(rawTaxId),
                 dateBusinessStarted: this.utils.formatDate(conv.business_start_date, 'display'),
                 lengthOfOwnership: conv.length_of_ownership || '',
                 website: conv.website || '',
@@ -949,7 +1055,7 @@ class IntelligenceTabs {
                 ownerZip: conv.owner_home_zip || '',
                 ownershipPercentage: conv.ownership_percent || '',
                 creditScore: conv.credit_score || '',
-                ownerSSN: conv.ssn || conv.owner_ssn || conv.ssn_encrypted || '',
+                ownerSSN: this.formatSSN(rawSSN),
                 ownerDOB: this.utils.formatDate(conv.date_of_birth, 'display'),
                 ownerCellPhone: conv.cell_phone || '',
                 yearsInBusiness: conv.years_in_business || '',

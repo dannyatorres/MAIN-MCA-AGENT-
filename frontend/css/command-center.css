@@ -3430,6 +3430,69 @@ textarea.message-input:focus,
     }
 }
 
+/* Modal-specific form styles - apply same styles to modal context */
+#editLeadInlineModal .edit-form-container .form-group,
+#editLeadInlineModal .form-group {
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 16px;
+    margin-bottom: 16px;
+    min-width: 150px;
+    max-width: 220px;
+}
+
+#editLeadInlineModal .form-row-six {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(150px, 1fr)) !important;
+    gap: 12px !important;
+    margin-bottom: 16px;
+}
+
+#editLeadInlineModal .form-input,
+#editLeadInlineModal input[type="text"],
+#editLeadInlineModal input[type="number"],
+#editLeadInlineModal input[type="email"],
+#editLeadInlineModal input[type="tel"],
+#editLeadInlineModal input[type="url"],
+#editLeadInlineModal input[type="date"],
+#editLeadInlineModal select {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+    height: 32px;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+#editLeadInlineModal .form-section {
+    max-width: 100%;
+    margin-bottom: 24px;
+}
+
+#editLeadInlineModal .form-section h4 {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+#editLeadInlineModal .edit-form-container {
+    padding: 20px;
+    background: #ffffff;
+}
+
+#editLeadInlineModal label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
 /* FCS Progress Indicator */
 .fcs-progress-indicator {
     position: fixed;
