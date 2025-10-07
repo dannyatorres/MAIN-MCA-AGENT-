@@ -415,13 +415,12 @@ body {
 }
 
 .conversation-item {
-    padding: 6px 12px;
+    padding: 8px 12px;
     border-bottom: 1px solid #f3f4f6;
     cursor: pointer;
     transition: background-color 0.2s;
     position: relative;
-    height: 50px;
-    max-height: 50px;
+    min-height: 60px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -429,8 +428,13 @@ body {
 
 .conversation-checkbox {
     flex-shrink: 0;
-    display: flex;
+    display: none; /* Hidden by default */
     align-items: center;
+}
+
+/* Show checkboxes when in delete mode */
+.conversations-list.delete-mode .conversation-checkbox {
+    display: flex;
 }
 
 .delete-checkbox {
@@ -438,6 +442,30 @@ body {
     height: 14px;
     margin: 0;
     cursor: pointer;
+}
+
+/* Avatar circle - iOS style */
+.conversation-avatar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #0ea5e9;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 .conversation-content {

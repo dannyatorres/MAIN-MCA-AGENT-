@@ -344,6 +344,15 @@ class Templates {
             ? `<span class="conversation-id-badge">CID# ${conversation.display_id}</span>`
             : '';
 
+        // Get initials for avatar
+        const businessName = conversation.business_name || 'Unknown Business';
+        const initials = businessName
+            .split(' ')
+            .filter(word => word.length > 0)
+            .slice(0, 2)
+            .map(word => word[0].toUpperCase())
+            .join('');
+
         return `
             <div class="conversation-item ${isSelected ? 'selected' : ''} ${isChecked ? 'checked-for-deletion' : ''} ${hasUnread ? 'has-unread' : ''}"
                  data-conversation-id="${conversation.id}"${displayIdData}>
@@ -351,6 +360,9 @@ class Templates {
                 <div class="conversation-checkbox">
                     <input type="checkbox" class="delete-checkbox"
                            data-conversation-id="${conversation.id}" ${isChecked ? 'checked' : ''}>
+                </div>
+                <div class="conversation-avatar">
+                    <div class="avatar-circle">${initials}</div>
                 </div>
                 <div class="conversation-content">
                     <div class="conversation-header">

@@ -517,8 +517,8 @@
                         <button class="action-button secondary" id="csvImportBtn" onclick="window.location.href='csv-import.html'">
                             Import Conversations
                         </button>
-                        <button class="action-button secondary" id="reloadBtn" onclick="manualReloadConversations()">
-                            Reload
+                        <button class="action-button secondary" id="toggleDeleteModeBtn" onclick="toggleDeleteMode()">
+                            Delete Conversations
                         </button>
                         <button class="action-button danger" id="deleteSelectedBtn" style="display: none;">
                             Delete Selected
@@ -3125,6 +3125,44 @@
             }
 
             modal.style.display = 'flex';
+        };
+
+        // Toggle delete mode - show/hide checkboxes
+        window.toggleDeleteMode = function() {
+            const conversationsList = document.querySelector('.conversations-list');
+            const toggleBtn = document.getElementById('toggleDeleteModeBtn');
+
+            if (!conversationsList) return;
+
+            // Toggle delete mode class
+            const isDeleteMode = conversationsList.classList.toggle('delete-mode');
+
+            // Update button text and style
+            if (isDeleteMode) {
+                toggleBtn.textContent = 'Cancel';
+                toggleBtn.classList.remove('secondary');
+                toggleBtn.classList.add('danger');
+            } else {
+                toggleBtn.textContent = 'Delete Conversations';
+                toggleBtn.classList.remove('danger');
+                toggleBtn.classList.add('secondary');
+
+                // Clear any selections and hide delete button
+                if (window.conversationUI && window.conversationUI.core) {
+                    window.conversationUI.core.selectedForDeletion.clear();
+                    window.conversationUI.core.updateDeleteButtonVisibility();
+
+                    // Uncheck all checkboxes
+                    document.querySelectorAll('.delete-checkbox').forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+
+                    // Remove checked styling
+                    document.querySelectorAll('.conversation-item').forEach(item => {
+                        item.classList.remove('checked-for-deletion');
+                    });
+                }
+            }
         };
 
         // Close button handler

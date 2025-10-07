@@ -632,6 +632,14 @@ class ConversationCore {
                 'success'
             );
 
+            // Exit delete mode after successful deletion
+            const conversationsList = document.querySelector('.conversations-list');
+            if (conversationsList && conversationsList.classList.contains('delete-mode')) {
+                if (typeof window.toggleDeleteMode === 'function') {
+                    window.toggleDeleteMode();
+                }
+            }
+
         } catch (error) {
             console.error('Error deleting conversations:', error);
             this.utils.showNotification('Failed to delete leads. Please try again.', 'error');
