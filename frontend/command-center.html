@@ -512,10 +512,10 @@
                 <div class="panel-header">
                     <div class="panel-actions">
                         <button class="action-button primary" id="addLeadBtn" onclick="openNewLeadModal()">
-                            New Lead
+                            New Conversation
                         </button>
                         <button class="action-button secondary" id="csvImportBtn" onclick="window.location.href='csv-import.html'">
-                            Import Leads
+                            Import Conversations
                         </button>
                         <button class="action-button secondary" id="reloadBtn" onclick="manualReloadConversations()">
                             Reload
@@ -954,10 +954,6 @@
                 </div>
                 </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelAddLead">Cancel</button>
-                <button class="btn btn-primary" id="confirmAddLead">Create Lead</button>
             </div>
         </div>
     </div>
@@ -2988,6 +2984,69 @@
 
         console.log('💡 Test helper added: window.testOpenLeadModal()');
 
+        // Auto-formatting functions
+        function formatSSN(value) {
+            const digits = value.replace(/\D/g, '');
+            if (digits.length <= 3) return digits;
+            if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+            return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 9)}`;
+        }
+
+        function formatPhone(value) {
+            const digits = value.replace(/\D/g, '');
+            if (digits.length <= 3) return digits;
+            if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+            return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+        }
+
+        function formatEIN(value) {
+            const digits = value.replace(/\D/g, '');
+            if (digits.length <= 2) return digits;
+            return `${digits.slice(0, 2)}-${digits.slice(2, 9)}`;
+        }
+
+        function stripFormatting(value) {
+            return value.replace(/\D/g, '');
+        }
+
+        function attachInputFormatters(form) {
+            // SSN fields
+            const ssnFields = form.querySelectorAll('input[name="ownerSSN"]');
+            ssnFields.forEach(field => {
+                field.addEventListener('input', (e) => {
+                    const cursorPos = e.target.selectionStart;
+                    const oldLength = e.target.value.length;
+                    e.target.value = formatSSN(e.target.value);
+                    const newLength = e.target.value.length;
+                    e.target.setSelectionRange(cursorPos + (newLength - oldLength), cursorPos + (newLength - oldLength));
+                });
+            });
+
+            // Phone fields
+            const phoneFields = form.querySelectorAll('input[name="primaryPhone"], input[name="cellPhone"], input[name="workPhone"], input[name="faxPhone"]');
+            phoneFields.forEach(field => {
+                field.addEventListener('input', (e) => {
+                    const cursorPos = e.target.selectionStart;
+                    const oldLength = e.target.value.length;
+                    e.target.value = formatPhone(e.target.value);
+                    const newLength = e.target.value.length;
+                    e.target.setSelectionRange(cursorPos + (newLength - oldLength), cursorPos + (newLength - oldLength));
+                });
+            });
+
+            // EIN/Tax ID fields
+            const einFields = form.querySelectorAll('input[name="federalTaxId"]');
+            einFields.forEach(field => {
+                field.addEventListener('input', (e) => {
+                    const cursorPos = e.target.selectionStart;
+                    const oldLength = e.target.value.length;
+                    e.target.value = formatEIN(e.target.value);
+                    const newLength = e.target.value.length;
+                    e.target.setSelectionRange(cursorPos + (newLength - oldLength), cursorPos + (newLength - oldLength));
+                });
+            });
+        }
+
         // Handle new lead form submission
         async function handleNewLeadSubmit(e) {
             e.preventDefault();
@@ -2996,11 +3055,16 @@
             const formData = new FormData(e.target);
             const data = {};
 
-            // Convert form data to object with snake_case keys
+            // Convert form data to object - use exact field names the backend expects
             for (const [key, value] of formData.entries()) {
-                const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
                 if (value) {
-                    data[snakeKey] = value;
+                    // Strip formatting from SSN, phone, and EIN fields
+                    if (key === 'ownerSSN' || key === 'primaryPhone' || key === 'cellPhone' ||
+                        key === 'workPhone' || key === 'faxPhone' || key === 'federalTaxId') {
+                        data[key] = stripFormatting(value);
+                    } else {
+                        data[key] = value;
+                    }
                 }
             }
 
@@ -3054,6 +3118,9 @@
                         e.preventDefault();
                         await handleNewLeadSubmit(e);
                     };
+
+                    // Attach auto-formatters
+                    attachInputFormatters(form);
                 }
             }
 

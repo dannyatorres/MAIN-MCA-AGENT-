@@ -1260,14 +1260,14 @@ body {
 .comprehensive-modal {
     width: 1400px !important;
     max-width: 98vw !important;
-    max-height: 95vh;
+    max-height: 98vh !important;
     line-height: 1.2;
     overflow-x: auto;
 }
 
 .comprehensive-modal .modal-body {
-    max-height: 80vh;
-    overflow-y: auto;
+    max-height: none !important;
+    overflow-y: visible !important;
     padding: 10px;
     line-height: 1.2;
 }
