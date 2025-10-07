@@ -53,6 +53,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    width: 100%;
 }
 
 /* Header */
@@ -214,6 +215,7 @@ body {
     flex: 1;
     display: flex;
     min-height: 0;
+    width: 100%;
 }
 
 /* Panel Base Styles */
@@ -227,18 +229,17 @@ body {
 }
 
 .left-panel {
-    width: 280px;
-    flex-shrink: 0;
+    flex: 3 1 280px;
+    min-width: 260px;
 }
 
 .center-panel {
-    width: 400px;
-    flex-shrink: 0;
+    flex: 3 1 400px;
+    min-width: 350px;
 }
 
 .right-panel {
-    width: var(--panel-width);
-    flex-shrink: 0;
+    flex: 1 1 auto;
     border-right: none;
     min-width: 400px;
     height: calc(100vh - var(--header-height));
@@ -408,6 +409,8 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 0;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
 }
 
 .conversation-item {
@@ -632,6 +635,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
 }
 
 .message {
@@ -2053,14 +2058,12 @@ textarea.message-input:focus,
 @media (min-width: 1200px) {
     .left-panel {
         min-width: 260px;
-        max-width: 300px;
     }
-    
+
     .center-panel {
         min-width: 350px;
-        max-width: 450px;
     }
-    
+
     .right-panel {
         min-width: 500px;
     }
@@ -2068,12 +2071,7 @@ textarea.message-input:focus,
 
 @media (max-width: 1200px) and (min-width: 769px) {
     .right-panel {
-        width: 45vw;
         min-width: 380px;
-    }
-    
-    .center-panel {
-        max-width: 30vw;
     }
 }
 
@@ -3868,6 +3866,8 @@ textarea.message-input:focus,
     padding-bottom: 10px !important;
     margin-bottom: 0 !important;
     min-height: 0 !important; /* Important for flex children */
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
 }
 
 /* Messages list - keep it simple */
@@ -3993,48 +3993,15 @@ textarea.message-input:focus,
     box-sizing: border-box !important;
 }
 
-/* Fixed width scrollbar for messages container */
+/* Hide scrollbars for messages container */
 #messagesContainer::-webkit-scrollbar,
 .messages-container::-webkit-scrollbar {
-    width: 6px !important; /* Fixed width */
+    display: none;
 }
 
-#messagesContainer::-webkit-scrollbar-track,
-.messages-container::-webkit-scrollbar-track {
-    background: #f1f3f4 !important;
-    border-radius: 3px !important;
-}
-
-#messagesContainer::-webkit-scrollbar-thumb,
-.messages-container::-webkit-scrollbar-thumb {
-    background: #c1c1c1 !important;
-    border-radius: 3px !important;
-    min-height: 20px !important; /* Minimum thumb height */
-}
-
-#messagesContainer::-webkit-scrollbar-thumb:hover,
-.messages-container::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8 !important;
-}
-
-/* Fixed width scrollbar for conversations list */
+/* Hide scrollbars for conversations list */
 .conversations-list::-webkit-scrollbar {
-    width: 6px !important; /* Fixed width */
-}
-
-.conversations-list::-webkit-scrollbar-track {
-    background: #f1f3f4 !important;
-    border-radius: 3px !important;
-}
-
-.conversations-list::-webkit-scrollbar-thumb {
-    background: #c1c1c1 !important;
-    border-radius: 3px !important;
-    min-height: 20px !important; /* Minimum thumb height */
-}
-
-.conversations-list::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8 !important;
+    display: none;
 }
 
 /* Remove any max-height constraints */
@@ -4163,6 +4130,7 @@ textarea.message-input:focus,
 .main-content {
     display: flex !important;
     height: calc(100vh - var(--header-height) - var(--status-bar-height)) !important;
+    width: 100% !important;
     align-items: stretch !important; /* Make all children same height */
     overflow: hidden !important;
 }
@@ -4187,23 +4155,18 @@ textarea.message-input:focus,
 
 /* Set proper proportional widths */
 .left-panel {
-    width: 20% !important;
+    flex: 3 1 280px !important;
     min-width: 280px !important;
-    max-width: 350px !important;
-    flex-shrink: 0 !important;
 }
 
 .center-panel {
-    width: 30% !important;
+    flex: 3 1 400px !important;
     min-width: 350px !important;
-    max-width: 450px !important;
-    flex-shrink: 0 !important;
 }
 
 .right-panel {
-    width: 50% !important;
+    flex: 1 1 auto !important;
     min-width: 500px !important;
-    flex: 1 !important; /* Take remaining space */
 }
 
 /* Standardize ALL panel headers to same height */
@@ -4247,6 +4210,8 @@ textarea.message-input:focus,
     min-height: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
 }
 
 /* Make conversations list taller by giving it more flex grow */
@@ -4314,25 +4279,20 @@ textarea.message-input:focus,
 
 /* Conversations panel - increase width */
 .left-panel {
-    width: 25% !important; /* Increased from 20% */
-    min-width: 320px !important; /* Increased from 280px */
-    max-width: 400px !important; /* Increased from 350px */
-    flex-shrink: 0 !important;
+    flex: 3 1 320px !important;
+    min-width: 320px !important;
 }
 
 /* Messaging panel - increase width */
 .center-panel {
-    width: 35% !important; /* Increased from 30% */
-    min-width: 400px !important; /* Increased from 350px */
-    max-width: 500px !important; /* Increased from 450px */
-    flex-shrink: 0 !important;
+    flex: 3 1 400px !important;
+    min-width: 400px !important;
 }
 
 /* Lead Intelligence panel - reduce width */
 .right-panel {
-    width: 40% !important; /* Reduced from 50% */
-    min-width: 450px !important; /* Reduced from 500px */
-    flex: 1 !important; /* Still take remaining space */
+    flex: 1 1 auto !important;
+    min-width: 450px !important;
 }
 
 /* Update the root variable for consistency */
@@ -4344,32 +4304,20 @@ textarea.message-input:focus,
 @media (min-width: 1200px) {
     .left-panel {
         min-width: 320px;
-        max-width: 400px;
     }
-    
+
     .center-panel {
         min-width: 400px;
-        max-width: 500px;
     }
-    
+
     .right-panel {
         min-width: 450px;
-        max-width: 600px;
     }
 }
 
 @media (max-width: 1200px) and (min-width: 769px) {
     .right-panel {
-        width: 38vw;
         min-width: 400px;
-    }
-    
-    .center-panel {
-        max-width: 35vw;
-    }
-    
-    .left-panel {
-        max-width: 27vw;
     }
 }
 
@@ -4629,6 +4577,13 @@ textarea.message-input:focus,
 .ai-chat-messages {
     flex: 1;
     overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.ai-chat-messages::-webkit-scrollbar {
+    display: none;
 }
 
 /* Quick action buttons hover effect */

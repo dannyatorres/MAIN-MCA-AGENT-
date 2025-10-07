@@ -341,8 +341,8 @@ class LendersModule {
 
         let html = '';
 
-        // Wrap everything in a scrollable container
-        html = `<div style="max-height: 600px; overflow-y: auto; padding: 10px;">`;
+        // Wrap everything in a container
+        html = `<div style="padding: 10px;">`;
 
         // Simple Summary - just the numbers
         html += `
@@ -383,7 +383,7 @@ class LendersModule {
                     </button>
 
                     <div id="qualifiedSection" style="display: none; margin-top: 10px; padding: 15px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px;">
-                        <div style="max-height: 400px; overflow-y: auto;">`;
+                        <div>`;
 
             // Group by tiers
             const tiers = {};
@@ -429,7 +429,7 @@ class LendersModule {
                     </button>
 
                     <div id="nonQualifiedSection" style="display: none; margin-top: 10px; padding: 15px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;">
-                        <div style="max-height: 300px; overflow-y: auto;">
+                        <div>
                             ${nonQualified.map(item => `
                                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 6px; background: white; border-radius: 4px;">
                                     <div style="font-weight: 500; color: #374151; min-width: 200px;">${item.lender}</div>
@@ -497,8 +497,6 @@ class LendersModule {
             }
 
             // Ensure the results element itself is properly styled
-            resultsEl.style.maxHeight = '70vh';
-            resultsEl.style.overflowY = 'auto';
             resultsEl.style.paddingBottom = '20px';
 
             console.log('All event listeners attached');

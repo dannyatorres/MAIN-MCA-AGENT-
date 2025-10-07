@@ -246,7 +246,7 @@ class IntelligenceTabs {
                             <span style="font-weight: 600; color: #374151; font-size: 15px;">Chat about ${conversation.business_name || 'this project'}</span>
                         </div>
                     </div>
-                    <div class="ai-chat-messages" id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 24px; background: transparent; min-height: 0;">
+                    <div class="ai-chat-messages" id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 24px; background: transparent; min-height: 0; scrollbar-width: none; -ms-overflow-style: none;">
                         <div class="ai-loading-state" style="text-align: center; padding: 20px; color: #9ca3af;">
                             <div class="typing-dot" style="display: inline-block; width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; margin: 0 2px;"></div>
                             <div class="typing-dot" style="display: inline-block; width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; animation-delay: 0.2s; margin: 0 2px;"></div>
@@ -1013,13 +1013,14 @@ class IntelligenceTabs {
         }
 
         try {
-            this.utils.showNotification('Generating Working Capital Application...', 'info');
-
             const conv = selectedConversation;
 
             // Prepare application data
             const rawSSN = conv.ssn || conv.owner_ssn || conv.ssn_encrypted || '';
             const rawTaxId = conv.tax_id || conv.federal_tax_id || conv.tax_id_encrypted || '';
+            const rawPhone = conv.lead_phone || conv.phone || '';
+            const rawFax = conv.fax_phone || '';
+            const rawCellPhone = conv.cell_phone || '';
 
             console.log('🔍 Raw SSN:', rawSSN);
             console.log('🔍 Raw Tax ID:', rawTaxId);
@@ -1033,8 +1034,8 @@ class IntelligenceTabs {
                 city: conv.business_city || conv.city || '',
                 state: conv.business_state || conv.us_state || '',
                 zip: conv.business_zip || conv.zip || '',
-                telephone: conv.lead_phone || conv.phone || '',
-                fax: conv.fax_phone || '',
+                telephone: this.formatPhone(rawPhone),
+                fax: this.formatPhone(rawFax),
                 federalTaxId: this.formatEIN(rawTaxId),
                 dateBusinessStarted: this.utils.formatDate(conv.business_start_date, 'display'),
                 lengthOfOwnership: conv.length_of_ownership || '',
@@ -1057,7 +1058,7 @@ class IntelligenceTabs {
                 creditScore: conv.credit_score || '',
                 ownerSSN: this.formatSSN(rawSSN),
                 ownerDOB: this.utils.formatDate(conv.date_of_birth, 'display'),
-                ownerCellPhone: conv.cell_phone || '',
+                ownerCellPhone: this.formatPhone(rawCellPhone),
                 yearsInBusiness: conv.years_in_business || '',
                 signatureDate: new Date().toLocaleDateString()
             };
@@ -1143,7 +1144,6 @@ class IntelligenceTabs {
             await new Promise(resolve => setTimeout(resolve, 500));
 
             console.log('Converting to PDF with html2canvas...');
-            this.utils.showNotification('Converting to PDF...', 'info');
 
             // Capture with html2canvas - use the existing styling from app5.html
             const canvas = await html2canvas(iframeDoc.body, {
@@ -1204,7 +1204,6 @@ class IntelligenceTabs {
             const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
             console.log('Saving to AWS...');
-            this.utils.showNotification('Saving PDF to documents...', 'info');
 
             // Save to AWS server
             const saveResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conv.id}/save-generated-pdf`, {
@@ -1223,7 +1222,11 @@ class IntelligenceTabs {
             const saveResult = await saveResponse.json();
 
             if (saveResult.success) {
-                this.utils.showNotification('PDF generated and saved to AWS successfully!', 'success');
+                // Close the edit modal
+                const modal = document.getElementById('editLeadInlineModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
 
                 // Refresh documents
                 if (this.parent.documents) {
