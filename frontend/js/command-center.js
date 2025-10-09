@@ -131,9 +131,28 @@ class CommandCenter {
                 stats: !!this.stats
             });
 
+            // Make modules globally accessible for compatibility
+            this.exposeGlobalReferences();
+
         } catch (error) {
             console.error('❌ Failed to initialize MCA Command Center:', error);
         }
+    }
+
+    exposeGlobalReferences() {
+        // Make commandCenter accessible as conversationUI for backward compatibility
+        if (!window.conversationUI) {
+            window.conversationUI = this;
+            console.log('✅ window.conversationUI alias created');
+        }
+
+        // Make individual modules accessible globally
+        if (this.fcs) {
+            window.fcsModule = this.fcs;
+            console.log('✅ window.fcsModule exposed');
+        }
+
+        console.log('Global references exposed for compatibility');
     }
 
     setupKeyboardShortcuts() {

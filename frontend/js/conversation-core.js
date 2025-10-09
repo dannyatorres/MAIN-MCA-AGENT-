@@ -329,17 +329,9 @@ class ConversationCore {
         const businessName = this.selectedConversation.business_name || this.selectedConversation.company_name || '';
         const phoneNumber = this.selectedConversation.lead_phone || this.selectedConversation.phone || '';
 
-        // Add display ID to conversation header
-        const displayId = this.selectedConversation.display_id
-            ? `<span style="color: #64748b; font-size: 14px; font-weight: 500;">#${this.selectedConversation.display_id}</span>`
-            : '';
-
         conversationInfo.className = 'conversation-info text-style';
         conversationInfo.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <h2 class="owner-name" style="margin: 0;">${ownerName}</h2>
-                ${displayId}
-            </div>
+            <h2 class="owner-name" style="margin: 0; text-align: center;">${ownerName}</h2>
             ${businessName ? `<p class="business-name-subtitle">${businessName}</p>` : ''}
             ${phoneNumber ? `<p class="phone-number-subtitle">${phoneNumber}</p>` : ''}
         `;

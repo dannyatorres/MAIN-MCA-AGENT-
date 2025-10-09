@@ -87,29 +87,54 @@ class FCSModule {
     setupModalEventListeners() {
         console.log('Setting up FCS modal event listeners');
 
-        // Remove any existing modal listener first
-        if (this._modalClickHandler) {
-            document.body.removeEventListener('click', this._modalClickHandler);
-        }
+        // Wait for DOM to be ready, then attach listeners
+        const setupButtons = () => {
+            const confirmBtn = document.getElementById('confirmFcs');
+            const cancelBtn = document.getElementById('cancelFcs');
+            const closeBtn = document.getElementById('closeFCSModalBtn');
 
-        // Store the handler so we can remove it later
-        this._modalClickHandler = (event) => {
-            if (event.target.id === 'confirmFcs') {
-                console.log('✅ Confirm FCS button clicked');
-                event.preventDefault();
-                this.triggerFCS();
-            } else if (event.target.id === 'cancelFcs' ||
-                      (event.target.classList && event.target.classList.contains('modal-close') &&
-                       event.target.closest('#fcsModal'))) {
-                console.log('✅ Cancel/Close FCS button clicked');
-                event.preventDefault();
-                this.hideFCSModal();
+            if (confirmBtn) {
+                confirmBtn.onclick = (e) => {
+                    e.preventDefault();
+                    console.log('✅ Confirm FCS button clicked');
+                    this.triggerFCS();
+                };
+                console.log('✅ Confirm button handler attached');
+            } else {
+                console.warn('⚠️ Confirm button not found');
+            }
+
+            if (cancelBtn) {
+                cancelBtn.onclick = (e) => {
+                    e.preventDefault();
+                    console.log('✅ Cancel FCS button clicked');
+                    this.hideFCSModal();
+                };
+                console.log('✅ Cancel button handler attached');
+            } else {
+                console.warn('⚠️ Cancel button not found');
+            }
+
+            if (closeBtn) {
+                closeBtn.onclick = (e) => {
+                    e.preventDefault();
+                    console.log('✅ Close FCS modal clicked');
+                    this.hideFCSModal();
+                };
+                console.log('✅ Close button handler attached');
+            } else {
+                console.warn('⚠️ Close button not found');
             }
         };
 
-        document.body.addEventListener('click', this._modalClickHandler);
+        // Try to setup now, or wait for DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupButtons);
+        } else {
+            setupButtons();
+        }
 
-        console.log('FCS modal event listeners setup complete with proper cleanup');
+        console.log('FCS modal event listeners setup complete');
     }
 
     async showFCSModal() {
@@ -268,53 +293,17 @@ class FCSModule {
     }
 
     async triggerFCS() {
-        // Generate a unique execution ID
-        const executionId = Math.random().toString(36).substring(7);
-
-        console.log('====================================');
-        console.log(`TRIGGER FCS CALLED - Execution ID: ${executionId}`);
-        console.log('Call stack:', new Error().stack);
-        console.log('====================================');
-
-        // Add a global counter to detect duplicates
-        if (!window._fcsExecutionCount) {
-            window._fcsExecutionCount = 0;
-        }
-        window._fcsExecutionCount++;
-
-        console.log(`Total FCS executions so far: ${window._fcsExecutionCount}`);
-
-        // If this is a duplicate within 1 second, block it
-        const now = Date.now();
-        if (window._lastFCSExecution && (now - window._lastFCSExecution) < 1000) {
-            console.error(`🚫 BLOCKED DUPLICATE EXECUTION within ${now - window._lastFCSExecution}ms`);
-            return;
-        }
-        window._lastFCSExecution = now;
-
-        console.log('=== TRIGGER FCS DEBUG ===');
-        console.log('🎯 FCS generation triggered');
+        console.log('🔴 TRIGGER FCS - START');
 
         // ALWAYS get conversation ID from DOM, never from cache
         const selectedElement = document.querySelector('.conversation-item.selected');
         const conversationId = selectedElement?.dataset?.conversationId;
 
-        console.log('Selected element:', selectedElement);
-        console.log('Fresh conversation ID from DOM:', conversationId);
-        console.log('Cached parent ID (IGNORE):', this.parent.currentConversationId);
-
-        const selectedConv = this.parent.getSelectedConversation();
-        console.log('TRIGGER FCS - Selected conversation:', selectedConv?.id, selectedConv?.business_name);
-
-        if (conversationId !== selectedConv?.id) {
-            console.error('❌ MISMATCH: Fresh DOM ID does not match cached conversation!');
-            console.error('DOM:', conversationId, 'vs Cached:', selectedConv?.id);
-        }
-
-        console.log('===========================');
+        console.log('🔴 Selected element:', selectedElement);
+        console.log('🔴 Fresh conversation ID from DOM:', conversationId);
 
         if (!conversationId) {
-            console.error('❌ No conversation ID found from DOM');
+            console.error('🔴 ERROR: No conversation ID found from DOM');
             this.utils.showNotification('No conversation selected', 'error');
             return;
         }
@@ -329,69 +318,112 @@ class FCSModule {
         const selectedDocuments = Array.from(document.querySelectorAll('#fcsDocumentSelection input[type="checkbox"]:checked'))
             .map(checkbox => checkbox.value);
 
-        console.log('Business name from DOM:', businessName);
-        console.log('Selected document IDs:', selectedDocuments);
-        console.log('Sending to conversation:', conversationId);
+        console.log('🔴 Business name from DOM:', businessName);
+        console.log('🔴 Selected document IDs:', selectedDocuments);
+        console.log('🔴 Sending to conversation:', conversationId);
 
         if (selectedDocuments.length === 0) {
             this.utils.showNotification('Please select at least one bank statement', 'error');
             return;
         }
 
-        const confirmBtn = document.getElementById('confirmFcs');
-        if (confirmBtn) {
-            // Get original text, but handle case where button might already be in loading state
-            let originalText = confirmBtn.innerHTML;
-            if (originalText.includes('Generating FCS') || originalText.includes('loading-spinner')) {
-                originalText = 'Generate Report'; // Reset to default if already in loading state
-                console.log('Button was already in loading state, resetting to default text');
-            }
+        // Immediately close modal and switch to FCS tab to show generation progress
+        console.log('🔴 Closing modal...');
+        this.hideFCSModal();
 
-            // Set loading state
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<div class="loading-spinner-small"></div> Generating FCS...';
+        // Set generation flag
+        this._fcsGenerationInProgress = true;
 
-            try {
-                console.log(`🚀 Posting to: /api/conversations/${conversationId}/generate-fcs`);
-                console.log('📦 Payload:', { businessName, selectedDocuments });
+        // Check if intelligence module exists
+        console.log('🔴 Intelligence module exists?', !!this.parent.intelligence);
 
-                const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/generate-fcs`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        businessName,
-                        selectedDocuments
-                    })
-                });
+        // Check current DOM state
+        console.log('🔴 Current active tab:', document.querySelector('.tab-btn.active')?.dataset?.tab);
+        console.log('🔴 Intelligence content element exists?', !!document.getElementById('intelligenceContent'));
 
-                const result = await response.json();
+        // Switch to FCS tab immediately
+        if (this.parent.intelligence) {
+            console.log('🔴 Calling switchIntelligenceTab("fcs")');
+            this.parent.intelligence.switchIntelligenceTab('fcs');
 
-                if (result.success) {
-                    this.hideFCSModal();
-                    this.utils.showNotification('FCS Report generated successfully!', 'success');
+            // Force immediate loading state after tab switch
+            setTimeout(() => {
+                console.log('🔴 After switch - Active tab:', document.querySelector('.tab-btn.active')?.dataset?.tab);
+                console.log('🔴 FCS content element exists?', !!document.getElementById('fcsContent'));
 
-                    // Switch to FCS tab to show the results
-                    if (this.parent.intelligence) {
-                        this.parent.intelligence.switchIntelligenceTab('fcs');
-                    }
-
-                    console.log('FCS generation completed successfully');
+                const fcsContent = document.getElementById('fcsContent');
+                if (fcsContent) {
+                    console.log('🔴 Setting loading HTML in fcsContent');
+                    fcsContent.innerHTML = `
+                        <div style="text-align: center; padding: 60px 40px; background: white;">
+                            <style>
+                                @keyframes spin {
+                                    0% { transform: rotate(0deg); }
+                                    100% { transform: rotate(360deg); }
+                                }
+                            </style>
+                            <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating FCS Report</h3>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Analyzing ${selectedDocuments.length} document(s) with AI...</p>
+                            <p style="color: #9ca3af; font-size: 13px; margin: 16px 0 0 0;">This may take a few moments</p>
+                        </div>
+                    `;
                 } else {
-                    throw new Error(result.error || 'Failed to generate FCS report');
+                    console.log('🔴 ERROR: No fcsContent element found!');
                 }
-            } catch (error) {
-                console.error('FCS generation error:', error);
-                this.utils.showNotification(`FCS Generation failed: ${error.message}`, 'error');
-            } finally {
-                // Always ensure button is properly reset
-                if (confirmBtn) {
-                    confirmBtn.disabled = false;
-                    confirmBtn.innerHTML = originalText;
-                    console.log('FCS button state reset to:', originalText);
-                }
+            }, 100); // Small delay to ensure tab content is rendered
+        } else {
+            console.log('🔴 ERROR: No intelligence module!');
+        }
+
+        try {
+            console.log(`🚀 Posting to: /api/conversations/${conversationId}/generate-fcs`);
+            console.log('📦 Payload:', { businessName, selectedDocuments });
+
+            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/generate-fcs`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    businessName,
+                    selectedDocuments
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.utils.showNotification('FCS Report generated successfully!', 'success');
+
+                // Reload the FCS data to show the new report
+                await this.loadFCSData();
+
+                console.log('FCS generation completed successfully');
+            } else {
+                throw new Error(result.error || 'Failed to generate FCS report');
             }
+        } catch (error) {
+            console.error('FCS generation error:', error);
+            this.utils.showNotification(`FCS Generation failed: ${error.message}`, 'error');
+
+            // Show error state in FCS content
+            const fcsContent = document.getElementById('fcsContent');
+            if (fcsContent) {
+                fcsContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        <p style="font-size: 18px; margin-bottom: 8px;">❌ Generation Failed</p>
+                        <p style="font-size: 14px; color: #666;">${error.message}</p>
+                        <button onclick="window.commandCenter.fcs.showFCSModal()"
+                                style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        } finally {
+            // Reset generation flag
+            this._fcsGenerationInProgress = false;
         }
     }
 

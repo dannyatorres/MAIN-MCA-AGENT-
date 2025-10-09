@@ -114,6 +114,8 @@ class IntelligenceTabs {
     }
 
     switchIntelligenceTab(tab) {
+        console.log(`Switching to tab: ${tab}`);
+
         // Sync context before switching
         if (this.parent.core) {
             this.parent.core.syncConversationContext();
@@ -126,9 +128,14 @@ class IntelligenceTabs {
             this.saveAIChatState();
         }
 
-        // Update tab buttons
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === tab);
+        // Update tab buttons FIRST before anything else
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(btn => {
+            if (btn.dataset.tab === tab) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
         });
 
         const content = document.getElementById('intelligenceContent');
@@ -381,6 +388,12 @@ class IntelligenceTabs {
 
     renderFCSTab(content) {
         console.log('renderFCSTab called');
+
+        // First update the tab button states
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === 'fcs');
+        });
+
         content.innerHTML = `
             <div class="intelligence-section">
                 <h3>FCS Results</h3>
@@ -393,8 +406,8 @@ class IntelligenceTabs {
             </div>
         `;
 
-        // Load FCS data if FCS module is available
-        if (this.parent.fcs) {
+        // Only load FCS data if we're not already generating
+        if (this.parent.fcs && !this.parent.fcs._fcsGenerationInProgress) {
             this.parent.fcs.loadFCSData();
         }
     }

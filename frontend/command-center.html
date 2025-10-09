@@ -2775,7 +2775,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Generate FCS Report</h3>
-                <button class="modal-close" onclick="window.conversationUI.fcs.hideFCSModal()">&times;</button>
+                <button class="modal-close" id="closeFCSModalBtn">&times;</button>
             </div>
             <div class="modal-body">
                 <p>Select bank statements to analyze:</p>
@@ -2784,8 +2784,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="window.conversationUI.fcs.hideFCSModal()">Cancel</button>
-                <button id="confirmFcs" class="btn btn-primary" onclick="window.conversationUI.fcs.triggerFCS()">Generate FCS</button>
+                <button class="btn btn-secondary" id="cancelFcs">Cancel</button>
+                <button id="confirmFcs" class="btn btn-primary">Generate FCS</button>
             </div>
         </div>
     </div>
