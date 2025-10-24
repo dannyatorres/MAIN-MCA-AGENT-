@@ -38,18 +38,7 @@ class FCSModule {
             const button = event.target.closest('#generateFCSBtn');
 
             if (button) {
-                console.trace('FCS button clicked - Call stack:');
-
-                // Prevent duplicate clicks during generation
-                if (this._fcsGenerationInProgress) {
-                    console.log('⚠️ FCS generation already in progress, BLOCKING duplicate click');
-                    event.preventDefault();
-                    event.stopPropagation();
-                    return false;
-                }
-
-                console.log('✅ ALLOWING first FCS button click via delegation');
-                this._fcsGenerationInProgress = true;
+                console.log('✅ FCS button clicked via delegation');
 
                 event.preventDefault();
                 event.stopPropagation();
@@ -87,54 +76,100 @@ class FCSModule {
     setupModalEventListeners() {
         console.log('Setting up FCS modal event listeners');
 
-        // Wait for DOM to be ready, then attach listeners
-        const setupButtons = () => {
-            const confirmBtn = document.getElementById('confirmFcs');
-            const cancelBtn = document.getElementById('cancelFcs');
-            const closeBtn = document.getElementById('closeFCSModalBtn');
-
-            if (confirmBtn) {
-                confirmBtn.onclick = (e) => {
-                    e.preventDefault();
-                    console.log('✅ Confirm FCS button clicked');
-                    this.triggerFCS();
-                };
-                console.log('✅ Confirm button handler attached');
-            } else {
-                console.warn('⚠️ Confirm button not found');
-            }
-
-            if (cancelBtn) {
-                cancelBtn.onclick = (e) => {
-                    e.preventDefault();
-                    console.log('✅ Cancel FCS button clicked');
-                    this.hideFCSModal();
-                };
-                console.log('✅ Cancel button handler attached');
-            } else {
-                console.warn('⚠️ Cancel button not found');
-            }
-
-            if (closeBtn) {
-                closeBtn.onclick = (e) => {
-                    e.preventDefault();
-                    console.log('✅ Close FCS modal clicked');
-                    this.hideFCSModal();
-                };
-                console.log('✅ Close button handler attached');
-            } else {
-                console.warn('⚠️ Close button not found');
-            }
-        };
-
-        // Try to setup now, or wait for DOM
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupButtons);
-        } else {
-            setupButtons();
-        }
+        // DON'T wait for DOMContentLoaded since we're already past it
+        // Just attach listeners directly
+        this.attachModalButtonListeners();
 
         console.log('FCS modal event listeners setup complete');
+    }
+
+    attachModalButtonListeners() {
+        console.log('Attaching FCS modal button listeners...');
+
+        // Remove ALL existing handlers by cloning buttons
+        const confirmBtn = document.getElementById('confirmFcs');
+        const cancelBtn = document.getElementById('cancelFcs');
+        const closeBtn = document.getElementById('closeFCSModalBtn');
+        const toggleAllBtn = document.getElementById('toggleAllFcsBtn');
+
+        if (confirmBtn) {
+            // Clone to remove all existing listeners
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+            // Attach fresh handler
+            newConfirmBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('✅ Confirm FCS button clicked - calling triggerFCS()');
+                this.triggerFCS();
+            });
+
+            console.log('✅ Confirm button handler attached');
+        } else {
+            console.warn('⚠️ confirmFcs button not found');
+        }
+
+        if (cancelBtn) {
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+            newCancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('✅ Cancel FCS button clicked');
+                this.hideFCSModal();
+            });
+
+            console.log('✅ Cancel button handler attached');
+        }
+
+        if (closeBtn) {
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+
+            newCloseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('✅ Close FCS modal clicked');
+                this.hideFCSModal();
+            });
+
+            console.log('✅ Close button handler attached');
+        }
+
+        if (toggleAllBtn) {
+            const newToggleBtn = toggleAllBtn.cloneNode(true);
+            toggleAllBtn.parentNode.replaceChild(newToggleBtn, toggleAllBtn);
+
+            newToggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleAllFCSDocuments();
+            });
+
+            console.log('✅ Toggle All button handler attached');
+        }
+
+        console.log('✅ All FCS modal button handlers attached (fresh)');
+    }
+
+    toggleAllFCSDocuments() {
+        const checkboxes = document.querySelectorAll('#fcsDocumentSelection input[type="checkbox"]');
+        const toggleBtn = document.getElementById('toggleAllFcsBtn');
+
+        // Check if all are currently checked
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+        if (allChecked) {
+            // Deselect all
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            if (toggleBtn) toggleBtn.textContent = 'Select All';
+        } else {
+            // Select all
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+            if (toggleBtn) toggleBtn.textContent = 'Deselect All';
+        }
     }
 
     async showFCSModal() {
@@ -149,6 +184,9 @@ class FCSModule {
             this.createFCSModalIfMissing();
             return;
         }
+
+        // Re-attach event listeners when modal is shown
+        this.attachModalButtonListeners();
 
         // CRITICAL: Get conversation ID from the CURRENTLY SELECTED conversation item in the UI
         const selectedElement = document.querySelector('.conversation-item.selected');
@@ -183,18 +221,21 @@ class FCSModule {
 
     async fetchAndDisplayFCSDocuments(conversationId) {
         const documentSelection = document.getElementById('fcsDocumentSelection');
-        if (!documentSelection) return;
+        if (!documentSelection) {
+            console.error('❌ fcsDocumentSelection element not found');
+            return;
+        }
 
         // Don't use fallback IDs - use exactly what was passed in
         if (!conversationId) {
-            console.error('No conversation ID provided to fetchAndDisplayFCSDocuments');
+            console.error('❌ No conversation ID provided to fetchAndDisplayFCSDocuments');
             documentSelection.innerHTML = '<div style="padding: 20px; color: red;">No conversation selected</div>';
             return;
         }
 
         documentSelection.innerHTML = '<div style="padding: 20px;">Loading documents...</div>';
 
-        console.log('Fetching documents for conversation:', conversationId);
+        console.log('📥 Fetching documents for conversation:', conversationId);
 
         try {
             const response = await fetch(
@@ -206,11 +247,14 @@ class FCSModule {
             }
 
             const result = await response.json();
-            console.log('Documents fetched for', conversationId, ':', result.documents?.length || 0, 'documents');
+            console.log('📄 Documents fetched:', result.documents?.length || 0, 'documents');
 
             // Log first document to verify it's for the right conversation
             if (result.documents && result.documents.length > 0) {
-                console.log('First document:', result.documents[0].original_filename);
+                console.log('First document:', {
+                    filename: result.documents[0].original_filename,
+                    id: result.documents[0].id
+                });
             }
 
             if (result.success && result.documents) {
@@ -219,25 +263,32 @@ class FCSModule {
                     this.parent.documents.currentDocuments = result.documents;
                 }
 
+                if (result.documents.length === 0) {
+                    documentSelection.innerHTML = '<div style="padding: 20px; color: #6b7280;">No documents found. Please upload bank statements first.</div>';
+                    return;
+                }
+
                 documentSelection.innerHTML = result.documents.map((doc, index) => `
                     <div class="document-checkbox" style="padding: 12px; border-bottom: 1px solid #f1f5f9;">
-                        <input type="checkbox"
-                               id="fcsDoc_${doc.id}"
-                               value="${doc.id}"
-                               ${index === 0 ? 'checked' : ''}>
-                        <label for="fcsDoc_${doc.id}" style="margin-left: 10px;">
-                            ${doc.original_filename || doc.filename || 'Unknown'}
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox"
+                                   id="fcsDoc_${doc.id}"
+                                   value="${doc.id}"
+                                   ${index === 0 ? 'checked' : ''}
+                                   style="margin-right: 10px;">
+                            <span>${doc.original_filename || doc.filename || 'Unknown'}</span>
                         </label>
                     </div>
                 `).join('');
 
-                console.log('✅ Documents displayed successfully for conversation:', conversationId);
+                console.log('✅ Documents displayed successfully');
+                console.log('Total checkboxes created:', result.documents.length);
             } else {
                 throw new Error(result.error || 'No documents in response');
             }
         } catch (error) {
-            console.error('Error fetching documents:', error);
-            documentSelection.innerHTML = '<div style="padding: 20px; color: red;">Error loading documents</div>';
+            console.error('❌ Error fetching documents:', error);
+            documentSelection.innerHTML = `<div style="padding: 20px; color: red;">Error loading documents: ${error.message}</div>`;
         }
     }
 
@@ -293,138 +344,183 @@ class FCSModule {
     }
 
     async triggerFCS() {
-        console.log('🔴 TRIGGER FCS - START');
-
-        // ALWAYS get conversation ID from DOM, never from cache
-        const selectedElement = document.querySelector('.conversation-item.selected');
-        const conversationId = selectedElement?.dataset?.conversationId;
-
-        console.log('🔴 Selected element:', selectedElement);
-        console.log('🔴 Fresh conversation ID from DOM:', conversationId);
-
-        if (!conversationId) {
-            console.error('🔴 ERROR: No conversation ID found from DOM');
-            this.utils.showNotification('No conversation selected', 'error');
-            return;
-        }
-
-        // Update cache for consistency
-        this.parent.currentConversationId = conversationId;
-
-        // Get business name from fresh DOM element
-        const businessName = selectedElement?.querySelector('.conversation-business')?.textContent || 'Auto-Generated Business';
-
-        // Get selected document IDs from modal checkboxes
         const selectedDocuments = Array.from(document.querySelectorAll('#fcsDocumentSelection input[type="checkbox"]:checked'))
             .map(checkbox => checkbox.value);
-
-        console.log('🔴 Business name from DOM:', businessName);
-        console.log('🔴 Selected document IDs:', selectedDocuments);
-        console.log('🔴 Sending to conversation:', conversationId);
 
         if (selectedDocuments.length === 0) {
             this.utils.showNotification('Please select at least one bank statement', 'error');
             return;
         }
 
-        // Immediately close modal and switch to FCS tab to show generation progress
-        console.log('🔴 Closing modal...');
-        this.hideFCSModal();
+        const selectedElement = document.querySelector('.conversation-item.selected');
+        const conversationId = selectedElement?.dataset?.conversationId;
+        const businessName = selectedElement?.querySelector('.conversation-business')?.textContent || 'Auto-Generated Business';
 
-        // Set generation flag
-        this._fcsGenerationInProgress = true;
-
-        // Check if intelligence module exists
-        console.log('🔴 Intelligence module exists?', !!this.parent.intelligence);
-
-        // Check current DOM state
-        console.log('🔴 Current active tab:', document.querySelector('.tab-btn.active')?.dataset?.tab);
-        console.log('🔴 Intelligence content element exists?', !!document.getElementById('intelligenceContent'));
-
-        // Switch to FCS tab immediately
-        if (this.parent.intelligence) {
-            console.log('🔴 Calling switchIntelligenceTab("fcs")');
-            this.parent.intelligence.switchIntelligenceTab('fcs');
-
-            // Force immediate loading state after tab switch
-            setTimeout(() => {
-                console.log('🔴 After switch - Active tab:', document.querySelector('.tab-btn.active')?.dataset?.tab);
-                console.log('🔴 FCS content element exists?', !!document.getElementById('fcsContent'));
-
-                const fcsContent = document.getElementById('fcsContent');
-                if (fcsContent) {
-                    console.log('🔴 Setting loading HTML in fcsContent');
-                    fcsContent.innerHTML = `
-                        <div style="text-align: center; padding: 60px 40px; background: white;">
-                            <style>
-                                @keyframes spin {
-                                    0% { transform: rotate(0deg); }
-                                    100% { transform: rotate(360deg); }
-                                }
-                            </style>
-                            <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                            <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating FCS Report</h3>
-                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Analyzing ${selectedDocuments.length} document(s) with AI...</p>
-                            <p style="color: #9ca3af; font-size: 13px; margin: 16px 0 0 0;">This may take a few moments</p>
-                        </div>
-                    `;
-                } else {
-                    console.log('🔴 ERROR: No fcsContent element found!');
-                }
-            }, 100); // Small delay to ensure tab content is rendered
-        } else {
-            console.log('🔴 ERROR: No intelligence module!');
+        if (!conversationId) {
+            this.utils.showNotification('No conversation selected', 'error');
+            return;
         }
 
-        try {
-            console.log(`🚀 Posting to: /api/conversations/${conversationId}/generate-fcs`);
-            console.log('📦 Payload:', { businessName, selectedDocuments });
+        // ⭐ CRITICAL: Set flags FIRST before doing ANYTHING else
+        this._fcsGenerationInProgress = true;
+        this._generatingForConversation = conversationId;
+        this._generationStartTime = Date.now();
 
+        console.log('🚀 FCS Generation Started:', {
+            conversationId,
+            documentCount: selectedDocuments.length,
+            timestamp: new Date().toISOString()
+        });
+
+        // Close modal
+        this.hideFCSModal();
+
+        // Switch to FCS tab (this will trigger renderFCSTab which checks flags)
+        if (this.parent.intelligence) {
+            this.parent.intelligence.switchIntelligenceTab('fcs');
+        }
+
+        // Start the actual generation
+        this.startFCSGeneration(conversationId, businessName, selectedDocuments);
+    }
+
+    async startFCSGeneration(conversationId, businessName, selectedDocuments) {
+        console.log('Starting FCS generation for:', conversationId);
+
+        try {
             const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/generate-fcs`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    businessName,
-                    selectedDocuments
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ businessName, selectedDocuments })
             });
 
             const result = await response.json();
+            console.log('FCS API response:', result);
 
             if (result.success) {
-                this.utils.showNotification('FCS Report generated successfully!', 'success');
-
-                // Reload the FCS data to show the new report
-                await this.loadFCSData();
-
-                console.log('FCS generation completed successfully');
+                console.log('FCS generation started, will begin polling in 30 seconds...');
+                // Start polling after 30 seconds
+                setTimeout(() => {
+                    console.log('Starting to poll for FCS report...');
+                    this.pollForFCSReport(conversationId);
+                }, 30000);
             } else {
-                throw new Error(result.error || 'Failed to generate FCS report');
+                throw new Error(result.error || 'Failed to start generation');
             }
         } catch (error) {
-            console.error('FCS generation error:', error);
-            this.utils.showNotification(`FCS Generation failed: ${error.message}`, 'error');
+            console.error('Error starting FCS:', error);
+            // Clear ALL flags on error
+            this._fcsGenerationInProgress = false;
+            this._generatingForConversation = null;
+            this._generationStartTime = null;
+            this.utils.showNotification('Failed to start FCS generation: ' + error.message, 'error');
 
-            // Show error state in FCS content
+            // Show error in UI
             const fcsContent = document.getElementById('fcsContent');
             if (fcsContent) {
                 fcsContent.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #ef4444;">
-                        <p style="font-size: 18px; margin-bottom: 8px;">❌ Generation Failed</p>
-                        <p style="font-size: 14px; color: #666;">${error.message}</p>
-                        <button onclick="window.commandCenter.fcs.showFCSModal()"
+                        <p style="font-size: 18px;">Failed to start FCS generation</p>
+                        <p style="font-size: 14px;">${error.message}</p>
+                        <button onclick="window.conversationUI.fcs.showFCSModal()"
                                 style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
                             Try Again
                         </button>
                     </div>
                 `;
             }
-        } finally {
-            // Reset generation flag
-            this._fcsGenerationInProgress = false;
         }
+    }
+
+    async pollForFCSReport(conversationId, attempts = 0) {
+        console.log(`Polling attempt ${attempts + 1} for conversation ${conversationId}`);
+
+        if (attempts >= 30) { // 30 * 10 = 5 minutes max
+            // Clear ALL flags on timeout
+            this._fcsGenerationInProgress = false;
+            this._generatingForConversation = null;
+            this._generationStartTime = null;
+
+            const fcsContent = document.getElementById('fcsContent');
+            if (fcsContent) {
+                fcsContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #f59e0b; font-size: 18px;">⏱️ Generation taking longer than expected</p>
+                        <p style="color: #6b7280;">The report may still be processing.</p>
+                        <button onclick="window.conversationUI.fcs.loadFCSData()"
+                                class="btn btn-primary"
+                                style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Check for Report
+                        </button>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/fcs-report?_=${Date.now()}`);
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Poll response:', result);
+
+                if (result.success && result.report?.report_content) {
+                    // CRITICAL: Check if this report was generated AFTER we started generation
+                    const reportTimestamp = new Date(result.report.generated_at).getTime();
+                    const generationStarted = this._generationStartTime;
+
+                    console.log('Timestamp check:', {
+                        reportGenerated: new Date(reportTimestamp).toISOString(),
+                        generationStarted: new Date(generationStarted).toISOString(),
+                        reportIsNewer: reportTimestamp > generationStarted,
+                        diff: reportTimestamp - generationStarted
+                    });
+
+                    // ONLY accept the report if it was created AFTER generation started
+                    if (reportTimestamp > generationStarted) {
+                        console.log('✅ NEW FCS Report ready! (Generated after start time)');
+                        // Clear ALL flags when done
+                        this._fcsGenerationInProgress = false;
+                        this._generatingForConversation = null;
+                        this._generationStartTime = null;
+                        this.displayFCSReport(result.report);
+                        this.utils.showNotification('FCS Report generated successfully!', 'success');
+                        return;
+                    } else {
+                        console.log('⏳ Found OLD report - waiting for new one...', {
+                            oldReport: new Date(reportTimestamp).toLocaleString(),
+                            expectedAfter: new Date(generationStarted).toLocaleString()
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('Poll error (will retry):', error);
+        }
+
+        // Update status with elapsed time
+        const fcsContent = document.getElementById('fcsContent');
+        if (fcsContent) {
+            const elapsed = Math.floor((Date.now() - this._generationStartTime) / 1000);
+            fcsContent.innerHTML = `
+                <div style="text-align: center; padding: 60px 40px;">
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                    <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
+                    <p style="color: #6b7280; font-size: 15px; margin: 0;">Processing... (${elapsed} seconds elapsed)</p>
+                    <p style="color: #9ca3af; font-size: 13px; margin: 16px 0 0 0;">n8n workflow still running...</p>
+                </div>
+            `;
+        }
+
+        // Poll again in 10 seconds
+        setTimeout(() => this.pollForFCSReport(conversationId, attempts + 1), 10000);
     }
 
     async loadFCSData() {
@@ -432,11 +528,34 @@ class FCSModule {
 
         console.log('=== FCS DATA LOADING DEBUG ===');
         console.log('Current conversation ID:', conversationId);
-        console.log('Selected conversation:', this.parent.getSelectedConversation()?.id);
-        console.log('Selected element data:', document.querySelector('.conversation-item.selected')?.dataset?.conversationId);
-        console.log('Parent current ID:', this.parent.currentConversationId);
-        console.log('Parent selected conv:', this.parent.selectedConversation?.id);
+        console.log('Generation in progress:', this._fcsGenerationInProgress);
+        console.log('Generating for conversation:', this._generatingForConversation);
         console.log('================================');
+
+        // CRITICAL: BLOCK IMMEDIATELY if generation is in progress for THIS conversation
+        if (this._fcsGenerationInProgress && this._generatingForConversation === conversationId) {
+            console.log('🚫 BLOCKED: Generation in progress for this conversation - NOT loading old data');
+
+            // Keep showing loading state - DON'T fetch from database
+            const fcsContent = document.getElementById('fcsContent');
+            if (fcsContent) {
+                fcsContent.innerHTML = `
+                    <div style="text-align: center; padding: 60px 40px;">
+                        <style>
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        </style>
+                        <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
+                        <p style="color: #6b7280; font-size: 15px; margin: 0;">Processing with n8n workflow...</p>
+                        <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh</p>
+                    </div>
+                `;
+            }
+            return; // EXIT IMMEDIATELY - don't continue to database fetch
+        }
 
         if (!conversationId) {
             console.warn('No conversation ID found, cannot load FCS data');
@@ -451,7 +570,7 @@ class FCSModule {
 
         console.log(`Loading FCS data for conversation ${conversationId}`);
 
-        // Show loading state
+        // Show loading state ONLY if not generating
         fcsContent.innerHTML = `
             <div style="text-align: center; padding: 40px;">
                 <div class="loading-spinner"></div>
@@ -555,7 +674,7 @@ class FCSModule {
             const processedContent = this.formatFCSContent(report.report_content);
 
             fcsContent.innerHTML = `
-                <div class="fcs-report">
+                <div class="fcs-report" style="width: 100%; max-width: 100%; overflow: hidden;">
                     <div class="fcs-header" style="background: #f0f9ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
@@ -573,8 +692,23 @@ class FCSModule {
                         </div>
                     </div>
 
-                    <div class="fcs-content" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
-                        ${processedContent}
+                    <div class="fcs-content" style="
+                        background: white;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 6px;
+                        padding: 0;
+                        width: 100%;
+                        max-width: 100%;
+                        overflow-x: auto;
+                        overflow-y: visible;
+                    ">
+                        <div style="
+                            min-width: 600px;
+                            width: 100%;
+                            max-width: 100%;
+                        ">
+                            ${processedContent}
+                        </div>
                     </div>
                 </div>
             `;
@@ -596,66 +730,202 @@ class FCSModule {
     }
 
     formatFCSContent(content) {
-        // Handle null/undefined content
         if (!content || typeof content !== 'string') {
-            console.error('Invalid content passed to formatFCSContent:', content);
             return '<div style="padding: 20px; text-align: center; color: #666;">No content available</div>';
         }
 
-        const sections = content.split('\n\n');
-        let formattedHTML = '';
+        let formattedHTML = `
+            <div style="
+                font-family: Consolas, Monaco, 'Courier New', monospace;
+                font-size: 11px;
+                line-height: 1.3;
+                background: #ffffff;
+                color: #333;
+                padding: 15px;
+                width: 100%;
+                overflow-x: auto;
+            ">`;
 
-        sections.forEach(section => {
-            const lines = section.split('\n');
-            if (lines.length === 0) return;
+        const lines = content.split('\n');
 
-            const firstLine = lines[0].trim();
+        lines.forEach((line, index) => {
+            const trimmedLine = line.trim();
 
-            // Check if this is a header/title
-            if (firstLine.includes('FCS FINANCIAL ANALYSIS REPORT') ||
-                firstLine.includes('DOCUMENT SUMMARY') ||
-                firstLine.includes('FINANCIAL ANALYSIS') ||
-                firstLine.includes('RECOMMENDATIONS') ||
-                firstLine.includes('STATUS:')) {
+            if (trimmedLine === '```') return;
 
-                formattedHTML += `<div style="background: #f8fafc; padding: 12px 16px; border-left: 3px solid #0ea5e9; margin-bottom: 16px;">
-                    <h5 style="color: #0369a1; margin: 0; font-weight: 600;">${firstLine}</h5>
-                </div>`;
+            // Main section headers
+            if (trimmedLine === 'FILE CONTROL SHEET' ||
+                trimmedLine === 'Monthly Financial Summary' ||
+                trimmedLine === 'True Revenue:' ||
+                trimmedLine.startsWith('1a. Revenue Deductions') ||
+                trimmedLine === 'MCA Deposits' ||
+                trimmedLine === 'Recurring MCA Payments' ||
+                trimmedLine === 'Observations') {
+                formattedHTML += `
+                    <div style="
+                        font-weight: bold;
+                        color: #1e40af;
+                        margin: ${index === 0 ? '0' : '12px'} 0 6px 0;
+                        padding-bottom: 2px;
+                        border-bottom: 1px solid #e5e7eb;
+                        font-size: 12px;
+                    ">${trimmedLine}</div>`;
+            }
+            // Account headers
+            else if (trimmedLine.match(/^(CHECKING|SAVINGS|CREDIT)\s+ACCOUNT/)) {
+                formattedHTML += `
+                    <div style="
+                        font-weight: 600;
+                        color: #374151;
+                        margin: 8px 0 4px 0;
+                        background: #f9fafb;
+                        padding: 3px 8px;
+                    ">${trimmedLine}</div>`;
+            }
+            // Table header row
+            else if (line.includes('Month Year') && line.includes('Deposits:') && line.includes('Revenue:')) {
+                formattedHTML += `
+                    <div style="
+                        display: flex;
+                        padding: 4px 0;
+                        background: #f0f9ff;
+                        border-bottom: 1px solid #3b82f6;
+                        font-weight: 600;
+                        margin-top: 2px;
+                        font-size: 10px;
+                    ">
+                        <div style="width: 70px;">Month Year</div>
+                        <div style="width: 130px; padding-left: 10px;">Deposits</div>
+                        <div style="width: 130px;">Revenue</div>
+                        <div style="width: 70px;">Neg Days</div>
+                        <div style="width: 110px;">End Bal</div>
+                        <div style="width: 50px;">#Dep</div>
+                    </div>`;
+            }
+            // Monthly data rows
+            else if (line.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/)) {
+                const deposits = line.match(/Deposits:\s*(\$[\d,]+\.\d+)/)?.[1] || '';
+                const revenue = line.match(/Revenue:\s*(\$[\d,]+\.\d+)/)?.[1] || '';
+                const negDays = line.match(/Neg Days:\s*(\d+|N\/A)/)?.[1] || '';
+                const endBal = line.match(/End Bal:\s*(-?\$[\d,]+\.\d+)/)?.[1] || '';
+                const depCount = line.match(/#Dep:\s*(\d+)/)?.[1] || '';
+                const monthYear = line.split(/\s{2,}/)[0] || '';
 
-                // Add remaining lines in this section
-                if (lines.length > 1) {
-                    formattedHTML += `<div style="padding: 0 16px 16px 16px;">`;
-                    for (let i = 1; i < lines.length; i++) {
-                        if (lines[i].trim()) {
-                            if (lines[i].startsWith('•')) {
-                                formattedHTML += `<div style="margin: 4px 0; color: #374151; font-size: 14px;"><span style="color: #0ea5e9;">•</span> ${lines[i].substring(1)}</div>`;
-                            } else if (lines[i].startsWith('-') || lines[i].startsWith('  -')) {
-                                formattedHTML += `<div style="margin: 2px 0 2px 20px; color: #6b7280; font-size: 14px;">${lines[i].trim()}</div>`;
-                            } else {
-                                formattedHTML += `<div style="margin: 4px 0; color: #374151; font-size: 14px;">${lines[i]}</div>`;
-                            }
-                        }
-                    }
-                    formattedHTML += `</div>`;
+                formattedHTML += `
+                    <div style="
+                        display: flex;
+                        padding: 2px 0;
+                        border-bottom: 1px solid #f1f5f9;
+                        background: ${endBal.startsWith('-') ? '#fef2f2' : 'white'};
+                    ">
+                        <div style="width: 70px; font-weight: 500;">${monthYear}</div>
+                        <div style="width: 130px; padding-left: 10px; color: #059669;">${deposits}</div>
+                        <div style="width: 130px; color: #059669;">${revenue}</div>
+                        <div style="width: 70px; color: ${negDays !== '0' && negDays !== 'N/A' ? '#dc2626' : '#6b7280'};">
+                            ${negDays}
+                        </div>
+                        <div style="width: 110px; color: ${endBal.startsWith('-') ? '#dc2626' : '#059669'}; font-weight: 500;">
+                            ${endBal}
+                        </div>
+                        <div style="width: 50px; color: #6b7280;">${depCount}</div>
+                    </div>`;
+            }
+            // True Revenue entries
+            else if (line.match(/^(May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr)\s+\d{4}:\s*\$/)) {
+                formattedHTML += `<div style="padding: 2px 0; margin-left: 10px;">${line}</div>`;
+            }
+            // Revenue deduction entries
+            else if (line.match(/^\s*-\s*\$/)) {
+                formattedHTML += `
+                    <div style="
+                        padding: 3px 12px;
+                        margin: 2px 0;
+                        background: #fef2f2;
+                        border-left: 2px solid #ef4444;
+                        font-size: 10px;
+                        color: #dc2626;
+                    ">${trimmedLine}</div>`;
+            }
+            // Month headers in deductions
+            else if (line.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}:/)) {
+                formattedHTML += `
+                    <div style="
+                        font-weight: 600;
+                        color: #374151;
+                        margin: 6px 0 3px 0;
+                    ">${trimmedLine}</div>`;
+            }
+            // MCA Position entries
+            else if (line.match(/^Position\s+\d+:/)) {
+                formattedHTML += `
+                    <div style="
+                        padding: 4px 6px;
+                        margin: 3px 0;
+                        background: #f0f9ff;
+                        border-left: 2px solid #3b82f6;
+                    ">${line}</div>`;
+            }
+            // Sample dates
+            else if (line.match(/^Sample dates:/)) {
+                formattedHTML += `
+                    <div style="
+                        padding: 1px 6px 3px 18px;
+                        color: #6b7280;
+                        font-size: 10px;
+                    ">${line}</div>`;
+            }
+            // Summary block
+            else if (line.includes('-Month Summary')) {
+                formattedHTML += `
+                    <div style="
+                        margin-top: 15px;
+                        padding: 10px;
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 3px;
+                    ">
+                    <div style="
+                        font-weight: bold;
+                        color: #1e40af;
+                        margin-bottom: 6px;
+                        font-size: 12px;
+                    ">${trimmedLine}</div>`;
+            }
+            // Summary items
+            else if (line.match(/^- (Business Name|Position|Industry|Time in Business|Average|Negative Days|State|Positions|Last MCA):/)) {
+                const [label, ...valueParts] = line.substring(2).split(':');
+                const value = valueParts.join(':').trim();
+                formattedHTML += `
+                    <div style="
+                        padding: 2px 0;
+                        display: flex;
+                        gap: 8px;
+                    ">
+                        <span style="font-weight: 500; color: #4b5563; min-width: 130px;">
+                            ${label}:
+                        </span>
+                        <span style="color: #111827;">
+                            ${value}
+                        </span>
+                    </div>`;
+            }
+            // Empty lines
+            else if (trimmedLine === '') {
+                if (index > 0 && lines[index - 1].trim()) {
+                    formattedHTML += '<div style="height: 4px;"></div>';
                 }
-            } else {
-                // Regular content section
-                formattedHTML += `<div style="padding: 12px 16px; border-bottom: 1px solid #f1f5f9;">`;
-                lines.forEach(line => {
-                    if (line.trim()) {
-                        if (line.startsWith('•')) {
-                            formattedHTML += `<div style="margin: 4px 0; color: #374151; font-size: 14px;"><span style="color: #0ea5e9;">•</span> ${line.substring(1)}</div>`;
-                        } else if (line.startsWith('-') || line.startsWith('  -')) {
-                            formattedHTML += `<div style="margin: 2px 0 2px 20px; color: #6b7280; font-size: 14px;">${line.trim()}</div>`;
-                        } else {
-                            formattedHTML += `<div style="margin: 4px 0; color: #374151; font-size: 14px;">${line}</div>`;
-                        }
-                    }
-                });
-                formattedHTML += `</div>`;
+            }
+            // All other content
+            else {
+                formattedHTML += `<div style="padding: 1px 0;">${line}</div>`;
             }
         });
 
+        if (content.includes('-Month Summary')) {
+            formattedHTML += '</div>';
+        }
+
+        formattedHTML += '</div>';
         return formattedHTML;
     }
 

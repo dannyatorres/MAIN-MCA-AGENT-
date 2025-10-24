@@ -222,6 +222,11 @@ class ConversationCore {
         // Clear unread count for this conversation
         this.unreadMessages.delete(conversationId);
 
+        // Remove notification badge when viewing the conversation
+        if (this.parent.messaging) {
+            this.parent.messaging.removeConversationBadge(conversationId);
+        }
+
         // Clear previous conversation state before setting new one
         this.clearPreviousConversationState();
 

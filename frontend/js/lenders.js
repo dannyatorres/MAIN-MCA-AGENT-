@@ -101,6 +101,10 @@ class LendersModule {
         this.populateLenderForm();
         setTimeout(() => this.initializeLenderFormCaching(), 100);
 
+        // Quick Import functionality
+        this.setupQuickImport();
+
+        // Continue with TIB calculation...
         // TIB calculation
         const calculateTIB = (dateString) => {
             if (!dateString) return 0;
@@ -251,6 +255,308 @@ class LendersModule {
         }
     }
 
+    setupQuickImport() {
+        console.log('Setting up Quick Import functionality...');
+
+        // Toggle button
+        const toggleBtn = document.getElementById('toggleQuickImport');
+        const quickImportContent = document.getElementById('quickImportContent');
+
+        if (toggleBtn && quickImportContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isHidden = quickImportContent.style.display === 'none';
+                quickImportContent.style.display = isHidden ? 'block' : 'none';
+                toggleBtn.textContent = isHidden ? 'Hide ▲' : 'Show ▼';
+            });
+        }
+
+        // Import button
+        const importBtn = document.getElementById('importDataBtn');
+        if (importBtn) {
+            importBtn.addEventListener('click', () => {
+                const textarea = document.getElementById('quickImportTextarea');
+                if (!textarea || !textarea.value.trim()) {
+                    this.utils.showNotification('Please paste some data first', 'warning');
+                    return;
+                }
+
+                console.log('📋 Starting import...');
+                console.log('Raw data:', textarea.value);
+
+                const parsed = this.parseClipboardData(textarea.value);
+                console.log('Parsed data:', parsed);
+
+                if (Object.keys(parsed).length > 0) {
+                    const filledCount = this.populateLenderFormFromParsed(parsed);
+
+                    if (filledCount > 0) {
+                        this.utils.showNotification(`✅ Auto-filled ${filledCount} fields!`, 'success');
+
+                        // Clear the textarea after successful import
+                        textarea.value = '';
+
+                        // Hide the Quick Import section
+                        if (quickImportContent && toggleBtn) {
+                            quickImportContent.style.display = 'none';
+                            toggleBtn.textContent = 'Show ▼';
+                        }
+                    } else {
+                        this.utils.showNotification('❌ No fields were filled. Check console.', 'error');
+                    }
+                } else {
+                    this.utils.showNotification('❌ No valid data found. Try this format:\n\nBusiness Name: ABC Corp\nMonthly Revenue: 45000\nFICO Score: 680', 'error');
+                    console.error('❌ Parse returned empty object');
+                }
+            });
+        }
+
+        // Clear button
+        const clearBtn = document.getElementById('clearImportBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                const textarea = document.getElementById('quickImportTextarea');
+                if (textarea) {
+                    textarea.value = '';
+                }
+            });
+        }
+
+        console.log('✅ Quick Import setup complete');
+    }
+
+    parseClipboardData(text) {
+        const data = {};
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+
+        console.log('Parsing lender data from', lines.length, 'lines');
+
+        // Process line by line, checking both inline and next-line formats
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const nextLine = lines[i + 1] || '';
+
+            // Business Name (handle multiple formats)
+            if (/business\s*name/i.test(line)) {
+                console.log('🔍 Detected "Business Name" line:', line);
+                // Check if value is on the same line after the colon
+                const inlineMatch = line.match(/business\s*name[:\s]+(.+)/i);
+                if (inlineMatch && inlineMatch[1].trim()) {
+                    data.businessName = inlineMatch[1].trim();
+                    console.log('✅ Found Business Name (inline):', data.businessName);
+                }
+                // Otherwise look for the next non-empty line (skip blanks and position lines)
+                else {
+                    console.log('📝 Searching next lines for business name...');
+                    let j = i + 1;
+                    while (j < lines.length) {
+                        const candidateLine = lines[j].trim();
+                        console.log(`  Line ${j}: "${candidateLine}"`);
+
+                        // Skip empty lines
+                        if (!candidateLine) {
+                            console.log('    ⏭️ Skipping empty line');
+                            j++;
+                            continue;
+                        }
+                        // Skip lines that start with "- Position"
+                        if (/^-\s*position/i.test(candidateLine)) {
+                            console.log('    ⏭️ Skipping position line');
+                            j++;
+                            continue;
+                        }
+                        // This is the business name!
+                        data.businessName = candidateLine.replace(/^-\s*/, '').trim();
+                        console.log('✅ Found Business Name (multi-line):', data.businessName);
+                        break;
+                    }
+
+                    if (!data.businessName) {
+                        console.warn('❌ Business Name not found after searching');
+                    }
+                }
+            }
+
+            // Industry (handle both formats)
+            if (/^industry:?\s*$/i.test(line) && nextLine) {
+                data.industry = nextLine.replace(/^-\s*/, '').trim();
+                console.log('Found Industry (multi-line):', data.industry);
+            } else if (/industry[:\s]+(.+)/i.test(line)) {
+                const match = line.match(/industry[:\s]+(.+)/i);
+                if (match) {
+                    data.industry = match[1].trim();
+                    console.log('Found Industry (inline):', data.industry);
+                }
+            }
+
+            // State (handle both formats)
+            if (/^state:?\s*$/i.test(line) && nextLine) {
+                const stateMatch = nextLine.match(/\b([A-Z]{2})\b/);
+                if (stateMatch) {
+                    data.state = stateMatch[1];
+                    console.log('Found State (multi-line):', data.state);
+                }
+            } else if (/state[:\s]+([A-Z]{2})\b/i.test(line)) {
+                const match = line.match(/state[:\s]+([A-Z]{2})\b/i);
+                if (match) {
+                    data.state = match[1].toUpperCase();
+                    console.log('Found State (inline):', data.state);
+                }
+            }
+
+            // Position - extract from "4 active -> Looking for 5th" or "Position: 2nd"
+            if (/position/i.test(line)) {
+                // Look for "Looking for Xth" pattern
+                const lookingMatch = line.match(/looking\s+for\s+(\d+)(?:st|nd|rd|th)?/i);
+                if (lookingMatch) {
+                    data.position = lookingMatch[1];
+                    console.log('Found Position (looking for):', data.position);
+                } else {
+                    // Standard position format
+                    const posMatch = line.match(/position[:\s]+(\d+)(?:st|nd|rd|th)?/i);
+                    if (posMatch) {
+                        data.position = posMatch[1];
+                        console.log('Found Position (standard):', data.position);
+                    }
+                }
+            }
+
+            // Revenue - handle "Average True Revenue", "Monthly Revenue", etc.
+            if (/(?:average\s*true\s*revenue|monthly\s*revenue|revenue)/i.test(line)) {
+                const revenueMatch = line.match(/\$?([\d,]+\.?\d*)/);
+                if (revenueMatch) {
+                    data.revenue = Math.round(parseFloat(revenueMatch[1].replace(/,/g, '')));
+                    console.log('Found Revenue:', data.revenue);
+                }
+            }
+
+            // Deposits - handle "Average Number of Deposits" or "Deposits Per Month"
+            if (/(?:number\s+of\s+deposits|deposits\s*per\s*month)/i.test(line)) {
+                const depositsMatch = line.match(/:\s*(\d+)/);
+                if (depositsMatch) {
+                    data.deposits = depositsMatch[1];
+                    console.log('Found Deposits:', data.deposits);
+                }
+            }
+
+            // Negative Days - handle "3+" or "0.75+"
+            if (/negative\s*days/i.test(line)) {
+                const negMatch = line.match(/([\d.]+)\+?/);
+                if (negMatch) {
+                    data.negativeDays = Math.round(parseFloat(negMatch[1]));
+                    console.log('Found Negative Days:', data.negativeDays);
+                }
+            }
+
+            // FICO Score
+            if (/(?:fico|credit)\s*(?:score)?[:\s]+([0-9]+)/i.test(line)) {
+                const match = line.match(/(?:fico|credit)\s*(?:score)?[:\s]+([0-9]+)/i);
+                if (match) {
+                    data.fico = match[1];
+                    console.log('Found FICO:', data.fico);
+                }
+            }
+
+            // Start Date (explicit format)
+            if (/(?:start\s*date|business\s*start)[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i.test(line)) {
+                const match = line.match(/(?:start\s*date|business\s*start)[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+                if (match) {
+                    data.startDate = match[1];
+                    console.log('Found Start Date:', data.startDate);
+                }
+            }
+
+            // Current Positions - capture everything after "Positions:"
+            if (/^positions:?\s*$/i.test(line)) {
+                let positionsText = [];
+                let j = i + 1;
+                // Collect all lines until we hit "Last MCA Deposit" or end of data
+                while (j < lines.length && !/last\s*mca\s*deposit/i.test(lines[j])) {
+                    const posLine = lines[j].replace(/^-\s*/, '').trim();
+                    if (posLine) {
+                        positionsText.push(posLine);
+                    }
+                    j++;
+                }
+                if (positionsText.length > 0) {
+                    data.currentPositions = positionsText.join('\n');
+                    console.log('Found Current Positions:', data.currentPositions);
+                }
+            }
+
+            // Last MCA Deposit - capture the full line
+            if (/last\s*mca\s*deposit/i.test(line)) {
+                const depositMatch = line.match(/last\s*mca\s*deposit[:\s]+(.+)/i);
+                if (depositMatch) {
+                    data.lastMcaDeposit = depositMatch[1].trim();
+                    console.log('Found Last MCA Deposit:', data.lastMcaDeposit);
+                }
+            }
+        }
+
+        // Combine currentPositions and lastMcaDeposit into notes
+        if (data.currentPositions || data.lastMcaDeposit) {
+            let notesArray = [];
+            if (data.currentPositions) {
+                notesArray.push('Current Positions:\n' + data.currentPositions);
+            }
+            if (data.lastMcaDeposit) {
+                notesArray.push('Last MCA Deposit: ' + data.lastMcaDeposit);
+            }
+            data.notes = notesArray.join('\n\n');
+            console.log('Combined Notes:', data.notes);
+        }
+
+        console.log('Parsed lender data:', data);
+        return data;
+    }
+
+    populateLenderFormFromParsed(data) {
+        const fieldMap = {
+            businessName: 'lenderBusinessName',
+            revenue: 'lenderRevenue',
+            fico: 'lenderFico',
+            state: 'lenderState',
+            industry: 'lenderIndustry',
+            position: 'lenderPosition',
+            startDate: 'lenderStartDate',
+            deposits: 'lenderDepositsPerMonth',
+            negativeDays: 'lenderNegativeDays',
+            notes: 'lenderAdditionalNotes',
+            currentPositions: 'lenderCurrentPositions'
+        };
+
+        console.log('🔍 Starting to populate fields with data:', data);
+
+        let filledCount = 0;
+
+        Object.keys(data).forEach(key => {
+            const fieldId = fieldMap[key];
+            if (fieldId) {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    const oldValue = element.value;
+                    // ALWAYS fill, even if field has existing value
+                    element.value = data[key];
+                    filledCount++;
+
+                    // Trigger change event for date field to update TIB
+                    if (fieldId === 'lenderStartDate') {
+                        element.dispatchEvent(new Event('input'));
+                    }
+
+                    console.log(`✅ Filled ${fieldId}: "${oldValue}" → "${data[key]}"`);
+                } else {
+                    console.warn(`⚠️ Element ${fieldId} not found in DOM`);
+                }
+            } else {
+                console.warn(`⚠️ No field mapping for key: ${key}`);
+            }
+        });
+
+        console.log(`📋 Import complete: ${filledCount} fields filled`);
+        return filledCount;
+    }
+
     populateLenderForm() {
         const conversation = this.parent.getSelectedConversation();
         if (!conversation) return;
@@ -263,6 +569,20 @@ class LendersModule {
 
         if (hasCachedData) {
             console.log('Cached data exists, skipping auto-population');
+        }
+
+        // Check for cached lender results and reattach event listeners if needed
+        if (conversationId && this.lenderResultsCache.has(conversationId)) {
+            console.log('Found cached lender results, checking if event listeners need reattaching...');
+            const sendButton = document.getElementById('sendToLendersBtn');
+            if (sendButton) {
+                const cachedResults = this.lenderResultsCache.get(conversationId);
+                console.log('Reattaching event listeners for cached lender results');
+                this.reattachResultsEventListeners(cachedResults.data, cachedResults.criteria);
+            }
+        }
+
+        if (hasCachedData) {
             return;
         }
 
@@ -1367,6 +1687,44 @@ Best regards`;
 
         return `
             <div class="lender-form-content" style="height: 100%; overflow-y: auto; padding-bottom: 100px;">
+                <!-- Quick Import Section -->
+                <div style="margin-bottom: 20px; background: #f0f9ff; border: 2px dashed #3b82f6; border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 20px;">📋</span>
+                            <h4 style="margin: 0; color: #1e40af; font-size: 16px;">Quick Import</h4>
+                        </div>
+                        <button type="button" id="toggleQuickImport" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 14px; font-weight: 500;">
+                            Show ▼
+                        </button>
+                    </div>
+                    <div id="quickImportContent" style="display: none;">
+                        <p style="margin: 0 0 12px 0; color: #475569; font-size: 14px;">
+                            Paste lender data here (from email, spreadsheet, etc.) and we'll auto-fill the form
+                        </p>
+                        <textarea id="quickImportTextarea"
+                                  placeholder="Example:
+Business Name: ABC Corporation
+Monthly Revenue: $45,000
+FICO Score: 680
+State: NY
+Industry: Retail
+Position: 2nd
+Business Start Date: 01/15/2020
+Deposits Per Month: 15
+Negative Days: 3"
+                                  style="width: 100%; min-height: 140px; padding: 12px; font-size: 13px; font-family: monospace; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; background: white;"></textarea>
+                        <button type="button" id="importDataBtn"
+                                style="margin-top: 10px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                            Import Data
+                        </button>
+                        <button type="button" id="clearImportBtn"
+                                style="margin-top: 10px; margin-left: 8px; padding: 10px 20px; background: #94a3b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
                 <form id="lenderForm" class="lender-form">
                     <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
                         ${this.lenderFormFields.map(field => {

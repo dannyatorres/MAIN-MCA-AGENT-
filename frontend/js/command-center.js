@@ -20,6 +20,7 @@ class CommandCenter {
         this.lenders = null;
         this.fcs = null;
         this.ai = null;
+        this.emailTab = null;
         this.stats = null;
         this.stateManager = null;
 
@@ -96,6 +97,14 @@ class CommandCenter {
                 console.error('AIAssistant class not found!');
             }
 
+            // 8.5 Email Tab
+            console.log('8.5 Initializing Email Tab...');
+            if (typeof EmailTab !== 'undefined') {
+                this.emailTab = new EmailTab(this);
+            } else {
+                console.error('EmailTab class not found!');
+            }
+
             // 9. Stats Module
             console.log('9. Initializing Stats...');
             if (typeof StatsModule !== 'undefined') {
@@ -128,6 +137,7 @@ class CommandCenter {
                 fcs: !!this.fcs,
                 lenders: !!this.lenders,
                 ai: !!this.ai,
+                emailTab: !!this.emailTab,
                 stats: !!this.stats
             });
 

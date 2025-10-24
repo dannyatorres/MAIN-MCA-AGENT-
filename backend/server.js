@@ -20,8 +20,8 @@ const http = require('http');
 console.log('✅ HTTP loaded');
 
 console.log('📦 Loading socket.io...');
-// const { Server } = require('socket.io');
-console.log('✅ Socket.io skipped (temporarily disabled)');
+const { Server } = require('socket.io');
+console.log('✅ Socket.io loaded');
 
 console.log('📦 Loading other dependencies...');
 const cors = require('cors');
@@ -1192,6 +1192,41 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
     } catch (error) {
         console.error('❌ Send message error:', error);
         res.status(500).json({ error: 'Failed to send message: ' + error.message });
+    }
+});
+
+// Delete message endpoint
+app.delete('/api/conversations/:id/messages/:messageId', async (req, res) => {
+    try {
+        const { id: conversationId, messageId } = req.params;
+        const database = getDatabase();
+
+        // Verify the message belongs to this conversation
+        const messageCheck = await database.query(
+            'SELECT * FROM messages WHERE id = $1 AND conversation_id = $2',
+            [messageId, conversationId]
+        );
+
+        if (!messageCheck.rows.length) {
+            return res.status(404).json({ error: 'Message not found' });
+        }
+
+        // Delete the message
+        await database.query(
+            'DELETE FROM messages WHERE id = $1',
+            [messageId]
+        );
+
+        console.log(`✅ Deleted message ${messageId} from conversation ${conversationId}`);
+
+        res.json({
+            success: true,
+            message: 'Message deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('❌ Delete message error:', error);
+        res.status(500).json({ error: 'Failed to delete message: ' + error.message });
     }
 });
 
@@ -2460,7 +2495,7 @@ app.get('/api/conversations/:conversationId/fcs-report', async (req, res) => {
                 report_content: reportContent,
                 business_name: report.business_name,
                 statement_count: 4,
-                generated_at: report.created_at || report.updated_at,
+                generated_at: report.updated_at || report.created_at,  // Use updated_at (when completed) instead of created_at
                 status: report.status,
                 file_url: report.file_url
             }
@@ -3300,20 +3335,19 @@ app.post('/webhook/sms', async (req, res) => {
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
-// Initialize Socket.io with CORS configuration (temporarily disabled)
+// Initialize Socket.io with CORS configuration
 console.log('Setting up Socket.io...');
-// const io = new Server(server, {
-//     cors: {
-//         origin: ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:8000', 'http://127.0.0.1:8080', 'http://127.0.0.1:3001', 'http://127.0.0.1:8000'],
-//         methods: ['GET', 'POST'],
-//         credentials: true
-//     },
-//     transports: ['websocket', 'polling'],
-//     allowEIO3: true
-// });
+const io = new Server(server, {
+    cors: {
+        origin: ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:8000', 'http://127.0.0.1:8080', 'http://127.0.0.1:3001', 'http://127.0.0.1:8000'],
+        methods: ['GET', 'POST'],
+        credentials: true
+    },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true
+});
 
-// Socket.io connection handling (temporarily disabled)
-/*
+// Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
@@ -3339,7 +3373,6 @@ io.on('connection', (socket) => {
         console.error('Socket connection error:', error);
     });
 });
-*/
 
 // Server-side PDF generation endpoint using Puppeteer
 app.post('/api/conversations/:id/generate-pdf-from-template', async (req, res) => {
@@ -4075,6 +4108,205 @@ app.get('/api/email/test', async (req, res) => {
             success: false, 
             error: error.message 
         });
+    }
+});
+
+// Gmail Inbox Service - lazy load
+let gmailInboxService = null;
+function getGmailInboxService() {
+    if (!gmailInboxService) {
+        const GmailInboxService = require('./services/gmailInboxService');
+        gmailInboxService = new GmailInboxService();
+        console.log('Gmail inbox service initialized');
+    }
+    return gmailInboxService;
+}
+
+// Email Inbox endpoints
+// Fetch emails from inbox
+app.get('/api/email/inbox', async (req, res) => {
+    try {
+        const { limit = 50, unreadOnly = false } = req.query;
+
+        const gmailService = getGmailInboxService();
+        const emails = await gmailService.fetchEmails({
+            limit: parseInt(limit),
+            unreadOnly: unreadOnly === 'true'
+        });
+
+        res.json({
+            success: true,
+            emails,
+            count: emails.length
+        });
+
+    } catch (error) {
+        console.error('Error fetching inbox:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        // Disconnect after request
+        if (gmailInboxService) {
+            await gmailInboxService.disconnect();
+        }
+    }
+});
+
+// Get single email by ID
+app.get('/api/email/:emailId', async (req, res) => {
+    try {
+        const { emailId } = req.params;
+
+        const gmailService = getGmailInboxService();
+        const email = await gmailService.getEmailById(emailId);
+
+        res.json({
+            success: true,
+            email
+        });
+
+    } catch (error) {
+        console.error('Error fetching email:', error.message);
+        res.status(404).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        if (gmailInboxService) {
+            await gmailInboxService.disconnect();
+        }
+    }
+});
+
+// Mark email as read
+app.post('/api/email/:emailId/read', async (req, res) => {
+    try {
+        const { emailId } = req.params;
+
+        const gmailService = getGmailInboxService();
+        await gmailService.markAsRead(emailId);
+
+        res.json({
+            success: true,
+            message: 'Email marked as read'
+        });
+
+    } catch (error) {
+        console.error('Error marking email as read:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        if (gmailInboxService) {
+            await gmailInboxService.disconnect();
+        }
+    }
+});
+
+// Mark email as unread
+app.post('/api/email/:emailId/unread', async (req, res) => {
+    try {
+        const { emailId } = req.params;
+
+        const gmailService = getGmailInboxService();
+        await gmailService.markAsUnread(emailId);
+
+        res.json({
+            success: true,
+            message: 'Email marked as unread'
+        });
+
+    } catch (error) {
+        console.error('Error marking email as unread:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        if (gmailInboxService) {
+            await gmailInboxService.disconnect();
+        }
+    }
+});
+
+// Delete email
+app.delete('/api/email/:emailId', async (req, res) => {
+    try {
+        const { emailId } = req.params;
+
+        const gmailService = getGmailInboxService();
+        await gmailService.deleteEmail(emailId);
+
+        res.json({
+            success: true,
+            message: 'Email deleted'
+        });
+
+    } catch (error) {
+        console.error('Error deleting email:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        if (gmailInboxService) {
+            await gmailInboxService.disconnect();
+        }
+    }
+});
+
+// Search emails
+app.get('/api/email/search/:query', async (req, res) => {
+    try {
+        const { query } = req.params;
+
+        const gmailService = getGmailInboxService();
+        const emails = await gmailService.searchEmails(query);
+
+        res.json({
+            success: true,
+            emails,
+            count: emails.length,
+            query
+        });
+
+    } catch (error) {
+        console.error('Error searching emails:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        if (gmailInboxService) {
+            await gmailInboxService.disconnect();
+        }
+    }
+});
+
+// Get unread count
+app.get('/api/email/unread/count', async (req, res) => {
+    try {
+        const gmailService = getGmailInboxService();
+        const count = await gmailService.getUnreadCount();
+
+        res.json({
+            success: true,
+            count
+        });
+
+    } catch (error) {
+        console.error('Error getting unread count:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        if (gmailInboxService) {
+            await gmailInboxService.disconnect();
+        }
     }
 });
 

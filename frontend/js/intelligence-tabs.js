@@ -188,6 +188,9 @@ class IntelligenceTabs {
             case 'lender-management':
                 this.renderLenderManagementTab(content);
                 break;
+            case 'email':
+                this.renderEmailTab(content);
+                break;
             default:
                 console.log(`Unknown tab: ${tab}, falling back to AI Assistant`);
                 this.renderAIAssistantTab(content);
@@ -262,11 +265,15 @@ class IntelligenceTabs {
                     </div>
 
                     <div class="ai-chat-input-area" style="padding: 20px; background: white; border-radius: 0 0 8px 8px; flex-shrink: 0; border-top: 1px solid #e5e7eb;">
-                        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
                             <button onclick="console.log('Test button clicked'); window.conversationUI?.ai?.askQuestion('What should I do next?');"
                                     style="padding: 8px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.2s; font-weight: 500;">
                                 What's next?
                             </button>
+                            <label style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; cursor: pointer; font-size: 13px; color: #16a34a; font-weight: 500;">
+                                <input type="checkbox" id="fundMyDealCheckbox" style="width: 16px; height: 16px; cursor: pointer;">
+                                <span>Fund My Deal</span>
+                            </label>
                             <button onclick="window.conversationUI.ai.askQuestion('Analyze this lead')"
                                     style="padding: 8px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.2s; font-weight: 500;">
                                 Analyze
@@ -389,11 +396,6 @@ class IntelligenceTabs {
     renderFCSTab(content) {
         console.log('renderFCSTab called');
 
-        // First update the tab button states
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === 'fcs');
-        });
-
         content.innerHTML = `
             <div class="intelligence-section">
                 <h3>FCS Results</h3>
@@ -406,8 +408,46 @@ class IntelligenceTabs {
             </div>
         `;
 
-        // Only load FCS data if we're not already generating
-        if (this.parent.fcs && !this.parent.fcs._fcsGenerationInProgress) {
+        // CRITICAL: Check if we're in generation mode BEFORE trying to load
+        if (this.parent.fcs && this.parent.fcs._fcsGenerationInProgress) {
+            const generatingConvId = this.parent.fcs._generatingForConversation;
+            const currentConvId = this.parent.getCurrentConversationId();
+
+            console.log('Generation in progress check:', {
+                generating: true,
+                generatingFor: generatingConvId,
+                current: currentConvId,
+                match: generatingConvId === currentConvId
+            });
+
+            if (generatingConvId === currentConvId) {
+                console.log('🚫 NOT loading old data - generation in progress');
+
+                // Show loading state immediately
+                const fcsContent = document.getElementById('fcsContent');
+                if (fcsContent) {
+                    fcsContent.innerHTML = `
+                        <div style="text-align: center; padding: 60px 40px;">
+                            <style>
+                                @keyframes spin {
+                                    0% { transform: rotate(0deg); }
+                                    100% { transform: rotate(360deg); }
+                                }
+                            </style>
+                            <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Processing with n8n workflow...</p>
+                            <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh</p>
+                        </div>
+                    `;
+                }
+                return; // EXIT - don't call loadFCSData
+            }
+        }
+
+        // Only load existing FCS data if NOT generating
+        if (this.parent.fcs) {
+            console.log('✅ Safe to load existing FCS data');
             this.parent.fcs.loadFCSData();
         }
     }
@@ -503,6 +543,14 @@ class IntelligenceTabs {
         if (this.parent.lenders) {
             content.innerHTML = this.parent.lenders.createLenderManagementTemplate();
             this.parent.lenders.loadLendersList();
+        }
+    }
+
+    renderEmailTab(content) {
+        if (this.parent.emailTab) {
+            this.parent.emailTab.render();
+        } else {
+            content.innerHTML = '<div class="empty-state">Email module not available</div>';
         }
     }
 

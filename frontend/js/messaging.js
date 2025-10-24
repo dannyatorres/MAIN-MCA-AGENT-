@@ -1,4 +1,4 @@
-// messaging.js - Complete messaging functionality
+// messaging.js - Complete messaging functionality with Real-time WebSocket Updates
 
 class MessagingModule {
     constructor(parent) {
@@ -17,7 +17,37 @@ class MessagingModule {
 
     init() {
         this.setupEventListeners();
+        this.setupWebSocketListeners(); // NEW: Connect to WebSocket events
         this.requestNotificationPermissionOnDemand();
+    }
+
+    // NEW: Setup WebSocket listeners for real-time updates
+    setupWebSocketListeners() {
+        // Check if global Socket.io connection exists
+        if (window.globalSocket) {
+            console.log('✅ Connecting messaging module to WebSocket...');
+
+            // Listen for new messages
+            window.globalSocket.on('new_message', (data) => {
+                console.log('📨 Real-time message received:', data);
+                this.handleIncomingMessage(data);
+            });
+
+            // Listen for conversation updates
+            window.globalSocket.on('conversation_updated', (data) => {
+                console.log('📋 Conversation updated:', data);
+                // Reload conversation list if needed
+                if (this.parent.conversationUI) {
+                    this.parent.conversationUI.loadConversations();
+                }
+            });
+
+            console.log('✅ WebSocket listeners attached to messaging module');
+        } else {
+            console.warn('⚠️ Global Socket not available yet, will retry...');
+            // Retry after a delay
+            setTimeout(() => this.setupWebSocketListeners(), 1000);
+        }
     }
 
     setupEventListeners() {
@@ -47,6 +77,26 @@ class MessagingModule {
         const closeSuggestions = document.getElementById('closeSuggestions');
         if (closeSuggestions) {
             closeSuggestions.addEventListener('click', () => this.hideAISuggestions());
+        }
+
+        // Event delegation for delete buttons
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            messagesContainer.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.delete-message-btn');
+                if (deleteBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const messageId = deleteBtn.dataset.messageId;
+                    if (messageId) {
+                        console.log('Delete button clicked for message:', messageId);
+                        this.deleteMessage(messageId);
+                    }
+                }
+            });
+
+            console.log('✅ Delete button event delegation set up');
         }
     }
 
@@ -105,6 +155,7 @@ class MessagingModule {
         container.scrollTop = container.scrollHeight;
     }
 
+    // IMPROVED: Add message with duplicate detection
     addMessage(message) {
         const conversationId = this.parent.getCurrentConversationId();
         if (message.conversation_id !== conversationId) return;
@@ -112,14 +163,27 @@ class MessagingModule {
         const messagesContainer = document.getElementById('messagesContainer');
         const messagesList = messagesContainer?.querySelector('.messages-list');
 
-        if (messagesList) {
-            const messageElement = document.createElement('div');
-            messageElement.innerHTML = this.templates.messageItem(message);
-            messagesList.appendChild(messageElement.firstElementChild);
+        if (!messagesList) return;
 
-            // Scroll to bottom
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // Check if message already exists (prevent duplicates)
+        const existingMessage = messagesList.querySelector(`[data-message-id="${message.id}"]`);
+        if (existingMessage) {
+            console.log('⚠️ Message already exists, skipping duplicate:', message.id);
+            return;
         }
+
+        // Create and add new message
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML = this.templates.messageItem(message);
+        messagesList.appendChild(messageElement.firstElementChild);
+
+        // Smooth scroll to bottom
+        messagesContainer.scrollTo({
+            top: messagesContainer.scrollHeight,
+            behavior: 'smooth'
+        });
+
+        console.log('✅ New message added to UI:', message.id);
     }
 
     async sendMessage() {
@@ -153,8 +217,16 @@ class MessagingModule {
             });
 
             if (response.ok) {
-                // Reload messages in current conversation
-                await this.loadConversationMessages();
+                const result = await response.json();
+                console.log('✅ Message sent successfully:', result);
+
+                // Add the message to UI immediately (optimistic update)
+                if (result.message) {
+                    this.addMessage(result.message);
+                } else {
+                    // Fallback: reload all messages
+                    await this.loadConversationMessages();
+                }
 
                 // Update conversation timestamp
                 this.updateConversationAfterMessage(conversationId);
@@ -258,35 +330,82 @@ class MessagingModule {
         this.hideAISuggestions();
     }
 
-    // Notification handling
+    // IMPROVED: Real-time incoming message handler with verbose logging
     handleIncomingMessage(data) {
-        console.log('Handling incoming message:', data);
+        console.log('📨 Handling incoming message:', data);
+        console.log('📨 Message data structure:', JSON.stringify(data, null, 2));
 
         const conversationId = this.parent.getCurrentConversationId();
+        const messageConversationId = data.conversation_id;
 
-        // Add to unread count if not current conversation
-        if (data.conversation_id !== conversationId) {
+        // If it's for the current conversation, add it to the UI immediately
+        if (messageConversationId === conversationId) {
+            console.log('✅ Message is for current conversation, adding to UI');
+
+            const message = data.message || data;
+            const messagesContainer = document.getElementById('messagesContainer');
+            const messagesList = messagesContainer?.querySelector('.messages-list');
+
+            if (!messagesList) {
+                console.warn('⚠️ No messages list found, reloading all messages');
+                this.loadConversationMessages(conversationId);
+                return;
+            }
+
+            // Check for duplicates
+            const existingMessage = messagesList.querySelector(`[data-message-id="${message.id}"]`);
+            if (existingMessage) {
+                console.log('⚠️ Message already exists in UI, skipping:', message.id);
+                return;
+            }
+
+            // Create and add message
+            const messageHTML = this.templates.messageItem(message);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = messageHTML;
+            const messageElement = tempDiv.firstElementChild;
+
+            // Add animation class
+            messageElement.classList.add('new-message');
+
+            messagesList.appendChild(messageElement);
+            console.log('✅ Message element added to DOM');
+
+            // Smooth scroll with slight delay for animation
+            setTimeout(() => {
+                messagesContainer.scrollTo({
+                    top: messagesContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+
+        } else {
+            console.log('📋 Message is for different conversation, updating badge');
+
+            // Add visual badge to conversation item
+            this.addConversationBadge(messageConversationId);
+
+            // Add to unread count
             const unreadMessages = this.parent.unreadMessages || new Map();
-            const currentCount = unreadMessages.get(data.conversation_id) || 0;
-            unreadMessages.set(data.conversation_id, currentCount + 1);
+            const currentCount = unreadMessages.get(messageConversationId) || 0;
+            unreadMessages.set(messageConversationId, currentCount + 1);
 
             // Play notification sound
             this.playNotificationSound();
 
             // Show browser notification if allowed
             this.showBrowserNotification(data);
-        } else {
-            // If it's current conversation, just reload messages
-            this.loadConversationMessages();
         }
 
         // Always refresh conversation list to update order and show badge
-        if (this.parent.conversationCore) {
-            this.parent.conversationCore.loadConversations();
+        if (this.parent.conversationUI) {
+            this.parent.conversationUI.loadConversations();
         }
 
-        // Show in-app notification
-        this.utils.showNotification('New message received!', 'info');
+        // Show in-app notification for non-current conversations
+        if (messageConversationId !== conversationId) {
+            this.utils.showNotification('New message received!', 'info');
+        }
     }
 
     playNotificationSound() {
@@ -309,8 +428,8 @@ class MessagingModule {
 
             notification.onclick = () => {
                 window.focus();
-                if (this.parent.conversationCore) {
-                    this.parent.conversationCore.selectConversation(data.conversation_id);
+                if (this.parent.conversationUI) {
+                    this.parent.conversationUI.selectConversation(data.conversation_id);
                 }
                 notification.close();
             };
@@ -324,6 +443,105 @@ class MessagingModule {
             }).catch(error => {
                 console.log('Notification permission error (non-fatal):', error);
             });
+        }
+    }
+
+    async deleteMessage(messageId) {
+        const conversationId = this.parent.getCurrentConversationId();
+        if (!conversationId) return;
+
+        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+
+        if (!messageElement) {
+            console.error('Message element not found');
+            return;
+        }
+
+        if (messageElement.classList.contains('deleting')) {
+            console.log('Message already being deleted, skipping...');
+            return;
+        }
+
+        if (!confirm('Are you sure you want to delete this message?')) {
+            return;
+        }
+
+        messageElement.classList.add('deleting');
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/messages/${messageId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Smooth fade out animation
+                messageElement.style.transition = 'all 0.3s ease';
+                messageElement.style.opacity = '0';
+                messageElement.style.transform = 'translateX(-20px)';
+
+                setTimeout(() => {
+                    messageElement.remove();
+                    console.log('✅ Message deleted successfully');
+                }, 300);
+
+                this.utils.showNotification('Message deleted', 'success');
+            } else {
+                throw new Error('Failed to delete message');
+            }
+        } catch (error) {
+            console.error('Delete message error:', error);
+            messageElement.classList.remove('deleting');
+            this.utils.showNotification(`Failed to delete message: ${error.message}`, 'error');
+        }
+    }
+
+    // Badge management for unread conversations
+    addConversationBadge(conversationId) {
+        console.log('🔔 Adding badge to conversation:', conversationId);
+
+        // Find the conversation item in the sidebar
+        const conversationItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+
+        if (!conversationItem) {
+            console.warn('⚠️ Conversation item not found for badge:', conversationId);
+            return;
+        }
+
+        // Check if badge already exists
+        let badge = conversationItem.querySelector('.conversation-badge');
+
+        if (!badge) {
+            // Create new badge
+            badge = document.createElement('div');
+            badge.className = 'conversation-badge';
+            badge.textContent = '1';
+            conversationItem.appendChild(badge);
+            console.log('✅ Added badge to conversation:', conversationId);
+        } else {
+            // Increment existing badge count
+            const currentCount = parseInt(badge.textContent) || 1;
+            badge.textContent = currentCount + 1;
+            console.log('✅ Incremented badge count:', badge.textContent);
+        }
+
+        // Store unread count in data attribute
+        conversationItem.dataset.unreadCount = badge.textContent;
+    }
+
+    removeConversationBadge(conversationId) {
+        console.log('🔕 Removing badge from conversation:', conversationId);
+
+        const conversationItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+
+        if (conversationItem) {
+            const badge = conversationItem.querySelector('.conversation-badge');
+            if (badge) {
+                badge.remove();
+                console.log('✅ Removed badge from conversation:', conversationId);
+            }
+
+            // Clear unread count
+            delete conversationItem.dataset.unreadCount;
         }
     }
 }
