@@ -1622,9 +1622,16 @@ Best regards`;
 
         if (!lenders || lenders.length === 0) {
             container.innerHTML = `
-                <div class="empty-state">
-                    <h4>No Lenders Found</h4>
-                    <p>Start by adding your first lender to the database.</p>
+                <div class="empty-state" style="
+                    text-align: center;
+                    padding: 60px 20px;
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    border-radius: 16px;
+                    border: 2px dashed #cbd5e1;
+                ">
+                    <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">🏦</div>
+                    <h4 style="margin: 0 0 8px 0; font-size: 20px; color: #1e293b; font-weight: 600;">No Lenders Found</h4>
+                    <p style="margin: 0; color: #64748b; font-size: 15px;">Start by adding your first lender to the database.</p>
                 </div>
             `;
             return;
@@ -1636,31 +1643,125 @@ Best regards`;
         );
 
         container.innerHTML = `
-            <table class="lenders-table" style="width: 100%;">
-                <thead>
-                    <tr>
-                        <th style="text-align: left; padding: 12px; font-size: 16px; font-weight: 600;">Lender Name</th>
-                        <th style="text-align: right; padding: 12px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${sortedLenders.map(lender => `
-                        <tr>
-                            <td style="text-align: left; padding: 12px; font-weight: 500; font-size: 15px;">${lender.name}</td>
-                            <td style="text-align: right; padding: 12px;">
-                                <div class="action-buttons" style="display: inline-flex; gap: 8px;">
-                                    <button class="action-btn edit" onclick="window.conversationUI.lenders.editLender('${lender.id}')">
-                                        Edit
-                                    </button>
-                                    <button class="action-btn delete" onclick="window.conversationUI.lenders.deleteLender('${lender.id}', '${lender.name}')">
-                                        Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="
+                    display: grid;
+                    grid-template-columns: 1fr auto;
+                    padding: 16px 20px;
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    border-bottom: 1px solid #e2e8f0;
+                ">
+                    <div style="
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #475569;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    ">
+                        <span style="font-size: 18px;">🏦</span>
+                        Lender Name
+                    </div>
+                    <div style="
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #475569;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        text-align: right;
+                    ">Actions</div>
+                </div>
+                <div>
+                    ${sortedLenders.map((lender, index) => `
+                        <div style="
+                            display: grid;
+                            grid-template-columns: 1fr auto;
+                            padding: 10px 16px;
+                            border-bottom: 1px solid #f1f5f9;
+                            transition: all 0.2s ease;
+                            background: ${index % 2 === 0 ? '#ffffff' : '#fafbfc'};
+                        "
+                        onmouseover="this.style.background='#f8fafc'; this.style.transform='translateX(4px)';"
+                        onmouseout="this.style.background='${index % 2 === 0 ? '#ffffff' : '#fafbfc'}'; this.style.transform='translateX(0)';">
+                            <div style="
+                                font-size: 15px;
+                                font-weight: 500;
+                                color: #1e293b;
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                            ">
+                                <div style="
+                                    width: 32px;
+                                    height: 32px;
+                                    border-radius: 8px;
+                                    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    color: white;
+                                    font-weight: 700;
+                                    font-size: 14px;
+                                    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
+                                ">${lender.name.charAt(0).toUpperCase()}</div>
+                                <span>${lender.name}</span>
+                            </div>
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                gap: 6px;
+                            ">
+                                <button
+                                    onclick="window.conversationUI.lenders.editLender('${lender.id}')"
+                                    style="
+                                        padding: 6px 12px;
+                                        background: white;
+                                        color: #3b82f6;
+                                        border: 1.5px solid #3b82f6;
+                                        border-radius: 6px;
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                        transition: all 0.2s ease;
+                                        display: inline-flex;
+                                        align-items: center;
+                                        gap: 4px;
+                                    "
+                                    onmouseover="this.style.background='#3b82f6'; this.style.color='white'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(59, 130, 246, 0.3)';"
+                                    onmouseout="this.style.background='white'; this.style.color='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                                >
+                                    <span style="font-size: 14px;">✏️</span>
+                                    Edit
+                                </button>
+                                <button
+                                    onclick="window.conversationUI.lenders.deleteLender('${lender.id}', '${lender.name}')"
+                                    style="
+                                        padding: 6px 12px;
+                                        background: white;
+                                        color: #ef4444;
+                                        border: 1.5px solid #ef4444;
+                                        border-radius: 6px;
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                        transition: all 0.2s ease;
+                                        display: inline-flex;
+                                        align-items: center;
+                                        gap: 4px;
+                                    "
+                                    onmouseover="this.style.background='#ef4444'; this.style.color='white'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(239, 68, 68, 0.3)';"
+                                    onmouseout="this.style.background='white'; this.style.color='#ef4444'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                                >
+                                    <span style="font-size: 14px;">🗑️</span>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
                     `).join('')}
-                </tbody>
-            </table>
+                </div>
+            </div>
         `;
     }
 
@@ -1859,17 +1960,57 @@ Negative Days: 3"
     createLenderManagementTemplate() {
         return `
             <div class="lender-management-system" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
-                <div class="lender-mgmt-header" style="flex-shrink: 0;">
-                    <h3>Lender Management</h3>
-                    <p>Add, edit, and manage your lender database</p>
-                </div>
-
                 <div class="lender-mgmt-content" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
-                    <div class="mgmt-actions" style="flex-shrink: 0; padding: 16px 0;">
-                        <button class="mgmt-btn primary" onclick="window.conversationUI.lenders.showAddLenderModal()">
+                    <div class="mgmt-actions" style="
+                        flex-shrink: 0;
+                        padding: 0 0 16px 0;
+                        display: flex;
+                        gap: 10px;
+                        align-items: center;
+                    ">
+                        <button
+                            onclick="window.conversationUI.lenders.showAddLenderModal()"
+                            style="
+                                padding: 10px 20px;
+                                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                            "
+                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.4)';"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(59, 130, 246, 0.3)';"
+                        >
+                            <span style="font-size: 16px;">➕</span>
                             Add New Lender
                         </button>
-                        <button class="mgmt-btn secondary" onclick="window.conversationUI.lenders.refreshLendersList()">
+                        <button
+                            onclick="window.conversationUI.lenders.refreshLendersList()"
+                            style="
+                                padding: 10px 18px;
+                                background: white;
+                                color: #64748b;
+                                border: 1.5px solid #e2e8f0;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                            "
+                            onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0, 0, 0, 0.1)';"
+                            onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                        >
+                            <span style="font-size: 16px;">🔄</span>
                             Refresh
                         </button>
                     </div>
