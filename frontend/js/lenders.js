@@ -1715,47 +1715,49 @@ Best regards`;
                             ">
                                 <button
                                     onclick="window.conversationUI.lenders.editLender('${lender.id}')"
+                                    title="Edit lender"
                                     style="
-                                        padding: 6px 12px;
+                                        width: 28px;
+                                        height: 28px;
+                                        padding: 0;
                                         background: white;
                                         color: #3b82f6;
-                                        border: 1.5px solid #3b82f6;
-                                        border-radius: 6px;
-                                        font-size: 13px;
-                                        font-weight: 600;
+                                        border: 1.5px solid #e2e8f0;
+                                        border-radius: 5px;
+                                        font-size: 14px;
                                         cursor: pointer;
                                         transition: all 0.2s ease;
                                         display: inline-flex;
                                         align-items: center;
-                                        gap: 4px;
+                                        justify-content: center;
                                     "
-                                    onmouseover="this.style.background='#3b82f6'; this.style.color='white'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(59, 130, 246, 0.3)';"
-                                    onmouseout="this.style.background='white'; this.style.color='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                                    onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#3b82f6'; this.style.transform='scale(1.1)';"
+                                    onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'; this.style.transform='scale(1)';"
                                 >
-                                    <span style="font-size: 14px;">✏️</span>
-                                    Edit
+                                    ✏️
                                 </button>
                                 <button
                                     onclick="window.conversationUI.lenders.deleteLender('${lender.id}', '${lender.name}')"
+                                    title="Delete lender"
                                     style="
-                                        padding: 6px 12px;
+                                        width: 28px;
+                                        height: 28px;
+                                        padding: 0;
                                         background: white;
                                         color: #ef4444;
-                                        border: 1.5px solid #ef4444;
-                                        border-radius: 6px;
-                                        font-size: 13px;
-                                        font-weight: 600;
+                                        border: 1.5px solid #e2e8f0;
+                                        border-radius: 5px;
+                                        font-size: 14px;
                                         cursor: pointer;
                                         transition: all 0.2s ease;
                                         display: inline-flex;
                                         align-items: center;
-                                        gap: 4px;
+                                        justify-content: center;
                                     "
-                                    onmouseover="this.style.background='#ef4444'; this.style.color='white'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(239, 68, 68, 0.3)';"
-                                    onmouseout="this.style.background='white'; this.style.color='#ef4444'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                                    onmouseover="this.style.background='#fef2f2'; this.style.borderColor='#ef4444'; this.style.transform='scale(1.1)';"
+                                    onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'; this.style.transform='scale(1)';"
                                 >
-                                    <span style="font-size: 14px;">🗑️</span>
-                                    Delete
+                                    🗑️
                                 </button>
                             </div>
                         </div>
@@ -1971,46 +1973,46 @@ Negative Days: 3"
                         <button
                             onclick="window.conversationUI.lenders.showAddLenderModal()"
                             style="
-                                padding: 10px 20px;
+                                padding: 7px 14px;
                                 background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
                                 color: white;
                                 border: none;
-                                border-radius: 8px;
-                                font-size: 14px;
+                                border-radius: 6px;
+                                font-size: 13px;
                                 font-weight: 600;
                                 cursor: pointer;
                                 transition: all 0.2s ease;
-                                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+                                box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
                                 display: inline-flex;
                                 align-items: center;
-                                gap: 6px;
+                                gap: 5px;
                             "
-                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.4)';"
-                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(59, 130, 246, 0.3)';"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(59, 130, 246, 0.35)';"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(59, 130, 246, 0.3)';"
                         >
-                            <span style="font-size: 16px;">➕</span>
+                            <span style="font-size: 14px;">➕</span>
                             Add New Lender
                         </button>
                         <button
                             onclick="window.conversationUI.lenders.refreshLendersList()"
                             style="
-                                padding: 10px 18px;
+                                padding: 7px 14px;
                                 background: white;
                                 color: #64748b;
                                 border: 1.5px solid #e2e8f0;
-                                border-radius: 8px;
-                                font-size: 14px;
+                                border-radius: 6px;
+                                font-size: 13px;
                                 font-weight: 600;
                                 cursor: pointer;
                                 transition: all 0.2s ease;
                                 display: inline-flex;
                                 align-items: center;
-                                gap: 6px;
+                                gap: 5px;
                             "
-                            onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0, 0, 0, 0.1)';"
+                            onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.08)';"
                             onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
                         >
-                            <span style="font-size: 16px;">🔄</span>
+                            <span style="font-size: 14px;">🔄</span>
                             Refresh
                         </button>
                     </div>
