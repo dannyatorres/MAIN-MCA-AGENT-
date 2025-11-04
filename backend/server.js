@@ -4942,6 +4942,833 @@ app.post('/api/migrate/add-timestamp-columns', async (req, res) => {
     }
 });
 
+// ============================================================================
+// N8N SALES AGENT INTEGRATION API ENDPOINTS
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// GROUP 1: CONVERSATION MANAGEMENT
+// ----------------------------------------------------------------------------
+
+// NOTE: GET /api/conversations/:id already exists above (line 829) with more features
+// Using that endpoint for N8N integration as well
+
+// Get full merchant context (conversation + lead details + FCS)
+app.get('/api/conversations/:id/context', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDatabase();
+
+        // Get conversation
+        const conversation = await db.query(
+            'SELECT * FROM conversations WHERE id = $1',
+            [id]
+        );
+
+        if (conversation.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Conversation not found'
+            });
+        }
+
+        // Get lead details
+        const leadDetails = await db.query(
+            'SELECT * FROM lead_details WHERE conversation_id = $1',
+            [id]
+        );
+
+        // Get FCS results
+        const fcs = await db.query(
+            'SELECT * FROM fcs_results WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1',
+            [id]
+        );
+
+        // Get message stats
+        const messageStats = await db.query(`
+            SELECT
+                COUNT(*) as message_count,
+                MAX(timestamp) as last_message_at
+            FROM messages
+            WHERE conversation_id = $1
+        `, [id]);
+
+        // Calculate average response time (inbound messages only)
+        const responseTimeResult = await db.query(`
+            SELECT
+                AVG(EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (ORDER BY timestamp)))) / 60 as avg_response_minutes
+            FROM messages
+            WHERE conversation_id = $1 AND direction = 'inbound'
+        `, [id]);
+
+        res.json({
+            success: true,
+            conversation: conversation.rows[0],
+            lead_details: leadDetails.rows[0] || null,
+            fcs_results: fcs.rows[0] || null,
+            has_fcs: fcs.rows.length > 0,
+            message_count: parseInt(messageStats.rows[0].message_count),
+            last_message_at: messageStats.rows[0].last_message_at,
+            response_time_avg_minutes: Math.round(parseFloat(responseTimeResult.rows[0].avg_response_minutes) || 0)
+        });
+
+    } catch (error) {
+        console.error('Error fetching context:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Update conversation state
+app.patch('/api/conversations/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { state, current_step, priority, metadata, tags } = req.body;
+        const db = getDatabase();
+
+        const updates = [];
+        const values = [];
+        let paramIndex = 1;
+
+        if (state) {
+            updates.push(`state = $${paramIndex++}`);
+            values.push(state);
+        }
+
+        if (current_step) {
+            updates.push(`current_step = $${paramIndex++}`);
+            values.push(current_step);
+        }
+
+        if (priority !== undefined) {
+            updates.push(`priority = $${paramIndex++}`);
+            values.push(priority);
+        }
+
+        if (metadata) {
+            updates.push(`metadata = $${paramIndex++}`);
+            values.push(JSON.stringify(metadata));
+        }
+
+        if (tags) {
+            updates.push(`tags = $${paramIndex++}`);
+            values.push(JSON.stringify(tags));
+        }
+
+        updates.push(`last_activity = NOW()`);
+
+        if (updates.length === 1) { // Only last_activity
+            return res.status(400).json({
+                success: false,
+                error: 'No fields to update'
+            });
+        }
+
+        values.push(id);
+
+        await db.query(`
+            UPDATE conversations
+            SET ${updates.join(', ')}
+            WHERE id = $${paramIndex}
+        `, values);
+
+        // Emit WebSocket event
+        if (io) {
+            io.emit('conversation_updated', {
+                conversation_id: id,
+                state,
+                current_step,
+                priority
+            });
+        }
+
+        res.json({
+            success: true,
+            conversation_id: id,
+            updated_fields: Object.keys(req.body)
+        });
+
+    } catch (error) {
+        console.error('Error updating conversation:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ----------------------------------------------------------------------------
+// GROUP 2: MESSAGE MANAGEMENT
+// ----------------------------------------------------------------------------
+
+// Save AI message (before sending SMS)
+app.post('/api/messages', async (req, res) => {
+    try {
+        const { conversation_id, content, direction, message_type, sent_by, metadata } = req.body;
+        const db = getDatabase();
+
+        if (!conversation_id || !content || !direction) {
+            return res.status(400).json({
+                success: false,
+                error: 'conversation_id, content, and direction are required'
+            });
+        }
+
+        const result = await db.query(`
+            INSERT INTO messages (conversation_id, content, direction, message_type, sent_by, metadata, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, timestamp
+        `, [
+            conversation_id,
+            content,
+            direction,
+            message_type || 'ai',
+            sent_by || 'ai_agent',
+            metadata ? JSON.stringify(metadata) : '{}',
+            'pending'
+        ]);
+
+        // Update conversation last_activity
+        await db.query(
+            'UPDATE conversations SET last_activity = NOW() WHERE id = $1',
+            [conversation_id]
+        );
+
+        // Emit WebSocket event
+        if (io) {
+            io.emit('new_message', {
+                conversation_id,
+                message: {
+                    id: result.rows[0].id,
+                    content,
+                    direction,
+                    message_type: message_type || 'ai',
+                    sent_by: sent_by || 'ai_agent',
+                    timestamp: result.rows[0].timestamp
+                }
+            });
+        }
+
+        res.json({
+            success: true,
+            message: {
+                id: result.rows[0].id,
+                timestamp: result.rows[0].timestamp
+            }
+        });
+
+    } catch (error) {
+        console.error('Error saving message:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Send SMS via Twilio
+app.post('/api/sms/send', async (req, res) => {
+    try {
+        const { phone, message, conversation_id } = req.body;
+
+        if (!phone || !message) {
+            return res.status(400).json({
+                success: false,
+                error: 'phone and message are required'
+            });
+        }
+
+        const twilio = getTwilioClient();
+        const db = getDatabase();
+
+        if (!twilio) {
+            return res.status(500).json({
+                success: false,
+                error: 'Twilio client not initialized. Check environment variables.'
+            });
+        }
+
+        try {
+            const result = await twilio.messages.create({
+                body: message,
+                from: process.env.TWILIO_PHONE_NUMBER,
+                to: phone
+            });
+
+            // Update message status with Twilio SID
+            if (conversation_id) {
+                await db.query(`
+                    UPDATE messages
+                    SET twilio_sid = $1, status = $2
+                    WHERE conversation_id = $3
+                    AND content = $4
+                    AND direction = 'outbound'
+                    AND status = 'pending'
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                `, [result.sid, 'sent', conversation_id, message]);
+            }
+
+            console.log(`✅ SMS sent to ${phone}: ${result.sid}`);
+
+            res.json({
+                success: true,
+                twilio_sid: result.sid,
+                status: 'sent',
+                message_id: result.sid
+            });
+
+        } catch (twilioError) {
+            console.error('Twilio error:', twilioError);
+
+            // Update message status to failed
+            if (conversation_id) {
+                await db.query(`
+                    UPDATE messages
+                    SET status = $1, error_message = $2
+                    WHERE conversation_id = $3
+                    AND content = $4
+                    AND direction = 'outbound'
+                    AND status = 'pending'
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                `, ['failed', twilioError.message, conversation_id, message]);
+            }
+
+            res.status(500).json({
+                success: false,
+                error: twilioError.message
+            });
+        }
+
+    } catch (error) {
+        console.error('Error sending SMS:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Send batch SMS (for initial outreach)
+app.post('/api/sms/send-batch', async (req, res) => {
+    try {
+        const { messages } = req.body;
+
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({
+                success: false,
+                error: 'messages array is required'
+            });
+        }
+
+        const twilio = getTwilioClient();
+        const db = getDatabase();
+
+        if (!twilio) {
+            return res.status(500).json({
+                success: false,
+                error: 'Twilio client not initialized'
+            });
+        }
+
+        const results = [];
+        let sent = 0;
+        let failed = 0;
+
+        for (const msg of messages) {
+            try {
+                // Save message first
+                await db.query(`
+                    INSERT INTO messages (conversation_id, content, direction, message_type, sent_by, status)
+                    VALUES ($1, $2, 'outbound', 'ai', 'ai_agent', 'pending')
+                `, [msg.conversation_id, msg.message]);
+
+                // Send via Twilio
+                const result = await twilio.messages.create({
+                    body: msg.message,
+                    from: process.env.TWILIO_PHONE_NUMBER,
+                    to: msg.phone
+                });
+
+                // Update status
+                await db.query(`
+                    UPDATE messages
+                    SET twilio_sid = $1, status = 'sent'
+                    WHERE conversation_id = $2
+                    AND content = $3
+                    AND direction = 'outbound'
+                    AND status = 'pending'
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                `, [result.sid, msg.conversation_id, msg.message]);
+
+                results.push({
+                    conversation_id: msg.conversation_id,
+                    status: 'sent',
+                    twilio_sid: result.sid
+                });
+
+                sent++;
+
+                // Small delay to avoid rate limits
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+            } catch (error) {
+                console.error(`Failed to send to ${msg.phone}:`, error.message);
+
+                results.push({
+                    conversation_id: msg.conversation_id,
+                    status: 'failed',
+                    error: error.message
+                });
+
+                failed++;
+            }
+        }
+
+        res.json({
+            success: true,
+            sent,
+            failed,
+            total: messages.length,
+            results
+        });
+
+    } catch (error) {
+        console.error('Error sending batch SMS:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ----------------------------------------------------------------------------
+// GROUP 3: FCS & DRIVE INTEGRATION
+// ----------------------------------------------------------------------------
+
+// Search Google Drive for business folder
+app.post('/api/drive/search', async (req, res) => {
+    try {
+        const { business_name, conversation_id, fuzzy_match = true } = req.body;
+
+        if (!business_name) {
+            return res.status(400).json({
+                success: false,
+                error: 'business_name is required'
+            });
+        }
+
+        // TODO: Implement actual Google Drive API search
+        // This is a placeholder that you'll need to implement with Drive API
+
+        console.log(`🔍 Searching Drive for: ${business_name}`);
+
+        // For now, return mock data
+        // You'll replace this with actual Drive API calls
+        res.json({
+            success: true,
+            matches: [
+                {
+                    folder_id: 'placeholder_id',
+                    folder_name: business_name,
+                    folder_path: `/Leads/${business_name}`,
+                    confidence: 0.95,
+                    match_reason: 'Exact match'
+                }
+            ],
+            best_match: {
+                folder_id: 'placeholder_id',
+                confidence: 0.95
+            },
+            note: 'Drive API integration pending - returning mock data'
+        });
+
+    } catch (error) {
+        console.error('Error searching Drive:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// List files in Drive folder
+app.get('/api/drive/folder/:folderId/files', async (req, res) => {
+    try {
+        const { folderId } = req.params;
+
+        // TODO: Implement actual Google Drive API file listing
+        // This is a placeholder
+
+        console.log(`📁 Listing files in folder: ${folderId}`);
+
+        res.json({
+            success: true,
+            folder_id: folderId,
+            files: [],
+            bank_statement_count: 0,
+            note: 'Drive API integration pending - returning empty list'
+        });
+
+    } catch (error) {
+        console.error('Error listing Drive files:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Trigger FCS analysis
+app.post('/api/fcs/trigger/:conversationId', async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { folder_id, file_ids, auto_download = true } = req.body;
+        const db = getDatabase();
+
+        // Verify conversation exists
+        const conversation = await db.query(
+            'SELECT * FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+
+        if (conversation.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Conversation not found'
+            });
+        }
+
+        // Create job in queue
+        const job = await db.query(`
+            INSERT INTO job_queue (job_type, conversation_id, input_data, status)
+            VALUES ($1, $2, $3, 'queued')
+            RETURNING id, created_at
+        `, [
+            'fcs_analysis',
+            conversationId,
+            JSON.stringify({
+                folder_id,
+                file_ids,
+                auto_download
+            })
+        ]);
+
+        // Update conversation state
+        await db.query(`
+            UPDATE conversations
+            SET state = 'FCS_PROCESSING', current_step = 'fcs_queued'
+            WHERE id = $1
+        `, [conversationId]);
+
+        // Emit WebSocket event
+        if (io) {
+            io.emit('fcs_triggered', {
+                conversation_id: conversationId,
+                job_id: job.rows[0].id
+            });
+        }
+
+        console.log(`📊 FCS analysis queued for conversation ${conversationId}`);
+
+        res.json({
+            success: true,
+            job_id: job.rows[0].id,
+            status: 'queued',
+            message: 'FCS analysis queued. Files will be downloaded and processed.',
+            estimated_time_minutes: 2
+        });
+
+    } catch (error) {
+        console.error('Error triggering FCS:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Check FCS job status
+app.get('/api/fcs/status/:jobId', async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(
+            'SELECT * FROM job_queue WHERE id = $1',
+            [jobId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Job not found'
+            });
+        }
+
+        const job = result.rows[0];
+
+        res.json({
+            success: true,
+            job_id: job.id,
+            status: job.status,
+            progress: job.progress || 0,
+            progress_message: job.progress_message || '',
+            started_at: job.started_at,
+            completed_at: job.completed_at,
+            error_message: job.error_message
+        });
+
+    } catch (error) {
+        console.error('Error checking FCS status:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get FCS results
+app.get('/api/fcs/results/:conversationId', async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(
+            'SELECT * FROM fcs_results WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1',
+            [conversationId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'No FCS results found for this conversation'
+            });
+        }
+
+        res.json({
+            success: true,
+            fcs_results: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Error fetching FCS results:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ----------------------------------------------------------------------------
+// GROUP 4: LEAD MANAGEMENT
+// ----------------------------------------------------------------------------
+
+// Get leads needing action
+app.get('/api/leads/pending', async (req, res) => {
+    try {
+        const { state, limit = 30, offset = 0 } = req.query;
+        const db = getDatabase();
+
+        let query = `
+            SELECT
+                c.id as conversation_id,
+                c.business_name,
+                c.lead_phone as phone,
+                c.state,
+                c.current_step,
+                c.priority,
+                c.last_activity,
+                EXTRACT(EPOCH FROM (NOW() - c.last_activity)) / 60 as minutes_since_last_activity,
+                (
+                    SELECT content
+                    FROM messages
+                    WHERE conversation_id = c.id
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                ) as last_message
+            FROM conversations c
+            WHERE 1=1
+        `;
+
+        const values = [];
+        let paramIndex = 1;
+
+        if (state) {
+            query += ` AND c.state = $${paramIndex++}`;
+            values.push(state);
+        }
+
+        query += ` ORDER BY c.priority DESC, c.last_activity DESC LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
+        values.push(parseInt(limit), parseInt(offset));
+
+        const result = await db.query(query, values);
+
+        const countResult = await db.query(
+            `SELECT COUNT(*) as total FROM conversations WHERE state = $1`,
+            [state || 'NEW']
+        );
+
+        res.json({
+            success: true,
+            leads: result.rows,
+            total: parseInt(countResult.rows[0].total)
+        });
+
+    } catch (error) {
+        console.error('Error fetching pending leads:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Mark conversation as dead/cold
+app.post('/api/conversations/:id/mark-dead', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason, final_state = 'DEAD' } = req.body;
+        const db = getDatabase();
+
+        await db.query(`
+            UPDATE conversations
+            SET state = $1, current_step = 'marked_dead', metadata = metadata || $2
+            WHERE id = $3
+        `, [
+            final_state,
+            JSON.stringify({ dead_reason: reason, marked_dead_at: new Date() }),
+            id
+        ]);
+
+        // Log action
+        await db.query(`
+            INSERT INTO agent_actions (conversation_id, action_type, action_details, performed_by)
+            VALUES ($1, 'conversation_marked_dead', $2, 'ai_agent')
+        `, [id, JSON.stringify({ reason, final_state })]);
+
+        console.log(`💀 Conversation ${id} marked as ${final_state}: ${reason}`);
+
+        res.json({
+            success: true,
+            conversation_id: id,
+            final_state
+        });
+
+    } catch (error) {
+        console.error('Error marking conversation dead:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ----------------------------------------------------------------------------
+// GROUP 5: LENDER QUALIFICATION (Placeholder for future)
+// ----------------------------------------------------------------------------
+
+// Trigger lender qualification
+app.post('/api/lender-qualification/trigger/:conversationId', async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const db = getDatabase();
+
+        // Create job in queue
+        const job = await db.query(`
+            INSERT INTO job_queue (job_type, conversation_id, input_data, status)
+            VALUES ('lender_qualification', $1, '{}', 'queued')
+            RETURNING id
+        `, [conversationId]);
+
+        console.log(`🎯 Lender qualification queued for conversation ${conversationId}`);
+
+        res.json({
+            success: true,
+            job_id: job.rows[0].id,
+            status: 'queued',
+            message: 'Lender qualification will be processed by n8n worker'
+        });
+
+    } catch (error) {
+        console.error('Error triggering lender qualification:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get qualified lenders
+app.get('/api/lender-matches/:conversationId', async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(`
+            SELECT * FROM lender_matches
+            WHERE conversation_id = $1 AND qualified = true
+            ORDER BY tier ASC, match_score DESC
+        `, [conversationId]);
+
+        res.json({
+            success: true,
+            qualified_lenders: result.rows,
+            total_qualified: result.rows.length
+        });
+
+    } catch (error) {
+        console.error('Error fetching lender matches:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ----------------------------------------------------------------------------
+// HELPER: WebSocket emit endpoint (for n8n to trigger WebSocket events)
+// ----------------------------------------------------------------------------
+
+app.post('/api/websocket/emit', (req, res) => {
+    try {
+        const { event, data } = req.body;
+
+        if (!event) {
+            return res.status(400).json({
+                success: false,
+                error: 'event name is required'
+            });
+        }
+
+        if (io) {
+            io.emit(event, data);
+            console.log(`🔔 WebSocket event emitted: ${event}`);
+        }
+
+        res.json({
+            success: true,
+            event,
+            emitted: !!io
+        });
+
+    } catch (error) {
+        console.error('Error emitting WebSocket event:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ============================================================================
+// END OF N8N SALES AGENT INTEGRATION API ENDPOINTS
+// ============================================================================
+
 server.listen(PORT, () => {
     // Clear the startup timeout - server started successfully
     clearTimeout(startupTimeout);

@@ -621,7 +621,8 @@ class ConversationCore {
                 this.clearConversationDetails();
             }
 
-            this.renderConversationsList();
+            // Reload conversations from server to ensure UI is in sync with database
+            await this.loadConversations();
 
             const deletedCount = result.deletedCount || idsToDelete.length;
             this.utils.showNotification(
