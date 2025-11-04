@@ -39,7 +39,7 @@ const csvUpload = multer({
 });
 
 // Upload and import CSV
-router.post('/upload', csvUpload.single('file'), async (req, res) => {
+router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
     let importId = null;
     let importedCount = 0;
     let errorCount = 0;
