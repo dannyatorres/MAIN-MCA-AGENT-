@@ -234,8 +234,9 @@ class DocumentsModule {
             return;
         }
 
-        this.selectedFiles = validFiles;
-        console.log('Showing document type selection');
+        // Append to existing files instead of replacing them
+        this.selectedFiles = [...this.selectedFiles, ...validFiles];
+        console.log('Total selected files:', this.selectedFiles.length);
         this.showDocumentTypeSelection();
     }
 
