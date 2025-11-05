@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modular System</title>
+</head>
+<body>
+    <h1>Testing Modular ConversationUI</h1>
+    <div id="conversationsList"></div>
+    <div id="intelligenceContent"></div>
+
+    <script type="module">
+        console.log('🚀 Starting modular test...');
+
+        // Import all modules
+        import ConversationCore from './js/conversation-core.js';
+        import MessagingModule from './js/messaging.js';
+        import DocumentsModule from './js/documents.js';
+        import StatsModule from './js/stats.js';
+        import IntelligenceTabsModule from './js/intelligence-tabs.js';
+        import FCSModule from './js/fcs-module.js';
+        import LendersModule from './js/lenders.js';
+        import AIAssistantModule from './js/ai-assistant.js';
+        import WebSocketManager from './js/websocket.js';
+
+        console.log('✅ All modules imported successfully');
+
+        // Main ConversationUI class
+        class ConversationUI {
+            constructor() {
+                console.log('🔧 Initializing ConversationUI...');
+
+                this.apiBaseUrl = 'http://localhost:3001';
+                this.wsUrl = 'ws://localhost:3001';
+                this.userId = 'test_user';
+
+                this.utils = {
+                    formatCurrency: (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount),
+                    formatDate: (date, format = 'date') => {
+                        const d = new Date(date);
+                        return format === 'time' ? d.toLocaleTimeString() : d.toLocaleDateString();
+                    },
+                    showError: (message) => console.error('Error:', message),
+                    showSuccess: (message) => console.log('Success:', message),
+                    showLoading: () => console.log('Loading...'),
+                    hideLoading: () => console.log('Loading complete'),
+                    handleError: (error, title = 'Error', message = null, showToUser = true) => {
+                        console.error(title + ':', error);
+                        if (showToUser) {
+                            const errorMsg = message || error.message || 'An unexpected error occurred';
+                            console.error('User Error:', errorMsg);
+                        }
+                    },
+                    showNotification: (message, type = 'info') => console.log(`[${type.toUpperCase()}] ${message}`),
+                    showModal: (modalId) => {
+                        const modal = document.getElementById(modalId);
+                        if (modal) modal.style.display = 'flex';
+                        return modal;
+                    },
+                    hideModal: (modalId) => {
+                        const modal = document.getElementById(modalId);
+                        if (modal) modal.style.display = 'none';
+                    }
+                };
+
+                this.templates = {};
+
+                this.initializeModules();
+                window.conversationUI = this;
+                console.log('✅ ConversationUI initialized');
+            }
+
+            initializeModules() {
+                try {
+                    console.log('🔧 Initializing modules...');
+
+                    this.core = new ConversationCore(this);
+                    console.log('✅ ConversationCore initialized');
+
+                    this.stats = new StatsModule(this);
+                    console.log('✅ StatsModule initialized');
+
+                    console.log('🎉 All modules initialized successfully');
+
+                } catch (error) {
+                    console.error('❌ Error initializing modules:', error);
+                }
+            }
+
+            getSelectedConversation() {
+                return this.core?.selectedConversation;
+            }
+
+            selectConversation(conversationId) {
+                return this.core?.selectConversation(conversationId);
+            }
+
+            loadConversations() {
+                return this.core?.loadConversations();
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DOM ready, initializing ConversationUI...');
+            try {
+                new ConversationUI();
+
+                // Test API call
+                setTimeout(() => {
+                    console.log('🔍 Testing API call...');
+                    if (window.conversationUI && window.conversationUI.core) {
+                        window.conversationUI.core.loadConversations();
+                    }
+                }, 1000);
+
+            } catch (error) {
+                console.error('❌ Failed to initialize ConversationUI:', error);
+            }
+        });
+    </script>
+</body>
+</html>

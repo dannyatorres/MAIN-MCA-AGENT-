@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Import - MCA Command Center</title>
+    <link rel="stylesheet" href="css/command-center.css">
+    <style>
+        .csv-import-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .import-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #333;
+        }
+
+        .import-title {
+            color: #00ff88;
+            font-size: 28px;
+            margin: 0;
+        }
+
+        .back-btn {
+            background: #333;
+            color: #e0e0e0;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: #555;
+        }
+
+        .import-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            background: #2a2a2a;
+            margin: 0 5px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .step.active {
+            background: #003d1a;
+            border: 2px solid #00ff88;
+        }
+
+        .step.completed {
+            background: #1a3d1a;
+            border: 2px solid #00aa44;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #555;
+            color: white;
+            border-radius: 50%;
+            line-height: 30px;
+            margin-bottom: 10px;
+        }
+
+        .step.active .step-number {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .step.completed .step-number {
+            background: #00aa44;
+            color: white;
+        }
+
+        .import-section {
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 2px dashed #555;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .upload-btn:hover {
+            background: #00cc6a;
+        }
+
+        .upload-btn:disabled {
+            background: #555;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .file-info {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #1a1a1a;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+
+        .preview-table th {
+            background: #333;
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .mapping-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .mapping-item {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .mapping-item label {
+            display: block;
+            color: #00ff88;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .mapping-select {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+
+        .validation-results {
+            margin: 20px 0;
+        }
+
+        .validation-item {
+            background: #2a2a2a;
+            border-left: 4px solid #ff6b6b;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .validation-item.warning {
+            border-left-color: #ffa500;
+        }
+
+        .validation-item.success {
+            border-left-color: #00ff88;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #00ff88;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .import-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .primary-btn {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .primary-btn:hover {
+            background: #00cc6a;
+        }
+
+        .secondary-btn {
+            background: #555;
+            color: #e0e0e0;
+        }
+
+        .secondary-btn:hover {
+            background: #777;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .status-message.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+
+        .status-message.error {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        .loading-spinner {
+            border: 3px solid #333;
+            border-top: 3px solid #00ff88;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="csv-import-container">
+        <div class="import-header">
+            <h1 class="import-title">📊 CSV Import</h1>
+            <a href="command-center.html" class="back-btn">
+                <span>←</span>
+                Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="import-steps">
+            <div class="step active" id="step1">
+                <div class="step-number">1</div>
+                <h3>Upload CSV</h3>
+                <p>Select and upload your CSV file</p>
+            </div>
+            <div class="step" id="step2">
+                <div class="step-number">2</div>
+                <h3>Map Columns</h3>
+                <p>Map CSV columns to database fields</p>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-number">3</div>
+                <h3>Validate Data</h3>
+                <p>Review and validate the data</p>
+            </div>
+            <div class="step" id="step4">
+                <div class="step-number">4</div>
+                <h3>Import</h3>
+                <p>Import data into the system</p>
+            </div>
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div class="import-section" id="uploadSection">
+            <h2>Step 1: Upload CSV File</h2>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📄</div>
+                <h3>Drag and drop your CSV file here</h3>
+                <p>Or click to select a file</p>
+                <input type="file" class="file-input" id="fileInput" accept=".csv" />
+                <button class="upload-btn" id="selectFileBtn">Select File</button>
+            </div>
+            <div class="file-info hidden" id="fileInfo">
+                <h4>File Information</h4>
+                <div id="fileDetails"></div>
+            </div>
+        </div>
+
+        <!-- Step 2: Column Mapping -->
+        <div class="import-section hidden" id="mappingSection">
+            <h2>Step 2: Map CSV Columns to Database Fields</h2>
+            <p>Review the auto-detected column mappings and adjust as needed:</p>
+            
+            <div class="preview-table-container">
+                <table class="preview-table" id="previewTable">
+                    <thead id="previewHeader"></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+
+            <div class="mapping-controls" id="mappingControls">
+                <!-- Column mapping controls will be populated here -->
+            </div>
+
+            <div class="import-actions">
+                <button class="action-btn secondary-btn" id="backToUploadBtn">
+                    <span>←</span>
+                    Back to Upload
+                </button>
+                <button class="action-btn primary-btn" id="validateMappingBtn">
+                    <span>✓</span>
+                    Validate Mapping
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Validation -->
+        <div class="import-section hidden" id="validationSection">
+            <h2>Step 3: Data Validation</h2>
+            <p>Review validation results and fix any issues:</p>
+
+            <div class="validation-results" id="validationResults">
+                <!-- Validation results will be populated here -->
+            </div>
+
+            <div class="import-actions">
+                <button class="action-btn secondary-btn" id="backToMappingBtn">
+                    <span>←</span>
+                    Back to Mapping
+                </button>
+                <button class="action-btn primary-btn" id="proceedToImportBtn">
+                    <span>→</span>
+                    Proceed to Import
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Import -->
+        <div class="import-section hidden" id="importSection">
+            <h2>Step 4: Import Data</h2>
+            <p>Importing your CSV data into the system...</p>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+
+            <div id="importStatus">
+                <div class="loading-spinner"></div>
+                <p>Starting import process...</p>
+            </div>
+
+            <div class="import-actions">
+                <button class="action-btn secondary-btn hidden" id="backToValidationBtn">
+                    <span>←</span>
+                    Back to Validation
+                </button>
+                <button class="action-btn primary-btn hidden" id="viewResultsBtn">
+                    <span>📊</span>
+                    View Results
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessages"></div>
+    </div>
+
+    <script>
+        console.log('🔥 BASIC TEST: JavaScript is running on CSV import page');
+        console.log('🔥 BASIC TEST: DOM ready state:', document.readyState);
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🔥 BASIC TEST: DOM Content Loaded event fired');
+        });
+    </script>
+    <script src="js/csv-import.js"></script>
+</body>
+</html>

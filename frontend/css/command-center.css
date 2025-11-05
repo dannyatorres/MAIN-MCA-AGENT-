@@ -1,0 +1,4892 @@
+/* MCA Command Center Styles */
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-green: #22c55e;
+    --dark-green: #16a34a;
+    --light-green: #dcfce7;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --blue: #3b82f6;
+    --purple: #8b5cf6;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --white: #ffffff;
+    --black: #000000;
+
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    --header-height: 60px;
+    --status-bar-height: 32px;
+    --sidebar-width: 280px;  /* Left panel: ~20% */
+    --panel-width: 50vw;     /* Right panel: 50% of viewport width */
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    background-color: var(--gray-50);
+    color: var(--gray-900);
+    overflow: hidden;
+}
+
+/* Command Center Layout */
+.command-center {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+}
+
+/* Header */
+.header {
+    height: var(--header-height);
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    box-shadow: var(--shadow-sm);
+    z-index: 50;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-dot.connected {
+    background-color: var(--primary-green);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+    animation: connected-pulse 3s ease-in-out infinite;
+}
+
+@keyframes connected-pulse {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 16px rgba(34, 197, 94, 0.8);
+    }
+}
+
+.status-dot.disconnected {
+    background-color: var(--red);
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.status-dot.disconnected:hover {
+    background-color: #dc2626;
+    transform: scale(1.05);
+}
+
+.status-dot.error {
+    background-color: var(--red);
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.status-dot.error:hover {
+    background-color: #dc2626;
+    transform: scale(1.05);
+}
+
+.status-dot.connecting, .status-dot.reconnecting {
+    background-color: var(--orange);
+    animation: connecting-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes connecting-pulse {
+    0%, 100% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+
+.status-text {
+    display: none;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.stats-summary {
+    display: flex;
+    gap: 16px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    background: var(--gray-200);
+}
+
+.refresh-icon {
+    font-size: 16px;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    width: 100%;
+}
+
+/* Panel Base Styles */
+.left-panel,
+.center-panel,
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    border-right: 1px solid var(--gray-200);
+}
+
+.left-panel {
+    flex: 3 1 280px;
+    min-width: 260px;
+}
+
+.center-panel {
+    flex: 3 1 400px;
+    min-width: 350px;
+}
+
+.right-panel {
+    flex: 3 0 450px;
+    border-right: none;
+    min-width: 450px;
+    max-width: 700px;
+    height: calc(100vh - var(--header-height));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 8px 16px;  /* Reduced from 16px 20px */
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    flex-shrink: 0;
+}
+
+/* Removed old conflicting panel-title rule */
+
+.panel-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+/* Panel Title Layout */
+.panel-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.title-text h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+/* Compact Toolbar Buttons */
+.panel-toolbar {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.toolbar-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.toolbar-btn:hover {
+    background: var(--gray-200);
+    color: var(--gray-800);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.toolbar-btn.primary {
+    background: var(--primary-green);
+    color: white;
+    border-color: var(--dark-green);
+}
+
+.toolbar-btn.primary:hover {
+    background: var(--dark-green);
+    color: white;
+}
+
+.toolbar-btn.secondary {
+    background: var(--blue);
+    color: white;
+    border-color: #2563eb;
+}
+
+.toolbar-btn.secondary:hover {
+    background: #2563eb;
+    color: white;
+}
+
+.toolbar-btn.tertiary {
+    background: var(--orange);
+    color: white;
+    border-color: #d97706;
+}
+
+.toolbar-btn.tertiary:hover {
+    background: #d97706;
+    color: white;
+}
+
+/* Responsive toolbar */
+@media (max-width: 768px) {
+    .panel-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .toolbar-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+}
+
+/* Form Styles */
+.required {
+    color: var(--error-color);
+    font-weight: 500;
+}
+
+.form-input:invalid {
+    border-color: var(--error-color);
+}
+
+.form-input:focus:invalid {
+    outline-color: var(--error-color);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
+.panel-controls {
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+    margin-bottom: 2px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.filter-select,
+.search-input,
+.state-select {
+    padding: 1px 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 2px;
+    font-size: 11px;
+    background: var(--white);
+    height: 22px;
+    box-sizing: border-box;
+}
+
+.search-input {
+    width: 100px;
+    font-size: 11px;
+}
+
+.filter-select,
+.state-select {
+    min-width: 80px;
+    font-size: 11px;
+}
+
+/* Conversations List */
+.conversations-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.conversation-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.conversation-checkbox {
+    flex-shrink: 0;
+    display: none; /* Hidden by default */
+    align-items: center;
+}
+
+/* Show checkboxes when in delete mode */
+.conversations-list.delete-mode .conversation-checkbox {
+    display: flex;
+}
+
+.delete-checkbox {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Avatar circle - iOS style */
+.conversation-avatar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #0ea5e9;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.conversation-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+
+.conversation-item.checked-for-deletion {
+    background: #fef2f2;
+    border-left: 3px solid #ef4444;
+}
+
+.conversation-item.checked-for-deletion:hover {
+    background: #fee2e2;
+}
+
+.conversation-item:hover {
+    background: var(--gray-50);
+}
+
+.conversation-item.active {
+    background: var(--light-green);
+    border-left: 4px solid var(--primary-green);
+}
+
+/* Unread Message Indicators */
+.unread-badge {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    background: #ef4444 !important;
+    color: white !important;
+    border-radius: 12px !important;
+    padding: 2px 8px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    min-width: 18px !important;
+    text-align: center !important;
+    animation: pulse 2s infinite !important;
+    z-index: 10 !important;
+    line-height: 1.2 !important;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+.conversation-item.has-unread {
+    background: #fef2f2 !important;
+    border-left: 3px solid #ef4444 !important;
+}
+
+.conversation-item.has-unread:hover {
+    background: #fee2e2 !important;
+}
+
+/* New message notification dot */
+.new-message-dot {
+    display: inline-block !important;
+    width: 8px !important;
+    height: 8px !important;
+    background: #ef4444 !important;
+    border-radius: 50% !important;
+    margin-left: 6px !important;
+    animation: blink 1.5s infinite !important;
+    vertical-align: middle !important;
+}
+
+@keyframes blink {
+    0%, 50%, 100% { opacity: 1; }
+    25%, 75% { opacity: 0.3; }
+}
+
+/* SMS Message Preview Style */
+.conversation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    margin-bottom: 1px;
+    line-height: 1.1;
+}
+
+.business-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #000000;
+    line-height: 1.1;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.phone-number {
+    font-size: 11px;
+    color: #8e8e93;
+    line-height: 1.1;
+    margin: 0;
+    font-weight: 400;
+}
+
+.state-badge {
+    padding: 1px 3px;
+    border-radius: 6px;
+    font-size: 7px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+}
+
+.state-badge.NEW {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.state-badge.INTERESTED {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.state-badge.FCS_RUNNING {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.state-badge.QUALIFIED {
+    background: var(--light-green);
+    color: var(--dark-green);
+}
+
+.state-badge.OFFER_SENT {
+    background: #e0e7ff;
+    color: #5b21b6;
+}
+
+.state-badge.ACCEPTED {
+    background: var(--light-green);
+    color: var(--dark-green);
+}
+
+.conversation-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: var(--gray-500);
+    line-height: 1.2;
+    margin-top: 1px;
+}
+
+.time-ago {
+    font-size: 8px;
+    color: var(--gray-400);
+    white-space: nowrap;
+    margin-left: 4px;
+}
+
+.last-activity {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.activity-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gray-300);
+}
+
+.activity-dot.recent {
+    background: var(--primary-green);
+}
+
+/* Messages Container */
+.messages-container {
+    flex: 1;
+    padding: 20px;
+    padding-bottom: 60px; /* Space for compact iPhone-style input at bottom */
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.message {
+    display: flex;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+}
+
+.message.outbound {
+    flex-direction: row-reverse;
+}
+
+.message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.message.inbound .message-avatar {
+    background: var(--gray-200);
+    color: var(--gray-600);
+}
+
+.message.outbound .message-avatar {
+    background: var(--primary-green);
+    color: var(--white);
+}
+
+.message.system .message-avatar {
+    background: var(--blue);
+    color: var(--white);
+}
+
+.message-content {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: var(--border-radius-lg);
+    word-wrap: break-word;
+    position: relative;
+}
+
+.message.inbound .message-content {
+    background: var(--gray-100);
+    color: var(--gray-900);
+    border-bottom-left-radius: 4px;
+}
+
+.message.outbound .message-content {
+    background: var(--primary-green);
+    color: var(--white);
+    border-bottom-right-radius: 4px;
+}
+
+.message.system .message-content {
+    background: var(--blue);
+    color: var(--white);
+    border-radius: var(--border-radius);
+    font-style: italic;
+    font-size: 13px;
+}
+
+.message-time {
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-top: 4px;
+}
+
+.message.outbound .message-time {
+    text-align: right;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Message Input */
+.message-input-container {
+    border-top: 1px solid var(--gray-200);
+    background: var(--white);
+    padding: 16px 20px;
+}
+
+.ai-suggestions {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    margin-bottom: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.suggestions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.close-suggestions {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.suggestions-list {
+    padding: 4px;
+}
+
+.suggestion-item {
+    padding: 8px 12px;
+    margin: 2px 0;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+
+.suggestion-item:hover {
+    background: var(--gray-200);
+}
+
+.input-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.message-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid var(--gray-300);
+    border-radius: 0;
+    resize: none;
+    font-family: inherit;
+    font-size: 14px;
+    min-height: 44px;
+    max-height: 120px;
+}
+
+.message-input:focus {
+    outline: none;
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.input-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* Text message style header - just owner name */
+.conversation-info.text-style {
+    padding: 16px 20px 16px 20px; /* More padding for less squished appearance */
+    text-align: center;
+    min-height: 50px; /* Ensure minimum height */
+    position: relative; /* For full-width border */
+}
+
+/* Full-width border that extends edge to edge */
+.conversation-info.text-style::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #e5e7eb;
+}
+
+.owner-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #000000;
+    margin: 0;
+    text-align: center;
+}
+
+.business-name-subtitle {
+    font-size: 14px;
+    font-weight: 400;
+    color: #666666;
+    margin: 2px 0 0 0;
+    text-align: center;
+}
+
+.phone-number-subtitle {
+    font-size: 12px;
+    font-weight: 400;
+    color: #888888;
+    margin: 2px 0 0 0;
+    text-align: center;
+}
+
+/* iPhone Messages Style - Compact with Attachment */
+.input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 46px;
+    box-sizing: border-box;
+}
+
+.attachment-icon {
+    background: none;
+    border: none;
+    color: #8e8e93;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.attachment-icon:hover {
+    color: #007aff;
+}
+
+.message-input {
+    flex: 1;
+    height: 34px;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 0;
+    resize: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.3;
+    background: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.message-input:focus {
+    border-color: #007aff;
+    box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.15);
+}
+
+.message-input::placeholder {
+    color: #8e8e93;
+}
+
+.ai-btn,
+.send-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 16px;
+}
+
+.ai-btn {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.ai-btn:hover {
+    background: var(--gray-200);
+}
+
+.ai-btn.loading {
+    animation: pulse 2s infinite;
+}
+
+.send-btn {
+    background: var(--primary-green);
+    color: var(--white);
+}
+
+.send-btn:hover {
+    background: var(--dark-green);
+}
+
+.send-btn:disabled {
+    background: var(--gray-300);
+    cursor: not-allowed;
+}
+
+/* Conversation Actions */
+.conversation-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;  /* Reduced from 6px */
+    padding: 4px 8px;  /* Reduced from 6px 12px */
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    background: var(--white);
+    font-size: 11px;  /* Reduced from 12px */
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--primary-green);
+}
+
+.trigger-fcs-btn {
+    color: var(--orange);
+    border-color: #fed7aa;
+}
+
+.trigger-fcs-btn:hover {
+    background: #fef3c7;
+}
+
+.qualify-lenders-btn {
+    color: var(--blue);
+    border-color: #bfdbfe;
+}
+
+.qualify-lenders-btn:hover {
+    background: #dbeafe;
+}
+
+/* Intelligence Panel */
+.intelligence-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--gray-100);
+    padding: 2px;
+    border-radius: var(--border-radius);
+}
+
+.tab-btn {
+    padding: 6px 12px;
+    border: none;
+    background: none;
+    border-radius: calc(var(--border-radius) - 2px);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--gray-600);
+}
+
+.tab-btn.active {
+    background: var(--white);
+    color: var(--gray-900);
+    box-shadow: var(--shadow-sm);
+}
+
+.intelligence-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.intelligence-section {
+    margin-bottom: 24px;
+}
+
+.intelligence-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 12px;
+}
+
+.info-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 13px;
+}
+
+.info-label {
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.info-value {
+    color: var(--gray-900);
+    font-weight: 600;
+}
+
+.lender-item {
+    padding: 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    margin-bottom: 8px;
+    background: var(--white);
+}
+
+.lender-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.lender-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gray-900);
+}
+
+.lender-tier {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.lender-tier.tier-1 {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.lender-tier.tier-2 {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.lender-details {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+/* Send to Lenders Button Fixes */
+#lenderResults {
+    overflow: visible !important;
+}
+
+.results.active {
+    overflow: visible !important;
+    min-height: auto;
+}
+
+#sendToLendersBtn {
+    z-index: 100 !important;
+    position: relative !important;
+    pointer-events: all !important;
+}
+
+/* Status Bar */
+.status-bar {
+    height: var(--status-bar-height);
+    background: var(--gray-100);
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.processing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--orange);
+}
+
+/* Loading States */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--gray-500);
+    text-align: center;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    color: var(--gray-500);
+    text-align: center;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    color: var(--gray-700);
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gray-200);
+    border-top: 2px solid var(--primary-green);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-spinner.small {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--white);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--gray-400);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 15px;
+    border-top: 1px solid var(--gray-200);
+}
+
+/* Comprehensive modal styles - Compact for Add Lead Modal */
+.comprehensive-modal {
+    width: 1400px !important;
+    max-width: 98vw !important;
+    max-height: 98vh !important;
+    line-height: 1.2;
+    overflow-x: auto;
+}
+
+.comprehensive-modal .modal-body {
+    max-height: none !important;
+    overflow-y: visible !important;
+    padding: 10px;
+    line-height: 1.2;
+}
+
+/* Form section styles - Compact for Add Lead Modal */
+.form-section {
+    margin-bottom: 4px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.section-header {
+    background: var(--gray-50);
+    padding: 4px 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--gray-200);
+    transition: background-color 0.3s ease;
+}
+
+.section-header:hover {
+    background: var(--gray-100);
+}
+
+.section-header h4 {
+    margin: 0;
+    color: var(--primary-green);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.2;
+}
+
+.section-toggle {
+    color: var(--gray-500);
+    font-size: 14px;
+    font-weight: bold;
+    transition: transform 0.3s ease;
+}
+
+.section-toggle.collapsed {
+    transform: rotate(90deg);
+}
+
+.section-content {
+    padding: 6px;
+    background: var(--white);
+}
+
+.section-content.collapsed {
+    display: none !important;
+}
+
+/* Form layout styles - Compact for Add Lead Modal */
+.form-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 5px;
+    margin-bottom: 6px;
+    width: 100%;
+}
+
+/* Three column layout for specific fields */
+.form-row-three {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 5px;
+    margin-bottom: 6px;
+    width: 100%;
+}
+
+/* Special case for Country/State row - keep as 2-column */
+.form-row-country-state {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin-bottom: 6px;
+}
+
+/* Ultra-dense CRM-style rows */
+.form-row-six {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr !important;
+    gap: 5px;
+    margin-bottom: 6px;
+    width: 100%;
+}
+
+.form-row-five {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr !important;
+    gap: 5px;
+    margin-bottom: 6px;
+    width: 100%;
+}
+
+.form-row-four {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr !important;
+    gap: 5px;
+    margin-bottom: 6px;
+    width: 100%;
+}
+
+.form-row:last-child,
+.form-row-three:last-child,
+.form-row-country-state:last-child {
+    margin-bottom: 0;
+}
+
+/* Radio group styles - Compact */
+.radio-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 3px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--gray-700);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.radio-label input[type="radio"] {
+    margin: 0;
+    accent-color: var(--primary-green);
+}
+
+.radio-label:hover {
+    color: var(--primary-green);
+}
+
+.required {
+    color: var(--red);
+    font-weight: 600;
+}
+
+/* Responsive design for smaller screens - More Compact */
+@media (max-width: 1024px) {
+    .comprehensive-modal {
+        width: 95vw;
+        max-height: 95vh;
+    }
+    
+    /* Keep horizontal layout for dense CRM form */
+    .form-row {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 5px;
+    }
+    
+    .form-row-three {
+        grid-template-columns: 1fr 1fr 1fr !important;
+        gap: 5px;
+    }
+    
+    .form-row-four {
+        grid-template-columns: 1fr 1fr 1fr 1fr !important;
+        gap: 5px;
+    }
+    
+    .form-row-five {
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr !important;
+        gap: 5px;
+    }
+    
+    .form-row-six {
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr !important;
+        gap: 5px;
+    }
+    
+    .form-row-country-state {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 5px;
+    }
+    
+    .comprehensive-modal .modal-body {
+        padding: 8px;
+        max-height: 82vh;
+        overflow-x: auto; /* Allow horizontal scrolling if needed */
+    }
+}
+
+@media (max-width: 768px) {
+    .comprehensive-modal {
+        width: 98vw;
+        max-height: 98vh;
+    }
+    
+    .modal-header {
+        padding: 8px 10px;
+    }
+    
+    .modal-header h3 {
+        font-size: 14px;
+    }
+    
+    .section-header {
+        padding: 6px 8px;
+    }
+    
+    .section-content {
+        padding: 6px;
+    }
+    
+    .form-input, .form-select {
+        padding: 4px;
+        height: 28px;
+        font-size: 12px;
+    }
+}
+
+.form-group {
+    margin-bottom: 4px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 1px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray-700);
+    line-height: 1.1;
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    height: 34px;
+    line-height: 1.4;
+}
+
+.form-select {
+    padding-right: 28px;
+    background-position: right 8px center;
+    background-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Special handling for textareas */
+.form-input[rows] {
+    height: auto;
+    min-height: 50px;
+    resize: vertical;
+}
+
+/* FIX: More rounded corners for message input */
+.message-input,
+#messageInput,
+textarea.message-input,
+.center-panel .message-input,
+.center-panel #messageInput,
+.input-row .message-input {
+    border-radius: 12px !important; /* Nicely rounded without being too circular */
+    border: 1px solid #d1d5db !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    background: #f9fafb !important;
+    resize: none !important;
+    outline: none !important;
+}
+
+.message-input:focus,
+#messageInput:focus,
+textarea.message-input:focus,
+.center-panel .message-input:focus,
+.center-panel #messageInput:focus {
+    border-radius: 12px !important; /* Maintain rounded corners on focus */
+    border-color: #007aff !important;
+    background: white !important;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15) !important;
+}
+
+/* Override any conflicting rules */
+.input-row .message-input,
+.input-row #messageInput,
+.message-input-wrapper .message-input {
+    border-radius: 12px !important;
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+/* Buttons */
+.btn {
+    padding: 6px 12px;
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+    height: 32px;
+    line-height: 1.2;
+}
+
+.btn-primary {
+    background: var(--primary-green);
+    color: var(--white);
+    border-color: var(--primary-green);
+}
+
+.btn-primary:hover {
+    background: var(--dark-green);
+    border-color: var(--dark-green);
+}
+
+.btn-secondary {
+    background: var(--white);
+    color: var(--gray-700);
+    border-color: var(--gray-300);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-50);
+}
+
+/* Notifications */
+.notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.notification {
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    max-width: 400px;
+    animation: slideInRight 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification.success {
+    background: var(--primary-green);
+    color: var(--white);
+}
+
+.notification.error {
+    background: var(--red);
+    color: var(--white);
+}
+
+.notification.warning {
+    background: var(--orange);
+    color: var(--white);
+}
+
+.notification.info {
+    background: var(--blue);
+    color: var(--white);
+}
+
+/* Animations */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .right-panel {
+        width: 300px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .left-panel {
+        width: 280px;
+    }
+    .center-panel {
+        width: 280px;
+    }
+    .right-panel {
+        width: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 100%;
+        --panel-width: 100%;
+    }
+
+    .main-content {
+        flex-direction: column;
+    }
+
+    .left-panel,
+    .center-panel,
+    .right-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .left-panel {
+        height: 250px;  /* Conversations list - compact */
+    }
+
+    .center-panel {
+        flex: none;
+        height: 300px;  /* Messages area - smaller */
+        min-height: 300px;
+    }
+
+    .right-panel {
+        height: 500px;  /* Lead Intelligence - much larger */
+        min-height: 500px;
+    }
+
+    .panel-controls {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .search-input,
+    .filter-select,
+    .state-select {
+        width: 100%;
+    }
+
+    .stats-summary {
+        display: none;
+    }
+
+    .conversation-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .action-btn {
+        justify-content: center;
+    }
+}
+
+/* Lead Actions Dropdown */
+.lead-actions-dropdown {
+    position: relative;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--gray-700);
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.dropdown-btn:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-400);
+}
+
+.dropdown-btn.open {
+    background: var(--primary-green);
+    color: white;
+    border-color: var(--dark-green);
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.dropdown-btn.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 1000;
+    min-width: 180px;
+    display: none;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu.show {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--gray-700);
+    transition: background-color 0.15s ease;
+    border-radius: 0;
+}
+
+.dropdown-item:first-child {
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+}
+
+.dropdown-item:last-child {
+    border-bottom-left-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+}
+
+.dropdown-item:hover {
+    background: var(--gray-50);
+}
+
+.dropdown-item.edit-item:hover {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.dropdown-item.clone-item:hover {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.dropdown-item.archive-item:hover {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.dropdown-item.danger-item:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--gray-200);
+    margin: 4px 0;
+}
+
+.item-icon {
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+}
+
+/* Confirmation Dialog Styles */
+.small-modal {
+    max-width: 500px;
+    width: 90%;
+}
+
+.warning-text {
+    color: var(--error-color);
+    font-size: 14px;
+    margin: 8px 0;
+}
+
+.info-text {
+    color: var(--blue);
+    font-size: 14px;
+    margin: 8px 0;
+}
+
+.lead-info {
+    background: var(--gray-50);
+    padding: 12px;
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--primary-green);
+    margin: 16px 0;
+    font-size: 14px;
+}
+
+.btn-danger {
+    background: var(--error-color);
+    color: white;
+    border-color: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    border-color: #b91c1c;
+}
+
+/* Mobile responsiveness for dropdown */
+@media (max-width: 768px) {
+    .lead-actions-dropdown {
+        margin-left: 0;
+        margin-top: 8px;
+        width: 100%;
+    }
+    
+    .dropdown-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .dropdown-menu {
+        left: 0;
+        right: 0;
+        width: 100%;
+    }
+    
+    .conversation-actions {
+        flex-wrap: wrap;
+    }
+    
+    .small-modal {
+        max-width: 95%;
+        margin: 10px;
+    }
+}
+
+/* Compact Lead Header Optimizations */
+.conversation-info {
+    min-height: auto;  /* Remove any fixed height constraints */
+}
+
+.conversation-info h2 {
+    font-size: 16px;  /* Reduced title size */
+    margin-bottom: 4px;  /* Reduced margin */
+    line-height: 1.2;
+}
+
+.conversation-info p {
+    font-size: 12px;  /* Smaller secondary text */
+    margin-bottom: 2px;
+    line-height: 1.3;
+}
+
+/* Compact lead info when conversation is selected */
+.conversation-info.compact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.conversation-info.compact .lead-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.conversation-info.compact .lead-main-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.conversation-info.compact .business-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.conversation-info.compact .phone-number {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin: 0;
+}
+
+.conversation-info.compact .state-badge {
+    padding: 2px 6px;
+    font-size: 10px;
+    border-radius: 4px;
+    background: var(--light-green);
+    color: var(--dark-green);
+    border: 1px solid var(--primary-green);
+    margin: 0;
+}
+
+.conversation-info.compact .lead-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+.conversation-info.compact .lead-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Make messages container take up more space */
+.messages-container {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure the center panel maximizes vertical space */
+.center-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative; /* Allow absolute positioning for iPhone-style input */
+}
+
+.center-panel .panel-header {
+    flex-shrink: 0;
+}
+
+/* Optimize for the new 20/30/50 layout proportions */
+@media (min-width: 1200px) {
+    .left-panel {
+        min-width: 260px;
+    }
+
+    .center-panel {
+        min-width: 350px;
+    }
+
+    .right-panel {
+        min-width: 500px;
+    }
+}
+
+@media (max-width: 1200px) and (min-width: 769px) {
+    .right-panel {
+        min-width: 380px;
+    }
+}
+
+/* State select styling to be more compact - OVERRIDDEN BY SMS STYLE */
+.state-select {
+    font-size: 11px;
+    padding: 3px 6px;
+    min-width: 100px;
+}
+
+/* Make the dropdown more compact too */
+.lead-actions-dropdown .dropdown-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-width: 100px;
+}
+
+/* Lead Intelligence Panel Optimizations */
+.right-panel .panel-content {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+    line-height: 1.4;
+    min-height: 0;
+}
+
+.right-panel h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.right-panel .info-section {
+    margin-bottom: 20px;
+}
+
+.right-panel .info-section h4 {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: 8px;
+}
+
+.right-panel .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.right-panel .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.right-panel .info-label {
+    font-size: 12px;
+    color: var(--gray-500);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.right-panel .info-value {
+    font-size: 13px;
+    color: var(--gray-900);
+    font-weight: 400;
+}
+
+.right-panel .full-width {
+    grid-column: 1 / -1;
+}
+
+/* Enhanced scrollbar for right panel */
+.right-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.right-panel::-webkit-scrollbar-track {
+    background: var(--gray-100);
+}
+
+.right-panel::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 3px;
+}
+
+.right-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* Compact Documents Tab Styles */
+.documents-section {
+    padding: 0;
+    font-size: 12px;
+}
+
+/* Compact Drag and Drop Zone */
+.drag-drop-zone {
+    border: 1px dashed var(--gray-300);
+    border-radius: var(--border-radius);
+    padding: 16px 12px;
+    text-align: center;
+    margin-bottom: 12px;
+    background: var(--gray-50);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.drag-drop-zone.drag-active {
+    border-color: var(--primary-green);
+    background: var(--light-green);
+}
+
+.drag-drop-content h4 {
+    margin: 2px 0;
+    color: var(--gray-700);
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.drag-drop-content p {
+    color: var(--gray-500);
+    margin: 2px 0;
+    font-size: 11px;
+}
+
+.drag-drop-hint {
+    font-size: 10px !important;
+    color: var(--gray-400) !important;
+    margin-top: 4px !important;
+}
+
+.drag-drop-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: var(--primary-green);
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: inherit;
+    padding: 0;
+}
+
+.link-btn:hover {
+    color: var(--dark-green);
+}
+
+/* Upload Progress */
+.upload-progress {
+    padding: 20px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary-green);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    text-align: center;
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+/* Compact Document Type Selection */
+.document-type-selection {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.document-type-selection h4 {
+    margin: 0 0 8px 0;
+    color: var(--gray-900);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.type-selection-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+/* Compact Single-Line File Items */
+.file-type-item-compact {
+    display: grid;
+    grid-template-columns: 2fr 60px 1fr 80px;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border: 1px solid var(--gray-200);
+    border-radius: 4px;
+    background: var(--gray-50);
+    height: 32px;
+    font-size: 11px;
+}
+
+.file-name-compact {
+    color: var(--gray-900);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-size-compact {
+    color: var(--gray-500);
+    font-size: 10px;
+    text-align: right;
+}
+
+.file-type-select-compact {
+    padding: 2px 4px;
+    border: 1px solid var(--gray-300);
+    border-radius: 3px;
+    background: var(--white);
+    font-size: 10px;
+    height: 24px;
+}
+
+.auto-process-compact {
+    display: flex;
+    align-items: center;
+    font-size: 10px;
+    color: var(--gray-600);
+    cursor: pointer;
+    gap: 4px;
+}
+
+.auto-process-compact input[type="checkbox"] {
+    margin: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.type-selection-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+/* Compact Documents Table */
+.documents-table {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.documents-table-header {
+    display: grid;
+    grid-template-columns: 1fr 60px 140px;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.document-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 140px;
+    gap: 12px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    transition: background-color 0.2s ease;
+    align-items: center;
+    min-height: 32px;
+    font-size: 11px;
+}
+
+.document-row:hover {
+    background: var(--light-green);
+}
+
+.document-row:last-child {
+    border-bottom: none;
+}
+
+/* Document Row Columns */
+.doc-col-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.doc-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.document-name-compact {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--gray-900);
+    font-weight: 500;
+}
+
+.doc-col-type {
+    color: var(--gray-600);
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.doc-col-size {
+    color: var(--gray-500);
+    font-size: 10px;
+    text-align: right;
+}
+
+.doc-col-status {
+    display: flex;
+    justify-content: center;
+}
+
+.status-badge-compact {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.doc-col-analysis {
+    font-size: 10px;
+}
+
+.analysis-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.confidence-compact {
+    color: var(--blue);
+    font-size: 9px;
+}
+
+.processing-compact {
+    display: flex;
+    justify-content: center;
+}
+
+.spinner-tiny {
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--gray-200);
+    border-top: 1px solid var(--primary-green);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.doc-col-actions {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    background: none;
+    border: none;
+    padding: 3px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 10px;
+    transition: background-color 0.2s ease;
+    line-height: 1;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-action:hover {
+    background: var(--gray-100);
+}
+
+.btn-action:focus {
+    outline: none;
+    box-shadow: none;
+    background: none;
+}
+
+.btn-action:active {
+    background: var(--gray-100);
+}
+
+.btn-ai-compact:hover {
+    background: var(--primary-green);
+    color: white;
+}
+
+.btn-info-compact:hover {
+    background: var(--blue);
+    color: white;
+}
+
+.btn-danger-compact:hover {
+    background: var(--red);
+    color: white;
+}
+
+.document-analysis-preview {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 6px;
+    padding: 4px 0;
+    font-size: 11px;
+}
+
+.analysis-indicator {
+    color: var(--primary-green);
+    font-weight: 600;
+}
+
+.balance-preview {
+    color: var(--gray-700);
+    font-weight: 500;
+}
+
+.confidence-score {
+    color: var(--blue);
+    font-weight: 500;
+}
+
+.document-status {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-uploaded {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.status-processing {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-processed {
+    background: var(--light-green);
+    color: var(--dark-green);
+}
+
+.status-failed {
+    background: #fecaca;
+    color: #dc2626;
+}
+
+/* Processing Indicator */
+.processing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #fef3c7;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #92400e;
+}
+
+.spinner-sm {
+    width: 12px;
+    height: 12px;
+    border: 2px solid #f3f4f6;
+    border-top: 2px solid #92400e;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* AI and Action Buttons */
+.btn-ai {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.btn-ai:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    transform: translateY(-1px);
+}
+
+.btn-info {
+    background: var(--blue);
+    color: white;
+    border: none;
+}
+
+.btn-info:hover {
+    background: #2563eb;
+}
+
+/* Document Actions Layout */
+.document-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex-shrink: 0;
+    align-items: flex-start;
+}
+
+.document-actions .btn-sm {
+    padding: 3px 6px;
+    font-size: 9px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+/* Status Badges in Summary */
+.status-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-right: 4px;
+}
+
+.processing-summary {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+/* Loading States */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--gray-500);
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--gray-200);
+    border-top: 3px solid var(--primary-green);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+/* Enhanced Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gray-500);
+}
+
+.empty-state .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+.empty-state h4 {
+    margin: 0 0 8px 0;
+    color: var(--gray-700);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--gray-500);
+}
+
+/* Responsive Improvements */
+@media (max-width: 1200px) {
+    .file-type-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .document-actions {
+        flex-direction: column;
+        gap: 3px;
+    }
+    
+    .document-actions .btn-sm {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .drag-drop-zone {
+        padding: 20px 16px;
+    }
+    
+    .document-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .document-thumbnail {
+        align-self: flex-start;
+    }
+    
+    .document-actions {
+        flex-direction: row;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+    
+    .type-selection-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .type-selection-actions .btn {
+        width: 100%;
+    }
+}
+
+.documents-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.documents-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+
+
+/* Compact Headers */
+.documents-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.documents-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+
+.documents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.document-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    background: var(--white);
+    transition: all 0.2s ease;
+}
+
+.document-item:hover {
+    border-color: var(--primary-green);
+    box-shadow: var(--shadow-sm);
+}
+
+.document-thumbnail {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    background: var(--gray-100);
+    flex-shrink: 0;
+}
+
+.document-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+}
+
+.document-icon {
+    font-size: 24px;
+    color: var(--gray-500);
+}
+
+.document-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.document-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.document-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--gray-500);
+}
+
+.document-type {
+    background: var(--blue);
+    color: var(--white);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.document-size,
+.document-date {
+    color: var(--gray-500);
+}
+
+.document-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.document-actions .btn {
+    padding: 4px 8px;
+    font-size: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--gray-300);
+    background: var(--white);
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.document-actions .btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.document-actions .btn.btn-secondary:hover {
+    background: var(--gray-100);
+}
+
+.document-actions .btn.btn-danger {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.document-actions .btn.btn-danger:hover {
+    background: var(--red);
+    color: var(--white);
+}
+
+.documents-summary {
+    padding: 8px 10px;
+    background: var(--light-green);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--primary-green);
+    margin-top: 8px;
+}
+
+.documents-summary p {
+    font-size: 11px;
+    color: var(--gray-700);
+    margin: 0 0 4px 0;
+}
+
+.document-types-summary {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.type-badge {
+    background: var(--primary-green);
+    color: var(--white);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 500;
+}
+
+.processing-summary {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.processing-summary .status-badge {
+    font-size: 9px;
+    padding: 1px 4px;
+}
+
+/* Actions Tab Styling */
+.action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.action-row label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-700);
+    min-width: 80px;
+}
+
+.action-row .state-select {
+    flex: 1;
+    font-size: 12px;
+    padding: 4px 8px;
+    height: 28px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    background: var(--white);
+}
+
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.action-btn.warning {
+    background: #f59e0b;
+    color: var(--white);
+}
+
+.action-btn.warning:hover {
+    background: #d97706;
+}
+
+.action-btn.danger {
+    background: #ef4444;
+    color: var(--white);
+}
+
+.action-btn.danger:hover {
+    background: #dc2626;
+}
+
+/* Mobile SMS Interface Style - Tiny Controls */
+.panel-actions {
+    display: flex;
+    gap: 6px; /* Balanced gap for good spacing */
+    margin-bottom: 4px; /* Reduced margin to save space */
+    padding: 6px; /* Reduced padding to be more compact */
+    flex-wrap: wrap; /* Allow wrapping if needed */
+    align-items: center; /* Center align buttons */
+}
+
+.action-button {
+    height: 24px;
+    padding: 2px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+}
+
+.action-button:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.action-button.primary {
+    background: #1f2937;
+    color: #ffffff;
+    border-color: #1f2937;
+}
+
+.action-button.primary:hover {
+    background: #111827;
+    border-color: #111827;
+}
+
+.action-button.secondary {
+    background: #6b7280;
+    color: #ffffff;
+    border-color: #6b7280;
+}
+
+.action-button.secondary:hover {
+    background: #4b5563;
+    border-color: #4b5563;
+}
+
+.action-button.danger {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+.action-button.danger:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+.state-filter {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 13px;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23374151'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    padding-right: 32px;
+}
+
+.state-filter:hover {
+    border-color: #9ca3af;
+}
+
+.state-filter:focus {
+    outline: none;
+    border-color: #1f2937;
+    box-shadow: 0 0 0 1px #1f2937;
+}
+
+.search-field {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 13px;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.search-field::placeholder {
+    color: #9ca3af;
+}
+
+.search-field:hover {
+    border-color: #9ca3af;
+}
+
+.search-field:focus {
+    outline: none;
+    border-color: #1f2937;
+    box-shadow: 0 0 0 1px #1f2937;
+}
+
+.panel-controls {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+}
+
+/* Mobile App Toolbar Style - Grouped Header with Visual Separation */
+.left-panel .panel-header {
+    padding: 8px;
+    border-bottom: 2px solid #e5e7eb;
+    background: #f8f9fa;
+    box-sizing: border-box;
+    margin-bottom: 0;
+}
+
+/* Ultra-compact spacing for mobile app toolbar with bottom separation */
+.left-panel .panel-controls {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    align-items: center !important;
+}
+
+.left-panel .panel-actions {
+    margin-bottom: 6px; /* Compact space below action buttons */
+    background: #f9fafb; /* Subtle background to group buttons */
+    border-radius: 6px; /* Rounded corners for container */
+    border: 1px solid #e5e7eb; /* Light border for definition */
+}
+
+.left-panel .search-input,
+.left-panel .state-select {
+    margin-bottom: 0px;
+}
+
+/* Force compact sizing for mobile app toolbar style - both elements visible */
+.left-panel .search-field,
+.left-panel .state-filter {
+    height: 26px !important;
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 3px !important;
+    box-sizing: border-box !important;
+    display: inline-block !important;
+    visibility: visible !important;
+}
+
+.left-panel .search-field {
+    width: 120px !important;
+    flex: 1 !important;
+}
+
+.left-panel .state-filter {
+    min-width: 80px !important;
+    flex-shrink: 0 !important;
+}
+
+/* SMS Interface Complete Override - iPhone Messages Style */
+.left-panel .conversations-list {
+    background: #ffffff;
+    border-radius: 4px 4px 0 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+    flex: 1;
+}
+
+.left-panel .conversation-item {
+    background: #ffffff;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.left-panel .conversation-item:hover {
+    background: #f5f5f5;
+}
+
+.left-panel .conversation-item.active {
+    background: #e8f4fd;
+    border-left: 3px solid #007aff;
+}
+
+.left-panel .business-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #000000;
+}
+
+.left-panel .phone-number {
+    font-size: 11px;
+    color: #8e8e93;
+    font-weight: 400;
+}
+
+.left-panel .state-badge {
+    font-size: 7px;
+    padding: 1px 3px;
+    border-radius: 6px;
+    background: #34d399;
+    color: #ffffff;
+}
+
+/* Timestamp styling for SMS interface */
+.left-panel .conversation-time {
+    font-size: 10px;
+    color: #8e8e93;
+    font-weight: 400;
+}
+
+/* List indicators for search results and recent leads */
+.list-indicator {
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 11px;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.list-indicator.search-results {
+    background: #e3f2fd;
+    color: #1565c0;
+    border-bottom-color: #bbdefb;
+}
+
+.list-indicator.recent-leads {
+    background: #fff3e0;
+    color: #ef6c00;
+    border-bottom-color: #ffcc02;
+}
+
+.list-indicator i {
+    font-size: 10px;
+}
+
+/* Edit Tab Inline Form Styling */
+.edit-form-container {
+    padding: 16px;
+    background: #ffffff;
+}
+
+.edit-form-container h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.form-section {
+    margin-bottom: 20px;
+}
+
+.form-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 4px;
+}
+
+.edit-lead-form .form-row-six {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr !important;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.edit-lead-form .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.edit-lead-form .form-group label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 2px;
+}
+
+.edit-lead-form .form-input {
+    height: 28px;
+    padding: 4px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    font-size: 12px;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+.edit-lead-form .form-input:focus {
+    outline: none;
+    border-color: #007aff;
+    box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.2);
+}
+
+.form-actions {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.update-btn {
+    background: #007aff;
+    color: #ffffff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.update-btn:hover {
+    background: #0056b3;
+}
+
+.generate-pdf-btn {
+    background: var(--blue);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.generate-pdf-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Signature Modal Styles */
+.signature-modal {
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.signature-modal .modal-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Ensure signature modal footer is visible and properly styled */
+.signature-modal .modal-footer {
+    display: flex !important;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 20px;
+    border-top: 1px solid var(--gray-200);
+    background-color: var(--gray-50);
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.signature-modal .modal-footer .btn {
+    min-width: 120px;
+    padding: 10px 16px;
+    font-weight: 500;
+}
+
+.signature-container {
+    border: 2px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    background: white;
+    margin: 16px 0;
+    text-align: center;
+}
+
+#signatureCanvas {
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.signature-controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.signature-controls .btn {
+    padding: 8px 16px;
+}
+
+
+/* Responsive adjustments for Edit form */
+@media (max-width: 1400px) {
+    .edit-lead-form .form-row-six {
+        grid-template-columns: 1fr 1fr 1fr !important;
+    }
+}
+
+@media (max-width: 1000px) {
+    .edit-lead-form .form-row-six {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .edit-lead-form .form-row-six {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Modal-specific form styles - apply same styles to modal context */
+#editLeadInlineModal .edit-form-container .form-group,
+#editLeadInlineModal .form-group {
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 16px;
+    margin-bottom: 16px;
+    min-width: 150px;
+    max-width: 220px;
+}
+
+#editLeadInlineModal .form-row-six {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(150px, 1fr)) !important;
+    gap: 12px !important;
+    margin-bottom: 16px;
+}
+
+#editLeadInlineModal .form-input,
+#editLeadInlineModal input[type="text"],
+#editLeadInlineModal input[type="number"],
+#editLeadInlineModal input[type="email"],
+#editLeadInlineModal input[type="tel"],
+#editLeadInlineModal input[type="url"],
+#editLeadInlineModal input[type="date"],
+#editLeadInlineModal select {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+    height: 32px;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+#editLeadInlineModal .form-section {
+    max-width: 100%;
+    margin-bottom: 24px;
+}
+
+#editLeadInlineModal .form-section h4 {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+#editLeadInlineModal .edit-form-container {
+    padding: 20px;
+    background: #ffffff;
+}
+
+#editLeadInlineModal label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+/* FCS Progress Indicator */
+.fcs-progress-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(2px);
+}
+
+.progress-content {
+    background: var(--white);
+    padding: 32px;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.progress-content .loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--gray-200);
+    border-top: 4px solid var(--primary-green);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+.progress-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-top: 16px;
+}
+
+/* FCS Modal Improvements */
+.fcs-modal .modal-content {
+    max-width: 800px;
+    width: 95%;
+}
+
+.fcs-modal .document-checkbox {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.fcs-modal .document-checkbox label {
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    margin-left: 8px !important;
+    line-height: 1.4 !important;
+}
+
+.fcs-modal .document-checkbox input[type="checkbox"] {
+    transform: scale(0.9);
+}
+
+/* Prompt Management Styles */
+.large-modal .modal-content {
+    max-width: 900px;
+    width: 95%;
+}
+
+.prompt-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--gray-200);
+    margin-bottom: 20px;
+}
+
+.prompt-tab {
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray-600);
+    transition: all 0.2s ease;
+}
+
+.prompt-tab:hover {
+    color: var(--gray-800);
+    background: var(--gray-50);
+}
+
+.prompt-tab.active {
+    color: var(--primary-green);
+    border-bottom-color: var(--primary-green);
+    background: var(--light-green);
+}
+
+.prompt-tab-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-small {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    min-height: auto !important;
+}
+
+/* Responsive adjustments for Documents tab */
+
+@media (max-width: 768px) {
+    .documents-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .document-actions {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .document-meta {
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+/* ===========================================
+   IMPROVED MESSAGE SCROLLING AND DISPLAY
+   =========================================== */
+
+/* Fix messages container scrolling */
+.messages-container {
+    flex: 1 !important;
+    overflow-y: auto !important;  /* Enable vertical scrolling */
+    overflow-x: hidden !important; /* Hide horizontal scroll */
+    padding: 20px !important;
+    max-height: calc(100vh - 300px) !important; /* Adjust based on layout */
+    position: relative !important;
+    min-height: 200px !important;
+}
+
+.messages-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    min-height: 100% !important;
+    padding-bottom: 20px !important; /* Add some bottom padding */
+}
+
+/* Ensure the center panel has proper height */
+.center-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    position: relative !important;
+}
+
+/* Make sure the container takes available space */
+#messagesContainer {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 200px !important;
+}
+
+/* ========== IMPROVED MESSAGE DISPLAY STYLING ========== */
+/* Message container improvements */
+#messagesContainer {
+    padding: 8px 15px 4px 15px !important;
+    overflow-y: auto !important;
+    background: #ffffff !important;
+    margin-bottom: 0 !important;
+}
+
+/* Remove excessive bottom padding from messages container and pull it up */
+.messages-container {
+    padding-bottom: 0px !important;
+    margin-bottom: 0px !important;
+    margin-top: -8px !important; /* Pull messages container up to eliminate gap */
+}
+
+/* Force tight spacing between messages container and input */
+.messages-container + .message-input-container,
+.messages-container + #messageInputContainer {
+    margin-top: 0 !important;
+}
+
+/* Override any flex gaps or spacing */
+.conversation-panel .messages-container {
+    margin-bottom: 0 !important;
+}
+
+.conversation-panel #messageInputContainer {
+    margin-top: 0 !important;
+}
+
+/* Nuclear option - override all spacing between these elements */
+.messages-container,
+#messagesContainer {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    border-bottom: none !important;
+}
+
+.message-input-container,
+#messageInputContainer {
+    padding-top: 6px !important;
+    margin-top: 0 !important;
+    border-top: 1px solid #e5e7eb !important;
+}
+
+/* CLEAN MESSAGE DISPLAY - Remove all the conflicting styles and use this */
+
+/* Center panel structure */
+.center-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 0 !important; /* This is the fix */
+}
+
+/* Messages container */
+#messagesContainer {
+    flex: 1;
+    padding: 10px 15px;
+    overflow-y: auto;
+    background: #ffffff;
+    min-height: 0; /* Important for flex children */
+}
+
+/* Messages list */
+.messages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: min-content; /* Only take up space needed */
+}
+
+/* Message bubbles */
+.message {
+    display: flex;
+    margin-bottom: 2px;
+}
+
+.message.inbound {
+    justify-content: flex-start;
+}
+
+.message.outbound {
+    justify-content: flex-end;
+}
+
+.message-wrapper {
+    max-width: 65%;
+    display: flex;
+    flex-direction: column;
+}
+
+.message.outbound .message-wrapper {
+    align-items: flex-end;
+}
+
+.message.inbound .message-wrapper {
+    align-items: flex-start;
+}
+
+.message-content {
+    padding: 6px 12px;
+    border-radius: 18px;
+    word-wrap: break-word;
+}
+
+.message-content p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.message.inbound .message-content {
+    background: #e9e9eb;
+    color: #000;
+    border-bottom-left-radius: 4px;
+}
+
+.message.outbound .message-content {
+    background: #007aff;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+/* Timestamp */
+.message-meta {
+    font-size: 11px;
+    color: #8e8e93;
+    margin-top: 2px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Delete message button */
+.delete-message-btn {
+    background: transparent;
+    border: none;
+    color: #dc2626;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+}
+
+.delete-message-btn:hover {
+    background: rgba(220, 38, 38, 0.1);
+    transform: scale(1.1);
+}
+
+.delete-message-btn:active {
+    transform: scale(0.95);
+}
+
+/* Show delete button on message hover */
+.message:hover .delete-message-btn {
+    opacity: 1;
+}
+
+/* Deleting animation state */
+.message.deleting {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Real-time message animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: rgba(59, 130, 246, 0.1);
+    }
+}
+
+.message.new-message {
+    animation: slideIn 0.3s ease-out, pulse 1s ease-out 0.3s;
+}
+
+/* Notification badges for conversations */
+.conversation-item {
+    position: relative;
+}
+
+.conversation-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    animation: badgePulse 2s infinite;
+    z-index: 10;
+}
+
+@keyframes badgePulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+}
+
+/* Fix empty state spacing */
+#messagesContainer .empty-state {
+    flex: none !important;
+    flex-grow: 0 !important;
+    text-align: center;
+    padding: 40px 20px !important;
+    color: #9ca3af;
+}
+
+/* Ensure messages list doesn't expand when empty */
+#messagesContainer .messages-list {
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+.empty-state .empty-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    font-weight: 500;
+    color: #6b7280;
+    margin: 0 0 8px 0;
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: #9ca3af;
+    margin: 0;
+}
+
+/* Message input - positioned at bottom */
+#messageInputContainer {
+    padding: 8px 12px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+/* Remove all the conflicting ::after pseudo-elements and extra spacing rules */
+#messagesContainer::after {
+    display: none !important;
+}
+
+/* FIX: Remove empty space between messages and input */
+
+/* Reset the center panel to proper flex layout */
+.center-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+/* Messages container should fill all available space */
+#messagesContainer,
+.messages-container {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 10px 15px !important;
+    /* Remove all bottom padding that creates the gap */
+    padding-bottom: 10px !important;
+    margin-bottom: 0 !important;
+    min-height: 0 !important; /* Important for flex children */
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+/* Messages list - keep it simple */
+.messages-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    /* Don't let it grow unnecessarily */
+    flex-grow: 0 !important;
+}
+
+/* Input container stays at bottom */
+#messageInputContainer,
+.message-input-container {
+    flex: 0 0 auto !important; /* Don't grow or shrink */
+    padding: 6px 12px 8px 12px !important;
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+    margin: 0 !important;
+}
+
+/* Ensure panel header doesn't take extra space */
+.center-panel .panel-header {
+    flex: 0 0 auto !important;
+    padding: 8px 16px !important;
+    margin: 0 !important;
+}
+
+/* Remove any ::after pseudo-elements that might add space */
+#messagesContainer::after,
+.messages-container::after {
+    display: none !important;
+}
+
+/* Make sure empty state doesn't create unnecessary space */
+.empty-state {
+    flex-grow: 0 !important;
+    margin: auto !important; /* Center it when present */
+}
+
+/* FIX: Make messages container fill entire space */
+
+/* Force center panel to use full height */
+.center-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    height: calc(100vh - var(--header-height)) !important;
+    position: relative !important;
+}
+
+/* Messages container fills all available space */
+#messagesContainer,
+.messages-container {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    /* Small padding on sides and top, minimal at bottom */
+    padding: 10px 15px 5px 15px !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+}
+
+/* Input stays at absolute bottom */
+#messageInputContainer,
+.message-input-container,
+.input-row {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 46px !important;
+    margin: 0 !important;
+    padding: 6px 12px !important;
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+}
+
+/* Adjust messages container to account for larger input and status bar */
+#messagesContainer,
+.messages-container {
+    padding-bottom: calc(100px + var(--status-bar-height, 24px) + 40px) !important; /* Larger input height + status bar + extra spacing */
+}
+
+/* Remove any gaps or margins */
+.center-panel > * {
+    margin-bottom: 0 !important;
+}
+
+/* Panel header stays compact */
+.center-panel .panel-header {
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+}
+
+/* FIX: Show maximum messages before scrolling */
+
+/* Center panel takes full available height */
+.center-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    height: calc(100vh - var(--header-height)) !important;
+    overflow: hidden !important;
+}
+
+/* Panel header - keep minimal */
+.center-panel .panel-header {
+    flex: 0 0 auto !important;
+    padding: 8px 16px !important;
+    margin: 0 !important;
+}
+
+/* Messages container - maximize visible area */
+#messagesContainer,
+.messages-container {
+    flex: 1 1 auto !important;
+    min-height: 0 !important; /* Critical for flexbox */
+    height: 100% !important; /* Take full height of flex container */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 10px 16px calc(85px + var(--status-bar-height, 24px) + 40px) 16px !important; /* Account for smaller input container */
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Hide scrollbars for messages container */
+#messagesContainer::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbars for conversations list */
+.conversations-list::-webkit-scrollbar {
+    display: none;
+}
+
+/* Remove any max-height constraints */
+#messagesContainer,
+.messages-container {
+    max-height: none !important; /* Remove the calc constraint */
+}
+
+/* Messages list - natural height */
+.messages-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    min-height: auto !important; /* Don't force minimum height */
+}
+
+/* Empty state styling for conversations with no messages */
+.empty-state {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+    min-height: 200px !important;
+}
+
+.empty-message {
+    text-align: center !important;
+    color: #6b7280 !important;
+}
+
+.empty-message p {
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    margin: 0 0 8px 0 !important;
+    color: #374151 !important;
+}
+
+.empty-message span {
+    font-size: 14px !important;
+    color: #9ca3af !important;
+}
+
+/* Input at bottom - above status bar - optimized size */
+#messageInputContainer,
+.message-input-container {
+    position: absolute !important;
+    bottom: var(--status-bar-height, 24px) !important; /* Above status bar */
+    left: 0 !important;
+    right: 0 !important;
+    min-height: 85px !important; /* Reduced from 100px to eliminate extra space */
+    z-index: 50 !important; /* Higher than messages, lower than status bar */
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 6px 16px !important; /* Reduced from 8px to save space */
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1) !important; /* Subtle shadow for separation */
+    display: flex !important;
+    align-items: center !important; /* Center content vertically */
+}
+
+/* Input row styling */
+.input-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    justify-content: center !important;
+}
+
+/* Message input field styling - larger for multi-line text */
+.message-input,
+#messageInput {
+    flex: 1 !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0 !important; /* Completely square/boxy appearance */
+    padding: 10px 12px !important; /* Balanced padding that fits in container */
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    resize: none !important; /* Disable resize to maintain consistent height */
+    outline: none !important;
+    background: #f8f9fa !important;
+    transition: border-color 0.2s ease !important;
+    height: 70px !important; /* Fixed height for consistent positioning */
+    overflow-y: auto !important; /* Scroll when content exceeds height */
+    align-self: center !important; /* Center within flex container */
+}
+
+.message-input:focus,
+#messageInput:focus {
+    border-color: #007aff !important;
+    background: white !important;
+}
+
+/* Attachment button styling */
+.attachment-icon {
+    background: none !important;
+    border: none !important;
+    font-size: 18px !important;
+    color: #6b7280 !important;
+    cursor: pointer !important;
+    padding: 6px !important;
+    border-radius: 50% !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.attachment-icon:hover {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+}
+
+/* Remove any viewport or percentage based heights that limit the container */
+.center-panel * {
+    max-height: none !important;
+}
+
+/* Ensure conversation info doesn't take unnecessary space */
+.conversation-info {
+    flex: 0 0 auto !important;
+    min-height: auto !important;
+}
+
+/* FIX: Make all panels equal height and properly aligned */
+
+/* Main content container - ensure full height minus header and status bar */
+.main-content {
+    display: flex !important;
+    height: calc(100vh - var(--header-height) - var(--status-bar-height)) !important;
+    width: 100% !important;
+    align-items: stretch !important; /* Make all children same height */
+    overflow: hidden !important;
+}
+
+/* All three panels - consistent base styling */
+.left-panel,
+.center-panel,
+.right-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important; /* Take full height of parent */
+    background: var(--white) !important;
+    border-right: 1px solid var(--gray-200) !important;
+    overflow: hidden !important;
+}
+
+/* Remove conflicting height on right panel */
+.right-panel {
+    border-right: none !important;
+    height: 100% !important; /* Override the calc height */
+    max-width: 700px !important;
+}
+
+/* Set proper proportional widths */
+.left-panel {
+    flex: 3 1 280px !important;
+    min-width: 280px !important;
+}
+
+.center-panel {
+    flex: 3 1 400px !important;
+    min-width: 350px !important;
+}
+
+.right-panel {
+    flex: 3 0 450px !important;
+    min-width: 450px !important;
+    max-width: 700px !important;
+}
+
+/* Standardize ALL panel headers to same height */
+.panel-header {
+    flex: 0 0 auto !important;
+    min-height: 60px !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid var(--gray-200) !important;
+    background: var(--gray-50) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+/* Special handling for left panel with buttons */
+.left-panel .panel-header {
+    min-height: auto !important;
+    padding: 8px !important;
+}
+
+/* Center panel header alignment */
+.center-panel .panel-header {
+    min-height: 60px !important;
+    justify-content: center !important;
+}
+
+/* Right panel header with tabs */
+.right-panel .panel-header {
+    min-height: 70px !important; /* More height for proper spacing */
+    padding: 16px 20px 12px 20px !important; /* More padding for separation */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important; /* Add gap between title and tabs */
+}
+
+/* Content areas - fill remaining space equally */
+.conversations-list,
+#messagesContainer,
+.intelligence-content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+/* Make conversations list taller by giving it more flex grow */
+.conversations-list {
+    flex-grow: 2 !important; /* Take more space than other content areas */
+    margin-top: 0 !important; /* Remove any top margin */
+    padding-top: 2px !important; /* Minimal padding to bring it right up to the line */
+}
+
+/* FIX: Minimize gap between buttons and conversations list */
+
+/* Reduce/remove bottom margin and padding from panel-actions */
+.left-panel .panel-actions {
+    margin-bottom: 2px !important; /* Reduced from 6px */
+    padding: 4px !important; /* Reduced from 6px */
+    background: #f9fafb;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+/* Reduce bottom margin and padding from panel-controls */
+.left-panel .panel-controls {
+    margin-bottom: 4px !important; /* Reduced from 10px */
+    padding-bottom: 4px !important; /* Reduced from 8px */
+    border-bottom: 1px solid #e5e7eb;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    align-items: center !important;
+}
+
+/* Remove/minimize top padding from conversations list */
+.left-panel .conversations-list {
+    padding-top: 0 !important; /* Remove top padding completely */
+    margin-top: 0 !important; /* Remove any top margin */
+    background: #ffffff;
+    border-radius: 0; /* Remove rounded corners at top for seamless connection */
+    overflow-y: auto;
+    flex: 1; /* Take all available space */
+}
+
+/* Ensure first conversation item is right at the top */
+.left-panel .conversation-item:first-child {
+    margin-top: 0 !important;
+    border-top: none !important;
+}
+
+/* Make the panel header more compact */
+.left-panel .panel-header {
+    padding: 6px !important; /* Reduced from 8px */
+    border-bottom: 1px solid #e5e7eb; /* Thinner border */
+    background: #f8f9fa;
+    margin-bottom: 0 !important;
+}
+
+/* Ensure conversations list takes maximum available height */
+.conversations-list {
+    flex-grow: 1 !important;
+    flex-shrink: 1 !important;
+    min-height: 0 !important;
+    height: calc(100% - 120px) !important; /* Adjust based on header height */
+}
+
+/* FIX: Rebalance panel widths - make conversations and messaging wider */
+
+/* Conversations panel - increase width */
+.left-panel {
+    flex: 3 1 320px !important;
+    min-width: 320px !important;
+}
+
+/* Messaging panel - increase width */
+.center-panel {
+    flex: 3 1 400px !important;
+    min-width: 350px !important;
+}
+
+/* Lead Intelligence panel - reduce width */
+.right-panel {
+    flex: 3 0 450px !important;
+    min-width: 450px !important;
+    max-width: 700px !important;
+}
+
+/* Update the root variable for consistency */
+:root {
+    --panel-width: 40vw; /* Reduced from 50vw */
+}
+
+/* Responsive adjustments for the new proportions */
+@media (min-width: 1200px) {
+    .left-panel {
+        min-width: 320px;
+    }
+
+    .center-panel {
+        min-width: 400px;
+    }
+
+    .right-panel {
+        min-width: 450px;
+    }
+}
+
+@media (max-width: 1200px) and (min-width: 769px) {
+    .right-panel {
+        min-width: 400px;
+    }
+}
+
+/* Intelligence tabs - make more compact */
+.intelligence-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--gray-100);
+    padding: 2px;
+    border-radius: var(--border-radius);
+    margin-bottom: 0 !important; /* Remove bottom margin */
+}
+
+.tab-btn {
+    padding: 6px 14px !important; /* Increased from 4px 10px */
+    border: none;
+    background: none;
+    border-radius: calc(var(--border-radius) - 2px);
+    font-size: 13px !important; /* Increased from 11px */
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--gray-600);
+}
+
+/* Remove any conflicting heights */
+.panel-header h2,
+.conversation-info h2 {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--gray-900) !important;
+    margin: 0 !important;
+    line-height: 1.4 !important;
+}
+
+/* Ensure status bar is at bottom */
+.status-bar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: var(--status-bar-height) !important;
+    z-index: 100 !important;
+}
+
+/* Minimize the center panel header padding to reduce spacing */
+.center-panel .panel-header {
+    padding: 2px 8px !important;
+    margin-bottom: 0 !important;
+    border-bottom: none !important;
+}
+
+.messages-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Message alignment - Override existing styles */
+.messages-list .message {
+    display: flex !important;
+    margin-bottom: 2px !important;
+    flex-direction: row !important;
+}
+
+.messages-list .message.inbound {
+    justify-content: flex-start !important;
+    flex-direction: row !important;
+}
+
+.messages-list .message.outbound {
+    justify-content: flex-end !important;
+    flex-direction: row !important;
+}
+
+.messages-list .message .message-wrapper {
+    max-width: 65% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.messages-list .message.outbound .message-wrapper {
+    align-items: flex-end !important;
+}
+
+.messages-list .message.inbound .message-wrapper {
+    align-items: flex-start !important;
+}
+
+.messages-list .message .message-content {
+    padding: 6px 12px !important;
+    border-radius: 18px !important;
+    word-wrap: break-word !important;
+    max-width: 100% !important;
+}
+
+.messages-list .message .message-content p {
+    margin: 0 !important;
+    font-size: 14px !important;
+    line-height: 1.3 !important;
+}
+
+.messages-list .message.inbound .message-content {
+    background: #e9e9eb !important;
+    color: #000 !important;
+    border-bottom-left-radius: 4px !important;
+}
+
+.messages-list .message.outbound .message-content {
+    background: #007aff !important;
+    color: white !important;
+    border-bottom-right-radius: 4px !important;
+}
+
+/* Timestamp styling */
+.messages-list .message .message-meta {
+    font-size: 11px !important;
+    color: #8e8e93 !important;
+    margin-top: 2px !important;
+    padding: 0 12px !important;
+}
+
+/* Hide "Sent" text */
+.delivery-status {
+    display: none !important;
+}
+
+/* Message input container */
+#messageInputContainer,
+.message-input-container {
+    padding: 6px 12px 8px 12px !important;
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.message-input-wrapper {
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+    max-width: 100% !important;
+}
+
+/* Message input field */
+#messageInput {
+    flex: 1 !important;
+    padding: 8px 14px !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 20px !important;
+    resize: none !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    max-height: 80px !important;
+    overflow-y: auto !important;
+    outline: none !important;
+    background: #f9fafb !important;
+}
+
+#messageInput:focus {
+    border-color: #007aff !important;
+    background: white !important;
+}
+
+/* Send button */
+#sendBtn {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #007aff !important;
+    border: none !important;
+    border-radius: 50% !important;
+    color: white !important;
+    cursor: pointer !important;
+}
+
+#sendBtn:hover {
+    background: #0051d5 !important;
+}
+
+#aiBtn {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    background: #f3f4f6 !important;
+    border: none !important;
+    border-radius: 50% !important;
+    color: #6b7280 !important;
+}
+
+/* Compact document styles for FCS modal */
+.compact-documents .document-item {
+    padding: 6px 8px;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.compact-documents .document-thumbnail {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+}
+
+.compact-documents .document-info h4 {
+    font-size: 11px;
+    margin-bottom: 2px;
+}
+
+.compact-documents .document-info p {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.compact-documents .document-actions {
+    gap: 4px;
+}
+
+.compact-documents .document-actions .btn {
+    padding: 2px 6px;
+    font-size: 9px;
+}
+
+/* AI Assistant Typing Animation */
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-10px);
+    }
+}
+
+.typing-dot {
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+/* AI Chat Interface Enhancements */
+.ai-assistant-section {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.ai-chat-interface {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.ai-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    min-width: 0; /* Allow flex items to shrink below content size */
+    max-width: 100%; /* Prevent expansion beyond container */
+    width: 100%; /* Force full width constraint */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.ai-chat-messages::-webkit-scrollbar {
+    display: none;
+}
+
+/* Force proper text wrapping in AI chat messages */
+.ai-chat-message {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.message-bubble {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    max-width: 70% !important;
+    box-sizing: border-box !important;
+}
+
+/* Quick action buttons hover effect */
+.ai-chat-input-area button:hover {
+    background: #e5e7eb !important;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+/* Conversation ID Badge */
+.conversation-id-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    margin-left: auto;
+    margin-right: 8px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    flex-shrink: 0;
+}
+
+.conversation-item.selected .conversation-id-badge {
+    background: #0ea5e9;
+    color: white;
+}
+
+.conversation-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.conversation-header .business-name {
+    flex: 1;
+    min-width: 0; /* Allow text truncation */
+}
+
+/* ===== Button Enhancements ===== */
+/* Button base styles */
+.btn {
+    cursor: pointer !important;
+    transition: all 0.15s ease-in-out;
+    user-select: none;
+    outline: none;
+    position: relative;
+}
+
+/* Hover feedback */
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Active/click feedback */
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Primary button styles */
+.btn-primary {
+    background: #3b82f6 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-primary:hover {
+    background: #2563eb !important;
+}
+
+.btn-primary:active {
+    background: #1d4ed8 !important;
+}
+
+/* Secondary button styles */
+.btn-secondary {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    color: #374151 !important;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-secondary:hover {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+}
+
+.btn-secondary:active {
+    background: #e5e7eb !important;
+}
+
+/* Modal close button */
+.modal-close {
+    cursor: pointer !important;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    transition: color 0.15s ease;
+    padding: 4px 8px;
+}
+
+.modal-close:hover {
+    color: #374151;
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+.modal-close:active {
+    color: #111827;
+    background: #e5e7eb;
+}
+
+/* Ensure pointer cursor on all clickable elements */
+button, .btn, [onclick] {
+    cursor: pointer !important;
+}
+
+/* Disable transitions when button is disabled */
+.btn:disabled,
+button:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.5;
+    transform: none !important;
+}
+
+.btn:disabled:hover,
+button:disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Spin animation for loading spinners */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
