@@ -10,16 +10,36 @@ const { getDatabase } = require('../services/database');
 // ============================================================================
 
 // Get conversation context for n8n AI agent
+// Supports both display_id (numeric like 100046) and UUID
 router.get('/conversations/:conversationId/context', async (req, res) => {
     try {
         const { conversationId } = req.params;
         const db = getDatabase();
 
-        // Get conversation details
-        const convResult = await db.query(
-            'SELECT * FROM conversations WHERE id = $1',
-            [conversationId]
-        );
+        // Check if numeric (display_id) or UUID
+        const isNumeric = /^\d+$/.test(conversationId);
+
+        console.log(`🔍 n8n context request - ID: ${conversationId}, Type: ${isNumeric ? 'display_id' : 'UUID'}`);
+
+        // Query based on type
+        let convResult;
+        if (isNumeric) {
+            // Use display_id
+            convResult = await db.query(`
+                SELECT c.*, ld.*
+                FROM conversations c
+                LEFT JOIN lead_details ld ON c.id = ld.conversation_id
+                WHERE c.display_id = $1
+            `, [parseInt(conversationId)]);
+        } else {
+            // Use UUID
+            convResult = await db.query(`
+                SELECT c.*, ld.*
+                FROM conversations c
+                LEFT JOIN lead_details ld ON c.id = ld.conversation_id
+                WHERE c.id = $1
+            `, [conversationId]);
+        }
 
         if (convResult.rows.length === 0) {
             return res.status(404).json({
@@ -29,31 +49,32 @@ router.get('/conversations/:conversationId/context', async (req, res) => {
         }
 
         const conversation = convResult.rows[0];
+        const actualId = conversation.id; // Get the UUID for other queries
 
-        // Get recent messages (last 20)
+        // Get recent messages (last 20) - use UUID
         const messagesResult = await db.query(`
             SELECT * FROM messages
             WHERE conversation_id = $1
             ORDER BY timestamp DESC
             LIMIT 20
-        `, [conversationId]);
+        `, [actualId]);
 
-        // Get documents
+        // Get documents - use UUID
         const docsResult = await db.query(
             'SELECT * FROM documents WHERE conversation_id = $1',
-            [conversationId]
+            [actualId]
         );
 
-        // Get FCS results (if available)
+        // Get FCS results (if available) - use UUID
         const fcsResult = await db.query(
             'SELECT * FROM fcs_results WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1',
-            [conversationId]
+            [actualId]
         );
 
-        // Get lender matches (if available)
+        // Get lender matches (if available) - use UUID
         const lendersResult = await db.query(
             'SELECT * FROM lender_matches WHERE conversation_id = $1 AND qualified = true',
-            [conversationId]
+            [actualId]
         );
 
         // Build context object
@@ -71,13 +92,15 @@ router.get('/conversations/:conversationId/context', async (req, res) => {
             }
         };
 
+        console.log(`✅ Context retrieved for ${conversation.business_name || 'Unknown'} - ${messagesResult.rows.length} messages, ${docsResult.rows.length} documents`);
+
         res.json({
             success: true,
             context: context
         });
 
     } catch (error) {
-        console.error('Error fetching conversation context:', error);
+        console.error('❌ Error fetching conversation context:', error);
         res.status(500).json({
             success: false,
             error: error.message

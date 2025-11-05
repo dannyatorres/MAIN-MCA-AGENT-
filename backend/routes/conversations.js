@@ -638,22 +638,82 @@ router.post('/:id/messages', async (req, res) => {
 
         console.log('📤 Sending message to conversation:', conversationId);
 
-        // Insert message
+        // Get conversation details to get phone number
+        const convResult = await db.query(
+            'SELECT lead_phone, business_name FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+
+        if (convResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Conversation not found' });
+        }
+
+        const { lead_phone, business_name } = convResult.rows[0];
+        const direction = sender_type === 'user' ? 'outbound' : 'inbound';
+
+        // Insert message with initial status
         const result = await db.query(`
             INSERT INTO messages (
                 conversation_id, content, direction, message_type,
-                sent_by, timestamp
+                sent_by, timestamp, status
             )
-            VALUES ($1, $2, $3, 'sms', $4, NOW())
+            VALUES ($1, $2, $3, 'sms', $4, NOW(), 'pending')
             RETURNING *
         `, [
             conversationId,
             message_content,
-            sender_type === 'user' ? 'outbound' : 'inbound',
+            direction,
             sender_type
         ]);
 
         const newMessage = result.rows[0];
+
+        // SEND VIA TWILIO (if outbound SMS)
+        if (direction === 'outbound') {
+            try {
+                if (!lead_phone) {
+                    throw new Error('No phone number found for this conversation');
+                }
+
+                console.log(`📞 Sending SMS to ${lead_phone}...`);
+
+                // Check if Twilio credentials exist
+                if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+                    console.error('❌ Twilio credentials not configured!');
+                    await db.query('UPDATE messages SET status = $1 WHERE id = $2', ['failed', newMessage.id]);
+                    newMessage.status = 'failed';
+                } else {
+                    // Initialize Twilio client
+                    const twilio = require('twilio');
+                    const twilioClient = twilio(
+                        process.env.TWILIO_ACCOUNT_SID,
+                        process.env.TWILIO_AUTH_TOKEN
+                    );
+
+                    // Send SMS via Twilio
+                    const twilioMessage = await twilioClient.messages.create({
+                        body: message_content,
+                        from: process.env.TWILIO_PHONE_NUMBER,
+                        to: lead_phone
+                    });
+
+                    console.log(`✅ SMS sent! SID: ${twilioMessage.sid}`);
+
+                    // Update message status to sent
+                    await db.query(
+                        'UPDATE messages SET status = $1, external_id = $2 WHERE id = $3',
+                        ['sent', twilioMessage.sid, newMessage.id]
+                    );
+
+                    newMessage.status = 'sent';
+                    newMessage.external_id = twilioMessage.sid;
+                }
+            } catch (twilioError) {
+                console.error('❌ Twilio error:', twilioError.message);
+                await db.query('UPDATE messages SET status = $1 WHERE id = $2', ['failed', newMessage.id]);
+                newMessage.status = 'failed';
+            }
+        }
 
         // Update conversation last_activity
         await db.query(
@@ -667,12 +727,13 @@ router.post('/:id/messages', async (req, res) => {
                 conversation_id: conversationId,
                 message: newMessage
             });
+            console.log(`📨 WebSocket event emitted for conversation ${conversationId}`);
         }
 
         console.log(`✅ Message sent in conversation ${conversationId}`);
 
-        // Return just the message object
-        res.json(newMessage);
+        // Return the message object with the actual status
+        res.json({ message: newMessage });
 
     } catch (error) {
         console.error('❌ Error sending message:', error);
