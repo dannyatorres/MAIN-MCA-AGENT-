@@ -4,11 +4,25 @@
 console.log('Starting MCA Command Center Server (NEW MODULAR VERSION)...');
 
 // Load dependencies
+console.log('Loading express...');
 const express = require('express');
+console.log('✅ express loaded');
+
+console.log('Loading http...');
 const http = require('http');
+console.log('✅ http loaded');
+
+console.log('Loading socket.io...');
 const { Server } = require('socket.io');
+console.log('✅ socket.io loaded');
+
+console.log('Loading cors...');
 const cors = require('cors');
+console.log('✅ cors loaded');
+
+console.log('Loading dotenv...');
 require('dotenv').config();
+console.log('✅ dotenv loaded');
 
 // Create Express app and HTTP server
 const app = express();
@@ -61,16 +75,37 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Import routes
+console.log('Loading health routes...');
 const healthRoutes = require('./routes/health');
+
+console.log('Loading conversation routes...');
 const conversationRoutes = require('./routes/conversations');
+
+console.log('Loading message routes...');
 const messageRoutes = require('./routes/messages');
+
+console.log('Loading document routes...');
 const documentRoutes = require('./routes/documents');
+
+console.log('Loading fcs routes...');
 const fcsRoutes = require('./routes/fcs');
+
+console.log('Loading lender routes...');
 const lenderRoutes = require('./routes/lenders');
+
+console.log('Loading csv-import routes...');
 const csvImportRoutes = require('./routes/csv-import');
+
+console.log('Loading lookups routes...');
 const lookupsRoutes = require('./routes/lookups');
+
+console.log('Loading n8n routes...');
 const n8nRoutes = require('./routes/n8n-integration');
+
+console.log('Loading ai routes...');
 const aiRoutes = require('./routes/ai');
+
+console.log('✅ All routes loaded successfully!');
 
 // Mount routes
 app.use('/api', healthRoutes);
