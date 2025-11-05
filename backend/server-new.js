@@ -107,6 +107,40 @@ const aiRoutes = require('./routes/ai');
 
 console.log('✅ All routes loaded successfully!');
 
+// Authentication setup
+const basicAuth = require('express-basic-auth');
+
+// Authentication middleware
+const authenticate = basicAuth({
+    users: {
+        'admin': process.env.ADMIN_PASSWORD || 'ChangeMe123!',
+        'agent': process.env.AGENT_PASSWORD || 'ChangeMe456!'
+    },
+    challenge: true,
+    realm: 'MCA Command Center',
+    unauthorizedResponse: (req) => {
+        return { error: 'Unauthorized - Please login' };
+    }
+});
+
+// Apply authentication to ALL /api routes EXCEPT:
+// - /api/health (Railway needs this for monitoring)
+// - /api/messages/webhook/receive (Twilio needs this)
+app.use('/api', (req, res, next) => {
+    // Skip auth for health check
+    if (req.path === '/health') {
+        return next();
+    }
+
+    // Skip auth for Twilio webhook
+    if (req.path === '/messages/webhook/receive') {
+        return next();
+    }
+
+    // Everything else requires auth
+    return authenticate(req, res, next);
+});
+
 // Mount routes
 app.use('/api', healthRoutes);
 app.use('/api/conversations', conversationRoutes);
