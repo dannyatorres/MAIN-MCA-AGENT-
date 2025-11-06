@@ -38,13 +38,7 @@ class IntelligenceTabs {
 
         try {
             console.log(`Loading intelligence for conversation: ${convId}`);
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${convId}`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
+            const data = await this.parent.apiCall(`/api/conversations/${convId}`);
             const conversationData = data.conversation || data;
 
             console.log(`Loaded intelligence data for: ${conversationData.business_name || 'Unknown'}`);
@@ -231,15 +225,29 @@ class IntelligenceTabs {
                 console.log('📋 Restoring AI chat from cache');
                 content.innerHTML = cachedContent.html;
 
-                // Restore event handlers with better timing
-                setTimeout(() => {
-                    if (this.parent.ai) {
-                        this.parent.ai.setupEventHandlers();
-                        this.parent.ai.currentConversationId = conversationId;
-                        this.parent.ai.isInitialized = true;
-                        console.log('✅ AI chat restored and handlers setup');
-                    }
-                }, 50);
+                // Check if messages are still in loading state
+                const messagesDiv = content.querySelector('#aiChatMessages');
+                const hasLoadingState = messagesDiv && messagesDiv.querySelector('.ai-loading-state');
+
+                if (hasLoadingState) {
+                    console.log('⚠️ Cached content still has loading state, forcing refresh');
+                    // Force re-initialize to load actual messages
+                    setTimeout(() => {
+                        if (this.parent.ai) {
+                            this.parent.ai.initializeAIChat();
+                        }
+                    }, 100);
+                } else {
+                    // Restore event handlers with better timing
+                    setTimeout(() => {
+                        if (this.parent.ai) {
+                            this.parent.ai.setupEventHandlers();
+                            this.parent.ai.currentConversationId = conversationId;
+                            this.parent.ai.isInitialized = true;
+                            console.log('✅ AI chat restored and handlers setup');
+                        }
+                    }, 50);
+                }
                 return;
             } else {
                 console.log('✨ AI assistant already properly rendered');
@@ -898,31 +906,12 @@ class IntelligenceTabs {
         const conversationId = this.parent.getCurrentConversationId();
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}`, {
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify(updateData)
             });
 
-            const responseText = await response.text();
-            console.log('Server response:', responseText);
-
-            let result;
-            try {
-                result = JSON.parse(responseText);
-            } catch (e) {
-                console.error('Invalid JSON response:', responseText);
-                throw new Error(`Server error: ${responseText}`);
-            }
-
-            if (!response.ok) {
-                console.error('Server rejection details:', result);
-                throw new Error(result.error || result.message || `Update failed: ${response.status}`);
-            }
-
-            if (result.success || response.ok) {
+            if (result.success) {
                 this.utils.showNotification('Lead data updated successfully', 'success');
 
                 // Close the modal
@@ -933,22 +922,19 @@ class IntelligenceTabs {
 
                 // Reload the full conversation data from server to get updated lead_details
                 try {
-                    const refreshResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}`);
-                    if (refreshResponse.ok) {
-                        const refreshData = await refreshResponse.json();
-                        const updatedConversation = refreshData.conversation || refreshData;
+                    const refreshData = await this.parent.apiCall(`/api/conversations/${conversationId}`);
+                    const updatedConversation = refreshData.conversation || refreshData;
 
-                        // Update the local conversation object with fresh server data
-                        if (this.parent) {
-                            this.parent.selectedConversation = updatedConversation;
+                    // Update the local conversation object with fresh server data
+                    if (this.parent) {
+                        this.parent.selectedConversation = updatedConversation;
 
-                            if (this.parent.core) {
-                                this.parent.core.conversations.set(conversationId, updatedConversation);
-                                this.parent.core.selectedConversation = updatedConversation;
-                                this.parent.core.showConversationDetails();
-                                // Refresh the conversation list panel to show updated name
-                                this.parent.core.renderConversationsList();
-                            }
+                        if (this.parent.core) {
+                            this.parent.core.conversations.set(conversationId, updatedConversation);
+                            this.parent.core.selectedConversation = updatedConversation;
+                            this.parent.core.showConversationDetails();
+                            // Refresh the conversation list panel to show updated name
+                            this.parent.core.renderConversationsList();
                         }
                     }
                 } catch (refreshError) {
@@ -1129,22 +1115,13 @@ class IntelligenceTabs {
             console.log('Requesting HTML template from server...');
 
             // Get HTML template from backend
-            const templateResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conv.id}/generate-html-template`, {
+            const htmlContent = await this.parent.apiCall(`/api/conversations/${conv.id}/generate-html-template`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({
                     applicationData: applicationData,
                     ownerName: ownerName
                 })
             });
-
-            if (!templateResponse.ok) {
-                throw new Error('Failed to get HTML template');
-            }
-
-            const htmlContent = await templateResponse.text();
 
             console.log('Received HTML template from server');
 
@@ -1267,11 +1244,8 @@ class IntelligenceTabs {
             console.log('Saving to AWS...');
 
             // Save to AWS server
-            const saveResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conv.id}/save-generated-pdf`, {
+            const saveResult = await this.parent.apiCall(`/api/conversations/${conv.id}/save-generated-pdf`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({
                     conversationId: conv.id,
                     pdfBase64: pdfBase64,
@@ -1279,8 +1253,6 @@ class IntelligenceTabs {
                     documentId: crypto.randomUUID()
                 })
             });
-
-            const saveResult = await saveResponse.json();
 
             if (saveResult.success) {
                 // Close the edit modal

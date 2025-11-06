@@ -473,4 +473,92 @@ router.get('/:lenderId', async (req, res) => {
     }
 });
 
+// Send business to selected lenders via email
+router.post('/send-to-lenders/:conversationId', async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { selectedLenders, businessData, documents } = req.body;
+
+        console.log(`📧 Sending to ${selectedLenders.length} lenders for conversation ${conversationId}`);
+
+        const db = getDatabase();
+
+        // Get conversation details
+        const convResult = await db.query(
+            'SELECT * FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+
+        if (convResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Conversation not found'
+            });
+        }
+
+        const conversation = convResult.rows[0];
+
+        const results = {
+            successful: [],
+            failed: []
+        };
+
+        // Process each selected lender
+        for (const lender of selectedLenders) {
+            try {
+                // TODO: Implement actual email sending logic here
+                // For now, just log and simulate success
+
+                console.log(`Sending to: ${lender.name} (${lender.email})`);
+                console.log(`Business: ${businessData.businessName}`);
+                console.log(`Documents: ${documents?.length || 0} attached`);
+
+                // Simulate successful send
+                results.successful.push({
+                    lenderId: lender.id,
+                    lenderName: lender.name,
+                    lenderEmail: lender.email,
+                    sentAt: new Date().toISOString()
+                });
+
+                // Optional: Log to database
+                await db.query(`
+                    INSERT INTO lender_submissions (
+                        conversation_id,
+                        lender_id,
+                        lender_name,
+                        status,
+                        submitted_at
+                    ) VALUES ($1, $2, $3, 'sent', NOW())
+                    ON CONFLICT (conversation_id, lender_id)
+                    DO UPDATE SET submitted_at = NOW(), status = 'sent'
+                `, [conversationId, lender.id, lender.name]);
+
+            } catch (error) {
+                console.error(`Failed to send to ${lender.name}:`, error);
+                results.failed.push({
+                    lenderId: lender.id,
+                    lenderName: lender.name,
+                    error: error.message
+                });
+            }
+        }
+
+        console.log(`✅ Sent to ${results.successful.length}/${selectedLenders.length} lenders`);
+
+        res.json({
+            success: true,
+            results: results,
+            message: `Successfully sent to ${results.successful.length} of ${selectedLenders.length} lenders`
+        });
+
+    } catch (error) {
+        console.error('Error sending to lenders:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

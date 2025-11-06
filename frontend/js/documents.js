@@ -88,8 +88,7 @@ class DocumentsModule {
         }
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversation.id}/documents`);
-            const result = await response.json();
+            const result = await this.parent.apiCall(`/api/conversations/${conversation.id}/documents`);
 
             if (result.success) {
                 this.currentDocuments = (result.documents || []).map(doc => this.normalizeDocumentFields(doc));
@@ -339,10 +338,19 @@ class DocumentsModule {
         this.showUploadProgress(true);
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversation.id}/documents/upload`, {
+            // Use direct fetch for file uploads (FormData needs special headers)
+            const response = await fetch(`${this.parent.apiBaseUrl}/api/conversations/${conversation.id}/documents/upload`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': this.parent.apiAuth
+                    // NO Content-Type! Browser sets it automatically for FormData
+                },
                 body: formData
             });
+
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.status}`);
+            }
 
             const result = await response.json();
 
@@ -534,19 +542,14 @@ class DocumentsModule {
         // Save to server with correct endpoint
         try {
             console.log('Sending update request...');
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversation.id}/documents/${documentId}`, {
+            const result = await this.parent.apiCall(`/api/conversations/${conversation.id}/documents/${documentId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({
                     filename: newName,
                     documentType: newType
                 })
             });
 
-            console.log('Response status:', response.status);
-            const result = await response.json();
             console.log('Response data:', result);
 
             if (result.success) {
@@ -625,19 +628,14 @@ class DocumentsModule {
             this.utils.showNotification('Renaming document...', 'info');
 
             // Try the simple endpoint first (more reliable)
-            const response = await fetch(`${this.apiBaseUrl}/api/documents/${documentId}`, {
+            const result = await this.parent.apiCall(`/api/documents/${documentId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({
                     filename: newName
                 })
             });
 
-            const result = await response.json();
-
-            if (result.success || response.ok) {
+            if (result.success) {
                 // Update local cache immediately
                 const docIndex = this.currentDocuments.findIndex(d => d.id === documentId);
                 if (docIndex !== -1) {
@@ -768,11 +766,9 @@ class DocumentsModule {
         }
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}`, {
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/documents/${documentId}`, {
                 method: 'DELETE'
             });
-
-            const result = await response.json();
 
             if (result.success) {
                 this.utils.showNotification('Document deleted successfully.', 'success');
