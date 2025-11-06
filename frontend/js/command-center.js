@@ -1,10 +1,10 @@
 // MCA Command Center Main Application
 class CommandCenter {
     constructor() {
-        // Basic properties first
-        this.wsUrl = 'ws://localhost:3001';
+        this.wsUrl = 'wss://api.mcagent.io';
         this.userId = 'default';
-        this.apiBaseUrl = 'http://localhost:3001';
+        this.apiBaseUrl = 'https://api.mcagent.io';
+        this.apiAuth = 'Basic ' + btoa('admin:Ronpaul2025!');
         this.isInitialized = false;
 
         // Initialize utilities FIRST (they have no dependencies)
@@ -30,6 +30,23 @@ class CommandCenter {
 
         // Now initialize
         this.init();
+    }
+
+    async apiCall(endpoint, options = {}) {
+        const config = {
+            ...options,
+            headers: {
+                'Authorization': this.apiAuth,
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            }
+        };
+
+        // FIX: use parentheses not backticks!
+        const response = await fetch(`${this.apiBaseUrl}${endpoint}`, config);
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}:`);
+        return response.json();
     }
 
     async init() {

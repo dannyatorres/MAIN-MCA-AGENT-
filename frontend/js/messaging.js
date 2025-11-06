@@ -111,13 +111,7 @@ class MessagingModule {
 
         try {
             console.log(`📨 Loading messages for conversation: ${convId}`);
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${convId}/messages`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
+            const data = await this.parent.apiCall(`/api/conversations/${convId}/messages`);
             console.log(`Loaded ${data?.length || 0} messages`);
 
             this.renderMessages(data || []);
@@ -205,38 +199,26 @@ class MessagingModule {
         messageInput.value = '';
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/messages`, {
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/messages`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({
                     message_content: message,
                     sender_type: 'user'
                 })
             });
 
-            if (response.ok) {
-                const result = await response.json();
-                console.log('✅ Message sent successfully:', result);
+            console.log('✅ Message sent successfully:', result);
 
-                // Add the message to UI immediately (optimistic update)
-                if (result.message) {
-                    this.addMessage(result.message);
-                } else {
-                    // Fallback: reload all messages
-                    await this.loadConversationMessages();
-                }
-
-                // Update conversation timestamp
-                this.updateConversationAfterMessage(conversationId);
-
+            // Add the message to UI immediately (optimistic update)
+            if (result.message) {
+                this.addMessage(result.message);
             } else {
-                // Restore message if failed
-                messageInput.value = message;
-                const errorData = await response.text();
-                throw new Error(`Failed to send message: ${response.status} - ${errorData}`);
+                // Fallback: reload all messages
+                await this.loadConversationMessages();
             }
+
+            // Update conversation timestamp
+            this.updateConversationAfterMessage(conversationId);
         } catch (error) {
             console.error('Error sending message:', error);
             // Restore message in input if failed
@@ -275,11 +257,8 @@ class MessagingModule {
         }
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/ai-response`, {
+            const data = await this.parent.apiCall(`/api/conversations/${conversationId}/ai-response`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({
                     messageType: 'followup',
                     generateMultiple: true,
@@ -287,7 +266,6 @@ class MessagingModule {
                 })
             });
 
-            const data = await response.json();
             this.showAISuggestions(data.response);
         } catch (error) {
             this.utils.handleError(error, 'Error generating AI suggestions', 'Failed to generate suggestions');
@@ -469,25 +447,21 @@ class MessagingModule {
         messageElement.classList.add('deleting');
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/messages/${messageId}`, {
+            await this.parent.apiCall(`/api/conversations/${conversationId}/messages/${messageId}`, {
                 method: 'DELETE'
             });
 
-            if (response.ok) {
-                // Smooth fade out animation
-                messageElement.style.transition = 'all 0.3s ease';
-                messageElement.style.opacity = '0';
-                messageElement.style.transform = 'translateX(-20px)';
+            // Smooth fade out animation
+            messageElement.style.transition = 'all 0.3s ease';
+            messageElement.style.opacity = '0';
+            messageElement.style.transform = 'translateX(-20px)';
 
-                setTimeout(() => {
-                    messageElement.remove();
-                    console.log('✅ Message deleted successfully');
-                }, 300);
+            setTimeout(() => {
+                messageElement.remove();
+                console.log('✅ Message deleted successfully');
+            }, 300);
 
-                this.utils.showNotification('Message deleted', 'success');
-            } else {
-                throw new Error('Failed to delete message');
-            }
+            this.utils.showNotification('Message deleted', 'success');
         } catch (error) {
             console.error('Delete message error:', error);
             messageElement.classList.remove('deleting');

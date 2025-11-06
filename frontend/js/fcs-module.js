@@ -238,15 +238,9 @@ class FCSModule {
         console.log('📥 Fetching documents for conversation:', conversationId);
 
         try {
-            const response = await fetch(
-                `${this.apiBaseUrl}/api/conversations/${conversationId}/documents?t=${Date.now()}`
+            const result = await this.parent.apiCall(
+                `/api/conversations/${conversationId}/documents?t=${Date.now()}`
             );
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const result = await response.json();
             console.log('📄 Documents fetched:', result.documents?.length || 0, 'documents');
 
             // Log first document to verify it's for the right conversation
@@ -388,13 +382,10 @@ class FCSModule {
         console.log('Starting FCS generation for:', conversationId);
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/generate-fcs`, {
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/generate-fcs`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ businessName, selectedDocuments })
             });
-
-            const result = await response.json();
             console.log('FCS API response:', result);
 
             if (result.success) {
@@ -459,10 +450,7 @@ class FCSModule {
         }
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/fcs-report?_=${Date.now()}`);
-
-            if (response.ok) {
-                const result = await response.json();
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs-report?_=${Date.now()}`);
                 console.log('Poll response:', result);
 
                 if (result.success && result.report?.report_content) {
@@ -494,7 +482,6 @@ class FCSModule {
                         });
                     }
                 }
-            }
         } catch (error) {
             console.log('Poll error (will retry):', error);
         }
@@ -580,28 +567,7 @@ class FCSModule {
 
         try {
             const cacheBuster = new Date().getTime();
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/fcs-report?_=${cacheBuster}`);
-            console.log(`FCS fetch response status: ${response.status}`);
-
-            if (response.status === 404) {
-                fcsContent.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📊</div>
-                        <h4>No FCS Report Generated</h4>
-                        <p>Upload bank statements and generate an FCS report from the Documents tab</p>
-                        <button class="btn btn-primary" onclick="window.conversationUI.intelligence.switchIntelligenceTab('documents')" style="margin-top: 10px;">
-                            Go to Documents
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const result = await response.json();
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs-report?_=${cacheBuster}`);
             console.log(`FCS API result:`, result);
 
             if (result.success && result.report) {
@@ -619,6 +585,22 @@ class FCSModule {
         } catch (error) {
             console.error('Error loading FCS data:', error);
             console.error('Error stack:', error.stack);
+
+            // Handle 404 (no report found) specially
+            if (error.message.includes('404')) {
+                fcsContent.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <h4>No FCS Report Generated</h4>
+                        <p>Upload bank statements and generate an FCS report from the Documents tab</p>
+                        <button class="btn btn-primary" onclick="window.conversationUI.intelligence.switchIntelligenceTab('documents')" style="margin-top: 10px;">
+                            Go to Documents
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
             fcsContent.innerHTML = `
                 <div style="text-align: center; padding: 20px; color: #ef4444;">
                     <p>Failed to load FCS data</p>

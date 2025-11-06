@@ -76,15 +76,12 @@ class LendersModule {
         }
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/lenders/qualify`, {
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/lenders/qualify`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify(businessData)
             });
 
-            if (response.ok) {
+            if (result.success) {
                 this.hideLenderModal();
                 this.utils.showNotification('Lender qualification started', 'success');
             } else {
@@ -1163,8 +1160,7 @@ class LendersModule {
         if (!lendersContent) return;
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/lenders`);
-            const result = await response.json();
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/lenders`);
 
             if (result.success && result.lenders && result.lenders.length > 0) {
                 this.displayLenders(result.lenders);
@@ -1304,8 +1300,7 @@ class LendersModule {
 
         try {
             console.log('Loading documents for submission modal...');
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/documents`);
-            const result = await response.json();
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/documents`);
 
             if (result.success && result.documents) {
                 // Store documents in parent's documents module
@@ -1443,8 +1438,7 @@ class LendersModule {
         }
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/documents`);
-            const result = await response.json();
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/documents`);
 
             if (result.success && result.documents) {
                 if (this.parent.documents) {
@@ -1568,19 +1562,14 @@ Best regards`;
 
             const conversationId = this.parent.getCurrentConversationId();
 
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/send-to-lenders`, {
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/send-to-lenders`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({
                     selectedLenders: selectedLenders,
                     businessData: businessData,
                     documents: selectedDocuments
                 })
             });
-
-            const result = await response.json();
 
             if (result.success) {
                 const successCount = result.results?.successful?.length || 0;
@@ -1604,13 +1593,8 @@ Best regards`;
     // Lender Management CRUD
     async loadLendersList() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/lenders`);
-            if (response.ok) {
-                const lenders = await response.json();
-                this.displayLendersList(lenders);
-            } else {
-                throw new Error('Failed to load lenders');
-            }
+            const lenders = await this.parent.apiCall(`/api/lenders`);
+            this.displayLendersList(lenders);
         } catch (error) {
             console.error('Error loading lenders:', error);
             this.displayLendersError('Failed to load lenders');
@@ -2092,19 +2076,17 @@ Negative Days: 3"
         };
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/lenders`, {
+            const result = await this.parent.apiCall(`/api/lenders`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(lenderData)
             });
 
-            if (response.ok) {
+            if (result.success) {
                 this.utils.showNotification('Lender added successfully', 'success');
                 document.getElementById('addLenderModal').remove();
                 this.loadLendersList();
             } else {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to add lender');
+                throw new Error(result.error || 'Failed to add lender');
             }
         } catch (error) {
             console.error('Error adding lender:', error);
@@ -2114,12 +2096,7 @@ Negative Days: 3"
 
     async editLender(lenderId) {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/lenders/${lenderId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch lender data');
-            }
-
-            const lender = await response.json();
+            const lender = await this.parent.apiCall(`/api/lenders/${lenderId}`);
             this.showEditLenderModal(lender);
 
         } catch (error) {
@@ -2195,19 +2172,17 @@ Negative Days: 3"
         };
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/lenders/${lenderId}`, {
+            const result = await this.parent.apiCall(`/api/lenders/${lenderId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(lenderData)
             });
 
-            if (response.ok) {
+            if (result.success) {
                 this.utils.showNotification('Lender updated successfully', 'success');
                 document.getElementById('editLenderModal').remove();
                 this.loadLendersList();
             } else {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to update lender');
+                throw new Error(result.error || 'Failed to update lender');
             }
         } catch (error) {
             console.error('Error updating lender:', error);
@@ -2221,11 +2196,11 @@ Negative Days: 3"
         }
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/lenders/${lenderId}`, {
+            const result = await this.parent.apiCall(`/api/lenders/${lenderId}`, {
                 method: 'DELETE'
             });
 
-            if (response.ok) {
+            if (result.success) {
                 this.utils.showNotification('Lender deleted successfully', 'success');
                 this.loadLendersList();
             } else {

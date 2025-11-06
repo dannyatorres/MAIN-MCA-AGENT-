@@ -4,7 +4,7 @@ class ConversationCore {
     constructor(parent, wsManager) {
         this.parent = parent;
         this.wsManager = wsManager;
-        this.apiBaseUrl = parent.apiBaseUrl || 'http://localhost:3001';
+        this.apiBaseUrl = parent.apiBaseUrl;
         this.utils = parent.utils;
         this.templates = parent.templates;
 
@@ -159,14 +159,8 @@ class ConversationCore {
         try {
             console.log('🔄 Starting loadConversations()');
             console.log('🌐 Fetching conversations from:', `${this.apiBaseUrl}/api/conversations`);
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations`);
-            console.log('📡 Response status:', response.status, response.statusText);
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const conversations = await response.json();
+            const conversations = await this.parent.apiCall('/api/conversations');
             console.log('📋 Received conversations:', conversations.length);
 
             this.conversations.clear();
@@ -187,19 +181,7 @@ class ConversationCore {
 
     async loadStats() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/stats`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const contentType = response.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-                console.error("Response is not JSON:", await response.text());
-                throw new TypeError("Response was not JSON");
-            }
-
-            const stats = await response.json();
+            const stats = await this.parent.apiCall('/api/stats');
             this.updateStats(stats);
 
         } catch (error) {
@@ -252,27 +234,18 @@ class ConversationCore {
         // Fetch detailed conversation data
         try {
             console.log('Fetching detailed conversation data for:', conversationId);
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}`);
-            if (response.ok) {
-                const data = await response.json();
-                // Handle both wrapped and unwrapped responses
-                this.selectedConversation = data.conversation || data;
-                console.log('Loaded detailed conversation data:', this.selectedConversation);
+            const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
+            // Handle both wrapped and unwrapped responses
+            this.selectedConversation = data.conversation || data;
+            console.log('Loaded detailed conversation data:', this.selectedConversation);
 
-                // Update parent reference
-                if (this.parent) {
-                    this.parent.selectedConversation = this.selectedConversation;
-                }
-
-                // Update the conversations map with detailed data
-                this.conversations.set(conversationId, this.selectedConversation);
-            } else {
-                console.error('Failed to load detailed conversation data');
-                this.selectedConversation = this.conversations.get(conversationId);
-                if (this.parent) {
-                    this.parent.selectedConversation = this.selectedConversation;
-                }
+            // Update parent reference
+            if (this.parent) {
+                this.parent.selectedConversation = this.selectedConversation;
             }
+
+            // Update the conversations map with detailed data
+            this.conversations.set(conversationId, this.selectedConversation);
         } catch (error) {
             console.error('Error fetching detailed conversation:', error);
             this.selectedConversation = this.conversations.get(conversationId);
@@ -596,19 +569,10 @@ class ConversationCore {
         const idsToDelete = Array.from(this.selectedForDeletion);
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/bulk-delete`, {
+            const result = await this.parent.apiCall('/api/conversations/bulk-delete', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({ conversationIds: idsToDelete })
             });
-
-            if (!response.ok) {
-                throw new Error(`Delete failed: ${response.status}`);
-            }
-
-            const result = await response.json();
 
             idsToDelete.forEach(id => {
                 this.conversations.delete(id);
@@ -714,13 +678,10 @@ class ConversationCore {
         if (!this.currentConversationId) return;
 
         try {
-            const response = await fetch(
-                `${this.apiBaseUrl}/api/conversations/${this.currentConversationId}/state`,
+            await this.parent.apiCall(
+                `/api/conversations/${this.currentConversationId}/state`,
                 {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
                     body: JSON.stringify({
                         newState,
                         triggeredBy: 'operator',
@@ -729,11 +690,7 @@ class ConversationCore {
                 }
             );
 
-            if (response.ok) {
-                this.utils.showNotification(`State changed to ${newState}`, 'success');
-            } else {
-                throw new Error('Failed to change state');
-            }
+            this.utils.showNotification(`State changed to ${newState}`, 'success');
         } catch (error) {
             console.error('Error changing state:', error);
             this.utils.showNotification('Failed to change state', 'error');
@@ -763,19 +720,16 @@ class ConversationCore {
         if (!this.currentConversationId) return;
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${this.currentConversationId}`);
-            if (response.ok) {
-                const data = await response.json();
-                this.selectedConversation = data.conversation || data;
-                this.conversations.set(this.currentConversationId, this.selectedConversation);
+            const data = await this.parent.apiCall(`/api/conversations/${this.currentConversationId}`);
+            this.selectedConversation = data.conversation || data;
+            this.conversations.set(this.currentConversationId, this.selectedConversation);
 
-                // Refresh the edit form if it's currently open
-                const activeTab = document.querySelector('.tab-btn.active');
-                if (activeTab && activeTab.dataset.tab === 'edit' && this.parent.intelligence) {
-                    this.parent.intelligence.renderEditTab(
-                        document.getElementById('intelligenceContent')
-                    );
-                }
+            // Refresh the edit form if it's currently open
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab && activeTab.dataset.tab === 'edit' && this.parent.intelligence) {
+                this.parent.intelligence.renderEditTab(
+                    document.getElementById('intelligenceContent')
+                );
             }
         } catch (error) {
             console.error('Error reloading conversation details:', error);

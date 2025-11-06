@@ -107,23 +107,14 @@ class AIAssistant {
             await this.loadAIContext();
 
             // Call the AI API endpoint with enhanced context
-            const response = await fetch(`${this.apiBaseUrl}/api/ai/chat`, {
+            const data = await this.parent.apiCall(`/api/ai/chat`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({
                     query: message,
                     conversationId: conversationId,
                     context: this.aiContext // Include FCS-enhanced context
                 })
             });
-
-            if (!response.ok) {
-                throw new Error(`AI API error: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
 
             this.hideTypingIndicator();
 
@@ -259,15 +250,12 @@ class AIAssistant {
 
         try {
             // Try to load from database first
-            const response = await fetch(`${this.apiBaseUrl}/api/ai/chat/${conversationId}`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.messages && data.messages.length > 0) {
-                    console.log('✅ Loaded chat history from database:', data.messages.length, 'messages');
-                    messagesContainer.innerHTML = '';  // Clear loading state
-                    this.renderChatHistory(data.messages);
-                    hasHistory = true;
-                }
+            const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
+            if (data.messages && data.messages.length > 0) {
+                console.log('✅ Loaded chat history from database:', data.messages.length, 'messages');
+                messagesContainer.innerHTML = '';  // Clear loading state
+                this.renderChatHistory(data.messages);
+                hasHistory = true;
             }
         } catch (error) {
             console.log('🔍 Failed to load history from database:', error.message);
@@ -332,22 +320,18 @@ class AIAssistant {
         });
 
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/ai/chat/${conversationId}/messages`, {
+            const result = await this.parent.apiCall(`/api/ai/chat/${conversationId}/messages`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({
                     role: role,
                     content: content
                 })
             });
 
-            if (response.ok) {
+            if (result.success) {
                 console.log('✅ AI message saved to database successfully');
             } else {
-                const errorText = await response.text();
-                console.error('❌ Failed to save AI message to database:', response.status, errorText);
+                console.error('❌ Failed to save AI message to database:', result.error);
             }
         } catch (error) {
             console.error('❌ Error saving AI message to database:', error);
@@ -432,10 +416,7 @@ class AIAssistant {
         // Try to load FCS data to enhance AI context
         try {
             const conversationId = this.parent.getCurrentConversationId();
-            const fcsResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/fcs-report`);
-
-            if (fcsResponse.ok) {
-                const fcsData = await fcsResponse.json();
+            const fcsData = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs-report`);
 
                 if (fcsData.success && fcsData.report) {
                     console.log('✅ FCS data loaded for AI context');
@@ -495,9 +476,6 @@ Always reference specific financial metrics from the FCS when making recommendat
                 } else {
                     console.log('📄 No FCS report available - using basic context');
                 }
-            } else {
-                console.log('📄 FCS report not found - using basic context');
-            }
         } catch (error) {
             console.log('⚠️ Failed to load FCS context:', error.message);
             console.log('📄 Continuing with basic AI context');

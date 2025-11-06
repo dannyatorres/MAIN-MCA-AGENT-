@@ -113,8 +113,8 @@ const basicAuth = require('express-basic-auth');
 // Authentication middleware
 const authenticate = basicAuth({
     users: {
-        'admin': process.env.ADMIN_PASSWORD || 'ChangeMe123!',
-        'agent': process.env.AGENT_PASSWORD || 'ChangeMe456!'
+        'admin': process.env.ADMIN_PASSWORD || 'Ronpaul2025!',
+        'agent': process.env.AGENT_PASSWORD || 'Ronpaul2025!'
     },
     challenge: true,
     realm: 'MCA Command Center',
