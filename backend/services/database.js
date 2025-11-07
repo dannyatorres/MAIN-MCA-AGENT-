@@ -4,8 +4,9 @@
 const { Pool } = require('pg');
 
 let pool = null;
+let schemaFixed = false;
 
-function getInstance() {
+async function getInstance() {
     if (!pool) {
         pool = new Pool({
             host: process.env.DB_HOST || 'localhost',
@@ -26,13 +27,44 @@ function getInstance() {
         });
 
         console.log('✅ Database connection pool created');
+
+        // AUTO-FIX: Ensure S3-only schema (add missing columns, remove file_path)
+        if (!schemaFixed) {
+            try {
+                console.log('🔧 Auto-fixing documents table schema...');
+
+                // Add S3-required columns if missing
+                await pool.query(`
+                    ALTER TABLE documents
+                      ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100),
+                      ADD COLUMN IF NOT EXISTS file_extension VARCHAR(10),
+                      ADD COLUMN IF NOT EXISTS processing_status VARCHAR(50) DEFAULT 'uploaded'
+                `);
+
+                // Remove old file_path column if it exists
+                await pool.query(`
+                    ALTER TABLE documents
+                      DROP COLUMN IF EXISTS file_path
+                `);
+
+                console.log('✅ Documents table schema verified/fixed for S3');
+                schemaFixed = true;
+            } catch (err) {
+                console.warn('⚠️ Could not auto-fix documents table:', err.message);
+            }
+        }
     }
 
     return pool;
 }
 
 function getDatabase() {
-    return getInstance();
+    // Return pool directly for synchronous calls
+    // Schema fix runs async on first connection
+    if (!pool) {
+        getInstance(); // Trigger async initialization
+    }
+    return pool;
 }
 
 module.exports = {
