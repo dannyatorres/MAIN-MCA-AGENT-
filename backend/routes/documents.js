@@ -80,6 +80,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 filename,
                 original_filename,
                 file_size,
+                mime_type,
+                file_extension,
                 document_type,
                 notes,
                 s3_bucket,
@@ -87,13 +89,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 s3_url,
                 created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
             RETURNING *
         `, [
             conversation_id,
             req.file.key.split('/').pop(), // Just the filename
             req.file.originalname,
             req.file.size,
+            req.file.mimetype,
+            req.file.originalname.split('.').pop().toLowerCase(),
             document_type || 'Other',
             notes || null,
             req.file.bucket,
