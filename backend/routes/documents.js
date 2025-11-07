@@ -66,9 +66,6 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const { conversation_id, document_type, notes } = req.body;
         const db = getDatabase();
 
-        // Get file extension
-        const fileExtension = req.file.originalname.split('.').pop().toLowerCase();
-
         console.log('📤 S3 Upload Success:', {
             bucket: req.file.bucket,
             key: req.file.key,
@@ -83,31 +80,25 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 filename,
                 original_filename,
                 file_size,
-                mime_type,
-                file_extension,
                 document_type,
                 notes,
                 s3_bucket,
                 s3_key,
                 s3_url,
-                processing_status,
                 created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
             RETURNING *
         `, [
             conversation_id,
             req.file.key.split('/').pop(), // Just the filename
             req.file.originalname,
             req.file.size,
-            req.file.mimetype,
-            fileExtension,
             document_type || 'Other',
             notes || null,
             req.file.bucket,
             req.file.key,
-            req.file.location, // Full S3 URL
-            'uploaded'
+            req.file.location // Full S3 URL
         ]);
 
         const document = result.rows[0];
