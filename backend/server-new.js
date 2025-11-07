@@ -126,6 +126,9 @@ const authenticate = basicAuth({
 // Apply authentication to ALL /api routes EXCEPT:
 // - /api/health (Railway needs this for monitoring)
 // - /api/messages/webhook/receive (Twilio needs this)
+// - /api/documents/view/* (Document preview)
+// - /api/documents/download/* (Document download)
+// - /api/conversations/*/documents/*/download (Conversation document download)
 app.use('/api', (req, res, next) => {
     // Skip auth for health check
     if (req.path === '/health') {
@@ -134,6 +137,13 @@ app.use('/api', (req, res, next) => {
 
     // Skip auth for Twilio webhook
     if (req.path === '/messages/webhook/receive') {
+        return next();
+    }
+
+    // Skip auth for document viewing/downloading
+    if (req.path.startsWith('/documents/view/') ||
+        req.path.startsWith('/documents/download/') ||
+        req.path.match(/^\/conversations\/[^/]+\/documents\/[^/]+\/download$/)) {
         return next();
     }
 
