@@ -1,36 +1,60 @@
-// routes/documents.js - HANDLES: File uploads and downloads
+// routes/documents.js - HANDLES: File uploads to S3 and downloads
 // URLs like: /api/documents/upload, /api/documents/:conversationId
 
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const multerS3 = require('multer-s3');
+const AWS = require('aws-sdk');
 const { getDatabase } = require('../services/database');
 
-// Configure upload directory
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Configure AWS S3
+const s3 = new AWS.S3({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION || 'us-east-1'
+});
 
-// Configure multer storage
-const storage = multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}-${file.originalname}`;
-        cb(null, uniqueName);
+const bucket = process.env.S3_DOCUMENTS_BUCKET;
+
+console.log('🔧 S3 Document Storage Configuration:', {
+    bucket: bucket,
+    region: process.env.AWS_REGION,
+    hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID
+});
+
+// Configure multer to upload directly to S3
+const upload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: bucket,
+        metadata: function (req, file, cb) {
+            cb(null, {
+                fieldName: file.fieldname,
+                originalName: file.originalname,
+                uploadedAt: new Date().toISOString()
+            });
+        },
+        key: function (req, file, cb) {
+            // Generate unique filename with timestamp
+            const timestamp = Date.now();
+            const randomId = Math.round(Math.random() * 1E9);
+            const sanitizedFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const key = `documents/${timestamp}-${randomId}-${sanitizedFilename}`;
+            cb(null, key);
+        }
+    }),
+    limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        // Accept all file types
+        cb(null, true);
     }
 });
 
-// Document upload configuration (allows any file type)
-const documentUpload = multer({
-    storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
-});
-
-// Upload document
-router.post('/upload', documentUpload.single('file'), async (req, res) => {
+// Upload document to S3
+router.post('/upload', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -42,23 +66,48 @@ router.post('/upload', documentUpload.single('file'), async (req, res) => {
         const { conversation_id, document_type, notes } = req.body;
         const db = getDatabase();
 
+        // Get file extension
+        const fileExtension = req.file.originalname.split('.').pop().toLowerCase();
+
+        console.log('📤 S3 Upload Success:', {
+            bucket: req.file.bucket,
+            key: req.file.key,
+            location: req.file.location,
+            size: req.file.size
+        });
+
         // Save document metadata to database
         const result = await db.query(`
             INSERT INTO documents (
-                conversation_id, filename, original_filename,
-                file_path, file_size, mime_type, document_type, notes, created_at
+                conversation_id,
+                filename,
+                original_filename,
+                file_size,
+                mime_type,
+                file_extension,
+                document_type,
+                notes,
+                s3_bucket,
+                s3_key,
+                s3_url,
+                processing_status,
+                created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
             RETURNING *
         `, [
             conversation_id,
-            req.file.filename,
+            req.file.key.split('/').pop(), // Just the filename
             req.file.originalname,
-            req.file.path,
             req.file.size,
             req.file.mimetype,
-            document_type || 'other',
-            notes || null
+            fileExtension,
+            document_type || 'Other',
+            notes || null,
+            req.file.bucket,
+            req.file.key,
+            req.file.location, // Full S3 URL
+            'uploaded'
         ]);
 
         const document = result.rows[0];
@@ -72,20 +121,29 @@ router.post('/upload', documentUpload.single('file'), async (req, res) => {
             console.log(`📄 WebSocket event emitted for document upload`);
         }
 
-        console.log(`✅ Document uploaded: ${document.id} - ${req.file.originalname}`);
+        console.log(`✅ Document uploaded to S3: ${document.id} - ${req.file.originalname}`);
+        console.log(`   S3 Location: ${req.file.location}`);
 
         res.json({
             success: true,
             document: document,
-            file_url: `/api/documents/download/${req.file.filename}`
+            s3_url: req.file.location
         });
 
     } catch (error) {
         console.error('Error uploading document:', error);
 
-        // Clean up file if database insert failed
-        if (req.file && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
+        // If database save failed but S3 upload succeeded, we should delete from S3
+        if (req.file && req.file.key) {
+            try {
+                await s3.deleteObject({
+                    Bucket: bucket,
+                    Key: req.file.key
+                }).promise();
+                console.log('🗑️ Cleaned up S3 file after database error');
+            } catch (s3Error) {
+                console.error('Failed to cleanup S3 file:', s3Error);
+            }
         }
 
         res.status(500).json({
@@ -122,20 +180,37 @@ router.get('/:conversationId', async (req, res) => {
     }
 });
 
-// Download document
-router.get('/download/:filename', (req, res) => {
+// Download document from S3 (generates pre-signed URL)
+router.get('/download/:documentId', async (req, res) => {
     try {
-        const { filename } = req.params;
-        const filePath = path.join(uploadDir, filename);
+        const { documentId } = req.params;
+        const db = getDatabase();
 
-        if (!fs.existsSync(filePath)) {
+        // Get document info from database
+        const result = await db.query(
+            'SELECT * FROM documents WHERE id = $1',
+            [documentId]
+        );
+
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 success: false,
-                error: 'File not found'
+                error: 'Document not found'
             });
         }
 
-        res.download(filePath);
+        const document = result.rows[0];
+
+        // Generate pre-signed URL for download (expires in 1 hour)
+        const url = s3.getSignedUrl('getObject', {
+            Bucket: document.s3_bucket,
+            Key: document.s3_key,
+            Expires: 3600,
+            ResponseContentDisposition: `attachment; filename="${document.original_filename}"`
+        });
+
+        // Redirect to pre-signed URL
+        res.redirect(url);
 
     } catch (error) {
         console.error('Error downloading document:', error);
@@ -146,21 +221,37 @@ router.get('/download/:filename', (req, res) => {
     }
 });
 
-// View/stream document (for PDFs, images, etc.)
-router.get('/view/:filename', (req, res) => {
+// View/stream document from S3 (for inline viewing)
+router.get('/view/:documentId', async (req, res) => {
     try {
-        const { filename } = req.params;
-        const filePath = path.join(uploadDir, filename);
+        const { documentId } = req.params;
+        const db = getDatabase();
 
-        if (!fs.existsSync(filePath)) {
+        // Get document info from database
+        const result = await db.query(
+            'SELECT * FROM documents WHERE id = $1',
+            [documentId]
+        );
+
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 success: false,
-                error: 'File not found'
+                error: 'Document not found'
             });
         }
 
-        // Send file for inline viewing
-        res.sendFile(filePath);
+        const document = result.rows[0];
+
+        // Generate pre-signed URL for viewing (expires in 1 hour)
+        const url = s3.getSignedUrl('getObject', {
+            Bucket: document.s3_bucket,
+            Key: document.s3_key,
+            Expires: 3600,
+            ResponseContentDisposition: `inline; filename="${document.original_filename}"`
+        });
+
+        // Redirect to pre-signed URL
+        res.redirect(url);
 
     } catch (error) {
         console.error('Error viewing document:', error);
@@ -171,10 +262,53 @@ router.get('/view/:filename', (req, res) => {
     }
 });
 
-// Delete document
-router.delete('/:documentId', async (req, res) => {
+// Get direct S3 URL for a document (for internal use)
+router.get('/s3-url/:documentId', async (req, res) => {
     try {
         const { documentId } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(
+            'SELECT s3_bucket, s3_key, s3_url, original_filename FROM documents WHERE id = $1',
+            [documentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Document not found'
+            });
+        }
+
+        const document = result.rows[0];
+
+        // Generate temporary pre-signed URL (expires in 1 hour)
+        const url = s3.getSignedUrl('getObject', {
+            Bucket: document.s3_bucket,
+            Key: document.s3_key,
+            Expires: 3600
+        });
+
+        res.json({
+            success: true,
+            document_id: documentId,
+            s3_url: url,
+            original_filename: document.original_filename
+        });
+
+    } catch (error) {
+        console.error('Error getting S3 URL:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Delete document from S3 and database
+router.delete('/:documentId', async (req, res) => {
+    try {
+        const { documentId} = req.params;
         const db = getDatabase();
 
         // Get document info first
@@ -192,9 +326,16 @@ router.delete('/:documentId', async (req, res) => {
 
         const document = docResult.rows[0];
 
-        // Delete file from filesystem
-        if (fs.existsSync(document.file_path)) {
-            fs.unlinkSync(document.file_path);
+        // Delete from S3
+        try {
+            await s3.deleteObject({
+                Bucket: document.s3_bucket,
+                Key: document.s3_key
+            }).promise();
+            console.log(`🗑️ Deleted from S3: ${document.s3_key}`);
+        } catch (s3Error) {
+            console.error('Error deleting from S3:', s3Error);
+            // Continue with database deletion even if S3 fails
         }
 
         // Delete from database
@@ -224,26 +365,64 @@ router.delete('/:documentId', async (req, res) => {
     }
 });
 
-// Verify PDF endpoint (for debugging)
-router.get('/verify-pdf/:filename', (req, res) => {
+// Health check - verify S3 connection
+router.get('/health/s3', async (req, res) => {
     try {
-        const { filename } = req.params;
-        const filePath = path.join(uploadDir, filename);
+        // Try to list objects in the bucket to verify connection
+        await s3.listObjectsV2({
+            Bucket: bucket,
+            MaxKeys: 1
+        }).promise();
 
-        if (!fs.existsSync(filePath)) {
+        res.json({
+            success: true,
+            message: 'S3 connection successful',
+            bucket: bucket,
+            region: process.env.AWS_REGION
+        });
+    } catch (error) {
+        console.error('S3 health check failed:', error);
+        res.status(500).json({
+            success: false,
+            error: 'S3 connection failed',
+            details: error.message
+        });
+    }
+});
+
+// Verify PDF endpoint (for debugging) - downloads from S3 and checks
+router.get('/verify-pdf/:documentId', async (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(
+            'SELECT * FROM documents WHERE id = $1',
+            [documentId]
+        );
+
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 success: false,
-                error: 'File not found'
+                error: 'Document not found'
             });
         }
 
-        // Read first few bytes to check if it's a valid PDF
-        const buffer = fs.readFileSync(filePath);
+        const document = result.rows[0];
+
+        // Get file from S3
+        const s3Data = await s3.getObject({
+            Bucket: document.s3_bucket,
+            Key: document.s3_key
+        }).promise();
+
+        const buffer = s3Data.Body;
         const header = buffer.toString('utf8', 0, 4);
         const isValidPDF = header === '%PDF';
 
         res.json({
-            filename,
+            filename: document.original_filename,
+            s3_key: document.s3_key,
             size: buffer.length,
             isValidPDF,
             header: header,

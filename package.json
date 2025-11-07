@@ -2,9 +2,9 @@
   "name": "mca-command-center",
   "version": "1.0.0",
   "description": "MCA Command Center - Unified SMS automation, FCS processing, and lender qualification system",
-  "main": "server-new.js",
+  "main": "backend/server-new.js",
   "scripts": {
-    "start": "node server-new.js",
+    "start": "node backend/server-new.js",
     "build": "echo 'No build step needed'",
     "dev": "nodemon backend/server-new.js",
     "dev:frontend": "cd frontend && npx http-server -p 8080 -c-1",

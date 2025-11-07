@@ -4,29 +4,11 @@
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
-// Configure multer for document uploads
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}-${file.originalname}`;
-        cb(null, uniqueName);
-    }
-});
-
-const documentUpload = multer({
-    storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
-});
+// ⚠️ REMOVED LOCAL FILE UPLOAD - Use /api/documents/upload instead
 
 // Get all conversations
 router.get('/', async (req, res) => {
@@ -772,135 +754,7 @@ router.get('/:id/documents', async (req, res) => {
 });
 
 // Upload documents to AWS S3
-router.post('/:id/documents/upload', documentUpload.array('documents'), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const uploadedFiles = req.files;
-        const db = getDatabase();
-
-        if (!uploadedFiles || uploadedFiles.length === 0) {
-            return res.status(400).json({ error: 'No files provided' });
-        }
-
-        // Check if AWS S3 is configured
-        const hasS3Config = process.env.AWS_ACCESS_KEY_ID &&
-                           process.env.AWS_SECRET_ACCESS_KEY &&
-                           process.env.S3_DOCUMENTS_BUCKET;
-
-        if (!hasS3Config) {
-            return res.status(500).json({
-                error: 'AWS S3 not configured. Please set AWS credentials in .env file.'
-            });
-        }
-
-        // Initialize AWS S3
-        const AWS = require('aws-sdk');
-        AWS.config.update({
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-            region: process.env.AWS_REGION || 'us-east-1'
-        });
-
-        const s3 = new AWS.S3();
-        const bucket = process.env.S3_DOCUMENTS_BUCKET;
-        const results = [];
-
-        for (const file of uploadedFiles) {
-            const documentId = uuidv4();
-
-            // Read the file buffer
-            const fileBuffer = fs.readFileSync(file.path);
-            const s3Key = `documents/${file.filename}`;
-
-            // Upload to S3 FIRST
-            try {
-                const uploadResult = await s3.upload({
-                    Bucket: bucket,
-                    Key: s3Key,
-                    Body: fileBuffer,
-                    ContentType: file.mimetype || 'application/pdf',
-                    ServerSideEncryption: 'AES256'
-                }).promise();
-
-                const s3Url = uploadResult.Location;
-                console.log(`✅ Uploaded to S3: ${s3Url}`);
-
-                // Save document record to database
-                const result = await db.query(`
-                    INSERT INTO documents (
-                        id, conversation_id, original_filename, filename,
-                        file_size, s3_key, s3_url, created_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-                    RETURNING *
-                `, [
-                    documentId,
-                    id,
-                    file.originalname,
-                    file.filename,
-                    file.size,
-                    s3Key,
-                    s3Url
-                ]);
-
-                results.push(result.rows[0]);
-                console.log(`✅ Document saved to database: ${file.originalname}`);
-
-                // Delete local file after successful S3 upload
-                try {
-                    fs.unlinkSync(file.path);
-                } catch (unlinkErr) {
-                    console.warn('⚠️ Could not delete local file:', unlinkErr.message);
-                }
-
-            } catch (s3Error) {
-                console.error(`❌ S3 upload failed for ${file.originalname}:`, s3Error);
-                // Clean up local file on S3 failure
-                try {
-                    fs.unlinkSync(file.path);
-                } catch (unlinkErr) {
-                    console.warn('⚠️ Could not delete local file:', unlinkErr.message);
-                }
-                continue;
-            }
-        }
-
-        console.log(`📁 Successfully uploaded ${results.length} documents for conversation ${id}`);
-
-        const totalFiles = uploadedFiles.length;
-        const successfulUploads = results.length;
-        const failedUploads = totalFiles - successfulUploads;
-
-        if (failedUploads > 0) {
-            console.warn(`⚠️ ${failedUploads} of ${totalFiles} documents failed to upload to S3`);
-            res.json({
-                success: true,
-                message: `${successfulUploads} of ${totalFiles} documents uploaded successfully`,
-                warning: failedUploads > 0 ? `${failedUploads} documents failed S3 upload and were skipped` : null,
-                documents: results,
-                uploadStats: {
-                    total: totalFiles,
-                    successful: successfulUploads,
-                    failed: failedUploads
-                }
-            });
-        } else {
-            res.json({
-                success: true,
-                message: 'All documents uploaded successfully',
-                documents: results,
-                uploadStats: {
-                    total: totalFiles,
-                    successful: successfulUploads,
-                    failed: failedUploads
-                }
-            });
-        }
-
-    } catch (error) {
-        console.error('❌ Document upload error:', error);
-        res.status(500).json({ error: 'Failed to upload documents' });
-    }
-});
+// ⚠️ UPLOAD ROUTE REMOVED - Use /api/documents/upload for direct S3 uploads
 
 // Download document from S3
 router.get('/:conversationId/documents/:documentId/download', async (req, res) => {
@@ -939,13 +793,10 @@ router.get('/:conversationId/documents/:documentId/download', async (req, res) =
 
             res.redirect(signedUrl);
         } else {
-            // Fallback to local file if no S3 URL
-            const filePath = path.join(uploadDir, document.filename);
-            if (fs.existsSync(filePath)) {
-                res.download(filePath, document.original_filename);
-            } else {
-                res.status(404).json({ error: 'File not found' });
-            }
+            // No S3 URL - document needs to be re-uploaded
+            res.status(404).json({
+                error: 'Document not found in S3. Please re-upload this document.'
+            });
         }
 
     } catch (error) {
@@ -1015,86 +866,11 @@ router.get('/:conversationId/documents/:documentId/preview', async (req, res) =>
             // Stream the file from S3
             stream.pipe(res);
 
-        } else if (doc.filename) {
-            // Legacy document without S3 key - migrate to S3 first
-            console.log('🔄 Legacy document detected, migrating to S3:', doc.original_filename);
-
-            const AWS = require('aws-sdk');
-            AWS.config.update({
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-                region: process.env.AWS_REGION || 'us-east-1'
-            });
-
-            const s3 = new AWS.S3();
-            const localFilePath = path.join(uploadDir, doc.filename);
-
-            // Check if local file exists
-            if (!fs.existsSync(localFilePath)) {
-                return res.status(404).json({ error: 'Document file not found' });
-            }
-
-            try {
-                // Read the local file
-                const fileBuffer = fs.readFileSync(localFilePath);
-
-                // Generate S3 key for the document
-                const s3Key = `documents/${doc.filename}`;
-
-                // Upload to S3
-                const uploadParams = {
-                    Bucket: process.env.S3_DOCUMENTS_BUCKET,
-                    Key: s3Key,
-                    Body: fileBuffer,
-                    ContentType: 'application/pdf',
-                    ServerSideEncryption: 'AES256'
-                };
-
-                const uploadResult = await s3.upload(uploadParams).promise();
-                console.log('✅ Document migrated to S3:', uploadResult.Location);
-
-                // Update database with S3 information
-                try {
-                    await db.query(`
-                        UPDATE documents
-                        SET s3_key = $1, s3_url = $2
-                        WHERE id = $3
-                    `, [s3Key, uploadResult.Location, doc.id]);
-                    console.log('✅ Database updated with S3 info');
-                } catch (dbError) {
-                    console.warn('⚠️ Database update failed but S3 upload succeeded:', dbError.message);
-                }
-
-                // Now stream the file from S3
-                const stream = s3.getObject({
-                    Bucket: process.env.S3_DOCUMENTS_BUCKET,
-                    Key: s3Key
-                }).createReadStream();
-
-                // Set proper content type
-                const ext = path.extname(doc.original_filename).toLowerCase();
-                let contentType = 'application/octet-stream';
-                if (ext === '.pdf') contentType = 'application/pdf';
-
-                res.setHeader('Content-Disposition', `inline; filename="${doc.original_filename}"`);
-                res.setHeader('Content-Type', contentType);
-
-                stream.on('error', (error) => {
-                    console.error('👁️ S3 stream error after migration:', error);
-                    if (!res.headersSent) {
-                        res.status(500).json({ error: 'Failed to preview from S3' });
-                    }
-                });
-
-                stream.pipe(res);
-
-            } catch (migrationError) {
-                console.error('❌ Document migration failed:', migrationError);
-                return res.status(500).json({ error: 'Failed to migrate document to S3' });
-            }
-
         } else {
-            return res.status(404).json({ error: 'Document not found' });
+            // Document doesn't have S3 key - re-upload required
+            return res.status(404).json({
+                error: 'Document not found in S3. Please re-upload this document.'
+            });
         }
 
     } catch (error) {

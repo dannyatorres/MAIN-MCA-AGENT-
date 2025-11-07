@@ -320,50 +320,63 @@ class DocumentsModule {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('conversationId', conversation.id);
-
-        this.selectedFiles.forEach((file, index) => {
-            formData.append('documents', file);
-
-            const documentType = typeSelects[index] ? typeSelects[index].value : 'Other';
-            const autoProcess = autoProcessChecks[index] ? autoProcessChecks[index].checked : false;
-
-            formData.append(`documentType_${index}`, documentType);
-            formData.append(`autoProcess_${index}`, autoProcess);
-
-            console.log(`File ${index}: ${file.name}, type: ${documentType}, autoProcess: ${autoProcess}`);
-        });
-
         this.showUploadProgress(true);
 
         try {
-            // Use direct fetch for file uploads (FormData needs special headers)
-            const response = await fetch(`${this.parent.apiBaseUrl}/api/conversations/${conversation.id}/documents/upload`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': this.parent.apiAuth
-                    // NO Content-Type! Browser sets it automatically for FormData
-                },
-                body: formData
-            });
+            // Upload files one by one to S3
+            const uploadResults = [];
 
-            if (!response.ok) {
-                throw new Error(`Upload failed: ${response.status}`);
+            for (let index = 0; index < this.selectedFiles.length; index++) {
+                const file = this.selectedFiles[index];
+                const documentType = typeSelects[index] ? typeSelects[index].value : 'Other';
+
+                console.log(`Uploading file ${index + 1}/${this.selectedFiles.length}: ${file.name}, type: ${documentType}`);
+
+                // Create FormData for single file upload
+                const formData = new FormData();
+                formData.append('file', file);  // Changed from 'documents' to 'file'
+                formData.append('conversation_id', conversation.id);  // Changed from 'conversationId'
+                formData.append('document_type', documentType);  // Changed from 'documentType_{index}'
+
+                // Upload to S3 via /api/documents/upload
+                const response = await fetch(`${this.parent.apiBaseUrl}/api/documents/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': this.parent.apiAuth
+                        // NO Content-Type! Browser sets it automatically for FormData
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    console.error(`Upload failed for ${file.name}: ${response.status}`);
+                    uploadResults.push({ success: false, filename: file.name });
+                    continue;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log(`✅ Uploaded to S3: ${result.s3_url}`);
+                    uploadResults.push({ success: true, filename: file.name, document: result.document });
+                } else {
+                    uploadResults.push({ success: false, filename: file.name });
+                }
             }
 
-            const result = await response.json();
+            const successCount = uploadResults.filter(r => r.success).length;
+            const failedCount = uploadResults.filter(r => !r.success).length;
 
-            if (result.success) {
-                const successCount = result.results ?
-                    result.results.filter(r => r.success).length :
-                    (result.documents ? result.documents.length : 1);
-
-                this.utils.showNotification(`${successCount} document(s) uploaded successfully!`, 'success');
+            if (successCount > 0) {
+                this.utils.showNotification(
+                    `${successCount} document(s) uploaded successfully to S3!` +
+                    (failedCount > 0 ? ` (${failedCount} failed)` : ''),
+                    successCount === this.selectedFiles.length ? 'success' : 'warning'
+                );
                 this.loadDocuments();
                 this.cancelUpload();
             } else {
-                this.utils.showNotification(`Upload failed: ${result.error}`, 'error');
+                this.utils.showNotification('All uploads failed. Please try again.', 'error');
             }
         } catch (error) {
             this.utils.handleError(error, 'Upload error', 'Upload failed. Please try again.');
