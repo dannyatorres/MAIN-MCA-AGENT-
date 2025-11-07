@@ -107,7 +107,7 @@ class IntelligenceTabs {
         this.switchIntelligenceTab(currentTab);
     }
 
-    switchIntelligenceTab(tab) {
+    async switchIntelligenceTab(tab) {
         console.log(`Switching to tab: ${tab}`);
 
         // Sync context before switching
@@ -148,7 +148,7 @@ class IntelligenceTabs {
                 this.renderOverviewTab(content);
                 break;
             case 'documents':
-                this.renderDocumentsTab(content);
+                await this.renderDocumentsTab(content);
                 break;
             case 'edit':
                 this.renderEditTab(content);
@@ -324,10 +324,10 @@ class IntelligenceTabs {
         }, 100);
     }
 
-    renderDocumentsTab(content) {
+    async renderDocumentsTab(content) {
         if (this.parent.documents) {
             content.innerHTML = this.parent.documents.createDocumentsTabTemplate();
-            this.parent.documents.loadDocuments();
+            await this.parent.documents.loadDocuments();
             this.parent.documents.setupDocumentsEventListeners();
         }
     }
