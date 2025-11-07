@@ -252,10 +252,11 @@ class FCSModule {
             }
 
             if (result.success && result.documents) {
-                // Clear cached documents
-                if (this.parent.documents) {
-                    this.parent.documents.currentDocuments = result.documents;
-                }
+                // DON'T overwrite main documents array - keep modal documents separate
+                // This was causing documents to disappear when FCS modal opened
+                // if (this.parent.documents) {
+                //     this.parent.documents.currentDocuments = result.documents;
+                // }
 
                 if (result.documents.length === 0) {
                     documentSelection.innerHTML = '<div style="padding: 20px; color: #6b7280;">No documents found. Please upload bank statements first.</div>';
