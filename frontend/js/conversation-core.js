@@ -271,6 +271,12 @@ class ConversationCore {
                 console.log('Loading intelligence for conversation:', conversationId);
                 await this.parent.intelligence.loadConversationIntelligence(conversationId);
             }
+
+            // Load documents for the conversation
+            if (this.parent.documents) {
+                console.log('Loading documents for conversation:', conversationId);
+                await this.parent.documents.loadDocuments();
+            }
         } catch (error) {
             console.error('Error loading conversation details:', error);
         }
