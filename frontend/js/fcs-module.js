@@ -420,6 +420,11 @@ class FCSModule {
                     </div>
                 `;
             }
+
+            // Reload documents to refresh the UI
+            if (this.parent.documents) {
+                this.parent.documents.loadDocuments();
+            }
         }
     }
 
