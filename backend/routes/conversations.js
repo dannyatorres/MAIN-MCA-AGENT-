@@ -1019,4 +1019,106 @@ router.delete('/:conversationId/documents/:documentId', async (req, res) => {
     }
 });
 
+// Send to lenders - Submit deal to selected lenders
+router.post('/:id/send-to-lenders', async (req, res) => {
+    try {
+        const { id: conversationId } = req.params;
+        const { selectedLenders, businessData, documents } = req.body;
+
+        console.log('📤 Sending to lenders:', {
+            conversationId,
+            lenderCount: selectedLenders?.length,
+            documentCount: documents?.length
+        });
+
+        if (!selectedLenders || selectedLenders.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No lenders selected'
+            });
+        }
+
+        const db = getDatabase();
+        const successful = [];
+        const failed = [];
+
+        // Create submissions for each lender
+        for (const lenderId of selectedLenders) {
+            try {
+                // Get lender details
+                const lenderResult = await db.query(
+                    'SELECT name, email FROM lenders WHERE id = $1',
+                    [lenderId]
+                );
+
+                if (lenderResult.rows.length === 0) {
+                    failed.push({ lenderId, error: 'Lender not found' });
+                    continue;
+                }
+
+                const lender = lenderResult.rows[0];
+
+                // Create submission record
+                const submissionId = uuidv4();
+                await db.query(`
+                    INSERT INTO lender_submissions (
+                        id,
+                        conversation_id,
+                        lender_id,
+                        status,
+                        submitted_at,
+                        custom_message,
+                        created_at
+                    ) VALUES ($1, $2, $3, $4, NOW(), $5, NOW())
+                `, [
+                    submissionId,
+                    conversationId,
+                    lenderId,
+                    'submitted',
+                    businessData?.customMessage || null
+                ]);
+
+                console.log(`✅ Created submission to ${lender.name}`);
+
+                successful.push({
+                    lenderId,
+                    lenderName: lender.name,
+                    submissionId
+                });
+
+            } catch (error) {
+                console.error(`❌ Failed to submit to lender ${lenderId}:`, error);
+                failed.push({
+                    lenderId,
+                    error: error.message
+                });
+            }
+        }
+
+        // Update conversation last_activity
+        await db.query(
+            'UPDATE conversations SET last_activity = NOW() WHERE id = $1',
+            [conversationId]
+        );
+
+        console.log(`✅ Sent to ${successful.length}/${selectedLenders.length} lenders`);
+
+        res.json({
+            success: true,
+            results: {
+                successful,
+                failed,
+                total: selectedLenders.length
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error sending to lenders:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
