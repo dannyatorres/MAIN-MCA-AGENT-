@@ -200,23 +200,52 @@ class FCSService {
 
     // Get document buffer helper
     async getDocumentBuffer(document) {
+        console.log('🔍 getDocumentBuffer called with:', {
+            id: document.id,
+            s3_key: document.s3_key,
+            s3_bucket: document.s3_bucket,
+            file_path: document.file_path,
+            filename: document.filename,
+            original_name: document.original_name,
+            original_filename: document.original_filename
+        });
+
         if (document.s3_key) {
-            const s3Object = await Promise.race([
-                this.s3.getObject({
-                    Bucket: process.env.S3_DOCUMENTS_BUCKET,
-                    Key: document.s3_key
-                }).promise(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('S3 download timeout')), 10000))
-            ]);
-            return s3Object.Body;
+            console.log(`📥 Fetching from S3: ${document.s3_bucket || process.env.S3_DOCUMENTS_BUCKET}/${document.s3_key}`);
+            try {
+                const s3Object = await Promise.race([
+                    this.s3.getObject({
+                        Bucket: document.s3_bucket || process.env.S3_DOCUMENTS_BUCKET,
+                        Key: document.s3_key
+                    }).promise(),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('S3 download timeout')), 10000)
+                    )
+                ]);
+                console.log(`✅ S3 fetch successful: ${s3Object.Body.length} bytes`);
+                return s3Object.Body;
+            } catch (s3Error) {
+                console.error(`❌ S3 fetch failed:`, {
+                    error: s3Error.message,
+                    code: s3Error.code,
+                    bucket: document.s3_bucket || process.env.S3_DOCUMENTS_BUCKET,
+                    key: document.s3_key
+                });
+                throw s3Error;
+            }
         } else if (document.file_path) {
+            console.log(`📁 Reading from file system: ${document.file_path}`);
             const fileExists = await fs.access(document.file_path).then(() => true).catch(() => false);
             if (!fileExists) {
-                throw new Error('File not found');
+                throw new Error(`File not found at path: ${document.file_path}`);
             }
-            return await fs.readFile(document.file_path);
+            const buffer = await fs.readFile(document.file_path);
+            console.log(`✅ File read successful: ${buffer.length} bytes`);
+            return buffer;
         } else {
-            throw new Error('No valid document source');
+            console.error('❌ No valid document source found!');
+            console.error('Document object:', JSON.stringify(document, null, 2));
+            throw new Error('No valid document source (need s3_key or file_path)');
         }
     }
 
@@ -463,7 +492,13 @@ Status: Unable to process document - manual review required`;
                 name: this.processorName,
                 rawDocument: {
                     content: documentBuffer.toString('base64'),
-                    mimeType: this.getMimeType(document.filename || document.original_name)
+                    mimeType: this.getMimeType(
+                        document.filename ||
+                        document.original_name ||
+                        document.original_filename ||
+                        document.renamed_name ||
+                        'document.pdf'
+                    )
                 },
                 imagelessMode: true,  // Enable 30-page limit instead of 15-page limit (top-level camelCase)
                 processOptions: {
@@ -574,6 +609,12 @@ Status: Unable to process document - manual review required`;
     }
     
     getMimeType(filename) {
+        // Add null/undefined check
+        if (!filename) {
+            console.warn('⚠️ getMimeType called with undefined filename, defaulting to PDF');
+            return 'application/pdf';
+        }
+
         const ext = path.extname(filename).toLowerCase();
         switch (ext) {
             case '.pdf': return 'application/pdf';
@@ -925,7 +966,12 @@ UNDERWRITING NOTES
                 throw new Error('No documents found for this conversation');
             }
 
-            const documents = docsResult.rows;
+            // Map database column names to what the code expects
+            const documents = docsResult.rows.map(doc => ({
+                ...doc,
+                filename: doc.original_filename,  // Map original_filename to filename
+                original_name: doc.original_filename  // Map original_filename to original_name
+            }));
             console.log(`📄 Found ${documents.length} documents to process`);
 
             // 3. Download documents from S3 and extract text
