@@ -1043,20 +1043,35 @@ router.post('/:id/send-to-lenders', async (req, res) => {
         const failed = [];
 
         // Create submissions for each lender
-        for (const lenderId of selectedLenders) {
+        for (const lenderData of selectedLenders) {
             try {
-                // Get lender details
-                const lenderResult = await db.query(
-                    'SELECT name, email FROM lenders WHERE id = $1',
-                    [lenderId]
-                );
+                // Extract lender ID - handle both object and string formats
+                const lenderId = typeof lenderData === 'string' ? lenderData : lenderData.id;
+                const lenderName = typeof lenderData === 'object' ? lenderData.name || lenderData.lender_name : null;
+                const lenderEmail = typeof lenderData === 'object' ? lenderData.email : null;
 
-                if (lenderResult.rows.length === 0) {
-                    failed.push({ lenderId, error: 'Lender not found' });
+                if (!lenderId) {
+                    failed.push({ lenderData, error: 'Invalid lender ID' });
                     continue;
                 }
 
-                const lender = lenderResult.rows[0];
+                // If we don't have name/email, fetch from database
+                let lender;
+                if (lenderName && lenderEmail) {
+                    lender = { name: lenderName, email: lenderEmail };
+                } else {
+                    const lenderResult = await db.query(
+                        'SELECT name, email FROM lenders WHERE id = $1',
+                        [lenderId]
+                    );
+
+                    if (lenderResult.rows.length === 0) {
+                        failed.push({ lenderId, error: 'Lender not found' });
+                        continue;
+                    }
+
+                    lender = lenderResult.rows[0];
+                }
 
                 // Create submission record
                 const submissionId = uuidv4();
