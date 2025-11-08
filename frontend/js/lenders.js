@@ -2118,8 +2118,12 @@ Negative Days: 3"
 
     async editLender(lenderId) {
         try {
-            const lender = await this.parent.apiCall(`/api/lenders/${lenderId}`);
-            this.showEditLenderModal(lender);
+            const result = await this.parent.apiCall(`/api/lenders/${lenderId}`);
+            if (result.success && result.lender) {
+                this.showEditLenderModal(result.lender);
+            } else {
+                throw new Error('Lender data not found');
+            }
 
         } catch (error) {
             console.error('Error fetching lender:', error);
