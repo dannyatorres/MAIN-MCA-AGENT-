@@ -84,11 +84,52 @@ class FCSService {
         console.log('🔄 Initializing Document AI...');
         
         try {
-            // Initialize with Service Account Credentials
-            const credentialsPath = path.join(__dirname, '../../google-credentials.json');
-            this.documentAI = new DocumentProcessorServiceClient({
-                keyFilename: credentialsPath
-            });
+            // Initialize Document AI with support for both file-based and inline credentials
+
+            // Option 1: Inline credentials from environment variable (BEST for cloud deployments)
+            if (process.env.GOOGLE_CREDENTIALS_JSON) {
+                console.log('🔑 Using inline credentials from GOOGLE_CREDENTIALS_JSON');
+
+                // CRITICAL: Unset GOOGLE_APPLICATION_CREDENTIALS to prevent the library from trying to read a file
+                delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+                try {
+                    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+                    this.documentAI = new DocumentProcessorServiceClient({
+                        credentials: credentials,
+                        // Explicitly tell the client not to look for credential files
+                        projectId: process.env.GOOGLE_PROJECT_ID || 'planar-outpost-462721-c8'
+                    });
+                    console.log('✅ Successfully initialized with inline credentials (no file required)');
+                } catch (parseError) {
+                    console.error('❌ Failed to parse GOOGLE_CREDENTIALS_JSON:', parseError.message);
+                    throw new Error('Invalid GOOGLE_CREDENTIALS_JSON format');
+                }
+            }
+            // Option 2: Credentials file path (for local development)
+            else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+                console.log('🔑 Using credentials file:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
+                // Verify file exists before trying to use it
+                const fs = require('fs');
+                if (fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+                    this.documentAI = new DocumentProcessorServiceClient({
+                        keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS
+                    });
+                } else {
+                    console.error('❌ Credentials file not found:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+                    throw new Error(`Credentials file not found: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
+                }
+            }
+            // Option 3: Application Default Credentials (fallback)
+            else {
+                console.log('🔑 Using Application Default Credentials (ADC)');
+                console.log('   If this fails, set one of:');
+                console.log('   1. GOOGLE_CREDENTIALS_JSON (for cloud deployments)');
+                console.log('   2. GOOGLE_APPLICATION_CREDENTIALS (for local development)');
+                console.log('   3. Run: gcloud auth application-default login');
+                this.documentAI = new DocumentProcessorServiceClient();
+            }
 
             // Use regular configuration
             this.projectId = process.env.GOOGLE_PROJECT_ID || 'planar-outpost-462721-c8';
@@ -269,7 +310,13 @@ class FCSService {
                 Bucket: bucketName,
                 Key: inputFileName,
                 Body: documentBuffer,
-                ContentType: this.getMimeType(document.filename || document.original_name)
+                ContentType: this.getMimeType(
+                    document.filename ||
+                    document.original_name ||
+                    document.original_filename ||
+                    document.renamed_name ||
+                    'document.pdf'
+                )
             };
             
             await this.s3.putObject(uploadParams).promise();
