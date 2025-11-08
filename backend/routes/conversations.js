@@ -5,12 +5,20 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const EmailService = require('../services/emailService');
+const AWS = require('aws-sdk');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
 // Initialize email service
 const emailService = new EmailService();
+
+// Initialize S3
+const s3 = new AWS.S3({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION || 'us-east-1'
+});
 
 // ⚠️ REMOVED LOCAL FILE UPLOAD - Use /api/documents/upload instead
 
@@ -1046,6 +1054,49 @@ router.post('/:id/send-to-lenders', async (req, res) => {
         const successful = [];
         const failed = [];
 
+        // Fetch actual documents from S3 to attach to emails
+        const documentsWithContent = [];
+        if (documents && documents.length > 0) {
+            console.log(`📎 Fetching ${documents.length} documents from S3...`);
+
+            for (const doc of documents) {
+                try {
+                    // Fetch full document record from database
+                    const docResult = await db.query(
+                        'SELECT * FROM documents WHERE id = $1',
+                        [doc.id]
+                    );
+
+                    if (docResult.rows.length === 0) {
+                        console.warn(`⚠️ Document not found in DB: ${doc.id}`);
+                        continue;
+                    }
+
+                    const dbDoc = docResult.rows[0];
+
+                    // Download file from S3
+                    console.log(`⬇️  Downloading ${dbDoc.original_filename} from S3...`);
+                    const s3Data = await s3.getObject({
+                        Bucket: dbDoc.s3_bucket,
+                        Key: dbDoc.s3_key
+                    }).promise();
+
+                    documentsWithContent.push({
+                        filename: dbDoc.original_filename,
+                        content: s3Data.Body,  // File buffer
+                        contentType: dbDoc.mime_type || 'application/pdf'
+                    });
+
+                    console.log(`✅ Downloaded ${dbDoc.original_filename} (${s3Data.Body.length} bytes)`);
+
+                } catch (docError) {
+                    console.error(`❌ Failed to fetch document ${doc.id}:`, docError.message);
+                }
+            }
+
+            console.log(`📎 Successfully prepared ${documentsWithContent.length}/${documents.length} documents`);
+        }
+
         // Create submissions for each lender
         for (const lenderData of selectedLenders) {
             try {
@@ -1118,7 +1169,7 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                         emailResult = await emailService.sendLenderSubmission(
                             recipientEmail,
                             businessData,
-                            documents || []
+                            documentsWithContent || []
                         );
 
                         console.log(`✅ Email sent successfully to ${recipientEmail}`);
