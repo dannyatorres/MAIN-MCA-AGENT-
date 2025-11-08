@@ -380,27 +380,28 @@ class FCSModule {
     }
 
     async startFCSGeneration(conversationId, businessName, selectedDocuments) {
-        console.log('Starting FCS generation for:', conversationId);
+        console.log('🔵 Starting FCS generation for:', conversationId);
 
         try {
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/generate-fcs`, {
+            // Call NEW backend FCS endpoint (no longer using n8n)
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs/generate`, {
                 method: 'POST',
-                body: JSON.stringify({ businessName, selectedDocuments })
+                body: JSON.stringify({})  // Backend fetches all documents automatically
             });
-            console.log('FCS API response:', result);
+            console.log('✅ FCS API response:', result);
 
             if (result.success) {
-                console.log('FCS generation started, will begin polling in 30 seconds...');
-                // Start polling after 30 seconds
+                console.log('⏳ FCS generation started, beginning status polling...');
+                // Start polling immediately (every 5 seconds)
                 setTimeout(() => {
-                    console.log('Starting to poll for FCS report...');
-                    this.pollForFCSReport(conversationId);
-                }, 30000);
+                    console.log('📊 Starting to poll for FCS completion...');
+                    this.pollForFCSStatus(conversationId);
+                }, 5000);  // First poll after 5 seconds
             } else {
                 throw new Error(result.error || 'Failed to start generation');
             }
         } catch (error) {
-            console.error('Error starting FCS:', error);
+            console.error('❌ Error starting FCS:', error);
             // Clear ALL flags on error
             this._fcsGenerationInProgress = false;
             this._generatingForConversation = null;
@@ -429,8 +430,79 @@ class FCSModule {
         }
     }
 
+    async pollForFCSStatus(conversationId, attempts = 0) {
+        console.log(`📊 Status poll attempt ${attempts + 1} for conversation ${conversationId}`);
+
+        if (attempts >= 60) { // 60 * 5 = 5 minutes max
+            // Clear ALL flags on timeout
+            this._fcsGenerationInProgress = false;
+            this._generatingForConversation = null;
+            this._generationStartTime = null;
+
+            const fcsContent = document.getElementById('fcsContent');
+            if (fcsContent) {
+                fcsContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #f59e0b; font-size: 18px;">⏱️ Generation taking longer than expected</p>
+                        <p style="color: #6b7280;">The report may still be processing.</p>
+                        <button onclick="window.conversationUI.fcs.loadFCSData()"
+                                class="btn btn-primary"
+                                style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Check for Report
+                        </button>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        try {
+            // Check status using new endpoint
+            const statusResult = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs/status?_=${Date.now()}`);
+            console.log('📊 Status response:', statusResult);
+
+            if (statusResult.status === 'completed') {
+                // FCS is ready! Load it
+                console.log('✅ FCS completed! Loading report...');
+                this.loadFCSData(conversationId);
+            } else if (statusResult.status === 'failed') {
+                // Generation failed
+                console.error('❌ FCS generation failed:', statusResult.error);
+                this._fcsGenerationInProgress = false;
+                this._generatingForConversation = null;
+                this._generationStartTime = null;
+
+                const fcsContent = document.getElementById('fcsContent');
+                if (fcsContent) {
+                    fcsContent.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #ef4444;">
+                            <p style="font-size: 18px;">❌ FCS Generation Failed</p>
+                            <p style="font-size: 14px;">${statusResult.error || 'Unknown error'}</p>
+                            <button onclick="window.conversationUI.fcs.showFCSModal()"
+                                    style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                Try Again
+                            </button>
+                        </div>
+                    `;
+                }
+            } else {
+                // Still processing, poll again in 5 seconds
+                console.log('⏳ Still processing... will check again in 5 seconds');
+                setTimeout(() => {
+                    this.pollForFCSStatus(conversationId, attempts + 1);
+                }, 5000);
+            }
+        } catch (error) {
+            console.error('Error polling FCS status:', error);
+            // Don't fail on poll errors, just retry
+            setTimeout(() => {
+                this.pollForFCSStatus(conversationId, attempts + 1);
+            }, 5000);
+        }
+    }
+
     async pollForFCSReport(conversationId, attempts = 0) {
-        console.log(`Polling attempt ${attempts + 1} for conversation ${conversationId}`);
+        console.log(`⚠️ DEPRECATED: pollForFCSReport - use pollForFCSStatus instead`);
 
         if (attempts >= 30) { // 30 * 10 = 5 minutes max
             // Clear ALL flags on timeout
@@ -573,17 +645,26 @@ class FCSModule {
 
         try {
             const cacheBuster = new Date().getTime();
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs-report?_=${cacheBuster}`);
+            // Use NEW FCS endpoint
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs?_=${cacheBuster}`);
             console.log(`FCS API result:`, result);
 
-            if (result.success && result.report) {
+            if (result.success && result.analysis) {
                 // Check if report has actual content
-                if (!result.report.report_content || result.report.report_content.trim() === '') {
+                if (!result.analysis.report || result.analysis.report.trim() === '') {
                     throw new Error('FCS report has no content');
                 }
 
-                console.log(`Calling displayFCSReport with report data`);
-                this.displayFCSReport(result.report);
+                console.log(`✅ Calling displayFCSReport with analysis data`);
+                // Convert new format to old format for displayFCSReport
+                const reportData = {
+                    report_content: result.analysis.report,
+                    generated_at: result.analysis.completedAt,
+                    status: result.analysis.status,
+                    business_name: result.analysis.businessName,
+                    statement_count: result.analysis.statementCount
+                };
+                this.displayFCSReport(reportData);
             } else {
                 throw new Error(result.error || 'No report data returned');
             }

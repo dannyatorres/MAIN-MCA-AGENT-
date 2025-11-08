@@ -882,6 +882,234 @@ UNDERWRITING NOTES
 - Low risk profile with stable banking behavior
 - Documents processed: ${extractedData.length} bank statements`;
     }
+
+    /**
+     * Generate FCS and save to database
+     * This is the main entry point for database-backed FCS generation
+     */
+    async generateAndSaveFCS(conversationId, businessName, db) {
+        let analysisId = null;
+
+        try {
+            console.log(`\n🔵 Starting FCS generation for conversation: ${conversationId}`);
+            console.log(`   Business: ${businessName}`);
+
+            // 1. Create initial database record
+            const createResult = await db.query(`
+                INSERT INTO fcs_analyses (
+                    conversation_id,
+                    status,
+                    created_at
+                ) VALUES ($1, $2, NOW())
+                ON CONFLICT (conversation_id)
+                DO UPDATE SET
+                    status = $2,
+                    created_at = NOW(),
+                    error_message = NULL,
+                    completed_at = NULL
+                RETURNING id
+            `, [conversationId, 'processing']);
+
+            analysisId = createResult.rows[0].id;
+            console.log(`✅ Created FCS analysis record: ${analysisId}`);
+
+            // 2. Fetch documents for this conversation
+            const docsResult = await db.query(`
+                SELECT id, original_filename, s3_bucket, s3_key, mime_type, file_size
+                FROM documents
+                WHERE conversation_id = $1
+                ORDER BY created_at ASC
+            `, [conversationId]);
+
+            if (docsResult.rows.length === 0) {
+                throw new Error('No documents found for this conversation');
+            }
+
+            const documents = docsResult.rows;
+            console.log(`📄 Found ${documents.length} documents to process`);
+
+            // 3. Download documents from S3 and extract text
+            const extractedData = [];
+
+            for (let i = 0; i < documents.length; i++) {
+                const doc = documents[i];
+                console.log(`⬇️  Processing ${i + 1}/${documents.length}: ${doc.original_filename}`);
+
+                try {
+                    // Download from S3
+                    const s3Data = await this.s3.getObject({
+                        Bucket: doc.s3_bucket,
+                        Key: doc.s3_key
+                    }).promise();
+
+                    console.log(`   Downloaded ${(s3Data.Body.length / 1024).toFixed(2)} KB`);
+
+                    // Extract text using Document AI
+                    const extractedText = await this.extractTextFromDocumentSync(doc, s3Data.Body);
+
+                    if (extractedText && extractedText.trim().length > 0) {
+                        extractedData.push({
+                            filename: doc.original_filename,
+                            text: extractedText
+                        });
+                        console.log(`   ✅ Extracted ${extractedText.length} characters`);
+                    } else {
+                        console.warn(`   ⚠️  No text extracted from ${doc.original_filename}`);
+                    }
+
+                } catch (docError) {
+                    console.error(`   ❌ Failed to process ${doc.original_filename}:`, docError.message);
+                }
+            }
+
+            if (extractedData.length === 0) {
+                throw new Error('No text could be extracted from any documents');
+            }
+
+            console.log(`\n📊 Successfully extracted text from ${extractedData.length}/${documents.length} documents`);
+
+            // 4. Generate FCS analysis with Gemini
+            console.log('🤖 Sending to Gemini AI for analysis...');
+            const fcsAnalysis = await this.generateFCSAnalysisWithGemini(extractedData, businessName);
+
+            if (!fcsAnalysis || fcsAnalysis.trim().length === 0) {
+                throw new Error('Gemini returned empty analysis');
+            }
+
+            console.log(`✅ Received FCS analysis (${fcsAnalysis.length} characters)`);
+
+            // 5. Parse the analysis to extract metadata
+            const metadata = this.parseFCSMetadata(fcsAnalysis);
+
+            // 6. Update database with completed analysis
+            await db.query(`
+                UPDATE fcs_analyses SET
+                    extracted_business_name = $1,
+                    statement_count = $2,
+                    fcs_report = $3,
+                    average_deposits = $4,
+                    average_revenue = $5,
+                    total_negative_days = $6,
+                    average_negative_days = $7,
+                    state = $8,
+                    industry = $9,
+                    position_count = $10,
+                    status = 'completed',
+                    completed_at = NOW()
+                WHERE id = $11
+            `, [
+                metadata.extractedBusinessName || businessName,
+                extractedData.length,
+                fcsAnalysis,
+                metadata.averageDeposits,
+                metadata.averageRevenue,
+                metadata.totalNegativeDays,
+                metadata.averageNegativeDays,
+                metadata.state,
+                metadata.industry,
+                metadata.positionCount,
+                analysisId
+            ]);
+
+            console.log(`✅ FCS generation completed successfully!`);
+            console.log(`   Analysis ID: ${analysisId}`);
+
+            return {
+                success: true,
+                analysisId,
+                metadata
+            };
+
+        } catch (error) {
+            console.error(`❌ FCS generation failed:`, error.message);
+
+            // Update database with error
+            if (analysisId) {
+                await db.query(`
+                    UPDATE fcs_analyses SET
+                        status = 'failed',
+                        error_message = $1,
+                        completed_at = NOW()
+                    WHERE id = $2
+                `, [error.message, analysisId]);
+            }
+
+            throw error;
+        }
+    }
+
+    /**
+     * Parse metadata from FCS report text
+     * Extracts metrics from the summary section
+     */
+    parseFCSMetadata(fcsReport) {
+        const metadata = {
+            extractedBusinessName: null,
+            averageDeposits: null,
+            averageRevenue: null,
+            totalNegativeDays: null,
+            averageNegativeDays: null,
+            state: null,
+            industry: null,
+            positionCount: null
+        };
+
+        try {
+            // Extract business name
+            const nameMatch = fcsReport.match(/^EXTRACTED_BUSINESS_NAME:\s*(.+?)$/m);
+            if (nameMatch) {
+                metadata.extractedBusinessName = nameMatch[1].trim();
+            }
+
+            // Look for the summary section
+            const summaryMatch = fcsReport.match(/(\d+)-Month Summary[\s\S]*?(?=\n\n|$)/);
+            if (!summaryMatch) return metadata;
+
+            const summaryText = summaryMatch[0];
+
+            // Extract metrics
+            const avgDepositsMatch = summaryText.match(/Average Deposits:\s*\$?([\d,]+(?:\.\d{2})?)/);
+            if (avgDepositsMatch) {
+                metadata.averageDeposits = parseFloat(avgDepositsMatch[1].replace(/,/g, ''));
+            }
+
+            const avgRevenueMatch = summaryText.match(/Average True Revenue:\s*\$?([\d,]+(?:\.\d{2})?)/);
+            if (avgRevenueMatch) {
+                metadata.averageRevenue = parseFloat(avgRevenueMatch[1].replace(/,/g, ''));
+            }
+
+            const totalNegMatch = summaryText.match(/Negative Days:\s*(\d+)/);
+            if (totalNegMatch) {
+                metadata.totalNegativeDays = parseInt(totalNegMatch[1]);
+            }
+
+            const avgNegMatch = summaryText.match(/Average Negative Days:\s*([\d.]+)/);
+            if (avgNegMatch) {
+                metadata.averageNegativeDays = parseFloat(avgNegMatch[1]);
+            }
+
+            const stateMatch = summaryText.match(/State:\s*([A-Z]{2})/);
+            if (stateMatch) {
+                metadata.state = stateMatch[1];
+            }
+
+            const industryMatch = summaryText.match(/Industry:\s*(.+?)$/m);
+            if (industryMatch) {
+                metadata.industry = industryMatch[1].trim();
+            }
+
+            // Extract position count from "Position (ASSUME NEXT):" line
+            const positionMatch = summaryText.match(/Position \(ASSUME NEXT\):\s*(\d+)/);
+            if (positionMatch) {
+                metadata.positionCount = parseInt(positionMatch[1]);
+            }
+
+        } catch (parseError) {
+            console.warn('Failed to parse some FCS metadata:', parseError.message);
+        }
+
+        return metadata;
+    }
 }
 
 module.exports = new FCSService();

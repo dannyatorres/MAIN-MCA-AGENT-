@@ -1243,4 +1243,161 @@ router.post('/:id/send-to-lenders', async (req, res) => {
     }
 });
 
+// ===== FCS (File Control Sheet) Routes =====
+
+// Generate FCS analysis for a conversation
+router.post('/:id/fcs/generate', async (req, res) => {
+    try {
+        const { id: conversationId } = req.params;
+        const db = getDatabase();
+        const fcsService = require('../services/fcsService');
+
+        console.log(`🔵 FCS generation requested for conversation: ${conversationId}`);
+
+        // Get conversation details
+        const convResult = await db.query(
+            'SELECT business_name FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+
+        if (convResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Conversation not found'
+            });
+        }
+
+        const businessName = convResult.rows[0].business_name || 'Unknown Business';
+
+        // Start async FCS generation (don't await - let it run in background)
+        fcsService.generateAndSaveFCS(conversationId, businessName, db)
+            .then(result => {
+                console.log(`✅ FCS generation completed for ${conversationId}`);
+            })
+            .catch(error => {
+                console.error(`❌ FCS generation failed for ${conversationId}:`, error.message);
+            });
+
+        // Return immediately to client
+        res.json({
+            success: true,
+            message: 'FCS generation started',
+            status: 'processing'
+        });
+
+    } catch (error) {
+        console.error('Error starting FCS generation:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get FCS analysis status
+router.get('/:id/fcs/status', async (req, res) => {
+    try {
+        const { id: conversationId } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(
+            'SELECT id, status, error_message, created_at, completed_at FROM fcs_analyses WHERE conversation_id = $1',
+            [conversationId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.json({
+                success: true,
+                status: 'not_started'
+            });
+        }
+
+        const analysis = result.rows[0];
+
+        res.json({
+            success: true,
+            status: analysis.status,
+            analysisId: analysis.id,
+            error: analysis.error_message,
+            createdAt: analysis.created_at,
+            completedAt: analysis.completed_at
+        });
+
+    } catch (error) {
+        console.error('Error checking FCS status:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get completed FCS analysis
+router.get('/:id/fcs', async (req, res) => {
+    try {
+        const { id: conversationId } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(`
+            SELECT
+                id,
+                extracted_business_name,
+                statement_count,
+                fcs_report,
+                average_deposits,
+                average_revenue,
+                total_negative_days,
+                average_negative_days,
+                state,
+                industry,
+                position_count,
+                status,
+                error_message,
+                created_at,
+                completed_at
+            FROM fcs_analyses
+            WHERE conversation_id = $1
+        `, [conversationId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'No FCS analysis found for this conversation'
+            });
+        }
+
+        const analysis = result.rows[0];
+
+        res.json({
+            success: true,
+            analysis: {
+                id: analysis.id,
+                businessName: analysis.extracted_business_name,
+                statementCount: analysis.statement_count,
+                report: analysis.fcs_report,
+                metrics: {
+                    averageDeposits: analysis.average_deposits,
+                    averageRevenue: analysis.average_revenue,
+                    totalNegativeDays: analysis.total_negative_days,
+                    averageNegativeDays: analysis.average_negative_days,
+                    state: analysis.state,
+                    industry: analysis.industry,
+                    positionCount: analysis.position_count
+                },
+                status: analysis.status,
+                error: analysis.error_message,
+                createdAt: analysis.created_at,
+                completedAt: analysis.completed_at
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching FCS analysis:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
