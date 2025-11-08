@@ -1045,32 +1045,38 @@ router.post('/:id/send-to-lenders', async (req, res) => {
         // Create submissions for each lender
         for (const lenderData of selectedLenders) {
             try {
-                // Extract lender ID - handle both object and string formats
-                const lenderId = typeof lenderData === 'string' ? lenderData : lenderData.id;
-                const lenderName = typeof lenderData === 'object' ? lenderData.name || lenderData.lender_name : null;
-                const lenderEmail = typeof lenderData === 'object' ? lenderData.email : null;
+                // Extract lender info - frontend sends { name, lender_name, email }
+                const lenderName = lenderData.name || lenderData.lender_name;
+                const lenderEmail = lenderData.email;
 
-                if (!lenderId) {
-                    failed.push({ lenderData, error: 'Invalid lender ID' });
+                if (!lenderName) {
+                    failed.push({ lenderData, error: 'Missing lender name' });
                     continue;
                 }
 
-                // If we don't have name/email, fetch from database
-                let lender;
-                if (lenderName && lenderEmail) {
-                    lender = { name: lenderName, email: lenderEmail };
-                } else {
-                    const lenderResult = await db.query(
-                        'SELECT name, email FROM lenders WHERE id = $1',
-                        [lenderId]
-                    );
+                // Look up lender by name (and email if available)
+                let lenderQuery = 'SELECT id, name, email FROM lenders WHERE name ILIKE $1';
+                const queryParams = [lenderName];
 
-                    if (lenderResult.rows.length === 0) {
-                        failed.push({ lenderId, error: 'Lender not found' });
-                        continue;
-                    }
+                if (lenderEmail) {
+                    lenderQuery += ' OR email ILIKE $2';
+                    queryParams.push(lenderEmail);
+                }
 
+                const lenderResult = await db.query(lenderQuery, queryParams);
+
+                let lenderId = null;
+                let lender = null;
+
+                if (lenderResult.rows.length > 0) {
+                    // Found existing lender
                     lender = lenderResult.rows[0];
+                    lenderId = lender.id;
+                    console.log(`🔗 Found existing lender: ${lender.name} (${lenderId})`);
+                } else {
+                    // Lender doesn't exist in database yet - we'll store name/email only
+                    console.log(`⚠️  Lender "${lenderName}" not found in database - storing name only`);
+                    lender = { name: lenderName, email: lenderEmail };
                 }
 
                 // Create submission record
@@ -1080,31 +1086,35 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                         id,
                         conversation_id,
                         lender_id,
+                        lender_name,
                         status,
                         submitted_at,
                         custom_message,
+                        message,
                         created_at
-                    ) VALUES ($1, $2, $3, $4, NOW(), $5, NOW())
+                    ) VALUES ($1, $2, $3, $4, $5, NOW(), $6, $6, NOW())
                 `, [
                     submissionId,
                     conversationId,
-                    lenderId,
+                    lenderId,  // May be null if lender not in DB
+                    lenderName,
                     'submitted',
                     businessData?.customMessage || null
                 ]);
 
-                console.log(`✅ Created submission to ${lender.name}`);
+                console.log(`✅ Created submission to ${lenderName}`);
 
                 successful.push({
                     lenderId,
-                    lenderName: lender.name,
+                    lenderName: lenderName,
                     submissionId
                 });
 
             } catch (error) {
-                console.error(`❌ Failed to submit to lender ${lenderId}:`, error);
+                const lenderName = lenderData.name || lenderData.lender_name || 'unknown';
+                console.error(`❌ Failed to submit to lender ${lenderName}:`, error);
                 failed.push({
-                    lenderId,
+                    lenderName,
                     error: error.message
                 });
             }
