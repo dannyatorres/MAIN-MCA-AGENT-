@@ -1507,8 +1507,13 @@ Best regards`;
                 };
 
                 if (lender) {
-                    cleanLender.email = lender.email || lender.Email || lender['Lender Email'] ||
-                                       `${lenderName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@lender.com`;
+                    // Try multiple property names for email
+                    cleanLender.email = lender.email || lender.Email || lender['Lender Email'] || lender['Email Address'] || null;
+
+                    // If still no email found, log warning
+                    if (!cleanLender.email) {
+                        console.warn(`⚠️ No email found for lender: ${lenderName}. Properties:`, Object.keys(lender));
+                    }
                 }
 
                 return cleanLender;
