@@ -579,7 +579,7 @@ class FCSModule {
                     <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                     <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
                     <p style="color: #6b7280; font-size: 15px; margin: 0;">Processing... (${elapsed} seconds elapsed)</p>
-                    <p style="color: #9ca3af; font-size: 13px; margin: 16px 0 0 0;">n8n workflow still running...</p>
+                    <p style="color: #9ca3af; font-size: 13px; margin: 16px 0 0 0;">Analyzing bank statements with AI...</p>
                 </div>
             `;
         }
@@ -614,7 +614,7 @@ class FCSModule {
                         </style>
                         <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                         <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
-                        <p style="color: #6b7280; font-size: 15px; margin: 0;">Processing with n8n workflow...</p>
+                        <p style="color: #6b7280; font-size: 15px; margin: 0;">Analyzing documents with AI (OCR + Gemini)...</p>
                         <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh</p>
                     </div>
                 `;
