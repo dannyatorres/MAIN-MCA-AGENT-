@@ -582,21 +582,78 @@ Status: Unable to process document - manual review required`;
             
             try {
                 console.log('📋 Final Document AI Request Configuration:');
-                console.log('  - Processor:', request.name);
-                console.log('  - Content size:', request.rawDocument.content.length);
-                console.log('  - Process options:', JSON.stringify(request.processOptions, null, 2));
-                
-                console.log('🚀 Making Document AI API call...');
-                const [result] = await Promise.race([
-                    this.documentAI.processDocument(request),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Document AI timeout')), 30000))
-                ]);
-                
+                console.log('  - Processor:', this.processorName);
+                console.log('  - Content size:', documentBuffer.length);
+
+                // Use REST API directly via fetch to avoid gRPC/OpenSSL issues
+                const { GoogleAuth } = require('google-auth-library');
+                const auth = new GoogleAuth({
+                    credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON),
+                    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+                });
+
+                const client = await auth.getClient();
+                const accessToken = await client.getAccessToken();
+
+                console.log('🚀 Making Document AI REST API call...');
+                const restResponse = await fetch(
+                    `https://documentai.googleapis.com/v1/${this.processorName}:process`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            rawDocument: {
+                                content: documentBuffer.toString('base64'),
+                                mimeType: this.getMimeType(
+                                    document.filename ||
+                                    document.original_name ||
+                                    document.original_filename ||
+                                    document.renamed_name ||
+                                    'document.pdf'
+                                )
+                            },
+                            imagelessMode: true,
+                            processOptions: {
+                                ocrConfig: {
+                                    enableImageQualityScores: false,
+                                    enableSymbol: false,
+                                    premiumFeatures: {
+                                        enableSelectionMarkDetection: false,
+                                        enableMathOcr: false,
+                                        computeStyleInfo: false
+                                    },
+                                    hints: {
+                                        languageHints: ['en']
+                                    }
+                                },
+                                pageRange: {
+                                    ranges: [{
+                                        start: 1,
+                                        end: 30
+                                    }]
+                                },
+                                skipHumanReview: true,
+                                enableNativePdfParsing: true
+                            }
+                        })
+                    }
+                );
+
+                if (!restResponse.ok) {
+                    const errorText = await restResponse.text();
+                    throw new Error(`Document AI REST API error: ${restResponse.status} ${errorText}`);
+                }
+
+                const result = await restResponse.json();
+
                 console.log('📊 Document AI Response Summary:');
                 console.log('  - Document found:', !!result.document);
                 console.log('  - Text length:', result.document?.text?.length || 0);
                 console.log('  - Pages found:', result.document?.pages?.length || 0);
-                
+
                 if (result.document && result.document.text) {
                     console.log('📄 OCR TEXT SAMPLE (first 500 chars):');
                     console.log('---START---');
@@ -605,48 +662,43 @@ Status: Unable to process document - manual review required`;
                     return result.document.text;
                 }
 
-                throw new Error('Document AI processing failed and no fallback available');
-                
+                throw new Error('Document AI processing succeeded but returned no text');
+
             } catch (error) {
-                console.log(`❌ Document AI failed for ${document.filename}: ${error.code} ${error.message}`);
+                console.log(`❌ Document AI failed for ${document.filename}: ${error.code || 'N/A'} ${error.message}`);
                 console.log(`  - Error type: ${error.constructor.name}`);
-                console.log(`  - Error code: ${error.code}`);
                 console.log(`  - Error details: ${error.message}`);
 
-                // Fallback to basic PDF text extraction using pdf-lib
-                console.log('🔄 Falling back to basic PDF text extraction...');
+                // Fallback to pdf-parse for text extraction
+                console.log('🔄 Falling back to pdf-parse for text extraction...');
                 try {
-                    const pdfDoc = await PDFDocument.load(documentBuffer);
-                    const pageCount = pdfDoc.getPageCount();
+                    const pdfParse = require('pdf-parse');
 
-                    // Extract basic text content without OCR
-                    let extractedText = '';
-                    for (let i = 0; i < Math.min(pageCount, 10); i++) { // Limit to first 10 pages
-                        try {
-                            const page = pdfDoc.getPage(i);
-                            // Basic text extraction - this will only work for PDFs with embedded text
-                            extractedText += `Page ${i + 1} of ${document.filename || document.original_name}\n`;
-                        } catch (pageError) {
-                            console.log(`⚠️ Could not extract text from page ${i + 1}`);
-                        }
+                    const data = await pdfParse(documentBuffer, {
+                        max: 10 // Process first 10 pages
+                    });
+
+                    console.log(`✅ Fallback extracted ${data.text.length} characters from ${data.numpages} pages`);
+
+                    if (data.text && data.text.trim().length > 100) {
+                        return data.text;
                     }
 
-                    const documentSize = documentBuffer.length;
-                    const basicInfo = `PDF Document: ${document.filename || document.original_name}
-File Size: ${documentSize} bytes
-Pages: ${pageCount}
-Processing Method: Basic extraction (Document AI unavailable)
-Note: This document requires manual review for complete analysis.`;
-
-                    return extractedText + '\n' + basicInfo;
+                    // If minimal text, document is likely image-based
+                    console.warn('⚠️ PDF contains minimal extractable text - likely scanned/image-based');
+                    return `PDF Document: ${document.filename || document.original_name}
+File Size: ${documentBuffer.length} bytes
+Pages: ${data.numpages}
+Status: Image-based PDF requiring OCR (Document AI unavailable)
+Extracted Text: ${data.text.trim() || 'None'}
+Note: This document contains ${data.numpages} pages that may require manual review.`;
 
                 } catch (pdfError) {
-                    console.log('❌ Basic PDF extraction also failed:', pdfError.message);
+                    console.log('❌ pdf-parse also failed:', pdfError.message);
 
                     // Final fallback - document info only
-                    const documentSize = documentBuffer.length;
                     return `PDF Document: ${document.filename || document.original_name}
-File Size: ${documentSize} bytes
+File Size: ${documentBuffer.length} bytes
 Status: Unable to extract text - requires manual processing
 Error: ${error.message}`;
                 }
