@@ -2023,19 +2023,41 @@ Negative Days: 3"
                         <h3 style="margin: 0;">Add New Lender</h3>
                     </div>
                     <div style="padding: 20px;">
-                        <input type="text" id="newLenderName" placeholder="Lender Name *" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <input type="email" id="newLenderEmail" placeholder="Email *" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <input type="text" id="newLenderPhone" placeholder="Phone" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <input type="text" id="newLenderCompany" placeholder="Company" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <input type="number" id="newLenderMinAmount" placeholder="Min Amount" style="width: 48%; margin-bottom: 10px; padding: 8px;">
-                        <input type="number" id="newLenderMaxAmount" placeholder="Max Amount" style="width: 48%; margin-bottom: 10px; padding: 8px; float: right;">
-                        <input type="text" id="newLenderIndustries" placeholder="Industries (comma-separated)" style="width: 100%; margin-bottom: 10px; padding: 8px; clear: both;">
-                        <input type="text" id="newLenderStates" placeholder="States (comma-separated)" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <textarea id="newLenderNotes" rows="3" placeholder="Notes" style="width: 100%; padding: 8px;"></textarea>
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Lender Name *</label>
+                        <input type="text" id="newLenderName" placeholder="e.g., ABC Capital Lending" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Email Address *</label>
+                        <input type="email" id="newLenderEmail" placeholder="e.g., deals@abclending.com" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Phone Number</label>
+                        <input type="text" id="newLenderPhone" placeholder="(555) 123-4567" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Company Name</label>
+                        <input type="text" id="newLenderCompany" placeholder="ABC Lending LLC" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Min Amount ($)</label>
+                                <input type="number" id="newLenderMinAmount" placeholder="10000" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Max Amount ($)</label>
+                                <input type="number" id="newLenderMaxAmount" placeholder="500000" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                            </div>
+                        </div>
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Industries (comma-separated)</label>
+                        <input type="text" id="newLenderIndustries" placeholder="retail, construction, healthcare" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">States (comma-separated)</label>
+                        <input type="text" id="newLenderStates" placeholder="CA, NY, TX, FL" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Notes</label>
+                        <textarea id="newLenderNotes" rows="3" placeholder="Additional notes about this lender..." style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
                     </div>
                     <div style="padding: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
-                        <button onclick="document.getElementById('addLenderModal').remove()">Cancel</button>
-                        <button onclick="window.conversationUI.lenders.saveLender()" style="background: #059669; color: white; padding: 8px 16px; border-radius: 4px;">Save</button>
+                        <button onclick="document.getElementById('addLenderModal').remove()" style="padding: 10px 20px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+                        <button onclick="window.conversationUI.lenders.saveLender()" style="padding: 10px 20px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Add Lender</button>
                     </div>
                 </div>
             </div>
@@ -2119,19 +2141,41 @@ Negative Days: 3"
                         <h3 style="margin: 0;">Edit Lender</h3>
                     </div>
                     <div style="padding: 20px;">
-                        <input type="text" id="editLenderName" value="${lender.name || ''}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <input type="email" id="editLenderEmail" value="${lender.email || ''}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <input type="text" id="editLenderPhone" value="${lender.phone || ''}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <input type="text" id="editLenderCompany" value="${lender.company || ''}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <input type="number" id="editLenderMinAmount" value="${lender.min_amount || 0}" style="width: 48%; margin-bottom: 10px; padding: 8px;">
-                        <input type="number" id="editLenderMaxAmount" value="${lender.max_amount || 0}" style="width: 48%; margin-bottom: 10px; padding: 8px; float: right;">
-                        <input type="text" id="editLenderIndustries" value="${industriesStr}" style="width: 100%; margin-bottom: 10px; padding: 8px; clear: both;">
-                        <input type="text" id="editLenderStates" value="${statesStr}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-                        <textarea id="editLenderNotes" rows="3" style="width: 100%; padding: 8px;">${lender.notes || ''}</textarea>
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Lender Name *</label>
+                        <input type="text" id="editLenderName" value="${lender.name || ''}" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Email Address *</label>
+                        <input type="email" id="editLenderEmail" value="${lender.email || ''}" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Phone Number</label>
+                        <input type="text" id="editLenderPhone" value="${lender.phone || ''}" placeholder="(555) 123-4567" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Company Name</label>
+                        <input type="text" id="editLenderCompany" value="${lender.company || ''}" placeholder="ABC Lending LLC" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Min Amount ($)</label>
+                                <input type="number" id="editLenderMinAmount" value="${lender.min_amount || 0}" placeholder="10000" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Max Amount ($)</label>
+                                <input type="number" id="editLenderMaxAmount" value="${lender.max_amount || 0}" placeholder="500000" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                            </div>
+                        </div>
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Industries (comma-separated)</label>
+                        <input type="text" id="editLenderIndustries" value="${industriesStr}" placeholder="retail, construction, healthcare" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">States (comma-separated)</label>
+                        <input type="text" id="editLenderStates" value="${statesStr}" placeholder="CA, NY, TX, FL" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+
+                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Notes</label>
+                        <textarea id="editLenderNotes" rows="3" placeholder="Additional notes about this lender..." style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; resize: vertical;">${lender.notes || ''}</textarea>
                     </div>
                     <div style="padding: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
-                        <button onclick="document.getElementById('editLenderModal').remove()">Cancel</button>
-                        <button onclick="window.conversationUI.lenders.updateLender('${lender.id}')" style="background: #3b82f6; color: white; padding: 8px 16px; border-radius: 4px;">Update</button>
+                        <button onclick="document.getElementById('editLenderModal').remove()" style="padding: 10px 20px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+                        <button onclick="window.conversationUI.lenders.updateLender('${lender.id}')" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Update Lender</button>
                     </div>
                 </div>
             </div>
