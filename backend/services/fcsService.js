@@ -80,15 +80,19 @@ class FCSService {
             console.log('📋 Document AI already initialized');
             return;
         }
-        
+
         console.log('🔄 Initializing Document AI...');
-        
+
         try {
+            // CRITICAL: Force REST transport globally to avoid OpenSSL gRPC issues in cloud environments
+            process.env.GOOGLE_CLOUD_USE_REST = 'true';
+
             // Initialize Document AI with support for both file-based and inline credentials
 
             // Option 1: Inline credentials from environment variable (BEST for cloud deployments)
             if (process.env.GOOGLE_CREDENTIALS_JSON) {
                 console.log('🔑 Using inline credentials from GOOGLE_CREDENTIALS_JSON');
+                console.log('🌐 GOOGLE_CLOUD_USE_REST set to force REST transport');
 
                 // CRITICAL: Unset GOOGLE_APPLICATION_CREDENTIALS to prevent the library from trying to read a file
                 delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
@@ -96,15 +100,12 @@ class FCSService {
                 try {
                     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
 
-                    // Use REST fallback instead of gRPC to avoid OpenSSL decoder issues in Railway/cloud
-                    // The fallback option forces the client to use REST instead of gRPC
+                    // Initialize with credentials object - REST transport forced via env var
                     this.documentAI = new DocumentProcessorServiceClient({
                         credentials: credentials,
-                        projectId: process.env.GOOGLE_PROJECT_ID || 'planar-outpost-462721-c8',
-                        // Force REST transport (fallback: true uses REST, fallback: false uses gRPC)
-                        fallback: true
+                        projectId: process.env.GOOGLE_PROJECT_ID || 'planar-outpost-462721-c8'
                     });
-                    console.log('✅ Successfully initialized with inline credentials (using REST transport)');
+                    console.log('✅ Successfully initialized with inline credentials (REST transport via env var)');
                 } catch (parseError) {
                     console.error('❌ Failed to parse GOOGLE_CREDENTIALS_JSON:', parseError.message);
                     console.error('Stack trace:', parseError.stack);
