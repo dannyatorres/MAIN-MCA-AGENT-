@@ -4,9 +4,13 @@
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
+const EmailService = require('../services/emailService');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+
+// Initialize email service
+const emailService = new EmailService();
 
 // ⚠️ REMOVED LOCAL FILE UPLOAD - Use /api/documents/upload instead
 
@@ -1104,10 +1108,50 @@ router.post('/:id/send-to-lenders', async (req, res) => {
 
                 console.log(`✅ Created submission to ${lenderName}`);
 
+                // Send email to lender
+                let emailResult = null;
+                if (lenderEmail || lender.email) {
+                    try {
+                        const recipientEmail = lenderEmail || lender.email;
+                        console.log(`📧 Sending email to ${recipientEmail}...`);
+
+                        emailResult = await emailService.sendLenderSubmission(
+                            recipientEmail,
+                            businessData,
+                            documents || []
+                        );
+
+                        console.log(`✅ Email sent successfully to ${recipientEmail}`);
+
+                        // Update submission status to indicate email was sent
+                        await db.query(
+                            'UPDATE lender_submissions SET status = $1 WHERE id = $2',
+                            ['sent', submissionId]
+                        );
+                    } catch (emailError) {
+                        console.error(`❌ Failed to send email to ${lenderEmail || lender.email}:`, emailError.message);
+
+                        // Update submission status to indicate email failed
+                        await db.query(
+                            'UPDATE lender_submissions SET status = $1 WHERE id = $2',
+                            ['email_failed', submissionId]
+                        );
+
+                        emailResult = {
+                            success: false,
+                            error: emailError.message
+                        };
+                    }
+                } else {
+                    console.warn(`⚠️  No email address for lender ${lenderName}`);
+                }
+
                 successful.push({
                     lenderId,
                     lenderName: lenderName,
-                    submissionId
+                    submissionId,
+                    emailSent: emailResult?.success || false,
+                    emailError: emailResult?.error || null
                 });
 
             } catch (error) {
