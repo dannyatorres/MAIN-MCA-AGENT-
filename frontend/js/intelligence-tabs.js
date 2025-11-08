@@ -325,11 +325,34 @@ class IntelligenceTabs {
     }
 
     async renderDocumentsTab(content) {
-        if (this.parent.documents) {
-            content.innerHTML = this.parent.documents.createDocumentsTabTemplate();
-            await this.parent.documents.loadDocuments();
-            this.parent.documents.setupDocumentsEventListeners();
+        console.log('📄 Rendering Documents Tab');
+
+        if (!this.parent.documents) {
+            console.error('❌ Documents module not available');
+            content.innerHTML = `
+                <div class="error-state" style="text-align: center; padding: 40px;">
+                    <div class="error-icon" style="font-size: 48px; margin-bottom: 16px;">❌</div>
+                    <h4 style="color: #dc2626;">Documents Module Not Loaded</h4>
+                    <p style="color: #6b7280;">The documents module failed to initialize.</p>
+                </div>
+            `;
+            return;
         }
+
+        // Render template first
+        content.innerHTML = this.parent.documents.createDocumentsTabTemplate();
+
+        // Setup event listeners
+        this.parent.documents.setupDocumentsEventListeners();
+
+        // Load documents with slight delay to ensure DOM is ready
+        setTimeout(async () => {
+            try {
+                await this.parent.documents.loadDocuments();
+            } catch (error) {
+                console.error('❌ Failed to load documents in tab:', error);
+            }
+        }, 100);
     }
 
     renderEditTab(content) {

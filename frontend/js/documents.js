@@ -75,32 +75,83 @@ class DocumentsModule {
 
     async loadDocuments() {
         const conversation = this.parent.getSelectedConversation();
+        const conversationId = this.parent.getCurrentConversationId();
 
         console.log('=== DOCUMENTS LOADING DEBUG ===');
         console.log('Selected conversation:', conversation?.id);
-        console.log('Parent current ID:', this.parent.getCurrentConversationId());
-        console.log('Parent selected conv:', this.parent.getSelectedConversation()?.id);
+        console.log('Parent current ID:', conversationId);
         console.log('================================');
 
-        if (!conversation) {
-            console.warn('No conversation found, cannot load documents');
+        // Try to use conversation ID even if conversation object is null
+        const targetId = conversation?.id || conversationId;
+
+        if (!targetId) {
+            console.error('❌ No conversation ID available, cannot load documents');
+            this.renderDocumentsList([]);
+
+            // Show user-friendly error in UI
+            const documentsList = document.getElementById('documentsList');
+            if (documentsList) {
+                documentsList.innerHTML = `
+                    <div class="error-state" style="text-align: center; padding: 40px;">
+                        <div class="error-icon" style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                        <h4 style="color: #dc2626; margin-bottom: 8px;">No Conversation Selected</h4>
+                        <p style="color: #6b7280;">Please select a conversation from the list to view documents.</p>
+                    </div>
+                `;
+            }
             return;
         }
 
         try {
-            const result = await this.parent.apiCall(`/api/conversations/${conversation.id}/documents`);
+            console.log(`📄 Loading documents for conversation: ${targetId}`);
+            const result = await this.parent.apiCall(`/api/conversations/${targetId}/documents`);
 
             if (result.success) {
                 this.currentDocuments = (result.documents || []).map(doc => this.normalizeDocumentFields(doc));
+                console.log(`✅ Loaded ${this.currentDocuments.length} documents`);
                 this.renderDocumentsList();
                 this.updateDocumentsSummary();
                 this.toggleFCSGenerationSection();
             } else {
-                console.error('Failed to load documents:', result.error);
+                console.error('❌ Failed to load documents:', result.error);
+
+                // Show error in UI
+                const documentsList = document.getElementById('documentsList');
+                if (documentsList) {
+                    documentsList.innerHTML = `
+                        <div class="error-state" style="text-align: center; padding: 40px;">
+                            <div class="error-icon" style="font-size: 48px; margin-bottom: 16px;">❌</div>
+                            <h4 style="color: #dc2626; margin-bottom: 8px;">Failed to Load Documents</h4>
+                            <p style="color: #6b7280; margin-bottom: 16px;">${result.error || 'Unknown error'}</p>
+                            <button onclick="window.conversationUI.documents.loadDocuments()"
+                                    class="btn btn-primary">
+                                Retry
+                            </button>
+                        </div>
+                    `;
+                }
                 this.renderDocumentsList([]);
             }
         } catch (error) {
-            console.error('Error loading documents:', error);
+            console.error('❌ Error loading documents:', error);
+
+            // Show error in UI
+            const documentsList = document.getElementById('documentsList');
+            if (documentsList) {
+                documentsList.innerHTML = `
+                    <div class="error-state" style="text-align: center; padding: 40px;">
+                        <div class="error-icon" style="font-size: 48px; margin-bottom: 16px;">❌</div>
+                        <h4 style="color: #dc2626; margin-bottom: 8px;">Error Loading Documents</h4>
+                        <p style="color: #6b7280; margin-bottom: 8px;">${error.message}</p>
+                        <p style="color: #9ca3af; font-size: 14px; margin-bottom: 16px;">Check console for details</p>
+                        <button onclick="window.conversationUI.documents.loadDocuments()"
+                                class="btn btn-primary">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
             this.renderDocumentsList([]);
         }
     }
