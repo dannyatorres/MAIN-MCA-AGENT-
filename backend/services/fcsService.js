@@ -95,14 +95,19 @@ class FCSService {
 
                 try {
                     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+
+                    // Use REST fallback instead of gRPC to avoid OpenSSL decoder issues in Railway/cloud
+                    // The fallback option forces the client to use REST instead of gRPC
                     this.documentAI = new DocumentProcessorServiceClient({
                         credentials: credentials,
-                        // Explicitly tell the client not to look for credential files
-                        projectId: process.env.GOOGLE_PROJECT_ID || 'planar-outpost-462721-c8'
+                        projectId: process.env.GOOGLE_PROJECT_ID || 'planar-outpost-462721-c8',
+                        // Force REST transport (fallback: true uses REST, fallback: false uses gRPC)
+                        fallback: true
                     });
-                    console.log('✅ Successfully initialized with inline credentials (no file required)');
+                    console.log('✅ Successfully initialized with inline credentials (using REST transport)');
                 } catch (parseError) {
                     console.error('❌ Failed to parse GOOGLE_CREDENTIALS_JSON:', parseError.message);
+                    console.error('Stack trace:', parseError.stack);
                     throw new Error('Invalid GOOGLE_CREDENTIALS_JSON format');
                 }
             }
