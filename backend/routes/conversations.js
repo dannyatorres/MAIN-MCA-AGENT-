@@ -1165,6 +1165,8 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                     try {
                         const recipientEmail = lenderEmail || lender.email;
                         console.log(`📧 Sending email to ${recipientEmail}...`);
+                        console.log(`📎 Attaching ${documentsWithContent.length} documents:`,
+                            documentsWithContent.map(d => `${d.filename} (${d.content?.length || 0} bytes)`));
 
                         emailResult = await emailService.sendLenderSubmission(
                             recipientEmail,
