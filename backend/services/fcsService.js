@@ -72,13 +72,13 @@ class FCSService {
             
             // Try models in order of preference (cheapest first for testing)
             const modelsToTry = [
-                "gemini-1.5-flash",              // Cheapest - use for testing
-                "gemini-2.0-flash-exp",          // Flash experimental
-                "gemini-2.5-flash",              // Gemini 2.5 Flash
-                "gemini-2.5-flash-exp",          // Gemini 2.5 experimental
+                "gemini-1.5-flash-latest",       // Cheapest - use for testing
+                "gemini-1.5-flash-001",          // Flash with version
+                "gemini-1.5-flash-002",          // Flash newer version
+                "gemini-1.5-pro-latest",         // Pro latest
                 "gemini-1.5-pro-002",            // Latest 1.5 Pro version
-                "gemini-1.5-pro",                // Stable 1.5 Pro
-                "gemini-2.0-flash-thinking-exp", // Thinking model with reasoning
+                "gemini-1.5-pro-001",            // 1.5 Pro 001
+                "gemini-pro",                    // 1.0 Pro (cheap fallback)
                 "gemini-2.5-pro"                 // Most expensive - last resort
             ];
             
