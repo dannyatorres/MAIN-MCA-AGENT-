@@ -454,11 +454,11 @@ class FCSModule {
     async pollForFCSStatus(conversationId, attempts = 0) {
         console.log(`📊 Status poll attempt ${attempts + 1} for conversation ${conversationId}`);
 
-        if (attempts >= 60) { // 60 * 5 = 5 minutes max
-            // Clear ALL flags on timeout
+        if (attempts >= 60) {
             this._fcsGenerationInProgress = false;
             this._generatingForConversation = null;
             this._generationStartTime = null;
+            this.hideFCSProgress();
 
             const fcsResults = document.getElementById('fcsResults');
             if (fcsResults) {
@@ -479,28 +479,73 @@ class FCSModule {
         }
 
         try {
-            // Check status using new endpoint
-            const statusResult = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs/status?_=${Date.now()}`);
-            console.log('📊 Status response:', statusResult);
+            // ✅ Use fetch directly with better error handling
+            const response = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/fcs/status?_=${Date.now()}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('📊 Status response status:', response.status);
+            console.log('📊 Status response headers:', response.headers.get('content-type'));
+
+            // Check if response is OK
+            if (!response.ok) {
+                console.error(`❌ Status check failed: ${response.status} ${response.statusText}`);
+
+                // Try to get error text
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+
+                // If it's a 404, the FCS doesn't exist yet - keep polling
+                if (response.status === 404) {
+                    console.log('⏳ FCS not created yet, continuing to poll...');
+                    setTimeout(() => {
+                        this.pollForFCSStatus(conversationId, attempts + 1);
+                    }, 5000);
+                    return;
+                }
+
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.error('❌ Response is not JSON:', responseText);
+                throw new Error('Server returned non-JSON response: ' + responseText.substring(0, 100));
+            }
+
+            // Parse JSON
+            const statusResult = await response.json();
+            console.log('📊 Parsed status result:', statusResult);
 
             if (statusResult.status === 'completed') {
-                // FCS is ready! Load it
                 console.log('✅ FCS completed! Loading report...');
 
-                // ✅ DON'T clear flags yet - wait until we fetch the new data!
-                // Otherwise loadFCSData() will block itself
-
-                // Hide progress indicator
                 this.hideFCSProgress();
 
-                // Fetch the completed FCS data directly (don't call loadFCSData - it checks flags)
+                // Fetch the completed FCS data
                 try {
-                    const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs?_=${Date.now()}`);
+                    const fcsResponse = await fetch(`${this.apiBaseUrl}/api/conversations/${conversationId}/fcs?_=${Date.now()}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!fcsResponse.ok) {
+                        throw new Error(`HTTP ${fcsResponse.status}`);
+                    }
+
+                    const result = await fcsResponse.json();
 
                     if (result.success && result.analysis && result.analysis.report) {
                         console.log('✅ Got fresh FCS data, displaying...');
 
-                        // ✅ NOW clear the flags after we have the data
+                        // Clear flags after we have the data
                         this._fcsGenerationInProgress = false;
                         this._generatingForConversation = null;
                         this._generationStartTime = null;
@@ -522,23 +567,19 @@ class FCSModule {
                 } catch (fetchError) {
                     console.error('Error fetching completed FCS:', fetchError);
 
-                    // Clear flags on error
                     this._fcsGenerationInProgress = false;
                     this._generatingForConversation = null;
                     this._generationStartTime = null;
 
                     this.utils.showNotification('Error loading FCS: ' + fetchError.message, 'error');
                 }
+
             } else if (statusResult.status === 'failed') {
-                // Generation failed
                 console.error('❌ FCS generation failed:', statusResult.error);
 
-                // Clear flags
                 this._fcsGenerationInProgress = false;
                 this._generatingForConversation = null;
                 this._generationStartTime = null;
-
-                // Hide progress indicator
                 this.hideFCSProgress();
 
                 const fcsResults = document.getElementById('fcsResults');
@@ -556,10 +597,9 @@ class FCSModule {
                     fcsResults.style.display = 'block';
                 }
             } else {
-                // Still processing, poll again in 5 seconds
+                // Still processing
                 console.log('⏳ Still processing... Status:', statusResult.status);
 
-                // Update progress message based on elapsed time
                 const elapsed = Math.floor((Date.now() - this._generationStartTime) / 1000);
                 if (elapsed < 20) {
                     this.showFCSProgress('Extracting text from documents...');
@@ -574,11 +614,25 @@ class FCSModule {
                 }, 5000);
             }
         } catch (error) {
-            console.error('Error polling FCS status:', error);
-            // Don't fail on poll errors, just retry
-            setTimeout(() => {
-                this.pollForFCSStatus(conversationId, attempts + 1);
-            }, 5000);
+            console.error('❌ Error polling FCS status:', error);
+            console.error('Error details:', error.message);
+            console.error('Error stack:', error.stack);
+
+            // Don't fail immediately - retry a few times
+            if (attempts < 5) {
+                console.log('Retrying after error...');
+                setTimeout(() => {
+                    this.pollForFCSStatus(conversationId, attempts + 1);
+                }, 5000);
+            } else {
+                // After 5 failed attempts, show error
+                this._fcsGenerationInProgress = false;
+                this._generatingForConversation = null;
+                this._generationStartTime = null;
+                this.hideFCSProgress();
+
+                this.utils.showNotification('Error checking FCS status: ' + error.message, 'error');
+            }
         }
     }
 
