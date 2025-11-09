@@ -28,10 +28,18 @@ console.log('✅ dotenv loaded');
 const app = express();
 const server = http.createServer(app);
 
-// Setup Socket.io
+// Setup Socket.io (CORS will be configured after allowedOrigins is set)
 const io = new Server(server, {
     cors: {
-        origin: ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:8000'],
+        origin: (origin, callback) => {
+            // Allow same origins as Express CORS
+            if (!origin) return callback(null, true);
+            if (origin.includes('localhost') || origin.includes('railway.app')) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true
     }
 });
@@ -54,8 +62,32 @@ io.on('connection', (socket) => {
 });
 
 // CORS configuration
+const allowedOrigins = [
+    'http://localhost:8080',
+    'http://localhost:3000',
+    'http://localhost:8000'
+];
+
+// Add Railway domain if deployed
+if (process.env.RAILWAY_STATIC_URL) {
+    allowedOrigins.push(`https://${process.env.RAILWAY_STATIC_URL}`);
+}
+if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    allowedOrigins.push(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
+}
+
 const corsOptions = {
-    origin: ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:8000'],
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        // Allow Railway domains or localhost
+        if (allowedOrigins.includes(origin) || origin.includes('railway.app')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -151,6 +183,10 @@ app.use('/api', (req, res, next) => {
     return authenticate(req, res, next);
 });
 
+// Serve static frontend files
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../frontend')));
+
 // Mount routes
 app.use('/api', healthRoutes);
 app.use('/api/conversations', conversationRoutes);
@@ -162,6 +198,13 @@ app.use('/api/csv-import', csvImportRoutes);
 app.use('/api/lookups', lookupsRoutes);
 app.use('/api/n8n', n8nRoutes);
 app.use('/api/ai', aiRoutes);
+
+// Catch-all route for SPA - serve index.html for any non-API routes
+app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(__dirname, '../frontend/command-center.html'));
+    }
+});
 
 // Start server
 const PORT = process.env.PORT || 3000;
