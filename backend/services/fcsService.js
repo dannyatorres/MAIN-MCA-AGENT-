@@ -70,16 +70,16 @@ class FCSService {
         try {
             this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
             
-            // Try the latest models in order of preference
+            // Try models in order of preference (cheapest first for testing)
             const modelsToTry = [
-                "gemini-2.5-pro",               // Gemini 2.5 Pro - most powerful
-                "gemini-2.0-flash-thinking-exp", // Latest thinking model with reasoning
-                "gemini-2.5-flash-exp",          // Gemini 2.5 experimental
+                "gemini-1.5-flash",              // Cheapest - use for testing
+                "gemini-2.0-flash-exp",          // Flash experimental
                 "gemini-2.5-flash",              // Gemini 2.5 Flash
-                "gemini-2.0-flash-exp",          // Gemini 2.0 experimental
+                "gemini-2.5-flash-exp",          // Gemini 2.5 experimental
                 "gemini-1.5-pro-002",            // Latest 1.5 Pro version
-                "gemini-1.5-pro",                // Most powerful stable model
-                "gemini-1.5-flash"               // Fallback fast model
+                "gemini-1.5-pro",                // Stable 1.5 Pro
+                "gemini-2.0-flash-thinking-exp", // Thinking model with reasoning
+                "gemini-2.5-pro"                 // Most expensive - last resort
             ];
             
             for (const modelName of modelsToTry) {
