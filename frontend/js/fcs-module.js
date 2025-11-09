@@ -484,7 +484,8 @@ class FCSModule {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                credentials: 'include'  // Send session cookie for authentication
             });
 
             console.log('📊 Status response status:', response.status);
@@ -533,7 +534,8 @@ class FCSModule {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json'
-                        }
+                        },
+                        credentials: 'include'  // Send session cookie for authentication
                     });
 
                     if (!fcsResponse.ok) {
