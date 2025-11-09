@@ -1095,16 +1095,20 @@ class FCSModule {
         try {
             const lines = content.split('\n');
             let html = '';
-            let inList = false;
+            let inBulletList = false;
 
             for (let i = 0; i < lines.length; i++) {
                 const trimmedLine = lines[i].trim();
 
-                // Skip empty lines completely
-                if (trimmedLine === '') continue;
-
-                // Check next line to see if it's a data line (for month summaries)
-                const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
+                // Skip empty lines
+                if (trimmedLine === '') {
+                    // Close bullet list if open
+                    if (inBulletList) {
+                        html += '</div>';
+                        inBulletList = false;
+                    }
+                    continue;
+                }
 
                 // Main section headers (ALL CAPS, standalone)
                 if (trimmedLine === trimmedLine.toUpperCase() &&
@@ -1112,9 +1116,9 @@ class FCSModule {
                     !trimmedLine.includes(':') &&
                     trimmedLine.match(/^[A-Z\s_]+$/)) {
 
-                    if (inList) {
+                    if (inBulletList) {
                         html += '</div>';
-                        inList = false;
+                        inBulletList = false;
                     }
 
                     html += `
@@ -1122,7 +1126,7 @@ class FCSModule {
                             color: #1e40af;
                             font-size: 15px;
                             font-weight: 700;
-                            margin: 16px 0 8px 0;
+                            margin: 20px 0 10px 0;
                             padding-bottom: 4px;
                             border-bottom: 2px solid #3b82f6;
                         ">${this.escapeHtml(trimmedLine)}</div>
@@ -1130,76 +1134,113 @@ class FCSModule {
                     continue;
                 }
 
-                // Month headers (e.g., "Jul 2025", "Aug 2025")
-                if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/)) {
-                    if (inList) {
+                // Section headers (ends with colon, Title Case or mixed, NOT all data fields)
+                if (trimmedLine.endsWith(':') &&
+                    !trimmedLine.match(/^(Deposits|Revenue|Neg Days|End Bal|#Dep|Business Name|Position|Industry|Time in Business|Average|State|Positions):/i)) {
+
+                    if (inBulletList) {
                         html += '</div>';
-                        inList = false;
+                        inBulletList = false;
                     }
 
                     html += `
                         <div style="
-                            background: #eff6ff;
-                            color: #1e40af;
-                            font-weight: 600;
-                            font-size: 13px;
-                            padding: 6px 10px;
-                            margin: 8px 0 4px 0;
-                            border-left: 3px solid #3b82f6;
-                            border-radius: 2px;
-                        ">${this.escapeHtml(trimmedLine)}</div>
-                    `;
-                    continue;
-                }
-
-                // Sub-section headers (ends with colon, not a data line)
-                if (trimmedLine.endsWith(':') && !trimmedLine.match(/^(Deposits|Revenue|Neg Days|End Bal|#Dep):/)) {
-                    if (inList) {
-                        html += '</div>';
-                        inList = false;
-                    }
-
-                    html += `
-                        <div style="
-                            color: #374151;
+                            color: #111827;
                             font-size: 14px;
                             font-weight: 600;
-                            margin: 12px 0 6px 0;
+                            margin: 16px 0 8px 0;
                         ">${this.escapeHtml(trimmedLine)}</div>
                     `;
                     continue;
                 }
 
-                // Bullet points or list items
-                if (trimmedLine.match(/^[•\-*]\s/) || trimmedLine.match(/^\d+\.\s/)) {
-                    if (!inList) {
-                        html += '<div style="margin: 6px 0;">';
-                        inList = true;
+                // Month summary lines (e.g., "Jul 2025 Deposits: $92,615 Revenue: ...")
+                if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+Deposits:/)) {
+                    if (inBulletList) {
+                        html += '</div>';
+                        inBulletList = false;
                     }
 
-                    const bulletText = trimmedLine.replace(/^[•\-*]\s/, '').replace(/^\d+\.\s/, '');
+                    // Parse the month line into structured data
+                    const monthMatch = trimmedLine.match(/^([A-Z][a-z]+\s+\d{4})\s+(.+)$/);
+                    if (monthMatch) {
+                        const month = monthMatch[1];
+                        const data = monthMatch[2];
+
+                        // Split data by known field names
+                        const fields = data.split(/\s+(?=Deposits:|Revenue:|Neg Days:|End Bal:|#Dep:)/);
+
+                        html += `
+                            <div style="
+                                background: #f0f9ff;
+                                border-left: 3px solid #3b82f6;
+                                padding: 10px 12px;
+                                margin: 8px 0;
+                                border-radius: 4px;
+                            ">
+                                <div style="
+                                    font-weight: 700;
+                                    color: #1e40af;
+                                    font-size: 14px;
+                                    margin-bottom: 6px;
+                                ">${this.escapeHtml(month)}</div>
+                                <div style="
+                                    display: grid;
+                                    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                                    gap: 6px;
+                                    font-size: 13px;
+                                ">
+                                    ${fields.map(field => {
+                                        const [key, value] = field.split(/:\s*/);
+                                        return `
+                                            <div style="display: flex; gap: 6px;">
+                                                <span style="font-weight: 600; color: #374151;">${this.escapeHtml(key)}:</span>
+                                                <span style="color: #111827;">${this.escapeHtml(value || '')}</span>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    continue;
+                }
+
+                // Bullet points (•, -, or numbered)
+                if (trimmedLine.match(/^[•\-]\s/) || trimmedLine.match(/^\d+\.\s/)) {
+                    if (!inBulletList) {
+                        html += '<div style="margin: 8px 0 8px 16px;">';
+                        inBulletList = true;
+                    }
+
+                    const bulletText = trimmedLine.replace(/^[•\-]\s/, '').replace(/^\d+\.\s/, '');
                     const isNumbered = trimmedLine.match(/^\d+\.\s/);
+                    const bulletSymbol = isNumbered ? trimmedLine.match(/^\d+/)[0] + '.' : '•';
 
                     html += `
                         <div style="
                             display: flex;
                             gap: 8px;
-                            margin: 3px 0 3px ${isNumbered ? '0' : '12px'};
-                            line-height: 1.4;
+                            margin: 4px 0;
+                            line-height: 1.5;
                             font-size: 13px;
                         ">
-                            <span style="color: #3b82f6; min-width: 6px;">${isNumbered ? trimmedLine.match(/^\d+/)[0] + '.' : '•'}</span>
-                            <span style="color: #374151;">${this.escapeHtml(bulletText)}</span>
+                            <span style="
+                                color: #3b82f6;
+                                font-weight: 600;
+                                min-width: ${isNumbered ? '20px' : '8px'};
+                            ">${this.escapeHtml(bulletSymbol)}</span>
+                            <span style="color: #374151; flex: 1;">${this.escapeHtml(bulletText)}</span>
                         </div>
                     `;
                     continue;
                 }
 
-                // Data lines (Deposits:, Revenue:, etc.)
-                if (trimmedLine.match(/^(Deposits|Revenue|Neg Days|End Bal|#Dep|Business Name|Position|Industry|Time in Business|Average|Negative Days|State|Positions):/)) {
-                    if (inList) {
+                // Summary data fields (in 3-Month Summary section)
+                if (trimmedLine.match(/^(Business Name|Position|Industry|Time in Business|Average [A-Z]|Negative Days|State|Positions|Average Number):/)) {
+                    if (inBulletList) {
                         html += '</div>';
-                        inList = false;
+                        inBulletList = false;
                     }
 
                     const colonIndex = trimmedLine.indexOf(':');
@@ -1209,26 +1250,32 @@ class FCSModule {
                     html += `
                         <div style="
                             display: grid;
-                            grid-template-columns: 140px 1fr;
-                            gap: 10px;
-                            padding: 4px 8px;
+                            grid-template-columns: 200px 1fr;
+                            gap: 12px;
+                            padding: 6px 10px;
                             background: #f9fafb;
-                            margin: 2px 0;
+                            margin: 3px 0;
                             border-radius: 3px;
                             font-size: 13px;
+                            align-items: center;
                         ">
-                            <span style="font-weight: 600; color: #4b5563;">${this.escapeHtml(key)}:</span>
-                            <span style="color: #111827;">${this.escapeHtml(value)}</span>
+                            <span style="
+                                font-weight: 600;
+                                color: #4b5563;
+                            ">${this.escapeHtml(key)}:</span>
+                            <span style="
+                                color: #111827;
+                            ">${this.escapeHtml(value)}</span>
                         </div>
                     `;
                     continue;
                 }
 
-                // Other key-value pairs
+                // Other key-value pairs (e.g., "July 2025:")
                 if (trimmedLine.includes(':') && !trimmedLine.endsWith(':')) {
-                    if (inList) {
+                    if (inBulletList) {
                         html += '</div>';
-                        inList = false;
+                        inBulletList = false;
                     }
 
                     const colonIndex = trimmedLine.indexOf(':');
@@ -1237,36 +1284,36 @@ class FCSModule {
 
                     html += `
                         <div style="
-                            display: flex;
-                            gap: 8px;
-                            margin: 4px 0;
-                            font-size: 13px;
-                            line-height: 1.4;
+                            margin: 12px 0 6px 0;
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: #374151;
                         ">
-                            <span style="font-weight: 600; color: #4b5563;">${this.escapeHtml(key)}:</span>
-                            <span style="color: #374151;">${this.escapeHtml(value)}</span>
+                            ${this.escapeHtml(key)}:
+                            ${value ? `<span style="font-weight: 400; margin-left: 8px;">${this.escapeHtml(value)}</span>` : ''}
                         </div>
                     `;
                     continue;
                 }
 
                 // Regular text
-                if (inList) {
+                if (inBulletList) {
                     html += '</div>';
-                    inList = false;
+                    inBulletList = false;
                 }
 
                 html += `
                     <div style="
-                        margin: 4px 0;
-                        line-height: 1.4;
+                        margin: 8px 0;
+                        line-height: 1.5;
                         color: #374151;
                         font-size: 13px;
                     ">${this.escapeHtml(trimmedLine)}</div>
                 `;
             }
 
-            if (inList) {
+            // Close any open bullet list
+            if (inBulletList) {
                 html += '</div>';
             }
 
