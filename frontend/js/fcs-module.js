@@ -382,6 +382,9 @@ class FCSModule {
     async startFCSGeneration(conversationId, businessName, selectedDocuments) {
         console.log('🔵 Starting FCS generation for:', conversationId);
 
+        // Show initial progress
+        this.showFCSProgress('Starting FCS generation...');
+
         try {
             // Call NEW backend FCS endpoint (no longer using n8n)
             const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs/generate`, {
@@ -392,6 +395,10 @@ class FCSModule {
 
             if (result.success) {
                 console.log('⏳ FCS generation started, beginning status polling...');
+
+                // Update progress message
+                this.showFCSProgress('Extracting text from documents with Document AI...');
+
                 // Start polling immediately (every 5 seconds)
                 setTimeout(() => {
                     console.log('📊 Starting to poll for FCS completion...');
@@ -402,10 +409,15 @@ class FCSModule {
             }
         } catch (error) {
             console.error('❌ Error starting FCS:', error);
+
             // Clear ALL flags on error
             this._fcsGenerationInProgress = false;
             this._generatingForConversation = null;
             this._generationStartTime = null;
+
+            // Hide progress indicator
+            this.hideFCSProgress();
+
             this.utils.showNotification('Failed to start FCS generation: ' + error.message, 'error');
 
             // Show error in UI
@@ -464,13 +476,29 @@ class FCSModule {
             if (statusResult.status === 'completed') {
                 // FCS is ready! Load it
                 console.log('✅ FCS completed! Loading report...');
-                this.loadFCSData(conversationId);
-            } else if (statusResult.status === 'failed') {
-                // Generation failed
-                console.error('❌ FCS generation failed:', statusResult.error);
+
+                // ✅ FIXED: Clear flags BEFORE loading data
                 this._fcsGenerationInProgress = false;
                 this._generatingForConversation = null;
                 this._generationStartTime = null;
+
+                // Hide progress indicator
+                this.hideFCSProgress();
+
+                // Load and display the report
+                this.loadFCSData(conversationId);
+                this.utils.showNotification('FCS generated successfully!', 'success');
+            } else if (statusResult.status === 'failed') {
+                // Generation failed
+                console.error('❌ FCS generation failed:', statusResult.error);
+
+                // Clear flags
+                this._fcsGenerationInProgress = false;
+                this._generatingForConversation = null;
+                this._generationStartTime = null;
+
+                // Hide progress indicator
+                this.hideFCSProgress();
 
                 const fcsContent = document.getElementById('fcsContent');
                 if (fcsContent) {
@@ -488,6 +516,17 @@ class FCSModule {
             } else {
                 // Still processing, poll again in 5 seconds
                 console.log('⏳ Still processing... will check again in 5 seconds');
+
+                // Update progress message based on elapsed time
+                const elapsed = Math.floor((Date.now() - this._generationStartTime) / 1000);
+                if (elapsed < 20) {
+                    this.showFCSProgress('Extracting text from documents...');
+                } else if (elapsed < 40) {
+                    this.showFCSProgress('Analyzing financial data with AI...');
+                } else {
+                    this.showFCSProgress(`Still processing... (${elapsed}s elapsed)`);
+                }
+
                 setTimeout(() => {
                     this.pollForFCSStatus(conversationId, attempts + 1);
                 }, 5000);
@@ -1056,18 +1095,29 @@ class FCSModule {
         if (!progressDiv) {
             progressDiv = document.createElement('div');
             progressDiv.id = 'fcsProgressIndicator';
-            progressDiv.className = 'fcs-progress-indicator';
+            progressDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 32px;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+                min-width: 300px;
+            `;
             progressDiv.innerHTML = `
-                <div class="progress-content">
-                    <div class="loading-spinner"></div>
-                    <div class="progress-text">${message}</div>
-                </div>
+                <div class="loading-spinner"></div>
+                <div class="progress-text" style="font-weight: 500; text-align: center; color: #111827;"></div>
             `;
 
-            const modal = document.getElementById('fcsModal');
-            if (modal) {
-                modal.appendChild(progressDiv);
-            }
+            // ✅ FIXED: Append to body instead of modal
+            document.body.appendChild(progressDiv);
         } else {
             const progressText = progressDiv.querySelector('.progress-text');
             if (progressText) {
