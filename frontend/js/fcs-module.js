@@ -487,17 +487,48 @@ class FCSModule {
                 // FCS is ready! Load it
                 console.log('✅ FCS completed! Loading report...');
 
-                // ✅ FIXED: Clear flags BEFORE loading data
-                this._fcsGenerationInProgress = false;
-                this._generatingForConversation = null;
-                this._generationStartTime = null;
+                // ✅ DON'T clear flags yet - wait until we fetch the new data!
+                // Otherwise loadFCSData() will block itself
 
                 // Hide progress indicator
                 this.hideFCSProgress();
 
-                // Load and display the report
-                this.loadFCSData(conversationId);
-                this.utils.showNotification('FCS generated successfully!', 'success');
+                // Fetch the completed FCS data directly (don't call loadFCSData - it checks flags)
+                try {
+                    const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs?_=${Date.now()}`);
+
+                    if (result.success && result.analysis && result.analysis.report) {
+                        console.log('✅ Got fresh FCS data, displaying...');
+
+                        // ✅ NOW clear the flags after we have the data
+                        this._fcsGenerationInProgress = false;
+                        this._generatingForConversation = null;
+                        this._generationStartTime = null;
+
+                        // Display the report
+                        const reportData = {
+                            report_content: result.analysis.report,
+                            generated_at: result.analysis.completedAt,
+                            status: result.analysis.status,
+                            business_name: result.analysis.businessName,
+                            statement_count: result.analysis.statementCount
+                        };
+                        this.displayFCSReport(reportData);
+                        this.utils.showNotification('FCS generated successfully!', 'success');
+
+                    } else {
+                        throw new Error('No report data in response');
+                    }
+                } catch (fetchError) {
+                    console.error('Error fetching completed FCS:', fetchError);
+
+                    // Clear flags on error
+                    this._fcsGenerationInProgress = false;
+                    this._generatingForConversation = null;
+                    this._generationStartTime = null;
+
+                    this.utils.showNotification('Error loading FCS: ' + fetchError.message, 'error');
+                }
             } else if (statusResult.status === 'failed') {
                 // Generation failed
                 console.error('❌ FCS generation failed:', statusResult.error);
@@ -526,7 +557,7 @@ class FCSModule {
                 }
             } else {
                 // Still processing, poll again in 5 seconds
-                console.log('⏳ Still processing... will check again in 5 seconds');
+                console.log('⏳ Still processing... Status:', statusResult.status);
 
                 // Update progress message based on elapsed time
                 const elapsed = Math.floor((Date.now() - this._generationStartTime) / 1000);
