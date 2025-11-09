@@ -634,18 +634,10 @@ Status: Unable to process document - manual review required`;
                             'document.pdf'
                         )
                     },
-                    processOptions: {
-                        ocrConfig: {
-                            enableImageQualityScores: false,
-                            enableSymbol: false,
-                            hints: {
-                                languageHints: ['en']
-                            }
-                        }
-                    }
+                    imagelessMode: true  // Enables 30-page processing (vs 15-page default)
                 };
 
-                console.log('🚀 Making Document AI REST API call with OAuth...');
+                console.log('🚀 Making Document AI REST API call (30-page mode with imagelessMode)...');
                 const restResponse = await fetch(
                     `https://documentai.googleapis.com/v1/${this.processorName}:process`,
                     {
@@ -667,7 +659,8 @@ Status: Unable to process document - manual review required`;
 
                 console.log('📊 Document AI Response:');
                 console.log('  - Text length:', result.document?.text?.length || 0);
-                console.log('  - Pages:', result.document?.pages?.length || 0);
+                console.log('  - Pages processed:', result.document?.pages?.length || 0);
+                console.log('  - Mode: imagelessMode (30-page limit)');
 
                 if (result.document && result.document.text) {
                     console.log('📄 OCR TEXT SAMPLE (first 500 chars):');
@@ -680,18 +673,13 @@ Status: Unable to process document - manual review required`;
                 throw new Error('No text returned from Document AI');
 
             } catch (error) {
-                console.log(`❌ Document AI failed for ${document.filename}: ${error.code || 'N/A'} ${error.message}`);
-                console.log(`  - Error type: ${error.constructor.name}`);
-                console.log(`  - Error details: ${error.message}`);
+                console.log(`❌ Document AI failed: ${error.message}`);
 
-                // Fallback to pdf-parse for text extraction
-                console.log('🔄 Falling back to pdf-parse for text extraction...');
+                // Fallback to pdf-parse
+                console.log('🔄 Falling back to pdf-parse...');
                 try {
                     const pdfParse = require('pdf-parse');
-
-                    const data = await pdfParse(documentBuffer, {
-                        max: 10 // Process first 10 pages
-                    });
+                    const data = await pdfParse(documentBuffer, { max: 30 });
 
                     console.log(`✅ Fallback extracted ${data.text.length} characters from ${data.numpages} pages`);
 
@@ -699,23 +687,14 @@ Status: Unable to process document - manual review required`;
                         return data.text;
                     }
 
-                    // If minimal text, document is likely image-based
-                    console.warn('⚠️ PDF contains minimal extractable text - likely scanned/image-based');
                     return `PDF Document: ${document.filename || document.original_name}
 File Size: ${documentBuffer.length} bytes
 Pages: ${data.numpages}
-Status: Image-based PDF requiring OCR (Document AI unavailable)
-Extracted Text: ${data.text.trim() || 'None'}
-Note: This document contains ${data.numpages} pages that may require manual review.`;
+Status: Minimal text - may need manual review`;
 
                 } catch (pdfError) {
-                    console.log('❌ pdf-parse also failed:', pdfError.message);
-
-                    // Final fallback - document info only
-                    return `PDF Document: ${document.filename || document.original_name}
-File Size: ${documentBuffer.length} bytes
-Status: Unable to extract text - requires manual processing
-Error: ${error.message}`;
+                    console.log('❌ pdf-parse failed:', pdfError.message);
+                    return `PDF Processing Failed: ${document.filename || document.original_name}`;
                 }
             }
 
