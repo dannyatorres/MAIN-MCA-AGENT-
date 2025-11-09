@@ -853,61 +853,114 @@ class FCSModule {
         try {
             console.log('=== displayFCSReport DEBUG ===');
             console.log('Full report object:', report);
-            console.log('report.report_content:', report.report_content);
-            console.log('Type of report_content:', typeof report.report_content);
-            console.log('Is null?', report.report_content === null);
-            console.log('Is undefined?', report.report_content === undefined);
+            console.log('report.report_content exists:', !!report?.report_content);
+            console.log('report.report_content length:', report?.report_content?.length || 0);
             console.log('==============================');
 
-            const fcsResults = document.getElementById('fcsResults');
+            // ✅ CRITICAL: Get or CREATE fcsResults element
+            let fcsResults = document.getElementById('fcsResults');
+
             if (!fcsResults) {
-                console.error('fcsResults element not found');
-                return;
+                console.warn('⚠️ fcsResults element not found, creating it now...');
+
+                // Find parent container
+                const intelligenceContent = document.getElementById('intelligenceContent');
+                if (!intelligenceContent) {
+                    console.error('❌ intelligenceContent container not found - cannot display FCS!');
+                    alert('Error: Cannot display FCS report. Page structure is missing.');
+                    return;
+                }
+
+                // Create the fcsResults div
+                fcsResults = document.createElement('div');
+                fcsResults.id = 'fcsResults';
+                intelligenceContent.appendChild(fcsResults);
+
+                console.log('✅ Created fcsResults element dynamically');
+            }
+
+            // ✅ ALWAYS hide empty state when showing FCS
+            const emptyState = document.querySelector('#intelligenceContent .empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'none';
             }
 
             // Check if report has content
             if (!report || !report.report_content) {
-                console.error('Report or report_content is missing:', report);
+                console.error('❌ Report or report_content is missing');
                 fcsResults.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #ef4444;">
-                        <p>FCS Report has no content</p>
-                        <p style="font-size: 0.9em; color: #666;">The report data is missing from the response.</p>
-                        <pre style="text-align: left; font-size: 11px; background: #f3f4f6; padding: 10px; border-radius: 4px; max-height: 200px; overflow: auto;">${JSON.stringify(report, null, 2)}</pre>
-                        <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button>
+                        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                        <h3>FCS Report Data Missing</h3>
+                        <p style="font-size: 0.9em; color: #666; margin: 16px 0;">The report content is empty or invalid.</p>
+                        <details style="margin: 20px 0; text-align: left;">
+                            <summary style="cursor: pointer; color: #3b82f6;">View Debug Info</summary>
+                            <pre style="font-size: 11px; background: #f3f4f6; padding: 10px; border-radius: 4px; max-height: 200px; overflow: auto; margin-top: 10px;">${JSON.stringify(report, null, 2)}</pre>
+                        </details>
+                        <button onclick="window.conversationUI.fcs.loadFCSData()"
+                                class="btn btn-primary"
+                                style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Retry Loading
+                        </button>
                     </div>
                 `;
                 fcsResults.style.display = 'block';
                 return;
             }
 
-            // Handle null/undefined date gracefully
+            // Handle date formatting
             let reportDate = 'Unknown Date';
             if (report.generated_at) {
                 try {
-                    reportDate = new Date(report.generated_at).toLocaleDateString();
+                    reportDate = new Date(report.generated_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
                 } catch (dateError) {
                     console.warn('Error parsing date:', dateError);
-                    reportDate = 'Invalid Date';
+                    reportDate = String(report.generated_at);
                 }
             }
 
-            console.log('About to call formatFCSContent with:', report.report_content.substring(0, 100) + '...');
+            console.log('✅ Formatting FCS content...');
             const processedContent = this.formatFCSContent(report.report_content);
 
+            console.log('✅ Building HTML...');
             fcsResults.innerHTML = `
                 <div class="fcs-report" style="width: 100%; max-width: 100%; overflow: hidden;">
-                    <div class="fcs-header" style="background: #f0f9ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="fcs-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 8px; margin-bottom: 20px; color: white;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
                             <div>
-                                <h4 style="color: #0369a1; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                    FCS Financial Analysis Report
+                                <h4 style="color: white; margin: 0 0 8px 0; font-size: 24px; font-weight: 600;">
+                                    📊 FCS Financial Analysis Report
                                 </h4>
-                                <p style="color: #475569; font-size: 0.875rem; margin: 5px 0 0 0;">Generated on ${reportDate}</p>
-                                ${report.status ? `<p style="color: #475569; font-size: 0.875rem; margin: 5px 0 0 0;">Status: ${report.status}</p>` : ''}
+                                <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0;">
+                                    Generated on ${reportDate}
+                                </p>
+                                ${report.business_name ? `
+                                    <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 4px 0 0 0;">
+                                        Business: ${report.business_name}
+                                    </p>
+                                ` : ''}
+                                ${report.statement_count ? `
+                                    <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 4px 0 0 0;">
+                                        Statements Analyzed: ${report.statement_count}
+                                    </p>
+                                ` : ''}
                             </div>
                             <div style="display: flex; gap: 8px;">
-                                <button class="btn btn-primary" onclick="window.conversationUI.fcs.downloadFCSReport()" style="padding: 6px 12px; font-size: 0.875rem;">
-                                    📥 Download
+                                <button class="btn btn-secondary"
+                                        onclick="window.conversationUI.fcs.downloadFCSReport()"
+                                        style="padding: 10px 16px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                                    📥 Download PDF
+                                </button>
+                                <button class="btn btn-primary"
+                                        onclick="window.conversationUI.fcs.regenerateFCS()"
+                                        style="padding: 10px 16px; background: white; color: #667eea; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                                    🔄 Regenerate
                                 </button>
                             </div>
                         </div>
@@ -916,20 +969,11 @@ class FCSModule {
                     <div class="fcs-content" style="
                         background: white;
                         border: 1px solid #e5e7eb;
-                        border-radius: 6px;
-                        padding: 0;
-                        width: 100%;
-                        max-width: 100%;
-                        overflow-x: auto;
-                        overflow-y: visible;
+                        border-radius: 8px;
+                        padding: 24px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                     ">
-                        <div style="
-                            min-width: 600px;
-                            width: 100%;
-                            max-width: 100%;
-                        ">
-                            ${processedContent}
-                        </div>
+                        ${processedContent}
                     </div>
                 </div>
             `;
@@ -937,17 +981,43 @@ class FCSModule {
             // ✅ CRITICAL: Show the container!
             fcsResults.style.display = 'block';
 
-            console.log('FCS report displayed successfully');
+            // ✅ Scroll to top of results
+            fcsResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            console.log('✅ FCS report displayed successfully!');
+
         } catch (error) {
-            console.error('Error in displayFCSReport:', error);
+            console.error('❌ Error in displayFCSReport:', error);
             console.error('Error stack:', error.stack);
-            const fcsResults = document.getElementById('fcsResults');
+
+            // Emergency fallback
+            let fcsResults = document.getElementById('fcsResults');
+            if (!fcsResults) {
+                const intelligenceContent = document.getElementById('intelligenceContent');
+                if (intelligenceContent) {
+                    fcsResults = document.createElement('div');
+                    fcsResults.id = 'fcsResults';
+                    intelligenceContent.appendChild(fcsResults);
+                }
+            }
+
             if (fcsResults) {
                 fcsResults.innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: #ef4444;">
-                        <p>Error displaying FCS report</p>
-                        <p style="font-size: 0.8em; color: #666;">Error: ${error.message}</p>
-                        <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry Loading</button>
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+                        <h3>Error Displaying FCS Report</h3>
+                        <p style="font-size: 14px; color: #666; margin: 16px 0;">
+                            ${error.message}
+                        </p>
+                        <details style="margin: 20px 0; text-align: left;">
+                            <summary style="cursor: pointer; color: #3b82f6;">View Technical Details</summary>
+                            <pre style="font-size: 11px; background: #f3f4f6; padding: 10px; border-radius: 4px; max-height: 200px; overflow: auto; margin-top: 10px;">${error.stack}</pre>
+                        </details>
+                        <button onclick="window.conversationUI.fcs.loadFCSData()"
+                                class="btn btn-primary"
+                                style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Retry Loading
+                        </button>
                     </div>
                 `;
                 fcsResults.style.display = 'block';
