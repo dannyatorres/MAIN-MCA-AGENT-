@@ -734,52 +734,64 @@ class FCSModule {
         console.log('=== FCS DATA LOADING DEBUG ===');
         console.log('Current conversation ID:', conversationId);
         console.log('Generation in progress:', this._fcsGenerationInProgress);
-        console.log('Generating for conversation:', this._generatingForConversation);
         console.log('================================');
+
+        // ✅ CRITICAL: Ensure fcsResults element exists
+        let fcsResults = document.getElementById('fcsResults');
+        if (!fcsResults) {
+            console.warn('⚠️ fcsResults not found, creating it...');
+            const intelligenceContent = document.getElementById('intelligenceContent');
+            if (intelligenceContent) {
+                fcsResults = document.createElement('div');
+                fcsResults.id = 'fcsResults';
+                fcsResults.style.display = 'block';
+                intelligenceContent.appendChild(fcsResults);
+            } else {
+                console.error('❌ intelligenceContent not found, cannot create fcsResults');
+                return;
+            }
+        }
 
         // CRITICAL: BLOCK IMMEDIATELY if generation is in progress for THIS conversation
         if (this._fcsGenerationInProgress && this._generatingForConversation === conversationId) {
             console.log('🚫 BLOCKED: Generation in progress for this conversation - NOT loading old data');
 
-            // Keep showing loading state - DON'T fetch from database
-            const fcsResults = document.getElementById('fcsResults');
-            if (fcsResults) {
-                fcsResults.innerHTML = `
-                    <div style="text-align: center; padding: 60px 40px;">
-                        <style>
-                            @keyframes spin {
-                                0% { transform: rotate(0deg); }
-                                100% { transform: rotate(360deg); }
-                            }
-                        </style>
-                        <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                        <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
-                        <p style="color: #6b7280; font-size: 15px; margin: 0;">Analyzing documents with AI (OCR + Gemini)...</p>
-                        <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh</p>
-                    </div>
-                `;
-                fcsResults.style.display = 'block';
-            }
-            return; // EXIT IMMEDIATELY - don't continue to database fetch
+            // Keep showing loading state
+            fcsResults.innerHTML = `
+                <div style="text-align: center; padding: 60px 40px;">
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                    <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
+                    <p style="color: #6b7280; font-size: 15px; margin: 0;">Analyzing documents with AI (OCR + OpenAI)...</p>
+                    <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh</p>
+                </div>
+            `;
+            fcsResults.style.display = 'block';
+            return; // EXIT IMMEDIATELY
         }
 
         if (!conversationId) {
             console.warn('No conversation ID found, cannot load FCS data');
-            return;
-        }
-
-        const fcsResults = document.getElementById('fcsResults');
-        if (!fcsResults) {
-            console.error('fcsResults element not found');
+            fcsResults.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #6b7280;">
+                    <p>No conversation selected</p>
+                </div>
+            `;
+            fcsResults.style.display = 'block';
             return;
         }
 
         console.log(`Loading FCS data for conversation ${conversationId}`);
 
-        // Show loading state ONLY if not generating
+        // Show loading state
         fcsResults.innerHTML = `
             <div style="text-align: center; padding: 40px;">
-                <div class="loading-spinner"></div>
+                <div class="loading-spinner" style="margin: 0 auto 16px; width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                 <p>Loading FCS report...</p>
             </div>
         `;
@@ -815,27 +827,22 @@ class FCSModule {
             console.error('Error loading FCS data:', error);
             console.error('Error stack:', error.stack);
 
-            // Handle 404 (no report found) specially
-            if (error.message.includes('404')) {
-                fcsResults.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📊</div>
-                        <h4>No FCS Report Generated</h4>
-                        <p>Upload bank statements and generate an FCS report from the Documents tab</p>
-                        <button class="btn btn-primary" onclick="window.conversationUI.intelligence.switchIntelligenceTab('documents')" style="margin-top: 10px;">
-                            Go to Documents
-                        </button>
-                    </div>
-                `;
-                fcsResults.style.display = 'block';
-                return;
-            }
-
+            // Show friendly error message
             fcsResults.innerHTML = `
-                <div style="text-align: center; padding: 20px; color: #ef4444;">
-                    <p>Failed to load FCS data</p>
-                    <p style="font-size: 0.8em; color: #666;">Error: ${error.message}</p>
-                    <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry Loading</button>
+                <div style="text-align: center; padding: 60px 40px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+                    <h3 style="color: #6b7280; margin-bottom: 12px;">No FCS Report Available</h3>
+                    <p style="color: #9ca3af; margin-bottom: 24px;">
+                        ${error.message.includes('404') || error.message.includes('not found')
+                            ? 'Generate a report to analyze your financial documents'
+                            : 'Error loading report: ' + error.message}
+                    </p>
+                    <button onclick="window.conversationUI.fcs.showFCSModal()"
+                            class="btn btn-primary"
+                            style="padding: 10px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        Generate FCS Report
+                    </button>
                 </div>
             `;
             fcsResults.style.display = 'block';
