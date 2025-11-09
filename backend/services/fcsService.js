@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const AWS = require('aws-sdk');
 const { DocumentProcessorServiceClient } = require('@google-cloud/documentai');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const OpenAI = require('openai');
 const { PDFDocument } = require('pdf-lib');
 
 // Load environment variables
@@ -18,15 +18,14 @@ class FCSService {
             region: process.env.AWS_REGION
         });
         
-        // Initialize Google services (lazy loading)
-        
+        // Initialize AI services (lazy loading)
+
         // Lazy initialization flags
-        this.genAI = null;
-        this.model = null;
+        this.openai = null;
         this.documentAI = null;
-        this.isGeminiInitialized = false;
+        this.isOpenAIInitialized = false;
         this.isDocumentAIInitialized = false;
-        
+
     }
     
     async getAccessTokenFromRefreshToken() {
@@ -64,38 +63,21 @@ class FCSService {
         }
     }
 
-    async initializeGeminiAI() {
-        if (this.isGeminiInitialized) return;
+    async initializeOpenAI() {
+        if (this.isOpenAIInitialized) return;
 
         try {
-            this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            
-            // Try models in order of preference (cheapest first for testing)
-            const modelsToTry = [
-                "gemini-1.5-flash",              // Cheapest - use for testing
-                "gemini-pro",                    // 1.0 Pro (fallback)
-                "gemini-1.5-pro",                // 1.5 Pro
-                "gemini-1.5-pro-002"             // Latest 1.5 Pro version
-            ];
-            
-            for (const modelName of modelsToTry) {
-                try {
-                    this.model = this.genAI.getGenerativeModel({ model: modelName });
-                    console.log(`✅ Gemini AI initialized with ${modelName}`);
-                    this.isGeminiInitialized = true;
-                    return;
-                } catch (modelError) {
-                    console.log(`⚠️ Failed to initialize ${modelName}, trying next model...`);
-                    continue;
-                }
-            }
-            
-            throw new Error('All Gemini models failed to initialize');
-            
+            this.openai = new OpenAI({
+                apiKey: process.env.OPENAI_API_KEY
+            });
+
+            console.log(`✅ OpenAI initialized with GPT-4o`);
+            this.isOpenAIInitialized = true;
+
         } catch (error) {
-            console.error('❌ Gemini AI initialization failed:', error);
-            this.model = null;
-            this.isGeminiInitialized = false;
+            console.error('❌ OpenAI initialization failed:', error);
+            this.openai = null;
+            this.isOpenAIInitialized = false;
         }
     }
     
@@ -724,26 +706,23 @@ Status: Unable to process document - manual review required`;
     
     async generateFCSAnalysisWithGemini(extractedData, businessName) {
         try {
-            // Force Gemini re-initialization to avoid caching issues on regeneration
-            console.log('🔄 Resetting Gemini AI for fresh analysis...');
-            this.genAI = null;
-            this.model = null;
-            this.isGeminiInitialized = false;
-            
+            // Force OpenAI re-initialization for fresh analysis
+            console.log('🔄 Initializing OpenAI for analysis...');
+
             // Add small delay to avoid rate limiting
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Initialize Gemini AI on-demand
-            await this.initializeGeminiAI();
-            
-            // If Gemini is not available, use hardcoded analysis
-            if (!this.model) {
+
+            // Initialize OpenAI on-demand
+            await this.initializeOpenAI();
+
+            // If OpenAI is not available, use hardcoded analysis
+            if (!this.openai) {
                 return this.generateTemplateAnalysis(extractedData, businessName);
             }
             
-            // Combine all extracted text with size limits to prevent Gemini overload
+            // Combine all extracted text with size limits to prevent token overload
             const allBankStatements = extractedData.map(doc => {
-                // Truncate very large documents to prevent Gemini timeout/failure
+                // Truncate very large documents to prevent timeout/failure
                 const maxCharsPerDoc = 15000; // Reasonable limit per document
                 const truncatedText = doc.text.length > maxCharsPerDoc 
                     ? doc.text.substring(0, maxCharsPerDoc) + '\n\n[Document truncated for analysis - showing first 15,000 characters]'
@@ -915,55 +894,50 @@ FORMATTING REMINDER: DO NOT USE ASTERISKS ANYWHERE IN THE REPORT
 Analyze the provided ${statementCount} months of bank statements and create the FCS following these exact formatting rules.
 `;
 
-            // Enhanced generation configuration for better analysis
-            const generationConfig = {
-                temperature: 0.2,        // Slightly higher for variation on regeneration
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 8192,   // Allow longer, more detailed reports
-            };
-            
-            console.log('🔍 Gemini request details:');
+            console.log('🔍 OpenAI request details:');
+            console.log('  - Model: gpt-4o');
             console.log('  - Prompt length:', prompt.length);
-            console.log('  - Temperature:', generationConfig.temperature);
-            console.log('  - Max tokens:', generationConfig.maxOutputTokens);
+            console.log('  - Temperature: 0.2');
+            console.log('  - Max tokens: 8192');
 
-            console.log('🚀 Making Gemini API call...');
-            
-            const result = await Promise.race([
-                this.model.generateContent({
-                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                    generationConfig
+            console.log('🚀 Making OpenAI API call...');
+
+            const completion = await Promise.race([
+                this.openai.chat.completions.create({
+                    model: "gpt-4o",
+                    messages: [{ role: "user", content: prompt }],
+                    temperature: 0.2,
+                    max_tokens: 8192
                 }),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini AI timeout')), 90000)) // Extended timeout for detailed analysis
+                new Promise((_, reject) => setTimeout(() => reject(new Error('OpenAI timeout')), 90000)) // Extended timeout for detailed analysis
             ]);
-            
-            console.log('📨 Gemini API call completed, processing response...');
-            const response = await result.response;
+
+            console.log('📨 OpenAI API call completed, processing response...');
             console.log('📋 Raw response object:', {
-                candidates: response.candidates?.length || 0,
-                text: typeof response.text === 'function' ? 'function available' : 'no text function'
+                choices: completion.choices?.length || 0,
+                model: completion.model,
+                usage: completion.usage
             });
-            
-            const fcsAnalysis = response.text();
-            
-            console.log('📊 GEMINI FINAL RESULT:');
+
+            const fcsAnalysis = completion.choices[0].message.content;
+
+            console.log('📊 OPENAI FINAL RESULT:');
             console.log('  - Response length:', fcsAnalysis.length);
             console.log('  - First 200 chars:', fcsAnalysis.substring(0, 200));
             console.log('  - Last 200 chars:', fcsAnalysis.substring(Math.max(0, fcsAnalysis.length - 200)));
-            console.log('🔍 FULL GEMINI RESPONSE:');
+            console.log('🔍 FULL OPENAI RESPONSE:');
             console.log(fcsAnalysis);
-            
-            // If Gemini returns empty response, use template
+
+            // If OpenAI returns empty response, use template
             if (!fcsAnalysis || fcsAnalysis.trim().length === 0) {
-                console.log('⚠️ Gemini returned empty response, falling back to template');
+                console.log('⚠️ OpenAI returned empty response, falling back to template');
                 return this.generateTemplateAnalysis(extractedData, businessName);
             }
             
             return fcsAnalysis;
             
         } catch (error) {
-            console.log('❌ Gemini AI error details:');
+            console.log('❌ OpenAI error details:');
             console.log('  - Error type:', error.constructor.name);
             console.log('  - Error message:', error.message);
             console.log('  - Error stack:', error.stack?.substring(0, 500));
