@@ -634,28 +634,14 @@ Status: Unable to process document - manual review required`;
                             'document.pdf'
                         )
                     },
-                    imagelessMode: true,
                     processOptions: {
                         ocrConfig: {
                             enableImageQualityScores: false,
                             enableSymbol: false,
-                            premiumFeatures: {
-                                enableSelectionMarkDetection: false,
-                                enableMathOcr: false,
-                                computeStyleInfo: false
-                            },
                             hints: {
                                 languageHints: ['en']
                             }
-                        },
-                        pageRange: {
-                            ranges: [{
-                                start: 1,
-                                end: 30
-                            }]
-                        },
-                        skipHumanReview: true,
-                        enableNativePdfParsing: true
+                        }
                     }
                 };
 
