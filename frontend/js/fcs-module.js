@@ -1379,32 +1379,10 @@ class FCSModule {
         return div.innerHTML;
     }
 
+    // Disabled - download feature not needed
     async downloadFCSReport() {
-        const conversationId = this.parent.getCurrentConversationId();
-        if (!conversationId) {
-            this.utils.showNotification('No conversation selected', 'error');
-            return;
-        }
-
-        try {
-            const downloadUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/fcs-report/download`;
-
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = `FCS_Report_${conversationId}.pdf`;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-
-            setTimeout(() => {
-                document.body.removeChild(link);
-            }, 100);
-
-            this.utils.showNotification('Download started', 'success');
-        } catch (error) {
-            console.error('Download error:', error);
-            this.utils.showNotification('Download failed: ' + error.message, 'error');
-        }
+        console.log('Download FCS - feature disabled');
+        this.utils.showNotification('Download feature coming soon!', 'info');
     }
 
     async regenerateFCS() {
@@ -1511,7 +1489,6 @@ class FCSModule {
                 <div class="fcs-header">
                     <h4>FCS Financial Analysis Report</h4>
                     <div class="fcs-actions">
-                        <button onclick="window.conversationUI.fcs.downloadFCSReport()" class="btn-secondary">Download PDF</button>
                         <button onclick="window.conversationUI.fcs.regenerateFCS()" class="btn-primary">Regenerate</button>
                     </div>
                 </div>
