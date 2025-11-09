@@ -1069,24 +1069,24 @@ class FCSModule {
         try {
             // ✅ Remove redundant lines
             let cleanedContent = content
-                .replace(/^EXTRACTED_BUSINESS_NAME:.*$/m, '') // Remove extracted business name
-                .replace(/^Business:.*$/m, '')                 // Remove "Business:" line
-                .replace(/^Statements Analyzed:.*$/m, '')      // Remove statements analyzed
-                .replace(/^Monthly Financial Summary$/m, '')   // Remove "Monthly Financial Summary" header
-                .replace(/^Underwriting Section Breakdown$/m, '') // Remove redundant header
-                .replace(/^\.\.\.\s*$/m, '')                   // Remove "..." placeholder
+                .replace(/^EXTRACTED_BUSINESS_NAME:.*$/m, '')
+                .replace(/^Business:.*$/m, '')
+                .replace(/^Statements Analyzed:.*$/m, '')
+                .replace(/^Monthly Financial Summary$/m, '')
+                .replace(/^Underwriting Section Breakdown$/m, '')
+                .replace(/^\.\.\.\s*$/gm, '')
                 .trim();
 
             const lines = cleanedContent.split('\n');
             let html = '';
             let inBulletList = false;
+            let inMonthTable = false;
 
             for (let i = 0; i < lines.length; i++) {
                 const trimmedLine = lines[i].trim();
 
                 // Skip empty lines
                 if (trimmedLine === '') {
-                    // Close bullet list if open
                     if (inBulletList) {
                         html += '</div>';
                         inBulletList = false;
@@ -1100,9 +1100,14 @@ class FCSModule {
                     !trimmedLine.includes(':') &&
                     trimmedLine.match(/^[A-Z\s_]+$/)) {
 
+                    // Close any open structures
                     if (inBulletList) {
                         html += '</div>';
                         inBulletList = false;
+                    }
+                    if (inMonthTable) {
+                        html += '</tbody></table>';
+                        inMonthTable = false;
                     }
 
                     html += `
@@ -1118,13 +1123,85 @@ class FCSModule {
                     continue;
                 }
 
-                // Section headers (ends with colon, Title Case or mixed, NOT all data fields)
+                // Month summary lines - TABLE FORMAT
+                if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+Deposits:/)) {
+                    // Close bullet list if open
+                    if (inBulletList) {
+                        html += '</div>';
+                        inBulletList = false;
+                    }
+
+                    // Start table on first month
+                    if (!inMonthTable) {
+                        html += `
+                            <table style="
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin: 12px 0 16px 0;
+                                font-size: 13px;
+                                border: 1px solid #e5e7eb;
+                                border-radius: 6px;
+                                overflow: hidden;
+                            ">
+                                <thead>
+                                    <tr style="background: #f9fafb; border-bottom: 2px solid #3b82f6;">
+                                        <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #1e40af; font-size: 13px;">Month</th>
+                                        <th style="padding: 10px 12px; text-align: right; font-weight: 600; color: #6b7280; font-size: 12px;">Deposits</th>
+                                        <th style="padding: 10px 12px; text-align: right; font-weight: 600; color: #6b7280; font-size: 12px;">Revenue</th>
+                                        <th style="padding: 10px 12px; text-align: center; font-weight: 600; color: #6b7280; font-size: 12px;">Neg Days</th>
+                                        <th style="padding: 10px 12px; text-align: right; font-weight: 600; color: #6b7280; font-size: 12px;">End Bal</th>
+                                        <th style="padding: 10px 12px; text-align: center; font-weight: 600; color: #6b7280; font-size: 12px;">#Dep</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        inMonthTable = true;
+                    }
+
+                    const monthMatch = trimmedLine.match(/^([A-Z][a-z]+\s+\d{4})\s+(.+)$/);
+                    if (monthMatch) {
+                        const month = monthMatch[1];
+                        const data = monthMatch[2];
+
+                        const deposits = data.match(/Deposits:\s*([^\s]+)/)?.[1] || '';
+                        const revenue = data.match(/Revenue:\s*([^\s]+)/)?.[1] || '';
+                        const negDays = data.match(/Neg Days:\s*([^\s]+)/)?.[1] || '';
+                        const endBal = data.match(/End Bal:\s*([^\s]+)/)?.[1] || '';
+                        const numDep = data.match(/#Dep:\s*([^\s]+)/)?.[1] || '';
+
+                        html += `
+                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                <td style="padding: 10px 12px; font-weight: 700; color: #1e40af;">${this.escapeHtml(month)}</td>
+                                <td style="padding: 10px 12px; text-align: right; color: #111827; font-weight: 600;">${this.escapeHtml(deposits)}</td>
+                                <td style="padding: 10px 12px; text-align: right; color: #111827; font-weight: 600;">${this.escapeHtml(revenue)}</td>
+                                <td style="padding: 10px 12px; text-align: center; color: #111827; font-weight: 600;">${this.escapeHtml(negDays)}</td>
+                                <td style="padding: 10px 12px; text-align: right; color: #111827; font-weight: 600;">${this.escapeHtml(endBal)}</td>
+                                <td style="padding: 10px 12px; text-align: center; color: #111827; font-weight: 600;">${this.escapeHtml(numDep)}</td>
+                            </tr>
+                        `;
+                    }
+
+                    // Check if next line is also a month, if not close table
+                    const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
+                    if (!nextLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+Deposits:/)) {
+                        html += '</tbody></table>';
+                        inMonthTable = false;
+                    }
+
+                    continue;
+                }
+
+                // Section headers (ends with colon, NOT all data fields)
                 if (trimmedLine.endsWith(':') &&
                     !trimmedLine.match(/^(Deposits|Revenue|Neg Days|End Bal|#Dep|Business Name|Position|Industry|Time in Business|Average|State|Positions):/i)) {
 
                     if (inBulletList) {
                         html += '</div>';
                         inBulletList = false;
+                    }
+                    if (inMonthTable) {
+                        html += '</tbody></table>';
+                        inMonthTable = false;
                     }
 
                     html += `
@@ -1138,75 +1215,13 @@ class FCSModule {
                     continue;
                 }
 
-                // Month summary lines - CLEAN VERSION WITHOUT CONTAINER
-                if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+Deposits:/)) {
-                    if (inBulletList) {
-                        html += '</div>';
-                        inBulletList = false;
-                    }
-
-                    const monthMatch = trimmedLine.match(/^([A-Z][a-z]+\s+\d{4})\s+(.+)$/);
-                    if (monthMatch) {
-                        const month = monthMatch[1];
-                        const data = monthMatch[2];
-
-                        // Parse fields
-                        const deposits = data.match(/Deposits:\s*([^\s]+)/)?.[1] || '';
-                        const revenue = data.match(/Revenue:\s*([^\s]+)/)?.[1] || '';
-                        const negDays = data.match(/Neg Days:\s*([^\s]+)/)?.[1] || '';
-                        const endBal = data.match(/End Bal:\s*([^\s]+)/)?.[1] || '';
-                        const numDep = data.match(/#Dep:\s*([^\s]+)/)?.[1] || '';
-
-                        html += `
-                            <div style="
-                                padding: 10px 0;
-                                margin: 8px 0;
-                                border-bottom: 1px solid #e5e7eb;
-                                display: flex;
-                                align-items: center;
-                                gap: 20px;
-                                flex-wrap: wrap;
-                                font-size: 13px;
-                            ">
-                                <div style="
-                                    font-weight: 700;
-                                    color: #1e40af;
-                                    font-size: 14px;
-                                    min-width: 85px;
-                                ">${this.escapeHtml(month)}</div>
-
-                                <div style="display: flex; gap: 6px; align-items: baseline;">
-                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">Deposits:</span>
-                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(deposits)}</span>
-                                </div>
-
-                                <div style="display: flex; gap: 6px; align-items: baseline;">
-                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">Revenue:</span>
-                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(revenue)}</span>
-                                </div>
-
-                                <div style="display: flex; gap: 6px; align-items: baseline;">
-                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">Neg Days:</span>
-                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(negDays)}</span>
-                                </div>
-
-                                <div style="display: flex; gap: 6px; align-items: baseline;">
-                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">End Bal:</span>
-                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(endBal)}</span>
-                                </div>
-
-                                <div style="display: flex; gap: 6px; align-items: baseline;">
-                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">#Dep:</span>
-                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(numDep)}</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    continue;
-                }
-
                 // Bullet points (•, -, or numbered)
                 if (trimmedLine.match(/^[•\-]\s/) || trimmedLine.match(/^\d+\.\s/)) {
+                    if (inMonthTable) {
+                        html += '</tbody></table>';
+                        inMonthTable = false;
+                    }
+
                     if (!inBulletList) {
                         html += '<div style="margin: 8px 0 8px 16px;">';
                         inBulletList = true;
@@ -1241,6 +1256,10 @@ class FCSModule {
                         html += '</div>';
                         inBulletList = false;
                     }
+                    if (inMonthTable) {
+                        html += '</tbody></table>';
+                        inMonthTable = false;
+                    }
 
                     const colonIndex = trimmedLine.indexOf(':');
                     const key = trimmedLine.substring(0, colonIndex).trim();
@@ -1270,11 +1289,15 @@ class FCSModule {
                     continue;
                 }
 
-                // Other key-value pairs (e.g., "July 2025:")
+                // Other key-value pairs
                 if (trimmedLine.includes(':') && !trimmedLine.endsWith(':')) {
                     if (inBulletList) {
                         html += '</div>';
                         inBulletList = false;
+                    }
+                    if (inMonthTable) {
+                        html += '</tbody></table>';
+                        inMonthTable = false;
                     }
 
                     const colonIndex = trimmedLine.indexOf(':');
@@ -1300,6 +1323,10 @@ class FCSModule {
                     html += '</div>';
                     inBulletList = false;
                 }
+                if (inMonthTable) {
+                    html += '</tbody></table>';
+                    inMonthTable = false;
+                }
 
                 html += `
                     <div style="
@@ -1311,9 +1338,12 @@ class FCSModule {
                 `;
             }
 
-            // Close any open bullet list
+            // Close any open structures
             if (inBulletList) {
                 html += '</div>';
+            }
+            if (inMonthTable) {
+                html += '</tbody></table>';
             }
 
             return html;
