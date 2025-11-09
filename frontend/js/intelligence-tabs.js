@@ -320,6 +320,35 @@ class IntelligenceTabs {
                 this.parent.ai.initializeAIChat();
                 // Cache the initial state after initialization
                 setTimeout(() => this.saveAIChatState(), 200);
+
+                // Safety timeout: If loading dots are still visible after 10 seconds, clear them
+                setTimeout(() => {
+                    const messagesDiv = document.getElementById('aiChatMessages');
+                    const loadingState = messagesDiv?.querySelector('.ai-loading-state');
+                    if (loadingState) {
+                        console.warn('⚠️ AI chat loading timed out - clearing loading state');
+                        messagesDiv.innerHTML = `
+                            <div style="text-align: center; padding: 40px 20px;">
+                                <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                                <h3 style="color: #6b7280; margin-bottom: 8px;">No messages yet</h3>
+                                <p style="color: #9ca3af;">Start a conversation with the AI assistant</p>
+                            </div>
+                        `;
+                    }
+                }, 10000);
+            } else {
+                // AI module not available - clear loading state and show empty state
+                console.error('❌ AI module not available');
+                const messagesDiv = document.getElementById('aiChatMessages');
+                if (messagesDiv) {
+                    messagesDiv.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                            <h3 style="color: #6b7280; margin-bottom: 8px;">AI Module Not Available</h3>
+                            <p style="color: #9ca3af;">The AI assistant module failed to load. Please refresh the page.</p>
+                        </div>
+                    `;
+                }
             }
         }, 100);
     }
