@@ -938,73 +938,15 @@ class FCSModule {
             const processedContent = this.formatFCSContent(report.report_content);
 
             console.log('✅ Building HTML...');
-            // ✅ COMPACT HEADER with all info consolidated
+            // ✅ NO HEADER - Pure content with subtle container
             fcsResults.innerHTML = `
                 <div class="fcs-report" style="width: 100%; max-width: 100%;">
-                    <!-- Compact header bar -->
-                    <div class="fcs-header" style="
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        padding: 12px 20px;
-                        border-radius: 6px;
-                        margin-bottom: 20px;
-                        color: white;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        flex-wrap: wrap;
-                        gap: 12px;
-                    ">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span style="font-size: 24px;">📊</span>
-                            <div>
-                                <h4 style="color: white; margin: 0; font-size: 16px; font-weight: 600;">
-                                    FCS Financial Analysis Report
-                                </h4>
-                                <p style="color: rgba(255,255,255,0.85); font-size: 12px; margin: 2px 0 0 0;">
-                                    ${report.business_name || 'Business Analysis'} •
-                                    ${report.statement_count || 'Multiple'} Statements •
-                                    ${reportDate}
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Action buttons -->
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="window.conversationUI.fcs.downloadFCSReport()"
-                                    style="
-                                        padding: 6px 12px;
-                                        background: rgba(255,255,255,0.2);
-                                        color: white;
-                                        border: 1px solid rgba(255,255,255,0.3);
-                                        border-radius: 4px;
-                                        cursor: pointer;
-                                        font-size: 12px;
-                                        font-weight: 500;
-                                    ">
-                                📥 Download
-                            </button>
-                            <button onclick="window.conversationUI.fcs.regenerateFCS()"
-                                    style="
-                                        padding: 6px 12px;
-                                        background: white;
-                                        color: #667eea;
-                                        border: none;
-                                        border-radius: 4px;
-                                        cursor: pointer;
-                                        font-size: 12px;
-                                        font-weight: 500;
-                                    ">
-                                🔄 Regenerate
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Report content (no redundant blue bar!) -->
+                    <!-- Just the report content, no header -->
                     <div class="fcs-content" style="
                         background: white;
                         border: 1px solid #e5e7eb;
                         border-radius: 6px;
-                        padding: 20px;
+                        padding: 16px;
                         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                     ">
                         ${processedContent}
