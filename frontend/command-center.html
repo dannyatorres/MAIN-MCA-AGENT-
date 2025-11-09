@@ -514,7 +514,7 @@
                         <button class="action-button primary" id="addLeadBtn" onclick="openNewLeadModal()">
                             New Conversation
                         </button>
-                        <button class="action-button secondary" id="csvImportBtn" onclick="window.location.href='csv-import.html'">
+                        <button class="action-button secondary" id="csvImportBtn" onclick="openCsvImportModal()">
                             Import Conversations
                         </button>
                         <button class="action-button secondary" id="toggleDeleteModeBtn" onclick="toggleDeleteMode()">
@@ -631,6 +631,111 @@
     </div>
 
     <!-- Modals -->
+
+    <!-- CSV Import Modal -->
+    <div class="modal" id="csvImportModal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px; width: 90%; max-height: 90vh;">
+            <div class="modal-header">
+                <h3>📊 Import Conversations from CSV</h3>
+                <button class="modal-close" id="closeCsvImportModal">×</button>
+            </div>
+            <div class="modal-body" style="max-height: calc(90vh - 130px); overflow-y: auto;">
+                <!-- Progress Steps -->
+                <div style="display: flex; justify-content: space-between; margin-bottom: 24px; gap: 8px;">
+                    <div style="flex: 1; text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; border: 2px solid transparent;" id="csvStep1" class="csv-step csv-step-active">
+                        <div style="display: inline-block; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 50%; line-height: 24px; margin-bottom: 6px; font-size: 12px; font-weight: 600;">1</div>
+                        <div style="font-size: 13px; font-weight: 600; color: #374151;">Upload CSV</div>
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; border: 2px solid transparent;" id="csvStep2" class="csv-step">
+                        <div style="display: inline-block; width: 24px; height: 24px; background: #9ca3af; color: white; border-radius: 50%; line-height: 24px; margin-bottom: 6px; font-size: 12px; font-weight: 600;">2</div>
+                        <div style="font-size: 13px; font-weight: 600; color: #6b7280;">Map Columns</div>
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; border: 2px solid transparent;" id="csvStep3" class="csv-step">
+                        <div style="display: inline-block; width: 24px; height: 24px; background: #9ca3af; color: white; border-radius: 50%; line-height: 24px; margin-bottom: 6px; font-size: 12px; font-weight: 600;">3</div>
+                        <div style="font-size: 13px; font-weight: 600; color: #6b7280;">Validate</div>
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; border: 2px solid transparent;" id="csvStep4" class="csv-step">
+                        <div style="display: inline-block; width: 24px; height: 24px; background: #9ca3af; color: white; border-radius: 50%; line-height: 24px; margin-bottom: 6px; font-size: 12px; font-weight: 600;">4</div>
+                        <div style="font-size: 13px; font-weight: 600; color: #6b7280;">Import</div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Upload -->
+                <div id="csvUploadSection" class="csv-section">
+                    <div style="border: 2px dashed #d1d5db; border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.3s;" id="csvUploadArea">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
+                        <h4 style="margin: 0 0 8px 0; color: #111827;">Drag and drop your CSV file here</h4>
+                        <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">Or click to select a file</p>
+                        <input type="file" style="display: none;" id="csvFileInput" accept=".csv" />
+                        <button class="btn btn-primary" id="csvSelectFileBtn">Select File</button>
+                    </div>
+                    <div style="display: none; background: #f9fafb; padding: 16px; border-radius: 6px; margin-top: 16px;" id="csvFileInfo">
+                        <h4 style="margin: 0 0 12px 0; color: #111827; font-size: 14px; font-weight: 600;">File Information</h4>
+                        <div id="csvFileDetails"></div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Column Mapping -->
+                <div id="csvMappingSection" class="csv-section" style="display: none;">
+                    <h4 style="margin: 0 0 12px 0; color: #111827;">Map CSV Columns to Database Fields</h4>
+                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px;">Review the auto-detected column mappings and adjust as needed:</p>
+
+                    <div style="overflow-x: auto; margin-bottom: 16px;">
+                        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; border: 1px solid #e5e7eb;" id="csvPreviewTable">
+                            <thead id="csvPreviewHeader"></thead>
+                            <tbody id="csvPreviewBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 16px 0;" id="csvMappingControls">
+                        <!-- Column mapping controls will be populated here -->
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                        <button class="btn btn-secondary" id="csvBackToUploadBtn">← Back to Upload</button>
+                        <button class="btn btn-primary" id="csvValidateMappingBtn">Validate Mapping ✓</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Validation -->
+                <div id="csvValidationSection" class="csv-section" style="display: none;">
+                    <h4 style="margin: 0 0 12px 0; color: #111827;">Data Validation</h4>
+                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px;">Review validation results and fix any issues:</p>
+
+                    <div id="csvValidationResults"></div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                        <button class="btn btn-secondary" id="csvBackToMappingBtn">← Back to Mapping</button>
+                        <button class="btn btn-primary" id="csvProceedToImportBtn">Proceed to Import →</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Import -->
+                <div id="csvImportSection" class="csv-section" style="display: none;">
+                    <h4 style="margin: 0 0 12px 0; color: #111827;">Import Data</h4>
+                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px;">Importing your CSV data into the system...</p>
+
+                    <div style="width: 100%; height: 20px; background: #e5e7eb; border-radius: 10px; overflow: hidden; margin: 16px 0;">
+                        <div style="height: 100%; background: #3b82f6; transition: width 0.3s ease; border-radius: 10px; width: 0%;" id="csvProgressFill"></div>
+                    </div>
+
+                    <div id="csvImportStatus">
+                        <div style="text-align: center; padding: 20px;">
+                            <div class="spinner"></div>
+                            <p style="margin: 16px 0 0 0; color: #6b7280;">Starting import process...</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                        <button class="btn btn-primary" style="display: none;" id="csvViewResultsBtn">📊 View Results</button>
+                    </div>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="csvStatusMessages" style="margin-top: 16px;"></div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal" id="lenderModal" style="display: none;">
         <div class="modal-content">
@@ -1427,6 +1532,7 @@
     <script src="js/ai-assistant.js"></script>
     <script src="js/email-tab.js"></script>
     <script src="js/stats.js"></script>
+    <script src="js/csv-import-modal.js"></script>
 
     <!-- New Lead Form Generator -->
     <script src="js/new-lead-form.js"></script>
