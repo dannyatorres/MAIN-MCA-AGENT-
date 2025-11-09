@@ -938,48 +938,99 @@ class FCSModule {
             const processedContent = this.formatFCSContent(report.report_content);
 
             console.log('✅ Building HTML...');
+            // ✅ COMPACT HEADER - Much smaller!
             fcsResults.innerHTML = `
-                <div class="fcs-report" style="width: 100%; max-width: 100%; overflow: hidden;">
-                    <div class="fcs-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 8px; margin-bottom: 20px; color: white;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <div class="fcs-report" style="width: 100%; max-width: 100%;">
+                    <!-- Compact header bar -->
+                    <div class="fcs-header" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 12px 20px;
+                        border-radius: 6px;
+                        margin-bottom: 16px;
+                        color: white;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        flex-wrap: wrap;
+                        gap: 12px;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 24px;">📊</span>
                             <div>
-                                <h4 style="color: white; margin: 0 0 8px 0; font-size: 24px; font-weight: 600;">
-                                    📊 FCS Financial Analysis Report
+                                <h4 style="color: white; margin: 0; font-size: 16px; font-weight: 600;">
+                                    FCS Financial Analysis Report
                                 </h4>
-                                <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0;">
+                                <p style="color: rgba(255,255,255,0.85); font-size: 12px; margin: 2px 0 0 0;">
                                     Generated on ${reportDate}
                                 </p>
-                                ${report.business_name ? `
-                                    <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 4px 0 0 0;">
-                                        Business: ${report.business_name}
-                                    </p>
-                                ` : ''}
-                                ${report.statement_count ? `
-                                    <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 4px 0 0 0;">
-                                        Statements Analyzed: ${report.statement_count}
-                                    </p>
-                                ` : ''}
                             </div>
-                            <div style="display: flex; gap: 8px;">
-                                <button class="btn btn-secondary"
-                                        onclick="window.conversationUI.fcs.downloadFCSReport()"
-                                        style="padding: 10px 16px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
-                                    📥 Download PDF
-                                </button>
-                                <button class="btn btn-primary"
-                                        onclick="window.conversationUI.fcs.regenerateFCS()"
-                                        style="padding: 10px 16px; background: white; color: #667eea; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
-                                    🔄 Regenerate
-                                </button>
-                            </div>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="window.conversationUI.fcs.downloadFCSReport()"
+                                    style="
+                                        padding: 6px 12px;
+                                        background: rgba(255,255,255,0.2);
+                                        color: white;
+                                        border: 1px solid rgba(255,255,255,0.3);
+                                        border-radius: 4px;
+                                        cursor: pointer;
+                                        font-size: 12px;
+                                        font-weight: 500;
+                                    ">
+                                📥 Download
+                            </button>
+                            <button onclick="window.conversationUI.fcs.regenerateFCS()"
+                                    style="
+                                        padding: 6px 12px;
+                                        background: white;
+                                        color: #667eea;
+                                        border: none;
+                                        border-radius: 4px;
+                                        cursor: pointer;
+                                        font-size: 12px;
+                                        font-weight: 500;
+                                    ">
+                                🔄 Regenerate
+                            </button>
                         </div>
                     </div>
 
+                    <!-- Business info bar (if available) -->
+                    ${report.business_name || report.statement_count ? `
+                        <div style="
+                            background: #f0f9ff;
+                            border-left: 3px solid #3b82f6;
+                            padding: 10px 16px;
+                            margin-bottom: 16px;
+                            border-radius: 4px;
+                            display: flex;
+                            gap: 24px;
+                            flex-wrap: wrap;
+                            font-size: 13px;
+                        ">
+                            ${report.business_name ? `
+                                <div>
+                                    <span style="color: #6b7280; font-weight: 500;">Business:</span>
+                                    <span style="color: #111827; margin-left: 6px;">${report.business_name}</span>
+                                </div>
+                            ` : ''}
+                            ${report.statement_count ? `
+                                <div>
+                                    <span style="color: #6b7280; font-weight: 500;">Statements Analyzed:</span>
+                                    <span style="color: #111827; margin-left: 6px;">${report.statement_count}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+
+                    <!-- Report content -->
                     <div class="fcs-content" style="
                         background: white;
                         border: 1px solid #e5e7eb;
-                        border-radius: 8px;
-                        padding: 24px;
+                        border-radius: 6px;
+                        padding: 20px;
                         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                     ">
                         ${processedContent}
@@ -1056,7 +1107,7 @@ class FCSModule {
                 // Skip empty lines (but preserve spacing between sections)
                 if (trimmedLine === '') {
                     if (!inTable) {
-                        html += '<div style="height: 12px;"></div>';
+                        html += '<div style="height: 8px;"></div>';
                     }
                     continue;
                 }
@@ -1076,6 +1127,26 @@ class FCSModule {
                     tableRows = [];
                 }
 
+                // Month summary lines (e.g., "Jul 2025 Deposits: $12,345")
+                if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/)) {
+                    const parts = trimmedLine.split(/\s{2,}/); // Split on multiple spaces
+
+                    html += `
+                        <div style="
+                            background: #f9fafb;
+                            border-left: 3px solid #3b82f6;
+                            padding: 12px 16px;
+                            margin: 8px 0;
+                            border-radius: 4px;
+                            font-size: 14px;
+                            line-height: 1.6;
+                        ">
+                            ${parts.map(part => `<div style="color: #111827;">${this.escapeHtml(part)}</div>`).join('')}
+                        </div>
+                    `;
+                    continue;
+                }
+
                 // Section headers (ALL CAPS or ends with :)
                 if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 3 && !trimmedLine.includes(':')) {
                     html += `
@@ -1083,7 +1154,7 @@ class FCSModule {
                             color: #1e40af;
                             font-size: 18px;
                             font-weight: 700;
-                            margin: 32px 0 16px 0;
+                            margin: 28px 0 14px 0;
                             padding-bottom: 8px;
                             border-bottom: 2px solid #3b82f6;
                         ">${this.escapeHtml(trimmedLine)}</h3>
@@ -1098,7 +1169,7 @@ class FCSModule {
                             color: #1f2937;
                             font-size: 16px;
                             font-weight: 600;
-                            margin: 24px 0 12px 0;
+                            margin: 20px 0 10px 0;
                         ">${this.escapeHtml(trimmedLine)}</h4>
                     `;
                     continue;
@@ -1110,9 +1181,10 @@ class FCSModule {
                     html += `
                         <div style="
                             display: flex;
-                            gap: 8px;
-                            margin: 8px 0 8px 20px;
-                            line-height: 1.6;
+                            gap: 10px;
+                            margin: 6px 0 6px 16px;
+                            line-height: 1.5;
+                            font-size: 14px;
                         ">
                             <span style="color: #3b82f6; font-weight: 700;">•</span>
                             <span style="color: #374151;">${this.escapeHtml(bulletText)}</span>
@@ -1129,17 +1201,18 @@ class FCSModule {
 
                     html += `
                         <div style="
-                            display: grid;
-                            grid-template-columns: 200px 1fr;
-                            gap: 16px;
-                            margin: 12px 0;
-                            padding: 12px;
+                            display: flex;
+                            gap: 12px;
+                            margin: 10px 0;
+                            padding: 10px 14px;
                             background: #f9fafb;
-                            border-radius: 6px;
+                            border-radius: 4px;
+                            font-size: 14px;
                         ">
                             <span style="
                                 font-weight: 600;
                                 color: #374151;
+                                min-width: 180px;
                             ">${this.escapeHtml(key)}:</span>
                             <span style="
                                 color: #111827;
@@ -1152,9 +1225,10 @@ class FCSModule {
                 // Regular paragraph
                 html += `
                     <p style="
-                        margin: 12px 0;
-                        line-height: 1.7;
+                        margin: 10px 0;
+                        line-height: 1.6;
                         color: #374151;
+                        font-size: 14px;
                     ">${this.escapeHtml(trimmedLine)}</p>
                 `;
             }
