@@ -946,7 +946,7 @@ class FCSModule {
                         background: white;
                         border: 1px solid #e5e7eb;
                         border-radius: 6px;
-                        padding: 16px;
+                        padding: 12px 16px 16px 16px;
                         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                     ">
                         ${processedContent}
@@ -1009,17 +1009,35 @@ class FCSModule {
         }
 
         try {
-            // ✅ Remove redundant lines
+            // ✅ ULTRA-AGGRESSIVE CLEANUP
             let cleanedContent = content
-                .replace(/^EXTRACTED_BUSINESS_NAME:.*$/m, '')
-                .replace(/^Business:.*$/m, '')
-                .replace(/^Statements Analyzed:.*$/m, '')
-                .replace(/^Monthly Financial Summary$/m, '')
-                .replace(/^Underwriting Section Breakdown$/m, '')
+                // Remove specific unwanted lines
+                .replace(/^EXTRACTED_BUSINESS_NAME:.*$/gm, '')
+                .replace(/^Business:.*$/gm, '')
+                .replace(/^Statements Analyzed:.*$/gm, '')
+                .replace(/^Monthly Financial Summary$/gm, '')
+                .replace(/^Underwriting Section Breakdown$/gm, '')
+
+                // Remove all variations of dots
                 .replace(/^\.\.\.\s*$/gm, '')
+                .replace(/^\s*\.\.\.\s*$/gm, '')
+                .replace(/^…\s*$/gm, '')
+                .replace(/^\s*…\s*$/gm, '')
+
+                // Clean up spacing
+                .replace(/\n\s*\.\.\.\s*\n/g, '\n')
+                .replace(/\n\s*…\s*\n/g, '\n')
+                .replace(/^\s+/gm, '')
+                .replace(/\s+$/gm, '')
+                .replace(/\n{3,}/g, '\n\n')
                 .trim();
 
-            const lines = cleanedContent.split('\n');
+            const lines = cleanedContent.split('\n').filter(line => {
+                const trimmed = line.trim();
+                // Filter out empty lines and lines with just dots
+                return trimmed !== '' && trimmed !== '...' && trimmed !== '…';
+            });
+
             let html = '';
             let inBulletList = false;
             let inMonthTable = false;
@@ -1027,8 +1045,8 @@ class FCSModule {
             for (let i = 0; i < lines.length; i++) {
                 const trimmedLine = lines[i].trim();
 
-                // Skip empty lines
-                if (trimmedLine === '') {
+                // ✅ NUCLEAR: Skip completely empty lines AND lines with just dots
+                if (trimmedLine === '' || trimmedLine === '...' || trimmedLine === '…') {
                     if (inBulletList) {
                         html += '</div>';
                         inBulletList = false;
@@ -1079,7 +1097,7 @@ class FCSModule {
                             <table style="
                                 width: 100%;
                                 border-collapse: collapse;
-                                margin: 12px 0 16px 0;
+                                margin: 0 0 16px 0;
                                 font-size: 13px;
                                 border: 1px solid #e5e7eb;
                                 border-radius: 6px;
