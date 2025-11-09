@@ -1035,203 +1035,215 @@ class FCSModule {
     }
 
     formatFCSContent(content) {
-        if (!content || typeof content !== 'string') {
-            return '<div style="padding: 20px; text-align: center; color: #666;">No content available</div>';
+        console.log('📋 Formatting FCS content...');
+        console.log('Content length:', content?.length || 0);
+
+        if (!content || content.trim() === '') {
+            return '<p style="color: #ef4444; text-align: center; padding: 40px;">No content to display</p>';
         }
 
-        let formattedHTML = `
-            <div style="
-                font-family: Consolas, Monaco, 'Courier New', monospace;
-                font-size: 11px;
-                line-height: 1.3;
-                background: #ffffff;
-                color: #333;
-                padding: 15px;
-                width: 100%;
-                overflow-x: auto;
-            ">`;
+        try {
+            // Split content into lines
+            const lines = content.split('\n');
+            let html = '';
+            let inTable = false;
+            let tableRows = [];
 
-        const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                const trimmedLine = line.trim();
 
-        lines.forEach((line, index) => {
-            const trimmedLine = line.trim();
-
-            if (trimmedLine === '```') return;
-
-            // Main section headers
-            if (trimmedLine === 'FILE CONTROL SHEET' ||
-                trimmedLine === 'Monthly Financial Summary' ||
-                trimmedLine === 'True Revenue:' ||
-                trimmedLine.startsWith('1a. Revenue Deductions') ||
-                trimmedLine === 'MCA Deposits' ||
-                trimmedLine === 'Recurring MCA Payments' ||
-                trimmedLine === 'Observations') {
-                formattedHTML += `
-                    <div style="
-                        font-weight: bold;
-                        color: #1e40af;
-                        margin: ${index === 0 ? '0' : '12px'} 0 6px 0;
-                        padding-bottom: 2px;
-                        border-bottom: 1px solid #e5e7eb;
-                        font-size: 12px;
-                    ">${trimmedLine}</div>`;
-            }
-            // Account headers
-            else if (trimmedLine.match(/^(CHECKING|SAVINGS|CREDIT)\s+ACCOUNT/)) {
-                formattedHTML += `
-                    <div style="
-                        font-weight: 600;
-                        color: #374151;
-                        margin: 8px 0 4px 0;
-                        background: #f9fafb;
-                        padding: 3px 8px;
-                    ">${trimmedLine}</div>`;
-            }
-            // Table header row
-            else if (line.includes('Month Year') && line.includes('Deposits:') && line.includes('Revenue:')) {
-                formattedHTML += `
-                    <div style="
-                        display: flex;
-                        padding: 4px 0;
-                        background: #f0f9ff;
-                        border-bottom: 1px solid #3b82f6;
-                        font-weight: 600;
-                        margin-top: 2px;
-                        font-size: 10px;
-                    ">
-                        <div style="width: 70px;">Month Year</div>
-                        <div style="width: 130px; padding-left: 10px;">Deposits</div>
-                        <div style="width: 130px;">Revenue</div>
-                        <div style="width: 70px;">Neg Days</div>
-                        <div style="width: 110px;">End Bal</div>
-                        <div style="width: 50px;">#Dep</div>
-                    </div>`;
-            }
-            // Monthly data rows
-            else if (line.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/)) {
-                const deposits = line.match(/Deposits:\s*(\$[\d,]+\.\d+)/)?.[1] || '';
-                const revenue = line.match(/Revenue:\s*(\$[\d,]+\.\d+)/)?.[1] || '';
-                const negDays = line.match(/Neg Days:\s*(\d+|N\/A)/)?.[1] || '';
-                const endBal = line.match(/End Bal:\s*(-?\$[\d,]+\.\d+)/)?.[1] || '';
-                const depCount = line.match(/#Dep:\s*(\d+)/)?.[1] || '';
-                const monthYear = line.split(/\s{2,}/)[0] || '';
-
-                formattedHTML += `
-                    <div style="
-                        display: flex;
-                        padding: 2px 0;
-                        border-bottom: 1px solid #f1f5f9;
-                        background: ${endBal.startsWith('-') ? '#fef2f2' : 'white'};
-                    ">
-                        <div style="width: 70px; font-weight: 500;">${monthYear}</div>
-                        <div style="width: 130px; padding-left: 10px; color: #059669;">${deposits}</div>
-                        <div style="width: 130px; color: #059669;">${revenue}</div>
-                        <div style="width: 70px; color: ${negDays !== '0' && negDays !== 'N/A' ? '#dc2626' : '#6b7280'};">
-                            ${negDays}
-                        </div>
-                        <div style="width: 110px; color: ${endBal.startsWith('-') ? '#dc2626' : '#059669'}; font-weight: 500;">
-                            ${endBal}
-                        </div>
-                        <div style="width: 50px; color: #6b7280;">${depCount}</div>
-                    </div>`;
-            }
-            // True Revenue entries
-            else if (line.match(/^(May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr)\s+\d{4}:\s*\$/)) {
-                formattedHTML += `<div style="padding: 2px 0; margin-left: 10px;">${line}</div>`;
-            }
-            // Revenue deduction entries
-            else if (line.match(/^\s*-\s*\$/)) {
-                formattedHTML += `
-                    <div style="
-                        padding: 3px 12px;
-                        margin: 2px 0;
-                        background: #fef2f2;
-                        border-left: 2px solid #ef4444;
-                        font-size: 10px;
-                        color: #dc2626;
-                    ">${trimmedLine}</div>`;
-            }
-            // Month headers in deductions
-            else if (line.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}:/)) {
-                formattedHTML += `
-                    <div style="
-                        font-weight: 600;
-                        color: #374151;
-                        margin: 6px 0 3px 0;
-                    ">${trimmedLine}</div>`;
-            }
-            // MCA Position entries
-            else if (line.match(/^Position\s+\d+:/)) {
-                formattedHTML += `
-                    <div style="
-                        padding: 4px 6px;
-                        margin: 3px 0;
-                        background: #f0f9ff;
-                        border-left: 2px solid #3b82f6;
-                    ">${line}</div>`;
-            }
-            // Sample dates
-            else if (line.match(/^Sample dates:/)) {
-                formattedHTML += `
-                    <div style="
-                        padding: 1px 6px 3px 18px;
-                        color: #6b7280;
-                        font-size: 10px;
-                    ">${line}</div>`;
-            }
-            // Summary block
-            else if (line.includes('-Month Summary')) {
-                formattedHTML += `
-                    <div style="
-                        margin-top: 15px;
-                        padding: 10px;
-                        background: #f8fafc;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 3px;
-                    ">
-                    <div style="
-                        font-weight: bold;
-                        color: #1e40af;
-                        margin-bottom: 6px;
-                        font-size: 12px;
-                    ">${trimmedLine}</div>`;
-            }
-            // Summary items
-            else if (line.match(/^- (Business Name|Position|Industry|Time in Business|Average|Negative Days|State|Positions|Last MCA):/)) {
-                const [label, ...valueParts] = line.substring(2).split(':');
-                const value = valueParts.join(':').trim();
-                formattedHTML += `
-                    <div style="
-                        padding: 2px 0;
-                        display: flex;
-                        gap: 8px;
-                    ">
-                        <span style="font-weight: 500; color: #4b5563; min-width: 130px;">
-                            ${label}:
-                        </span>
-                        <span style="color: #111827;">
-                            ${value}
-                        </span>
-                    </div>`;
-            }
-            // Empty lines
-            else if (trimmedLine === '') {
-                if (index > 0 && lines[index - 1].trim()) {
-                    formattedHTML += '<div style="height: 4px;"></div>';
+                // Skip empty lines (but preserve spacing between sections)
+                if (trimmedLine === '') {
+                    if (!inTable) {
+                        html += '<div style="height: 12px;"></div>';
+                    }
+                    continue;
                 }
-            }
-            // All other content
-            else {
-                formattedHTML += `<div style="padding: 1px 0;">${line}</div>`;
-            }
-        });
 
-        if (content.includes('-Month Summary')) {
-            formattedHTML += '</div>';
+                // Detect table rows (lines with | separators)
+                if (trimmedLine.includes('|')) {
+                    if (!inTable) {
+                        inTable = true;
+                        tableRows = [];
+                    }
+                    tableRows.push(trimmedLine);
+                    continue;
+                } else if (inTable) {
+                    // End of table, render it
+                    html += this.renderTable(tableRows);
+                    inTable = false;
+                    tableRows = [];
+                }
+
+                // Section headers (ALL CAPS or ends with :)
+                if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 3 && !trimmedLine.includes(':')) {
+                    html += `
+                        <h3 style="
+                            color: #1e40af;
+                            font-size: 18px;
+                            font-weight: 700;
+                            margin: 32px 0 16px 0;
+                            padding-bottom: 8px;
+                            border-bottom: 2px solid #3b82f6;
+                        ">${this.escapeHtml(trimmedLine)}</h3>
+                    `;
+                    continue;
+                }
+
+                // Sub-headers (ends with :)
+                if (trimmedLine.endsWith(':')) {
+                    html += `
+                        <h4 style="
+                            color: #1f2937;
+                            font-size: 16px;
+                            font-weight: 600;
+                            margin: 24px 0 12px 0;
+                        ">${this.escapeHtml(trimmedLine)}</h4>
+                    `;
+                    continue;
+                }
+
+                // Bullet points (starts with -, •, or *)
+                if (trimmedLine.match(/^[-•*]\s/)) {
+                    const bulletText = trimmedLine.replace(/^[-•*]\s/, '');
+                    html += `
+                        <div style="
+                            display: flex;
+                            gap: 8px;
+                            margin: 8px 0 8px 20px;
+                            line-height: 1.6;
+                        ">
+                            <span style="color: #3b82f6; font-weight: 700;">•</span>
+                            <span style="color: #374151;">${this.escapeHtml(bulletText)}</span>
+                        </div>
+                    `;
+                    continue;
+                }
+
+                // Key-value pairs (contains : in middle)
+                if (trimmedLine.includes(':') && !trimmedLine.endsWith(':')) {
+                    const colonIndex = trimmedLine.indexOf(':');
+                    const key = trimmedLine.substring(0, colonIndex).trim();
+                    const value = trimmedLine.substring(colonIndex + 1).trim();
+
+                    html += `
+                        <div style="
+                            display: grid;
+                            grid-template-columns: 200px 1fr;
+                            gap: 16px;
+                            margin: 12px 0;
+                            padding: 12px;
+                            background: #f9fafb;
+                            border-radius: 6px;
+                        ">
+                            <span style="
+                                font-weight: 600;
+                                color: #374151;
+                            ">${this.escapeHtml(key)}:</span>
+                            <span style="
+                                color: #111827;
+                            ">${this.escapeHtml(value)}</span>
+                        </div>
+                    `;
+                    continue;
+                }
+
+                // Regular paragraph
+                html += `
+                    <p style="
+                        margin: 12px 0;
+                        line-height: 1.7;
+                        color: #374151;
+                    ">${this.escapeHtml(trimmedLine)}</p>
+                `;
+            }
+
+            // Render any remaining table
+            if (inTable && tableRows.length > 0) {
+                html += this.renderTable(tableRows);
+            }
+
+            return html;
+
+        } catch (error) {
+            console.error('Error formatting FCS content:', error);
+            return `
+                <div style="padding: 20px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;">
+                    <p style="color: #991b1b; font-weight: 600; margin-bottom: 8px;">Error formatting report</p>
+                    <p style="color: #7f1d1d; font-size: 14px;">${error.message}</p>
+                    <details style="margin-top: 12px;">
+                        <summary style="cursor: pointer; color: #3b82f6;">View raw content</summary>
+                        <pre style="margin-top: 8px; padding: 12px; background: #f3f4f6; border-radius: 4px; overflow-x: auto; font-size: 12px;">${this.escapeHtml(content)}</pre>
+                    </details>
+                </div>
+            `;
         }
+    }
 
-        formattedHTML += '</div>';
-        return formattedHTML;
+    // Helper method to render tables
+    renderTable(rows) {
+        if (!rows || rows.length === 0) return '';
+
+        try {
+            let html = `
+                <div style="
+                    overflow-x: auto;
+                    margin: 20px 0;
+                    border-radius: 8px;
+                    border: 1px solid #e5e7eb;
+                ">
+                    <table style="
+                        width: 100%;
+                        border-collapse: collapse;
+                        background: white;
+                    ">
+            `;
+
+            rows.forEach((row, index) => {
+                const cells = row.split('|')
+                    .map(cell => cell.trim())
+                    .filter(cell => cell !== '');
+
+                // Skip separator rows (----)
+                if (cells.length > 0 && cells[0].match(/^-+$/)) {
+                    return;
+                }
+
+                const isHeader = index === 0;
+                const tag = isHeader ? 'th' : 'td';
+                const bgColor = isHeader ? '#f3f4f6' : (index % 2 === 0 ? 'white' : '#f9fafb');
+
+                html += '<tr>';
+                cells.forEach(cell => {
+                    html += `
+                        <${tag} style="
+                            padding: 12px 16px;
+                            text-align: left;
+                            background: ${bgColor};
+                            ${isHeader ? 'font-weight: 600; color: #111827;' : 'color: #374151;'}
+                            border-bottom: 1px solid #e5e7eb;
+                        ">${this.escapeHtml(cell)}</${tag}>
+                    `;
+                });
+                html += '</tr>';
+            });
+
+            html += '</table></div>';
+            return html;
+
+        } catch (error) {
+            console.error('Error rendering table:', error);
+            return '<p style="color: #ef4444;">Error rendering table</p>';
+        }
+    }
+
+    // Helper method to escape HTML
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     async downloadFCSReport() {
