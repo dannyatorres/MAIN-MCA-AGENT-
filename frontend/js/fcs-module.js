@@ -516,7 +516,6 @@ class FCSModule {
 
             if (status === 'completed') {
                 console.log('✅ FCS completed! Loading report...');
-                this.hideFCSProgress();
 
                 // Fetch the completed FCS data
                 try {
@@ -530,7 +529,7 @@ class FCSModule {
                         this._generatingForConversation = null;
                         this._generationStartTime = null;
 
-                        // Display the report
+                        // Display the report FIRST
                         const reportData = {
                             report_content: result.analysis.report,
                             generated_at: result.analysis.completedAt,
@@ -539,6 +538,12 @@ class FCSModule {
                             statement_count: result.analysis.statementCount
                         };
                         this.displayFCSReport(reportData);
+
+                        // ✅ Hide progress AFTER displaying (with slight delay to ensure render)
+                        setTimeout(() => {
+                            this.hideFCSProgress();
+                        }, 100);
+
                         this.utils.showNotification('FCS generated successfully!', 'success');
 
                     } else {
@@ -551,6 +556,8 @@ class FCSModule {
                     this._fcsGenerationInProgress = false;
                     this._generatingForConversation = null;
                     this._generationStartTime = null;
+
+                    this.hideFCSProgress(); // ✅ Hide on error too
 
                     this.utils.showNotification('Error loading FCS: ' + fetchError.message, 'error');
                 }
@@ -1317,9 +1324,16 @@ class FCSModule {
     }
 
     hideFCSProgress() {
+        console.log('🔇 Hiding FCS progress indicator');
+
         const progressDiv = document.getElementById('fcsProgressIndicator');
         if (progressDiv) {
             progressDiv.style.display = 'none';
+            // ✅ Also remove it from DOM completely
+            progressDiv.remove();
+            console.log('✅ Progress indicator hidden and removed');
+        } else {
+            console.log('⚠️ No progress indicator found to hide');
         }
     }
 
