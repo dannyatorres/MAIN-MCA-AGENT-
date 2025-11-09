@@ -1114,16 +1114,22 @@ class IntelligenceTabs {
     }
 
     async generatePDFApplication() {
-        console.log('Generate PDF clicked - Client-side generation');
+        console.log('Generate PDF Application clicked');
 
-        const selectedConversation = this.parent.getSelectedConversation();
-        if (!selectedConversation) {
+        const conv = this.parent.getSelectedConversation();
+        if (!conv) {
             this.utils.showNotification('No conversation selected', 'error');
             return;
         }
 
+        // ✅ Show form first, then generate PDF after user fills it
+        this.showApplicationForm(conv);
+    }
+
+    async proceedWithPDFGeneration(conv) {
+        console.log('Proceeding with PDF generation...');
+
         try {
-            const conv = selectedConversation;
 
             // Prepare application data
             const rawSSN = conv.ssn || conv.owner_ssn || conv.ssn_encrypted || '';
@@ -1341,6 +1347,405 @@ class IntelligenceTabs {
         } catch (error) {
             console.error('Error generating PDF:', error);
             this.utils.showNotification('Failed to generate PDF: ' + error.message, 'error');
+        }
+    }
+
+    showApplicationForm(conv) {
+        const modalHTML = `
+            <div id="appFormModal" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow-y: auto;
+            ">
+                <div style="
+                    background: white;
+                    border-radius: 8px;
+                    width: 90%;
+                    max-width: 700px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    margin: 20px;
+                ">
+                    <!-- Header -->
+                    <div style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 20px 24px;
+                        border-radius: 8px 8px 0 0;
+                        position: sticky;
+                        top: 0;
+                        z-index: 10;
+                    ">
+                        <h2 style="margin: 0; font-size: 20px;">Generate Application PDF</h2>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">
+                            Fill in the required fields
+                        </p>
+                    </div>
+
+                    <!-- Form -->
+                    <form id="appForm" style="padding: 24px;">
+
+                        <!-- BUSINESS INFORMATION -->
+                        <div style="margin-bottom: 28px;">
+                            <h3 style="
+                                color: #1e40af;
+                                font-size: 16px;
+                                font-weight: 700;
+                                margin: 0 0 16px 0;
+                                padding-bottom: 8px;
+                                border-bottom: 2px solid #3b82f6;
+                            ">Business Information</h3>
+
+                            <div style="display: flex; flex-direction: column; gap: 14px;">
+                                <!-- Legal/Corporate Name & DBA -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Legal/Corporate Name <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="business_name" value="${conv.business_name || ''}" required
+                                            placeholder="Brothers Financial Services LLC"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            DBA <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="dba_name" value="${conv.dba_name || conv.business_name || ''}" required
+                                            placeholder="Same as legal name or different"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                </div>
+
+                                <!-- Physical Address -->
+                                <div>
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Physical Address <span style="color: #ef4444;">*</span>
+                                    </label>
+                                    <input type="text" name="business_address" value="${conv.business_address || conv.address || ''}" required
+                                        placeholder="3925 shady hill trail"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                </div>
+
+                                <!-- City, State, Zip -->
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            City <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="business_city" value="${conv.business_city || conv.city || ''}" required
+                                            placeholder="Edmond"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            State <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="business_state" value="${conv.business_state || conv.us_state || ''}" required
+                                            placeholder="Oklahoma"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Zip <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="business_zip" value="${conv.business_zip || conv.zip || ''}" required
+                                            placeholder="73034"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                </div>
+
+                                <!-- Tax ID & Date Started -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Federal Tax ID <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="tax_id" value="${conv.tax_id || conv.federal_tax_id || ''}" required
+                                            placeholder="86-3156904"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Date Business Started <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="date" name="business_start_date" value="${conv.business_start_date || ''}" required
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                </div>
+
+                                <!-- Entity Type & Type of Business -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Type of Entity <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <select name="entity_type" required
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                            <option value="">Select...</option>
+                                            <option value="Sole Proprietorship" ${conv.entity_type === 'Sole Proprietorship' ? 'selected' : ''}>Sole Proprietorship</option>
+                                            <option value="Partnership" ${conv.entity_type === 'Partnership' ? 'selected' : ''}>Partnership</option>
+                                            <option value="Corporation" ${conv.entity_type === 'Corporation' ? 'selected' : ''}>Corporation</option>
+                                            <option value="LLC" ${conv.entity_type === 'LLC' ? 'selected' : ''}>LLC</option>
+                                            <option value="Other" ${conv.entity_type === 'Other' ? 'selected' : ''}>Other</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Type of Business <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="industry_type" value="${conv.industry_type || conv.business_type || ''}" required
+                                            placeholder="FINANCE"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                </div>
+
+                                <!-- Use of Proceeds, Requested Amount, Annual Sales -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Use of Proceeds <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="use_of_proceeds" value="${conv.use_of_proceeds || 'working capital'}" required
+                                            placeholder="working capital"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Requested Amount <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="number" name="requested_amount" value="${conv.requested_amount || conv.funding_amount || ''}" required
+                                            placeholder="150000"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Gross Annual Sales <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="number" name="annual_revenue" value="${conv.annual_revenue || ''}" required
+                                            placeholder="2000000"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OWNER/OFFICER INFORMATION -->
+                        <div style="margin-bottom: 28px;">
+                            <h3 style="
+                                color: #1e40af;
+                                font-size: 16px;
+                                font-weight: 700;
+                                margin: 0 0 16px 0;
+                                padding-bottom: 8px;
+                                border-bottom: 2px solid #3b82f6;
+                            ">Owner/Officer Information</h3>
+
+                            <div style="display: flex; flex-direction: column; gap: 14px;">
+                                <!-- Owner First & Last Name -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Owner First Name <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="first_name" value="${conv.first_name || conv.owner_first_name || ''}" required
+                                            placeholder="Joseph"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Owner Last Name <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="last_name" value="${conv.last_name || conv.owner_last_name || ''}" required
+                                            placeholder="Yako"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                </div>
+
+                                <!-- Same as Business Address Checkbox -->
+                                <div>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="sameAsBusinessAddress"
+                                            ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'checked' : ''}
+                                            onchange="
+                                                const ownerAddr = document.querySelector('[name=owner_home_address]');
+                                                const ownerCity = document.querySelector('[name=owner_home_city]');
+                                                const ownerState = document.querySelector('[name=owner_home_state]');
+                                                const ownerZip = document.querySelector('[name=owner_home_zip]');
+
+                                                if (this.checked) {
+                                                    ownerAddr.value = document.querySelector('[name=business_address]').value;
+                                                    ownerCity.value = document.querySelector('[name=business_city]').value;
+                                                    ownerState.value = document.querySelector('[name=business_state]').value;
+                                                    ownerZip.value = document.querySelector('[name=business_zip]').value;
+                                                    ownerAddr.disabled = true;
+                                                    ownerCity.disabled = true;
+                                                    ownerState.disabled = true;
+                                                    ownerZip.disabled = true;
+                                                } else {
+                                                    ownerAddr.disabled = false;
+                                                    ownerCity.disabled = false;
+                                                    ownerState.disabled = false;
+                                                    ownerZip.disabled = false;
+                                                }
+                                            ">
+                                        <span style="font-weight: 600;">Owner home address same as business</span>
+                                    </label>
+
+                                    <!-- Home Address -->
+                                    <input type="text" name="owner_home_address"
+                                        value="${conv.owner_home_address || conv.owner_address || conv.business_address || conv.address || ''}"
+                                        ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'disabled' : ''}
+                                        required
+                                        placeholder="3925 shady hill trail"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">
+
+                                    <!-- City, State, Zip -->
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+                                        <input type="text" name="owner_home_city"
+                                            value="${conv.owner_home_city || conv.business_city || conv.city || ''}"
+                                            ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'disabled' : ''}
+                                            required
+                                            placeholder="Edmond"
+                                            style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                        <input type="text" name="owner_home_state"
+                                            value="${conv.owner_home_state || conv.business_state || conv.us_state || ''}"
+                                            ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'disabled' : ''}
+                                            required
+                                            placeholder="Oklahoma"
+                                            style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                        <input type="text" name="owner_home_zip"
+                                            value="${conv.owner_home_zip || conv.business_zip || conv.zip || ''}"
+                                            ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'disabled' : ''}
+                                            required
+                                            placeholder="73034"
+                                            style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                </div>
+
+                                <!-- Ownership %, SSN, DOB -->
+                                <div style="display: grid; grid-template-columns: 100px 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Ownership % <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="number" name="ownership_percent" value="${conv.ownership_percent || '100'}" required
+                                            placeholder="100"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            SSN <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="text" name="ssn" value="${conv.ssn || conv.owner_ssn || ''}" required
+                                            placeholder="604-27-0200"
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                            Date of Birth <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <input type="date" name="date_of_birth" value="${conv.date_of_birth || conv.owner_dob || ''}" required
+                                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div style="
+                            display: flex;
+                            gap: 12px;
+                            justify-content: flex-end;
+                            padding-top: 20px;
+                            border-top: 2px solid #e5e7eb;
+                        ">
+                            <button type="button" onclick="document.getElementById('appFormModal').remove()" style="
+                                padding: 10px 24px;
+                                background: white;
+                                color: #374151;
+                                border: 1px solid #d1d5db;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: 500;
+                            ">Cancel</button>
+                            <button type="submit" style="
+                                padding: 10px 24px;
+                                background: #667eea;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: 600;
+                            ">📄 Generate PDF</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Handle form submission
+        document.getElementById('appForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleApplicationFormSubmit(conv);
+        });
+    }
+
+    async handleApplicationFormSubmit(conv) {
+        const form = document.getElementById('appForm');
+        const formData = new FormData(form);
+
+        // Build update object
+        const updates = {};
+
+        // Get all form fields
+        for (let [key, value] of formData.entries()) {
+            updates[key] = value;
+        }
+
+        // Copy business address to owner if checkbox is checked
+        if (document.getElementById('sameAsBusinessAddress')?.checked) {
+            updates.owner_home_address = updates.business_address;
+            updates.owner_home_city = updates.business_city;
+            updates.owner_home_state = updates.business_state;
+            updates.owner_home_zip = updates.business_zip;
+        }
+
+        try {
+            // Save to database
+            await this.parent.apiCall(`/api/conversations/${conv.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updates)
+            });
+
+            // Update local conversation object
+            Object.assign(conv, updates);
+
+            // Close modal
+            document.getElementById('appFormModal').remove();
+
+            // Show progress
+            this.utils.showNotification('Generating PDF application...', 'info');
+
+            // Generate PDF (existing code)
+            await this.proceedWithPDFGeneration(conv);
+
+        } catch (error) {
+            console.error('Error:', error);
+            this.utils.showNotification('Failed to save: ' + error.message, 'error');
         }
     }
 
