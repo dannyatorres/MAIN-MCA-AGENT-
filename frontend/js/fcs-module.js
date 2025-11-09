@@ -1072,7 +1072,7 @@ class FCSModule {
 
                     html += `
                         <div style="
-                            color: #1e40af;
+                            color: #3b82f6;
                             font-size: 15px;
                             font-weight: 700;
                             margin: 20px 0 10px 0;
@@ -1105,7 +1105,7 @@ class FCSModule {
                             ">
                                 <thead>
                                     <tr style="background: #f9fafb; border-bottom: 2px solid #3b82f6;">
-                                        <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #1e40af; font-size: 13px;">Month</th>
+                                        <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #3b82f6; font-size: 13px;">Month</th>
                                         <th style="padding: 10px 12px; text-align: right; font-weight: 600; color: #6b7280; font-size: 12px;">Deposits</th>
                                         <th style="padding: 10px 12px; text-align: right; font-weight: 600; color: #6b7280; font-size: 12px;">Revenue</th>
                                         <th style="padding: 10px 12px; text-align: center; font-weight: 600; color: #6b7280; font-size: 12px;">Neg Days</th>
@@ -1131,7 +1131,7 @@ class FCSModule {
 
                         html += `
                             <tr style="border-bottom: 1px solid #e5e7eb;">
-                                <td style="padding: 10px 12px; font-weight: 700; color: #1e40af;">${this.escapeHtml(month)}</td>
+                                <td style="padding: 10px 12px; font-weight: 700; color: #3b82f6;">${this.escapeHtml(month)}</td>
                                 <td style="padding: 10px 12px; text-align: right; color: #111827; font-weight: 600;">${this.escapeHtml(deposits)}</td>
                                 <td style="padding: 10px 12px; text-align: right; color: #111827; font-weight: 600;">${this.escapeHtml(revenue)}</td>
                                 <td style="padding: 10px 12px; text-align: center; color: #111827; font-weight: 600;">${this.escapeHtml(negDays)}</td>
