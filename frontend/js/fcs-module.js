@@ -1154,51 +1154,69 @@ class FCSModule {
                     continue;
                 }
 
-                // Month summary lines (e.g., "Jul 2025 Deposits: $92,615 Revenue: ...")
+                // Month summary lines - ULTRA COMPACT VERSION
                 if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+Deposits:/)) {
                     if (inBulletList) {
                         html += '</div>';
                         inBulletList = false;
                     }
 
-                    // Parse the month line into structured data
+                    // Parse the month line
                     const monthMatch = trimmedLine.match(/^([A-Z][a-z]+\s+\d{4})\s+(.+)$/);
                     if (monthMatch) {
                         const month = monthMatch[1];
                         const data = monthMatch[2];
 
-                        // Split data by known field names
-                        const fields = data.split(/\s+(?=Deposits:|Revenue:|Neg Days:|End Bal:|#Dep:)/);
+                        // Parse fields
+                        const deposits = data.match(/Deposits:\s*([^\s]+)/)?.[1] || '';
+                        const revenue = data.match(/Revenue:\s*([^\s]+)/)?.[1] || '';
+                        const negDays = data.match(/Neg Days:\s*([^\s]+)/)?.[1] || '';
+                        const endBal = data.match(/End Bal:\s*([^\s]+)/)?.[1] || '';
+                        const numDep = data.match(/#Dep:\s*([^\s]+)/)?.[1] || '';
 
                         html += `
                             <div style="
                                 background: #f0f9ff;
                                 border-left: 3px solid #3b82f6;
-                                padding: 10px 12px;
-                                margin: 8px 0;
+                                padding: 8px 12px;
+                                margin: 6px 0;
                                 border-radius: 4px;
+                                display: flex;
+                                align-items: center;
+                                gap: 24px;
+                                flex-wrap: wrap;
+                                font-size: 13px;
                             ">
                                 <div style="
                                     font-weight: 700;
                                     color: #1e40af;
                                     font-size: 14px;
-                                    margin-bottom: 6px;
+                                    min-width: 80px;
                                 ">${this.escapeHtml(month)}</div>
-                                <div style="
-                                    display: grid;
-                                    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                                    gap: 6px;
-                                    font-size: 13px;
-                                ">
-                                    ${fields.map(field => {
-                                        const [key, value] = field.split(/:\s*/);
-                                        return `
-                                            <div style="display: flex; gap: 6px;">
-                                                <span style="font-weight: 600; color: #374151;">${this.escapeHtml(key)}:</span>
-                                                <span style="color: #111827;">${this.escapeHtml(value || '')}</span>
-                                            </div>
-                                        `;
-                                    }).join('')}
+
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span style="font-weight: 600; color: #374151;">Deposits:</span>
+                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(deposits)}</span>
+                                </div>
+
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span style="font-weight: 600; color: #374151;">Revenue:</span>
+                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(revenue)}</span>
+                                </div>
+
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span style="font-weight: 600; color: #374151;">Neg Days:</span>
+                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(negDays)}</span>
+                                </div>
+
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span style="font-weight: 600; color: #374151;">End Bal:</span>
+                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(endBal)}</span>
+                                </div>
+
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span style="font-weight: 600; color: #374151;">#Dep:</span>
+                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(numDep)}</span>
                                 </div>
                             </div>
                         `;
