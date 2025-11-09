@@ -1087,114 +1087,150 @@ class FCSModule {
 
     formatFCSContent(content) {
         console.log('📋 Formatting FCS content...');
-        console.log('Content length:', content?.length || 0);
 
         if (!content || content.trim() === '') {
-            return '<p style="color: #ef4444; text-align: center; padding: 40px;">No content to display</p>';
+            return '<p style="color: #ef4444; text-align: center; padding: 20px;">No content to display</p>';
         }
 
         try {
-            // Split content into lines
             const lines = content.split('\n');
             let html = '';
-            let inTable = false;
-            let tableRows = [];
+            let inList = false;
 
             for (let i = 0; i < lines.length; i++) {
-                let line = lines[i];
-                const trimmedLine = line.trim();
+                const trimmedLine = lines[i].trim();
 
-                // Skip empty lines (but preserve spacing between sections)
-                if (trimmedLine === '') {
-                    if (!inTable) {
-                        html += '<div style="height: 8px;"></div>';
+                // Skip empty lines completely
+                if (trimmedLine === '') continue;
+
+                // Check next line to see if it's a data line (for month summaries)
+                const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
+
+                // Main section headers (ALL CAPS, standalone)
+                if (trimmedLine === trimmedLine.toUpperCase() &&
+                    trimmedLine.length > 3 &&
+                    !trimmedLine.includes(':') &&
+                    trimmedLine.match(/^[A-Z\s_]+$/)) {
+
+                    if (inList) {
+                        html += '</div>';
+                        inList = false;
                     }
-                    continue;
-                }
-
-                // Detect table rows (lines with | separators)
-                if (trimmedLine.includes('|')) {
-                    if (!inTable) {
-                        inTable = true;
-                        tableRows = [];
-                    }
-                    tableRows.push(trimmedLine);
-                    continue;
-                } else if (inTable) {
-                    // End of table, render it
-                    html += this.renderTable(tableRows);
-                    inTable = false;
-                    tableRows = [];
-                }
-
-                // Month summary lines (e.g., "Jul 2025 Deposits: $12,345")
-                if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/)) {
-                    const parts = trimmedLine.split(/\s{2,}/); // Split on multiple spaces
 
                     html += `
                         <div style="
-                            background: #f9fafb;
-                            border-left: 3px solid #3b82f6;
-                            padding: 12px 16px;
-                            margin: 8px 0;
-                            border-radius: 4px;
-                            font-size: 14px;
-                            line-height: 1.6;
-                        ">
-                            ${parts.map(part => `<div style="color: #111827;">${this.escapeHtml(part)}</div>`).join('')}
-                        </div>
-                    `;
-                    continue;
-                }
-
-                // Section headers (ALL CAPS or ends with :)
-                if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 3 && !trimmedLine.includes(':')) {
-                    html += `
-                        <h3 style="
                             color: #1e40af;
-                            font-size: 18px;
+                            font-size: 15px;
                             font-weight: 700;
-                            margin: 28px 0 14px 0;
-                            padding-bottom: 8px;
+                            margin: 16px 0 8px 0;
+                            padding-bottom: 4px;
                             border-bottom: 2px solid #3b82f6;
-                        ">${this.escapeHtml(trimmedLine)}</h3>
+                        ">${this.escapeHtml(trimmedLine)}</div>
                     `;
                     continue;
                 }
 
-                // Sub-headers (ends with :)
-                if (trimmedLine.endsWith(':')) {
+                // Month headers (e.g., "Jul 2025", "Aug 2025")
+                if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/)) {
+                    if (inList) {
+                        html += '</div>';
+                        inList = false;
+                    }
+
                     html += `
-                        <h4 style="
-                            color: #1f2937;
-                            font-size: 16px;
+                        <div style="
+                            background: #eff6ff;
+                            color: #1e40af;
                             font-weight: 600;
-                            margin: 20px 0 10px 0;
-                        ">${this.escapeHtml(trimmedLine)}</h4>
+                            font-size: 13px;
+                            padding: 6px 10px;
+                            margin: 8px 0 4px 0;
+                            border-left: 3px solid #3b82f6;
+                            border-radius: 2px;
+                        ">${this.escapeHtml(trimmedLine)}</div>
                     `;
                     continue;
                 }
 
-                // Bullet points (starts with -, •, or *)
-                if (trimmedLine.match(/^[-•*]\s/)) {
-                    const bulletText = trimmedLine.replace(/^[-•*]\s/, '');
+                // Sub-section headers (ends with colon, not a data line)
+                if (trimmedLine.endsWith(':') && !trimmedLine.match(/^(Deposits|Revenue|Neg Days|End Bal|#Dep):/)) {
+                    if (inList) {
+                        html += '</div>';
+                        inList = false;
+                    }
+
+                    html += `
+                        <div style="
+                            color: #374151;
+                            font-size: 14px;
+                            font-weight: 600;
+                            margin: 12px 0 6px 0;
+                        ">${this.escapeHtml(trimmedLine)}</div>
+                    `;
+                    continue;
+                }
+
+                // Bullet points or list items
+                if (trimmedLine.match(/^[•\-*]\s/) || trimmedLine.match(/^\d+\.\s/)) {
+                    if (!inList) {
+                        html += '<div style="margin: 6px 0;">';
+                        inList = true;
+                    }
+
+                    const bulletText = trimmedLine.replace(/^[•\-*]\s/, '').replace(/^\d+\.\s/, '');
+                    const isNumbered = trimmedLine.match(/^\d+\.\s/);
+
                     html += `
                         <div style="
                             display: flex;
-                            gap: 10px;
-                            margin: 6px 0 6px 16px;
-                            line-height: 1.5;
-                            font-size: 14px;
+                            gap: 8px;
+                            margin: 3px 0 3px ${isNumbered ? '0' : '12px'};
+                            line-height: 1.4;
+                            font-size: 13px;
                         ">
-                            <span style="color: #3b82f6; font-weight: 700;">•</span>
+                            <span style="color: #3b82f6; min-width: 6px;">${isNumbered ? trimmedLine.match(/^\d+/)[0] + '.' : '•'}</span>
                             <span style="color: #374151;">${this.escapeHtml(bulletText)}</span>
                         </div>
                     `;
                     continue;
                 }
 
-                // Key-value pairs (contains : in middle)
+                // Data lines (Deposits:, Revenue:, etc.)
+                if (trimmedLine.match(/^(Deposits|Revenue|Neg Days|End Bal|#Dep|Business Name|Position|Industry|Time in Business|Average|Negative Days|State|Positions):/)) {
+                    if (inList) {
+                        html += '</div>';
+                        inList = false;
+                    }
+
+                    const colonIndex = trimmedLine.indexOf(':');
+                    const key = trimmedLine.substring(0, colonIndex).trim();
+                    const value = trimmedLine.substring(colonIndex + 1).trim();
+
+                    html += `
+                        <div style="
+                            display: grid;
+                            grid-template-columns: 140px 1fr;
+                            gap: 10px;
+                            padding: 4px 8px;
+                            background: #f9fafb;
+                            margin: 2px 0;
+                            border-radius: 3px;
+                            font-size: 13px;
+                        ">
+                            <span style="font-weight: 600; color: #4b5563;">${this.escapeHtml(key)}:</span>
+                            <span style="color: #111827;">${this.escapeHtml(value)}</span>
+                        </div>
+                    `;
+                    continue;
+                }
+
+                // Other key-value pairs
                 if (trimmedLine.includes(':') && !trimmedLine.endsWith(':')) {
+                    if (inList) {
+                        html += '</div>';
+                        inList = false;
+                    }
+
                     const colonIndex = trimmedLine.indexOf(':');
                     const key = trimmedLine.substring(0, colonIndex).trim();
                     const value = trimmedLine.substring(colonIndex + 1).trim();
@@ -1202,56 +1238,43 @@ class FCSModule {
                     html += `
                         <div style="
                             display: flex;
-                            gap: 12px;
-                            margin: 10px 0;
-                            padding: 10px 14px;
-                            background: #f9fafb;
-                            border-radius: 4px;
-                            font-size: 14px;
+                            gap: 8px;
+                            margin: 4px 0;
+                            font-size: 13px;
+                            line-height: 1.4;
                         ">
-                            <span style="
-                                font-weight: 600;
-                                color: #374151;
-                                min-width: 180px;
-                            ">${this.escapeHtml(key)}:</span>
-                            <span style="
-                                color: #111827;
-                            ">${this.escapeHtml(value)}</span>
+                            <span style="font-weight: 600; color: #4b5563;">${this.escapeHtml(key)}:</span>
+                            <span style="color: #374151;">${this.escapeHtml(value)}</span>
                         </div>
                     `;
                     continue;
                 }
 
-                // Regular paragraph
+                // Regular text
+                if (inList) {
+                    html += '</div>';
+                    inList = false;
+                }
+
                 html += `
-                    <p style="
-                        margin: 10px 0;
-                        line-height: 1.6;
+                    <div style="
+                        margin: 4px 0;
+                        line-height: 1.4;
                         color: #374151;
-                        font-size: 14px;
-                    ">${this.escapeHtml(trimmedLine)}</p>
+                        font-size: 13px;
+                    ">${this.escapeHtml(trimmedLine)}</div>
                 `;
             }
 
-            // Render any remaining table
-            if (inTable && tableRows.length > 0) {
-                html += this.renderTable(tableRows);
+            if (inList) {
+                html += '</div>';
             }
 
             return html;
 
         } catch (error) {
             console.error('Error formatting FCS content:', error);
-            return `
-                <div style="padding: 20px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;">
-                    <p style="color: #991b1b; font-weight: 600; margin-bottom: 8px;">Error formatting report</p>
-                    <p style="color: #7f1d1d; font-size: 14px;">${error.message}</p>
-                    <details style="margin-top: 12px;">
-                        <summary style="cursor: pointer; color: #3b82f6;">View raw content</summary>
-                        <pre style="margin-top: 8px; padding: 12px; background: #f3f4f6; border-radius: 4px; overflow-x: auto; font-size: 12px;">${this.escapeHtml(content)}</pre>
-                    </details>
-                </div>
-            `;
+            return `<div style="color: #ef4444; padding: 12px;">Error: ${error.message}</div>`;
         }
     }
 
