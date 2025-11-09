@@ -938,7 +938,7 @@ class FCSModule {
             const processedContent = this.formatFCSContent(report.report_content);
 
             console.log('✅ Building HTML...');
-            // ✅ COMPACT HEADER - Much smaller!
+            // ✅ COMPACT HEADER with all info consolidated
             fcsResults.innerHTML = `
                 <div class="fcs-report" style="width: 100%; max-width: 100%;">
                     <!-- Compact header bar -->
@@ -946,7 +946,7 @@ class FCSModule {
                         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                         padding: 12px 20px;
                         border-radius: 6px;
-                        margin-bottom: 16px;
+                        margin-bottom: 20px;
                         color: white;
                         display: flex;
                         justify-content: space-between;
@@ -961,7 +961,9 @@ class FCSModule {
                                     FCS Financial Analysis Report
                                 </h4>
                                 <p style="color: rgba(255,255,255,0.85); font-size: 12px; margin: 2px 0 0 0;">
-                                    Generated on ${reportDate}
+                                    ${report.business_name || 'Business Analysis'} •
+                                    ${report.statement_count || 'Multiple'} Statements •
+                                    ${reportDate}
                                 </p>
                             </div>
                         </div>
@@ -997,35 +999,7 @@ class FCSModule {
                         </div>
                     </div>
 
-                    <!-- Business info bar (if available) -->
-                    ${report.business_name || report.statement_count ? `
-                        <div style="
-                            background: #f0f9ff;
-                            border-left: 3px solid #3b82f6;
-                            padding: 10px 16px;
-                            margin-bottom: 16px;
-                            border-radius: 4px;
-                            display: flex;
-                            gap: 24px;
-                            flex-wrap: wrap;
-                            font-size: 13px;
-                        ">
-                            ${report.business_name ? `
-                                <div>
-                                    <span style="color: #6b7280; font-weight: 500;">Business:</span>
-                                    <span style="color: #111827; margin-left: 6px;">${report.business_name}</span>
-                                </div>
-                            ` : ''}
-                            ${report.statement_count ? `
-                                <div>
-                                    <span style="color: #6b7280; font-weight: 500;">Statements Analyzed:</span>
-                                    <span style="color: #111827; margin-left: 6px;">${report.statement_count}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    ` : ''}
-
-                    <!-- Report content -->
+                    <!-- Report content (no redundant blue bar!) -->
                     <div class="fcs-content" style="
                         background: white;
                         border: 1px solid #e5e7eb;
@@ -1093,7 +1067,17 @@ class FCSModule {
         }
 
         try {
-            const lines = content.split('\n');
+            // ✅ Remove redundant lines
+            let cleanedContent = content
+                .replace(/^EXTRACTED_BUSINESS_NAME:.*$/m, '') // Remove extracted business name
+                .replace(/^Business:.*$/m, '')                 // Remove "Business:" line
+                .replace(/^Statements Analyzed:.*$/m, '')      // Remove statements analyzed
+                .replace(/^Monthly Financial Summary$/m, '')   // Remove "Monthly Financial Summary" header
+                .replace(/^Underwriting Section Breakdown$/m, '') // Remove redundant header
+                .replace(/^\.\.\.\s*$/m, '')                   // Remove "..." placeholder
+                .trim();
+
+            const lines = cleanedContent.split('\n');
             let html = '';
             let inBulletList = false;
 
@@ -1154,14 +1138,13 @@ class FCSModule {
                     continue;
                 }
 
-                // Month summary lines - ULTRA COMPACT VERSION
+                // Month summary lines - CLEAN VERSION WITHOUT CONTAINER
                 if (trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+Deposits:/)) {
                     if (inBulletList) {
                         html += '</div>';
                         inBulletList = false;
                     }
 
-                    // Parse the month line
                     const monthMatch = trimmedLine.match(/^([A-Z][a-z]+\s+\d{4})\s+(.+)$/);
                     if (monthMatch) {
                         const month = monthMatch[1];
@@ -1176,14 +1159,12 @@ class FCSModule {
 
                         html += `
                             <div style="
-                                background: #f0f9ff;
-                                border-left: 3px solid #3b82f6;
-                                padding: 8px 12px;
-                                margin: 6px 0;
-                                border-radius: 4px;
+                                padding: 10px 0;
+                                margin: 8px 0;
+                                border-bottom: 1px solid #e5e7eb;
                                 display: flex;
                                 align-items: center;
-                                gap: 24px;
+                                gap: 20px;
                                 flex-wrap: wrap;
                                 font-size: 13px;
                             ">
@@ -1191,32 +1172,32 @@ class FCSModule {
                                     font-weight: 700;
                                     color: #1e40af;
                                     font-size: 14px;
-                                    min-width: 80px;
+                                    min-width: 85px;
                                 ">${this.escapeHtml(month)}</div>
 
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <span style="font-weight: 600; color: #374151;">Deposits:</span>
-                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(deposits)}</span>
+                                <div style="display: flex; gap: 6px; align-items: baseline;">
+                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">Deposits:</span>
+                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(deposits)}</span>
                                 </div>
 
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <span style="font-weight: 600; color: #374151;">Revenue:</span>
-                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(revenue)}</span>
+                                <div style="display: flex; gap: 6px; align-items: baseline;">
+                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">Revenue:</span>
+                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(revenue)}</span>
                                 </div>
 
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <span style="font-weight: 600; color: #374151;">Neg Days:</span>
-                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(negDays)}</span>
+                                <div style="display: flex; gap: 6px; align-items: baseline;">
+                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">Neg Days:</span>
+                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(negDays)}</span>
                                 </div>
 
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <span style="font-weight: 600; color: #374151;">End Bal:</span>
-                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(endBal)}</span>
+                                <div style="display: flex; gap: 6px; align-items: baseline;">
+                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">End Bal:</span>
+                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(endBal)}</span>
                                 </div>
 
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <span style="font-weight: 600; color: #374151;">#Dep:</span>
-                                    <span style="color: #111827; font-weight: 500;">${this.escapeHtml(numDep)}</span>
+                                <div style="display: flex; gap: 6px; align-items: baseline;">
+                                    <span style="font-weight: 600; color: #6b7280; font-size: 12px;">#Dep:</span>
+                                    <span style="color: #111827; font-weight: 600;">${this.escapeHtml(numDep)}</span>
                                 </div>
                             </div>
                         `;
