@@ -620,38 +620,80 @@ class IntelligenceTabs {
         const form = document.getElementById('editLeadForm');
         const formData = new FormData(form);
 
-        // Build update object
+        // Build update object with correct field mapping
         const updates = {};
 
-        // Get all form fields
+        // Get all form fields and map to database columns
         for (let [key, value] of formData.entries()) {
             if (key === 'payment_methods') {
                 if (!updates.payment_methods) updates.payment_methods = [];
                 updates.payment_methods.push(value);
             } else {
-                updates[key] = value;
+                // Only include non-empty values
+                if (value && value.trim() !== '') {
+                    // ✅ Map frontend field names to database column names
+                    switch(key) {
+                        case 'business_address':
+                            updates.address = value;
+                            break;
+                        case 'business_city':
+                            updates.city = value;
+                            break;
+                        case 'business_state':
+                            updates.us_state = value;
+                            break;
+                        case 'business_zip':
+                            updates.zip = value;
+                            break;
+                        case 'tax_id':
+                            updates.federal_tax_id = value;
+                            break;
+                        case 'business_start_date':
+                            updates.business_start_date = value;
+                            break;
+                        case 'annual_revenue':
+                            updates.annual_revenue = parseFloat(value);
+                            updates.monthly_revenue = parseFloat(value) / 12;
+                            break;
+                        case 'entity_type':
+                            updates.entity_type = value;
+                            break;
+                        case 'industry_type':
+                            updates.industry_type = value;
+                            break;
+                        default:
+                            // All other fields keep same name
+                            updates[key] = value;
+                    }
+                }
             }
         }
 
         // Convert payment methods array to string
-        if (updates.payment_methods) {
+        if (updates.payment_methods && updates.payment_methods.length > 0) {
             updates.payment_methods = updates.payment_methods.join(', ');
+        } else {
+            delete updates.payment_methods;
         }
 
         // Copy business address to owner if checkbox is checked
         if (document.getElementById('sameAsBusinessAddressEdit')?.checked) {
-            updates.owner_home_address = updates.business_address;
-            updates.owner_home_city = updates.business_city;
-            updates.owner_home_state = updates.business_state;
-            updates.owner_home_zip = updates.business_zip;
+            updates.owner_home_address = updates.address;
+            updates.owner_home_city = updates.city;
+            updates.owner_home_state = updates.us_state;
+            updates.owner_home_zip = updates.zip;
         }
+
+        console.log('📤 Saving lead data:', updates);
 
         try {
             // Save to database
-            await this.parent.apiCall(`/api/conversations/${conv.id}`, {
+            const response = await this.parent.apiCall(`/api/conversations/${conv.id}`, {
                 method: 'PUT',
                 body: JSON.stringify(updates)
             });
+
+            console.log('✅ Save response:', response);
 
             // Update local conversation object
             Object.assign(conv, updates);
@@ -663,8 +705,14 @@ class IntelligenceTabs {
             this.utils.showNotification('Lead information saved!', 'success');
 
         } catch (error) {
-            console.error('Error saving lead:', error);
-            this.utils.showNotification('Failed to save: ' + error.message, 'error');
+            console.error('❌ Error saving lead:', error);
+            console.error('Data that failed:', updates);
+
+            let errorMsg = 'Failed to save';
+            if (error.message) {
+                errorMsg += ': ' + error.message;
+            }
+            this.utils.showNotification(errorMsg, 'error');
         }
     }
 
@@ -1964,21 +2012,59 @@ class IntelligenceTabs {
         const form = document.getElementById('appForm');
         const formData = new FormData(form);
 
-        // Build update object
+        // Build update object with correct field mapping
         const updates = {};
 
-        // Get all form fields
+        // Get all form fields and map to database columns
         for (let [key, value] of formData.entries()) {
-            updates[key] = value;
+            // Only include non-empty values
+            if (value && value.trim() !== '') {
+                // ✅ Map frontend field names to database column names
+                switch(key) {
+                    case 'business_address':
+                        updates.address = value;
+                        break;
+                    case 'business_city':
+                        updates.city = value;
+                        break;
+                    case 'business_state':
+                        updates.us_state = value;
+                        break;
+                    case 'business_zip':
+                        updates.zip = value;
+                        break;
+                    case 'tax_id':
+                        updates.federal_tax_id = value;
+                        break;
+                    case 'business_start_date':
+                        updates.business_start_date = value;
+                        break;
+                    case 'annual_revenue':
+                        updates.annual_revenue = parseFloat(value);
+                        updates.monthly_revenue = parseFloat(value) / 12;
+                        break;
+                    case 'entity_type':
+                        updates.entity_type = value;
+                        break;
+                    case 'industry_type':
+                        updates.industry_type = value;
+                        break;
+                    default:
+                        // All other fields keep same name
+                        updates[key] = value;
+                }
+            }
         }
 
         // Copy business address to owner if checkbox is checked
         if (document.getElementById('sameAsBusinessAddress')?.checked) {
-            updates.owner_home_address = updates.business_address;
-            updates.owner_home_city = updates.business_city;
-            updates.owner_home_state = updates.business_state;
-            updates.owner_home_zip = updates.business_zip;
+            updates.owner_home_address = updates.address;
+            updates.owner_home_city = updates.city;
+            updates.owner_home_state = updates.us_state;
+            updates.owner_home_zip = updates.zip;
         }
+
+        console.log('📤 Saving application data:', updates);
 
         try {
             // Save to database
@@ -1986,6 +2072,8 @@ class IntelligenceTabs {
                 method: 'PUT',
                 body: JSON.stringify(updates)
             });
+
+            console.log('✅ Save successful');
 
             // Update local conversation object
             Object.assign(conv, updates);
@@ -2000,7 +2088,8 @@ class IntelligenceTabs {
             await this.proceedWithPDFGeneration(conv);
 
         } catch (error) {
-            console.error('Error:', error);
+            console.error('❌ Error saving application data:', error);
+            console.error('Data that failed:', updates);
             this.utils.showNotification('Failed to save: ' + error.message, 'error');
         }
     }
