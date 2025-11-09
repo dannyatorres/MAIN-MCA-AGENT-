@@ -421,9 +421,9 @@ class FCSModule {
             this.utils.showNotification('Failed to start FCS generation: ' + error.message, 'error');
 
             // Show error in UI
-            const fcsContent = document.getElementById('fcsContent');
-            if (fcsContent) {
-                fcsContent.innerHTML = `
+            const fcsResults = document.getElementById('fcsResults');
+            if (fcsResults) {
+                fcsResults.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #ef4444;">
                         <p style="font-size: 18px;">Failed to start FCS generation</p>
                         <p style="font-size: 14px;">${error.message}</p>
@@ -433,6 +433,7 @@ class FCSModule {
                         </button>
                     </div>
                 `;
+                fcsResults.style.display = 'block';
             }
 
             // Reload documents to refresh the UI
@@ -451,9 +452,9 @@ class FCSModule {
             this._generatingForConversation = null;
             this._generationStartTime = null;
 
-            const fcsContent = document.getElementById('fcsContent');
-            if (fcsContent) {
-                fcsContent.innerHTML = `
+            const fcsResults = document.getElementById('fcsResults');
+            if (fcsResults) {
+                fcsResults.innerHTML = `
                     <div style="text-align: center; padding: 40px;">
                         <p style="color: #f59e0b; font-size: 18px;">⏱️ Generation taking longer than expected</p>
                         <p style="color: #6b7280;">The report may still be processing.</p>
@@ -464,6 +465,7 @@ class FCSModule {
                         </button>
                     </div>
                 `;
+                fcsResults.style.display = 'block';
             }
             return;
         }
@@ -500,9 +502,9 @@ class FCSModule {
                 // Hide progress indicator
                 this.hideFCSProgress();
 
-                const fcsContent = document.getElementById('fcsContent');
-                if (fcsContent) {
-                    fcsContent.innerHTML = `
+                const fcsResults = document.getElementById('fcsResults');
+                if (fcsResults) {
+                    fcsResults.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #ef4444;">
                             <p style="font-size: 18px;">❌ FCS Generation Failed</p>
                             <p style="font-size: 14px;">${statusResult.error || 'Unknown error'}</p>
@@ -512,6 +514,7 @@ class FCSModule {
                             </button>
                         </div>
                     `;
+                    fcsResults.style.display = 'block';
                 }
             } else {
                 // Still processing, poll again in 5 seconds
@@ -549,9 +552,9 @@ class FCSModule {
             this._generatingForConversation = null;
             this._generationStartTime = null;
 
-            const fcsContent = document.getElementById('fcsContent');
-            if (fcsContent) {
-                fcsContent.innerHTML = `
+            const fcsResults = document.getElementById('fcsResults');
+            if (fcsResults) {
+                fcsResults.innerHTML = `
                     <div style="text-align: center; padding: 40px;">
                         <p style="color: #f59e0b; font-size: 18px;">⏱️ Generation taking longer than expected</p>
                         <p style="color: #6b7280;">The report may still be processing.</p>
@@ -562,6 +565,7 @@ class FCSModule {
                         </button>
                     </div>
                 `;
+                fcsResults.style.display = 'block';
             }
             return;
         }
@@ -604,10 +608,10 @@ class FCSModule {
         }
 
         // Update status with elapsed time
-        const fcsContent = document.getElementById('fcsContent');
-        if (fcsContent) {
+        const fcsResults = document.getElementById('fcsResults');
+        if (fcsResults) {
             const elapsed = Math.floor((Date.now() - this._generationStartTime) / 1000);
-            fcsContent.innerHTML = `
+            fcsResults.innerHTML = `
                 <div style="text-align: center; padding: 60px 40px;">
                     <style>
                         @keyframes spin {
@@ -621,6 +625,7 @@ class FCSModule {
                     <p style="color: #9ca3af; font-size: 13px; margin: 16px 0 0 0;">Analyzing bank statements with AI...</p>
                 </div>
             `;
+            fcsResults.style.display = 'block';
         }
 
         // Poll again in 10 seconds
@@ -641,9 +646,9 @@ class FCSModule {
             console.log('🚫 BLOCKED: Generation in progress for this conversation - NOT loading old data');
 
             // Keep showing loading state - DON'T fetch from database
-            const fcsContent = document.getElementById('fcsContent');
-            if (fcsContent) {
-                fcsContent.innerHTML = `
+            const fcsResults = document.getElementById('fcsResults');
+            if (fcsResults) {
+                fcsResults.innerHTML = `
                     <div style="text-align: center; padding: 60px 40px;">
                         <style>
                             @keyframes spin {
@@ -657,6 +662,7 @@ class FCSModule {
                         <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh</p>
                     </div>
                 `;
+                fcsResults.style.display = 'block';
             }
             return; // EXIT IMMEDIATELY - don't continue to database fetch
         }
@@ -666,21 +672,22 @@ class FCSModule {
             return;
         }
 
-        const fcsContent = document.getElementById('fcsContent');
-        if (!fcsContent) {
-            console.error('fcsContent element not found');
+        const fcsResults = document.getElementById('fcsResults');
+        if (!fcsResults) {
+            console.error('fcsResults element not found');
             return;
         }
 
         console.log(`Loading FCS data for conversation ${conversationId}`);
 
         // Show loading state ONLY if not generating
-        fcsContent.innerHTML = `
+        fcsResults.innerHTML = `
             <div style="text-align: center; padding: 40px;">
                 <div class="loading-spinner"></div>
                 <p>Loading FCS report...</p>
             </div>
         `;
+        fcsResults.style.display = 'block';
 
         try {
             const cacheBuster = new Date().getTime();
@@ -714,7 +721,7 @@ class FCSModule {
 
             // Handle 404 (no report found) specially
             if (error.message.includes('404')) {
-                fcsContent.innerHTML = `
+                fcsResults.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">📊</div>
                         <h4>No FCS Report Generated</h4>
@@ -724,16 +731,18 @@ class FCSModule {
                         </button>
                     </div>
                 `;
+                fcsResults.style.display = 'block';
                 return;
             }
 
-            fcsContent.innerHTML = `
+            fcsResults.innerHTML = `
                 <div style="text-align: center; padding: 20px; color: #ef4444;">
                     <p>Failed to load FCS data</p>
                     <p style="font-size: 0.8em; color: #666;">Error: ${error.message}</p>
                     <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry Loading</button>
                 </div>
             `;
+            fcsResults.style.display = 'block';
         }
     }
 
@@ -747,16 +756,16 @@ class FCSModule {
             console.log('Is undefined?', report.report_content === undefined);
             console.log('==============================');
 
-            const fcsContent = document.getElementById('fcsContent');
-            if (!fcsContent) {
-                console.error('fcsContent element not found');
+            const fcsResults = document.getElementById('fcsResults');
+            if (!fcsResults) {
+                console.error('fcsResults element not found');
                 return;
             }
 
             // Check if report has content
             if (!report || !report.report_content) {
                 console.error('Report or report_content is missing:', report);
-                fcsContent.innerHTML = `
+                fcsResults.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #ef4444;">
                         <p>FCS Report has no content</p>
                         <p style="font-size: 0.9em; color: #666;">The report data is missing from the response.</p>
@@ -764,6 +773,7 @@ class FCSModule {
                         <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button>
                     </div>
                 `;
+                fcsResults.style.display = 'block';
                 return;
             }
 
@@ -781,7 +791,7 @@ class FCSModule {
             console.log('About to call formatFCSContent with:', report.report_content.substring(0, 100) + '...');
             const processedContent = this.formatFCSContent(report.report_content);
 
-            fcsContent.innerHTML = `
+            fcsResults.innerHTML = `
                 <div class="fcs-report" style="width: 100%; max-width: 100%; overflow: hidden;">
                     <div class="fcs-header" style="background: #f0f9ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -820,19 +830,24 @@ class FCSModule {
                     </div>
                 </div>
             `;
+
+            // ✅ CRITICAL: Show the container!
+            fcsResults.style.display = 'block';
+
             console.log('FCS report displayed successfully');
         } catch (error) {
             console.error('Error in displayFCSReport:', error);
             console.error('Error stack:', error.stack);
-            const fcsContent = document.getElementById('fcsContent');
-            if (fcsContent) {
-                fcsContent.innerHTML = `
+            const fcsResults = document.getElementById('fcsResults');
+            if (fcsResults) {
+                fcsResults.innerHTML = `
                     <div style="text-align: center; padding: 20px; color: #ef4444;">
                         <p>Error displaying FCS report</p>
                         <p style="font-size: 0.8em; color: #666;">Error: ${error.message}</p>
                         <button onclick="window.commandCenter.fcs.loadFCSData()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry Loading</button>
                     </div>
                 `;
+                fcsResults.style.display = 'block';
             }
         }
     }
