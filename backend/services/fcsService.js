@@ -475,35 +475,42 @@ class FCSService {
                 s3_key: document.s3_key,
                 renamed_name: document.renamed_name
             });
-            
-            // Construct file path from available filename fields
-            if (!document.file_path) {
-                if (document.renamed_name) {
-                    document.file_path = path.join(__dirname, '../uploads', document.renamed_name);
-                } else if (document.filename) {
-                    document.file_path = path.join(__dirname, '../uploads', document.filename);
-                } else if (document.original_name) {
-                    document.file_path = path.join(__dirname, '../uploads', document.original_name);
-                }
-            }
-            
-            console.log('📂 Constructed file path:', document.file_path);
-            
-            // Get document buffer and check if we need batch/chunked processing
+
+            // Get document buffer
+            const documentBuffer = await this.getDocumentBuffer(document);
+
+            // Use pdf-parse directly (skip Document AI due to Railway OpenSSL issues)
+            console.log('📄 Using pdf-parse for text extraction (Document AI disabled in production)');
+
             try {
-                const documentBuffer = await this.getDocumentBuffer(document);
-                const { useBatchProcessing, pageCount } = await this.detectLargeDocument(documentBuffer);
-                
-                if (useBatchProcessing) {
-                    console.log(`🔄 Document has ${pageCount} pages - Using chunked processing for large document`);
-                    return await this.extractTextFromDocumentChunked(document, documentBuffer);
-                } else {
-                    console.log(`🔄 Document has ${pageCount} pages - Using synchronous processing`);
-                    return await this.extractTextFromDocumentSync(document, documentBuffer);
+                const pdfParse = require('pdf-parse');
+
+                const data = await pdfParse(documentBuffer, {
+                    max: 0 // Process all pages
+                });
+
+                console.log(`✅ Extracted ${data.text.length} characters from ${data.numpages} pages`);
+
+                if (data.text && data.text.trim().length > 100) {
+                    return data.text;
                 }
-            } catch (error) {
-                console.log('⚠️ Could not determine processing method, trying synchronous');
-                return await this.extractTextFromDocumentSync(document);
+
+                // If minimal text, document is likely image-based
+                console.warn('⚠️ PDF contains minimal extractable text - likely scanned/image-based');
+                return `PDF Document: ${document.filename || document.original_name}
+File Size: ${documentBuffer.length} bytes
+Pages: ${data.numpages}
+Status: Image-based PDF (no embedded text)
+Note: This document contains ${data.numpages} pages of scanned content requiring OCR.`;
+
+            } catch (pdfError) {
+                console.log('❌ pdf-parse failed:', pdfError.message);
+
+                // Final fallback
+                return `PDF Document: ${document.filename || document.original_name}
+File Size: ${documentBuffer.length} bytes
+Status: Unable to extract text - requires manual processing
+Error: ${pdfError.message}`;
             }
         } catch (error) {
             // Final error fallback for extractTextFromDocument
