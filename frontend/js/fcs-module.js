@@ -381,15 +381,23 @@ class FCSModule {
 
     async startFCSGeneration(conversationId, businessName, selectedDocuments) {
         console.log('🔵 Starting FCS generation for:', conversationId);
+        console.log('📋 Generation parameters:', {
+            businessName,
+            documentCount: selectedDocuments.length,
+            documentIds: selectedDocuments
+        });
 
         // Show initial progress
         this.showFCSProgress('Starting FCS generation...');
 
         try {
-            // Call NEW backend FCS endpoint (no longer using n8n)
+            // ✅ FIXED: Send business name and document IDs to backend
             const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs/generate`, {
                 method: 'POST',
-                body: JSON.stringify({})  // Backend fetches all documents automatically
+                body: JSON.stringify({
+                    businessName: businessName,
+                    documentIds: selectedDocuments
+                })
             });
             console.log('✅ FCS API response:', result);
 
