@@ -115,13 +115,6 @@ class IntelligenceTabs {
             this.parent.core.syncConversationContext();
         }
 
-        // Cache AI chat content before switching away from ai-assistant tab
-        const currentActiveTab = document.querySelector('.tab-btn.active');
-        if (currentActiveTab && currentActiveTab.dataset.tab === 'ai-assistant' && tab !== 'ai-assistant') {
-            console.log(`🔄 Switching from AI Assistant to ${tab} - saving state`);
-            this.saveAIChatState();
-        }
-
         // Update tab buttons FIRST before anything else
         const tabButtons = document.querySelectorAll('.tab-btn');
         tabButtons.forEach(btn => {
@@ -139,56 +132,86 @@ class IntelligenceTabs {
             return;
         }
 
-        console.log(`Rendering tab: ${tab}`);
-        switch (tab) {
-            case 'ai-assistant':
-                this.renderAIAssistantTab(content);
-                break;
-            case 'overview':
-                this.renderOverviewTab(content);
-                break;
-            case 'documents':
-                await this.renderDocumentsTab(content);
-                break;
-            case 'edit':
-                this.renderEditTab(content);
-                break;
-            case 'fcs':
-                this.renderFCSTab(content);
-                break;
-            case 'lenders':
-                this.renderLendersTab(content);
+        // ✅ HIDE all existing tab contents first (preserve them, don't destroy)
+        const allTabContents = content.querySelectorAll('[data-tab-content]');
+        allTabContents.forEach(tc => {
+            tc.style.display = 'none';
+        });
+
+        // ✅ Check if tab content already exists
+        let tabContent = content.querySelector(`[data-tab-content="${tab}"]`);
+
+        if (tabContent) {
+            // Tab already rendered - just show it
+            console.log(`✅ Tab "${tab}" already exists, showing cached content`);
+            tabContent.style.display = 'block';
+
+            // Special handling for tabs that need refresh
+            if (tab === 'lenders') {
                 setTimeout(() => {
                     this.parent.lenders?.restoreLenderFormCacheIfNeeded();
 
-                    // Check if we have cached lender results and restore them
                     const conversationId = this.parent.getCurrentConversationId();
                     if (conversationId && this.parent.lenders?.lenderResultsCache.has(conversationId)) {
                         const cached = this.parent.lenders.lenderResultsCache.get(conversationId);
-
-                        // Restore the cached results
                         const resultsEl = document.getElementById('lenderResults');
                         if (resultsEl && cached.html) {
                             console.log('Restoring cached lender results for conversation:', conversationId);
                             resultsEl.innerHTML = cached.html;
                             resultsEl.classList.add('active');
-
-                            // Reattach event listeners for the restored content
                             this.parent.lenders.reattachResultsEventListeners(cached.data, cached.criteria);
                         }
                     }
-                }, 500);
-                break;
-            case 'lender-management':
-                this.renderLenderManagementTab(content);
-                break;
-            case 'email':
-                this.renderEmailTab(content);
-                break;
-            default:
-                console.log(`Unknown tab: ${tab}, falling back to AI Assistant`);
-                this.renderAIAssistantTab(content);
-                break;
+                }, 100);
+            }
+        } else {
+            // Tab doesn't exist - render it for the first time
+            console.log(`📝 Rendering new tab: ${tab}`);
+            switch (tab) {
+                case 'ai-assistant':
+                    this.renderAIAssistantTab(content);
+                    break;
+                case 'overview':
+                    this.renderOverviewTab(content);
+                    break;
+                case 'documents':
+                    await this.renderDocumentsTab(content);
+                    break;
+                case 'edit':
+                    this.renderEditTab(content);
+                    break;
+                case 'fcs':
+                    this.renderFCSTab(content);
+                    break;
+                case 'lenders':
+                    this.renderLendersTab(content);
+                    setTimeout(() => {
+                        this.parent.lenders?.restoreLenderFormCacheIfNeeded();
+
+                        const conversationId = this.parent.getCurrentConversationId();
+                        if (conversationId && this.parent.lenders?.lenderResultsCache.has(conversationId)) {
+                            const cached = this.parent.lenders.lenderResultsCache.get(conversationId);
+                            const resultsEl = document.getElementById('lenderResults');
+                            if (resultsEl && cached.html) {
+                                console.log('Restoring cached lender results for conversation:', conversationId);
+                                resultsEl.innerHTML = cached.html;
+                                resultsEl.classList.add('active');
+                                this.parent.lenders.reattachResultsEventListeners(cached.data, cached.criteria);
+                            }
+                        }
+                    }, 500);
+                    break;
+                case 'lender-management':
+                    this.renderLenderManagementTab(content);
+                    break;
+                case 'email':
+                    this.renderEmailTab(content);
+                    break;
+                default:
+                    console.log(`Unknown tab: ${tab}, falling back to AI Assistant`);
+                    this.renderAIAssistantTab(content);
+                    break;
+            }
         }
         console.log(`switchIntelligenceTab(${tab}) completed`);
     }
@@ -210,53 +233,13 @@ class IntelligenceTabs {
         const conversationId = this.parent.getCurrentConversationId();
         console.log(`Rendering AI Assistant tab for conversation: ${conversationId}`);
 
-        // Check if we have cached content for this conversation
-        if (this.aiChatCache.has(conversationId)) {
-            const cachedContent = this.aiChatCache.get(conversationId);
-            console.log(`🔄 Found cache for conversation: ${conversationId} (${cachedContent.messageCount} messages, ${Math.round((Date.now() - cachedContent.timestamp) / 1000)}s ago)`);
-
-            // Check if current content is different from cached content
-            const currentAISection = content.querySelector('.ai-assistant-section');
-            const shouldRestore = !currentAISection ||
-                                currentAISection.dataset.conversationId !== conversationId ||
-                                content.innerHTML !== cachedContent.html;
-
-            if (shouldRestore) {
-                console.log('📋 Restoring AI chat from cache');
-                content.innerHTML = cachedContent.html;
-
-                // Check if messages are still in loading state
-                const messagesDiv = content.querySelector('#aiChatMessages');
-                const hasLoadingState = messagesDiv && messagesDiv.querySelector('.ai-loading-state');
-
-                if (hasLoadingState) {
-                    console.log('⚠️ Cached content still has loading state, forcing refresh');
-                    // Force re-initialize to load actual messages
-                    setTimeout(() => {
-                        if (this.parent.ai) {
-                            this.parent.ai.initializeAIChat();
-                        }
-                    }, 100);
-                } else {
-                    // Restore event handlers with better timing
-                    setTimeout(() => {
-                        if (this.parent.ai) {
-                            this.parent.ai.setupEventHandlers();
-                            this.parent.ai.currentConversationId = conversationId;
-                            this.parent.ai.isInitialized = true;
-                            console.log('✅ AI chat restored and handlers setup');
-                        }
-                    }, 50);
-                }
-                return;
-            } else {
-                console.log('✨ AI assistant already properly rendered');
-                return;
-            }
-        }
+        // Create wrapper with data-tab-content attribute
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-tab-content', 'ai-assistant');
+        wrapper.style.display = 'block';
 
         // Create full-screen AI assistant interface
-        content.innerHTML = `
+        wrapper.innerHTML = `
             <div class="ai-assistant-section" data-conversation-id="${conversationId}" style="height: calc(100vh - 200px); display: flex; flex-direction: column; width: 100%; max-width: 100%; overflow: hidden;">
                 <div class="ai-chat-interface" style="height: 100%; display: flex; flex-direction: column; background: #f9fafb; border-radius: 8px; max-height: 100%; width: 100%; max-width: 100%; overflow: hidden;">
                     <div class="ai-chat-header" style="padding: 12px 16px; background: transparent; border-bottom: 1px solid #e5e7eb;">
@@ -314,12 +297,13 @@ class IntelligenceTabs {
             </div>
         `;
 
+        // Add to content
+        content.appendChild(wrapper);
+
         // Initialize AI chat functionality
         setTimeout(() => {
             if (this.parent.ai) {
                 this.parent.ai.initializeAIChat();
-                // Cache the initial state after initialization
-                setTimeout(() => this.saveAIChatState(), 200);
 
                 // Safety timeout: If loading dots are still visible after 10 seconds, clear them
                 setTimeout(() => {
@@ -356,20 +340,29 @@ class IntelligenceTabs {
     async renderDocumentsTab(content) {
         console.log('📄 Rendering Documents Tab');
 
+        // Create wrapper with data-tab-content attribute
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-tab-content', 'documents');
+        wrapper.style.display = 'block';
+
         if (!this.parent.documents) {
             console.error('❌ Documents module not available');
-            content.innerHTML = `
+            wrapper.innerHTML = `
                 <div class="error-state" style="text-align: center; padding: 40px;">
                     <div class="error-icon" style="font-size: 48px; margin-bottom: 16px;">❌</div>
                     <h4 style="color: #dc2626;">Documents Module Not Loaded</h4>
                     <p style="color: #6b7280;">The documents module failed to initialize.</p>
                 </div>
             `;
+            content.appendChild(wrapper);
             return;
         }
 
-        // Render template first
-        content.innerHTML = this.parent.documents.createDocumentsTabTemplate();
+        // Render template
+        wrapper.innerHTML = this.parent.documents.createDocumentsTabTemplate();
+
+        // Add to content
+        content.appendChild(wrapper);
 
         // Setup event listeners
         this.parent.documents.setupDocumentsEventListeners();
@@ -386,13 +379,20 @@ class IntelligenceTabs {
 
     renderEditTab(content) {
         const conversation = this.parent.getSelectedConversation();
+
+        // Create wrapper with data-tab-content attribute
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-tab-content', 'edit');
+        wrapper.style.display = 'block';
+
         if (!conversation) {
-            content.innerHTML = '<div class="empty-state">No conversation selected</div>';
+            wrapper.innerHTML = '<div class="empty-state">No conversation selected</div>';
+            content.appendChild(wrapper);
             return;
         }
 
         // Simple button to open the modal instead of inline form
-        content.innerHTML = `
+        wrapper.innerHTML = `
             <div style="padding: 40px; text-align: center;">
                 <h3 style="margin-bottom: 20px;">Edit Lead Information</h3>
                 <p style="margin-bottom: 30px; color: #6b7280;">
@@ -405,8 +405,11 @@ class IntelligenceTabs {
             </div>
         `;
 
+        // Add to content
+        content.appendChild(wrapper);
+
         // Set up the button to open modal
-        const openBtn = content.querySelector('#openEditModalBtn');
+        const openBtn = wrapper.querySelector('#openEditModalBtn');
         if (openBtn) {
             openBtn.addEventListener('click', () => this.openEditModal());
         }
@@ -456,27 +459,21 @@ class IntelligenceTabs {
     renderFCSTab(content) {
         console.log('renderFCSTab called');
 
-        // ✅ Check if fcsResults already exists and has content
-        let fcsResults = document.getElementById('fcsResults');
-        const hasFCSContent = fcsResults && fcsResults.innerHTML.trim() !== '' && fcsResults.style.display !== 'none';
+        // Create wrapper with data-tab-content attribute
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-tab-content', 'fcs');
+        wrapper.style.display = 'block';
 
-        if (hasFCSContent) {
-            console.log('✅ FCS results already rendered, preserving existing content');
-            // Don't re-render! Just make sure it's visible
-            fcsResults.style.display = 'block';
-            return;
-        }
-
-        // ✅ Only clear and rebuild if no content exists
-        console.log('📄 No existing FCS content, creating fresh structure');
-
-        content.innerHTML = `
+        wrapper.innerHTML = `
             <div class="intelligence-section">
                 <div id="fcsResults" style="display: none;"></div>
                 <div id="fcsLoading" style="display: none;"></div>
                 <div id="fcsErrorMsg" style="display: none;"></div>
             </div>
         `;
+
+        // Add to content
+        content.appendChild(wrapper);
 
         // CRITICAL: Check if we're in generation mode BEFORE trying to load
         if (this.parent.fcs && this.parent.fcs._fcsGenerationInProgress) {
@@ -494,7 +491,7 @@ class IntelligenceTabs {
                 console.log('🚫 NOT loading old data - generation in progress');
 
                 // Show loading state in fcsResults
-                fcsResults = document.getElementById('fcsResults');
+                const fcsResults = document.getElementById('fcsResults');
                 if (fcsResults) {
                     fcsResults.innerHTML = `
                         <div style="text-align: center; padding: 60px 40px;">
@@ -525,18 +522,26 @@ class IntelligenceTabs {
 
     renderLendersTab(content) {
         const conversation = this.parent.getSelectedConversation();
+
+        // Create wrapper with data-tab-content attribute
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-tab-content', 'lenders');
+        wrapper.style.display = 'block';
+
         if (!conversation) {
-            content.innerHTML = '<div class="empty-state">No conversation selected</div>';
+            wrapper.innerHTML = '<div class="empty-state">No conversation selected</div>';
+            content.appendChild(wrapper);
             return;
         }
 
         if (!this.parent.lenders) {
-            content.innerHTML = '<div class="empty-state">Lenders module not available</div>';
+            wrapper.innerHTML = '<div class="empty-state">Lenders module not available</div>';
+            content.appendChild(wrapper);
             return;
         }
 
         // Simple button to open the modal instead of inline form
-        content.innerHTML = `
+        wrapper.innerHTML = `
             <div style="padding: 40px; text-align: center;">
                 <h3 style="margin-bottom: 20px;">Lender Qualification & Submission</h3>
                 <p style="margin-bottom: 30px; color: #6b7280;">
@@ -549,8 +554,11 @@ class IntelligenceTabs {
             </div>
         `;
 
+        // Add to content
+        content.appendChild(wrapper);
+
         // Set up the button to open modal
-        const openBtn = content.querySelector('#openLendersModalBtn');
+        const openBtn = wrapper.querySelector('#openLendersModalBtn');
         if (openBtn) {
             openBtn.addEventListener('click', () => this.openLendersModal());
         }
@@ -618,10 +626,17 @@ class IntelligenceTabs {
     }
 
     renderEmailTab(content) {
+        // Create wrapper with data-tab-content attribute
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-tab-content', 'email');
+        wrapper.style.display = 'block';
+
         if (this.parent.emailTab) {
+            content.appendChild(wrapper);
             this.parent.emailTab.render();
         } else {
-            content.innerHTML = '<div class="empty-state">Email module not available</div>';
+            wrapper.innerHTML = '<div class="empty-state">Email module not available</div>';
+            content.appendChild(wrapper);
         }
     }
 
