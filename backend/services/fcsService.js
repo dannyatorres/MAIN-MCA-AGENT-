@@ -29,9 +29,44 @@ class FCSService {
         
     }
     
+    async getAccessTokenFromRefreshToken() {
+        try {
+            console.log('🔐 Refreshing OAuth access token...');
+
+            const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    client_id: process.env.GOOGLE_CLIENT_ID,
+                    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+                    grant_type: 'refresh_token'
+                })
+            });
+
+            if (!tokenResponse.ok) {
+                const errorText = await tokenResponse.text();
+                throw new Error(`Token refresh failed: ${tokenResponse.status} ${errorText}`);
+            }
+
+            const data = await tokenResponse.json();
+
+            if (!data.access_token) {
+                throw new Error(`No access token in response: ${JSON.stringify(data)}`);
+            }
+
+            console.log('✅ OAuth access token obtained');
+            return data.access_token;
+
+        } catch (error) {
+            console.error('❌ OAuth refresh failed:', error.message);
+            throw error;
+        }
+    }
+
     async initializeGeminiAI() {
         if (this.isGeminiInitialized) return;
-        
+
         try {
             this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
             
@@ -581,57 +616,50 @@ Status: Unable to process document - manual review required`;
             };
             
             try {
-                console.log('📋 Final Document AI Request Configuration:');
+                console.log('📋 Document AI Request Configuration:');
                 console.log('  - Processor:', this.processorName);
-                console.log('  - Content size:', documentBuffer.length);
+                console.log('  - Content size:', documentBuffer.length, 'bytes');
 
-                // Generate JWT token manually to avoid google-auth-library OpenSSL issues
-                const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-                const crypto = require('crypto');
+                // Get OAuth access token (no JWT, no OpenSSL!)
+                const accessToken = await this.getAccessTokenFromRefreshToken();
 
-                // Create JWT header
-                const header = Buffer.from(JSON.stringify({
-                    alg: 'RS256',
-                    typ: 'JWT'
-                })).toString('base64url');
+                const requestBody = {
+                    rawDocument: {
+                        content: documentBuffer.toString('base64'),
+                        mimeType: this.getMimeType(
+                            document.filename ||
+                            document.original_name ||
+                            document.original_filename ||
+                            document.renamed_name ||
+                            'document.pdf'
+                        )
+                    },
+                    imagelessMode: true,
+                    processOptions: {
+                        ocrConfig: {
+                            enableImageQualityScores: false,
+                            enableSymbol: false,
+                            premiumFeatures: {
+                                enableSelectionMarkDetection: false,
+                                enableMathOcr: false,
+                                computeStyleInfo: false
+                            },
+                            hints: {
+                                languageHints: ['en']
+                            }
+                        },
+                        pageRange: {
+                            ranges: [{
+                                start: 1,
+                                end: 30
+                            }]
+                        },
+                        skipHumanReview: true,
+                        enableNativePdfParsing: true
+                    }
+                };
 
-                // Create JWT claim set
-                const now = Math.floor(Date.now() / 1000);
-                const claim = Buffer.from(JSON.stringify({
-                    iss: credentials.client_email,
-                    scope: 'https://www.googleapis.com/auth/cloud-platform',
-                    aud: 'https://oauth2.googleapis.com/token',
-                    exp: now + 3600,
-                    iat: now
-                })).toString('base64url');
-
-                // Create signature
-                const signatureInput = `${header}.${claim}`;
-                const signature = crypto.createSign('RSA-SHA256')
-                    .update(signatureInput)
-                    .sign(credentials.private_key, 'base64url');
-
-                const jwt = `${signatureInput}.${signature}`;
-
-                console.log('🔐 Generated JWT token manually (no google-auth-library)');
-
-                // Exchange JWT for access token
-                const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-                });
-
-                if (!tokenResponse.ok) {
-                    throw new Error(`Token exchange failed: ${tokenResponse.status}`);
-                }
-
-                const tokenData = await tokenResponse.json();
-                const accessToken = tokenData.access_token;
-
-                console.log('✅ Access token obtained');
-                console.log('🚀 Making Document AI REST API call...');
-
+                console.log('🚀 Making Document AI REST API call with OAuth...');
                 const restResponse = await fetch(
                     `https://documentai.googleapis.com/v1/${this.processorName}:process`,
                     {
@@ -640,55 +668,20 @@ Status: Unable to process document - manual review required`;
                             'Authorization': `Bearer ${accessToken}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            rawDocument: {
-                                content: documentBuffer.toString('base64'),
-                                mimeType: this.getMimeType(
-                                    document.filename ||
-                                    document.original_name ||
-                                    document.original_filename ||
-                                    document.renamed_name ||
-                                    'document.pdf'
-                                )
-                            },
-                            imagelessMode: true,
-                            processOptions: {
-                                ocrConfig: {
-                                    enableImageQualityScores: false,
-                                    enableSymbol: false,
-                                    premiumFeatures: {
-                                        enableSelectionMarkDetection: false,
-                                        enableMathOcr: false,
-                                        computeStyleInfo: false
-                                    },
-                                    hints: {
-                                        languageHints: ['en']
-                                    }
-                                },
-                                pageRange: {
-                                    ranges: [{
-                                        start: 1,
-                                        end: 30
-                                    }]
-                                },
-                                skipHumanReview: true,
-                                enableNativePdfParsing: true
-                            }
-                        })
+                        body: JSON.stringify(requestBody)
                     }
                 );
 
                 if (!restResponse.ok) {
                     const errorText = await restResponse.text();
-                    throw new Error(`Document AI REST API error: ${restResponse.status} ${errorText}`);
+                    throw new Error(`Document AI error: ${restResponse.status} ${errorText}`);
                 }
 
                 const result = await restResponse.json();
 
-                console.log('📊 Document AI Response Summary:');
-                console.log('  - Document found:', !!result.document);
+                console.log('📊 Document AI Response:');
                 console.log('  - Text length:', result.document?.text?.length || 0);
-                console.log('  - Pages found:', result.document?.pages?.length || 0);
+                console.log('  - Pages:', result.document?.pages?.length || 0);
 
                 if (result.document && result.document.text) {
                     console.log('📄 OCR TEXT SAMPLE (first 500 chars):');
@@ -698,7 +691,7 @@ Status: Unable to process document - manual review required`;
                     return result.document.text;
                 }
 
-                throw new Error('Document AI processing succeeded but returned no text');
+                throw new Error('No text returned from Document AI');
 
             } catch (error) {
                 console.log(`❌ Document AI failed for ${document.filename}: ${error.code || 'N/A'} ${error.message}`);
