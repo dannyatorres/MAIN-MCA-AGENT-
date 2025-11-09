@@ -738,32 +738,39 @@ class FCSModule {
     async loadFCSData() {
         const conversationId = this.parent.getCurrentConversationId();
 
-        console.log('=== FCS DATA LOADING DEBUG ===');
-        console.log('Current conversation ID:', conversationId);
+        console.log('=== FCS DATA LOADING ===');
+        console.log('Conversation ID:', conversationId);
         console.log('Generation in progress:', this._fcsGenerationInProgress);
-        console.log('================================');
+        console.log('========================');
 
-        // ✅ CRITICAL: Ensure fcsResults element exists
+        // ✅ Ensure fcsResults exists
         let fcsResults = document.getElementById('fcsResults');
         if (!fcsResults) {
-            console.warn('⚠️ fcsResults not found, creating it...');
+            console.warn('⚠️ fcsResults not found, creating...');
             const intelligenceContent = document.getElementById('intelligenceContent');
             if (intelligenceContent) {
                 fcsResults = document.createElement('div');
                 fcsResults.id = 'fcsResults';
-                fcsResults.style.display = 'block';
                 intelligenceContent.appendChild(fcsResults);
             } else {
-                console.error('❌ intelligenceContent not found, cannot create fcsResults');
+                console.error('❌ Cannot create fcsResults - intelligenceContent missing');
                 return;
             }
         }
 
-        // CRITICAL: BLOCK IMMEDIATELY if generation is in progress for THIS conversation
-        if (this._fcsGenerationInProgress && this._generatingForConversation === conversationId) {
-            console.log('🚫 BLOCKED: Generation in progress for this conversation - NOT loading old data');
+        // ✅ Check if we already have content displayed
+        const hasContent = fcsResults.innerHTML.trim() !== '' &&
+                          fcsResults.innerHTML.includes('FCS Financial Analysis Report');
 
-            // Keep showing loading state
+        if (hasContent && !this._fcsGenerationInProgress) {
+            console.log('✅ FCS content already loaded, skipping reload');
+            fcsResults.style.display = 'block';
+            return;
+        }
+
+        // CRITICAL: BLOCK if generation is in progress
+        if (this._fcsGenerationInProgress && this._generatingForConversation === conversationId) {
+            console.log('🚫 BLOCKED: Generation in progress');
             fcsResults.innerHTML = `
                 <div style="text-align: center; padding: 60px 40px;">
                     <style>
@@ -774,28 +781,23 @@ class FCSModule {
                     </style>
                     <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                     <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
-                    <p style="color: #6b7280; font-size: 15px; margin: 0;">Analyzing documents with AI (OCR + OpenAI)...</p>
-                    <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh</p>
-                </div>
-            `;
-            fcsResults.style.display = 'block';
-            return; // EXIT IMMEDIATELY
-        }
-
-        if (!conversationId) {
-            console.warn('No conversation ID found, cannot load FCS data');
-            fcsResults.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #6b7280;">
-                    <p>No conversation selected</p>
+                    <p style="color: #6b7280; font-size: 15px; margin: 0;">Analyzing documents with AI...</p>
                 </div>
             `;
             fcsResults.style.display = 'block';
             return;
         }
 
+        if (!conversationId) {
+            console.warn('No conversation selected');
+            fcsResults.innerHTML = `<div style="text-align: center; padding: 40px;">No conversation selected</div>`;
+            fcsResults.style.display = 'block';
+            return;
+        }
+
         console.log(`Loading FCS data for conversation ${conversationId}`);
 
-        // Show loading state
+        // Show loading ONLY if we don't have content yet
         fcsResults.innerHTML = `
             <div style="text-align: center; padding: 40px;">
                 <div class="loading-spinner" style="margin: 0 auto 16px; width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>

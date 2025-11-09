@@ -427,15 +427,25 @@ class IntelligenceTabs {
     renderFCSTab(content) {
         console.log('renderFCSTab called');
 
+        // ✅ Check if fcsResults already exists and has content
+        let fcsResults = document.getElementById('fcsResults');
+        const hasFCSContent = fcsResults && fcsResults.innerHTML.trim() !== '' && fcsResults.style.display !== 'none';
+
+        if (hasFCSContent) {
+            console.log('✅ FCS results already rendered, preserving existing content');
+            // Don't re-render! Just make sure it's visible
+            fcsResults.style.display = 'block';
+            return;
+        }
+
+        // ✅ Only clear and rebuild if no content exists
+        console.log('📄 No existing FCS content, creating fresh structure');
+
         content.innerHTML = `
             <div class="intelligence-section">
-                <h3>FCS Results</h3>
-                <div id="fcsContent">
-                    <div class="fcs-status">
-                        <div class="loading-spinner"></div>
-                        <p>Loading FCS data...</p>
-                    </div>
-                </div>
+                <div id="fcsResults" style="display: none;"></div>
+                <div id="fcsLoading" style="display: none;"></div>
+                <div id="fcsErrorMsg" style="display: none;"></div>
             </div>
         `;
 
@@ -454,10 +464,10 @@ class IntelligenceTabs {
             if (generatingConvId === currentConvId) {
                 console.log('🚫 NOT loading old data - generation in progress');
 
-                // Show loading state immediately
-                const fcsContent = document.getElementById('fcsContent');
-                if (fcsContent) {
-                    fcsContent.innerHTML = `
+                // Show loading state in fcsResults
+                fcsResults = document.getElementById('fcsResults');
+                if (fcsResults) {
+                    fcsResults.innerHTML = `
                         <div style="text-align: center; padding: 60px 40px;">
                             <style>
                                 @keyframes spin {
@@ -467,10 +477,11 @@ class IntelligenceTabs {
                             </style>
                             <div style="margin: 0 auto 24px; width: 48px; height: 48px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                             <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 20px;">Generating NEW FCS Report</h3>
-                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Processing with n8n workflow...</p>
-                            <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh</p>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Analyzing documents with AI...</p>
+                            <p style="color: #ef4444; font-size: 13px; margin: 16px 0 0 0; font-weight: 600;">⚠️ Do not refresh or switch tabs</p>
                         </div>
                     `;
+                    fcsResults.style.display = 'block';
                 }
                 return; // EXIT - don't call loadFCSData
             }
