@@ -585,23 +585,59 @@ Status: Unable to process document - manual review required`;
                 console.log('  - Processor:', this.processorName);
                 console.log('  - Content size:', documentBuffer.length);
 
-                // Use REST API directly via fetch to avoid gRPC/OpenSSL issues
-                const { GoogleAuth } = require('google-auth-library');
-                const auth = new GoogleAuth({
-                    credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON),
-                    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+                // Generate JWT token manually to avoid google-auth-library OpenSSL issues
+                const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+                const crypto = require('crypto');
+
+                // Create JWT header
+                const header = Buffer.from(JSON.stringify({
+                    alg: 'RS256',
+                    typ: 'JWT'
+                })).toString('base64url');
+
+                // Create JWT claim set
+                const now = Math.floor(Date.now() / 1000);
+                const claim = Buffer.from(JSON.stringify({
+                    iss: credentials.client_email,
+                    scope: 'https://www.googleapis.com/auth/cloud-platform',
+                    aud: 'https://oauth2.googleapis.com/token',
+                    exp: now + 3600,
+                    iat: now
+                })).toString('base64url');
+
+                // Create signature
+                const signatureInput = `${header}.${claim}`;
+                const signature = crypto.createSign('RSA-SHA256')
+                    .update(signatureInput)
+                    .sign(credentials.private_key, 'base64url');
+
+                const jwt = `${signatureInput}.${signature}`;
+
+                console.log('🔐 Generated JWT token manually (no google-auth-library)');
+
+                // Exchange JWT for access token
+                const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
                 });
 
-                const client = await auth.getClient();
-                const accessToken = await client.getAccessToken();
+                if (!tokenResponse.ok) {
+                    throw new Error(`Token exchange failed: ${tokenResponse.status}`);
+                }
 
+                const tokenData = await tokenResponse.json();
+                const accessToken = tokenData.access_token;
+
+                console.log('✅ Access token obtained');
                 console.log('🚀 Making Document AI REST API call...');
+
                 const restResponse = await fetch(
                     `https://documentai.googleapis.com/v1/${this.processorName}:process`,
                     {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${accessToken.token}`,
+                            'Authorization': `Bearer ${accessToken}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
