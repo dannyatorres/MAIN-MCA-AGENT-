@@ -283,7 +283,9 @@ class Utilities {
         if (!zip || zip.length !== 5) return;
 
         try {
-            const zipField = document.querySelector(`[name="${fieldPrefix}Zip"]`);
+            // Support both camelCase (businessZip) and underscore (business_zip) field naming
+            const zipField = document.querySelector(`[name="${fieldPrefix}_zip"]`) ||
+                             document.querySelector(`[name="${fieldPrefix}Zip"]`);
             if (zipField) {
                 zipField.style.borderColor = '#3b82f6';
                 zipField.style.transition = 'border-color 0.3s ease';
@@ -297,7 +299,9 @@ class Utilities {
                 if (data.places && data.places[0]) {
                     const place = data.places[0];
 
-                    const cityField = document.querySelector(`[name="${fieldPrefix}City"]`);
+                    // Find city field (support underscore and camelCase)
+                    const cityField = document.querySelector(`[name="${fieldPrefix}_city"]`) ||
+                                     document.querySelector(`[name="${fieldPrefix}City"]`);
                     if (cityField) {
                         cityField.value = place['place name'];
                         cityField.style.borderColor = '#10b981';
@@ -305,7 +309,10 @@ class Utilities {
                         setTimeout(() => { cityField.style.borderColor = ''; }, 2000);
                     }
 
-                    const stateField = document.querySelector(`[name="${fieldPrefix}State"]`);
+                    // Find state field (support us_state for business, owner_state for owner)
+                    const stateField = document.querySelector(`[name="${fieldPrefix}_state"]`) ||
+                                      document.querySelector(`[name="us_state"]`) ||
+                                      document.querySelector(`[name="${fieldPrefix}State"]`);
                     if (stateField) {
                         stateField.value = place['state abbreviation'];
                         stateField.style.borderColor = '#10b981';

@@ -48,11 +48,11 @@ class IntelligenceTabs {
                 this.parent.selectedConversation = conversationData;
                 this.parent.currentConversationId = convId;
 
-                // Also update core's references if available
-                if (this.parent.core) {
-                    this.parent.core.selectedConversation = conversationData;
-                    this.parent.core.currentConversationId = convId;
-                    this.parent.core.conversations.set(convId, conversationData);
+                // Also update conversationUI's references if available
+                if (this.parent.conversationUI) {
+                    this.parent.conversationUI.selectedConversation = conversationData;
+                    this.parent.conversationUI.currentConversationId = convId;
+                    this.parent.conversationUI.conversations.set(convId, conversationData);
                 }
             }
 
@@ -89,13 +89,13 @@ class IntelligenceTabs {
             this.parent.selectedConversation = conversationData;
             this.parent.currentConversationId = convId;
 
-            if (this.parent.core) {
-                this.parent.core.selectedConversation = conversationData;
-                this.parent.core.currentConversationId = convId;
-                this.parent.core.conversations.set(convId, conversationData);
+            if (this.parent.conversationUI) {
+                this.parent.conversationUI.selectedConversation = conversationData;
+                this.parent.conversationUI.currentConversationId = convId;
+                this.parent.conversationUI.conversations.set(convId, conversationData);
 
                 // Update the conversation header with fresh data
-                this.parent.core.showConversationDetails();
+                this.parent.conversationUI.showConversationDetails();
             }
         }
 
@@ -111,8 +111,8 @@ class IntelligenceTabs {
         console.log(`Switching to tab: ${tab}`);
 
         // Sync context before switching
-        if (this.parent.core) {
-            this.parent.core.syncConversationContext();
+        if (this.parent.conversationUI) {
+            this.parent.conversationUI.syncConversationContext();
         }
 
         // Cache AI chat content before switching away from ai-assistant tab
@@ -400,72 +400,189 @@ class IntelligenceTabs {
         }
 
         content.innerHTML = `
-            <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
-                <!-- Header -->
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
-                    <h2 style="margin: 0 0 8px 0; font-size: 24px;">Edit Lead Information</h2>
-                    <p style="margin: 0; font-size: 14px; opacity: 0.9;">${conv.business_name || 'Update lead details'}</p>
-                </div>
+            <div style="
+                max-width: 600px;
+                margin: 60px auto;
+                text-align: center;
+            ">
+                <div style="font-size: 64px; margin-bottom: 24px;">📝</div>
+                <h2 style="color: #1e40af; margin-bottom: 12px;">Edit Lead Information</h2>
+                <p style="color: #6b7280; margin-bottom: 32px;">
+                    ${conv.business_name || 'Current Lead'}
+                </p>
+                <button id="openEditModalBtn" style="
+                    padding: 14px 32px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    font-weight: 600;
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                    transition: transform 0.2s;
+                "
+                onmouseover="this.style.transform='translateY(-2px)'"
+                onmouseout="this.style.transform='translateY(0)'">
+                    ✏️ Open Edit Form
+                </button>
+            </div>
+        `;
 
-                <!-- Form -->
-                <form id="editLeadForm" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        // Handle button click to open modal
+        document.getElementById('openEditModalBtn').addEventListener('click', () => {
+            this.showEditLeadModal(conv);
+        });
+    }
+
+    showEditLeadModal(conv) {
+        // Remove any existing modal
+        const existingModal = document.getElementById('editLeadModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modalHTML = `
+            <div id="editLeadModal" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow-y: auto;
+                padding: 20px;
+            ">
+                <div style="
+                    background: white;
+                    border-radius: 8px;
+                    width: 100%;
+                    max-width: 700px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                ">
+                    <!-- Header -->
+                    <div style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 20px 24px;
+                        border-radius: 8px 8px 0 0;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        position: sticky;
+                        top: 0;
+                        z-index: 10;
+                    ">
+                        <div>
+                            <h2 style="margin: 0; font-size: 20px;">Edit Lead Information</h2>
+                            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">
+                                ${conv.business_name || 'Update lead details'}
+                            </p>
+                        </div>
+                        <button onclick="document.getElementById('editLeadModal').remove()" style="
+                            background: none;
+                            border: none;
+                            color: white;
+                            font-size: 28px;
+                            cursor: pointer;
+                            padding: 0;
+                            width: 32px;
+                            height: 32px;
+                            line-height: 1;
+                        ">×</button>
+                    </div>
+
+                    <!-- Form -->
+                    <form id="editLeadForm" style="padding: 24px;">
 
                     <!-- BUSINESS INFORMATION -->
-                    <div style="margin-bottom: 32px;">
-                        <h3 style="color: #1e40af; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #3b82f6;">Business Information</h3>
+                    <div style="margin-bottom: 28px;">
+                        <h3 style="
+                            color: #1e40af;
+                            font-size: 16px;
+                            font-weight: 700;
+                            margin: 0 0 16px 0;
+                            padding-bottom: 8px;
+                            border-bottom: 2px solid #3b82f6;
+                        ">Business Information</h3>
 
                         <div style="display: flex; flex-direction: column; gap: 14px;">
                             <!-- Legal/Corporate Name & DBA -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Legal/Corporate Name <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="business_name" value="${conv.business_name || ''}" required placeholder="Brothers Financial Services LLC" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Legal/Corporate Name
+                                    </label>
+                                    <input type="text" name="business_name" value="${conv.business_name || ''}"
+                                        placeholder="Brothers Financial Services LLC"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">DBA</label>
-                                    <input type="text" name="dba_name" value="${conv.dba_name || ''}" placeholder="Same as legal name or different" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        DBA
+                                    </label>
+                                    <input type="text" name="dba_name" value="${conv.dba_name || ''}"
+                                        placeholder="Same as legal name or different"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
 
                             <!-- Physical Address -->
                             <div>
-                                <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Physical Address <span style="color: #ef4444;">*</span></label>
-                                <input type="text" name="business_address" value="${conv.business_address || conv.address || ''}" required placeholder="3925 shady hill trail" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                    Physical Address
+                                </label>
+                                <input type="text" name="business_address" value="${conv.business_address || conv.address || ''}"
+                                    placeholder="3925 shady hill trail"
+                                    style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                             </div>
 
                             <!-- City, State, Zip -->
                             <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
-                                <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">City <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="business_city" value="${conv.business_city || conv.city || ''}" required placeholder="Edmond" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                                </div>
-                                <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">State <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="business_state" value="${conv.business_state || conv.us_state || ''}" required placeholder="Oklahoma" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                                </div>
-                                <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Zip <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="business_zip" value="${conv.business_zip || conv.zip || ''}" required placeholder="73034" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                                </div>
+                                <input type="text" name="business_city" value="${conv.business_city || conv.city || ''}"
+                                    placeholder="City"
+                                    style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                <input type="text" name="us_state" value="${conv.us_state || ''}"
+                                    placeholder="Oklahoma"
+                                    style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                <input type="text" name="business_zip" value="${conv.business_zip || conv.zip || ''}"
+                                    placeholder="Zip"
+                                    style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                             </div>
 
                             <!-- Tax ID & Date Started -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Federal Tax ID <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="tax_id" value="${conv.tax_id || conv.federal_tax_id || ''}" required placeholder="86-3156904" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Federal Tax ID
+                                    </label>
+                                    <input type="text" name="tax_id" value="${conv.tax_id || conv.federal_tax_id || ''}"
+                                        placeholder="86-3156904"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Date Business Started <span style="color: #ef4444;">*</span></label>
-                                    <input type="date" name="business_start_date" value="${conv.business_start_date || ''}" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Date Business Started
+                                    </label>
+                                    <input type="date" name="date_started" value="${conv.date_started || conv.business_start_date || ''}"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
 
                             <!-- Entity Type & Type of Business -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Type of Entity <span style="color: #ef4444;">*</span></label>
-                                    <select name="entity_type" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Type of Entity
+                                    </label>
+                                    <select name="entity_type"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                         <option value="">Select...</option>
                                         <option value="Sole Proprietorship" ${conv.entity_type === 'Sole Proprietorship' ? 'selected' : ''}>Sole Proprietorship</option>
                                         <option value="Partnership" ${conv.entity_type === 'Partnership' ? 'selected' : ''}>Partnership</option>
@@ -475,155 +592,368 @@ class IntelligenceTabs {
                                     </select>
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Type of Business <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="industry_type" value="${conv.industry_type || conv.business_type || ''}" required placeholder="FINANCE" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Type of Business
+                                    </label>
+                                    <input type="text" name="industry" value="${conv.industry || ''}"
+                                        placeholder="FINANCE"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
 
                             <!-- Use of Proceeds, Requested Amount, Annual Sales -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Use of Proceeds <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="use_of_proceeds" value="${conv.use_of_proceeds || 'working capital'}" required placeholder="working capital" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Use of Proceeds
+                                    </label>
+                                    <input type="text" name="use_of_proceeds" value="${conv.use_of_proceeds || 'working capital'}"
+                                        placeholder="working capital"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Requested Amount <span style="color: #ef4444;">*</span></label>
-                                    <input type="number" name="requested_amount" value="${conv.requested_amount || conv.funding_amount || ''}" required placeholder="150000" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Requested Amount
+                                    </label>
+                                    <input type="number" name="requested_amount" value="${conv.requested_amount || ''}"
+                                        placeholder="150000"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Gross Annual Sales <span style="color: #ef4444;">*</span></label>
-                                    <input type="number" name="annual_revenue" value="${conv.annual_revenue || ''}" required placeholder="2000000" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Gross Annual Sales
+                                    </label>
+                                    <input type="number" name="annual_revenue" value="${conv.annual_revenue || ''}"
+                                        placeholder="2000000"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- OWNER/OFFICER INFORMATION -->
-                    <div style="margin-bottom: 32px;">
-                        <h3 style="color: #1e40af; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #3b82f6;">Owner/Officer Information</h3>
+                    <div style="margin-bottom: 28px;">
+                        <h3 style="
+                            color: #1e40af;
+                            font-size: 16px;
+                            font-weight: 700;
+                            margin: 0 0 16px 0;
+                            padding-bottom: 8px;
+                            border-bottom: 2px solid #3b82f6;
+                        ">Owner/Officer Information</h3>
 
                         <div style="display: flex; flex-direction: column; gap: 14px;">
                             <!-- Owner First & Last Name -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Owner First Name <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="first_name" value="${conv.first_name || conv.owner_first_name || ''}" required placeholder="Joseph" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Owner First Name
+                                    </label>
+                                    <input type="text" name="first_name" value="${conv.first_name || ''}"
+                                        placeholder="Joseph"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Owner Last Name <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="last_name" value="${conv.last_name || conv.owner_last_name || ''}" required placeholder="Yako" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Owner Last Name
+                                    </label>
+                                    <input type="text" name="last_name" value="${conv.last_name || ''}"
+                                        placeholder="Yako"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
 
                             <!-- Same as Business Address Checkbox -->
                             <div>
                                 <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; margin-bottom: 8px; cursor: pointer;">
-                                    <input type="checkbox" id="sameAsBusinessAddressEdit" ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'checked' : ''} onchange="
-                                        const ownerAddr = document.querySelector('[name=owner_home_address]');
-                                        const ownerCity = document.querySelector('[name=owner_home_city]');
-                                        const ownerState = document.querySelector('[name=owner_home_state]');
-                                        const ownerZip = document.querySelector('[name=owner_home_zip]');
-                                        if (this.checked) {
-                                            ownerAddr.value = document.querySelector('[name=business_address]').value;
-                                            ownerCity.value = document.querySelector('[name=business_city]').value;
-                                            ownerState.value = document.querySelector('[name=business_state]').value;
-                                            ownerZip.value = document.querySelector('[name=business_zip]').value;
-                                            ownerAddr.disabled = true;
-                                            ownerCity.disabled = true;
-                                            ownerState.disabled = true;
-                                            ownerZip.disabled = true;
-                                        } else {
-                                            ownerAddr.disabled = false;
-                                            ownerCity.disabled = false;
-                                            ownerState.disabled = false;
-                                            ownerZip.disabled = false;
-                                        }
-                                    ">
+                                    <input type="checkbox" id="sameAsBusinessAddress"
+                                        ${!conv.owner_address || conv.owner_address === conv.business_address || conv.owner_address === conv.address ? 'checked' : ''}
+                                        onchange="
+                                            const ownerAddr = document.querySelector('[name=owner_address]');
+                                            const ownerCity = document.querySelector('[name=owner_city]');
+                                            const ownerState = document.querySelector('[name=owner_state]');
+                                            const ownerZip = document.querySelector('[name=owner_zip]');
+
+                                            if (this.checked) {
+                                                ownerAddr.value = document.querySelector('[name=business_address]').value;
+                                                ownerCity.value = document.querySelector('[name=business_city]').value;
+                                                ownerState.value = document.querySelector('[name=us_state]').value;
+                                                ownerZip.value = document.querySelector('[name=business_zip]').value;
+                                                ownerAddr.disabled = true;
+                                                ownerCity.disabled = true;
+                                                ownerState.disabled = true;
+                                                ownerZip.disabled = true;
+                                            } else {
+                                                ownerAddr.disabled = false;
+                                                ownerCity.disabled = false;
+                                                ownerState.disabled = false;
+                                                ownerZip.disabled = false;
+                                            }
+                                        ">
                                     <span style="font-weight: 600;">Owner home address same as business</span>
                                 </label>
 
                                 <!-- Home Address -->
-                                <input type="text" name="owner_home_address" value="${conv.owner_home_address || conv.owner_address || conv.business_address || conv.address || ''}" ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'disabled' : ''} required placeholder="3925 shady hill trail" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">
+                                <input type="text" name="owner_address"
+                                    value="${conv.owner_address || conv.business_address || conv.address || ''}"
+                                    ${!conv.owner_address || conv.owner_address === conv.business_address || conv.owner_address === conv.address ? 'disabled' : ''}
+                                    placeholder="3925 shady hill trail"
+                                    style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">
 
                                 <!-- City, State, Zip -->
                                 <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
-                                    <input type="text" name="owner_home_city" value="${conv.owner_home_city || conv.owner_city || conv.business_city || conv.city || ''}" ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'disabled' : ''} required placeholder="Edmond" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                                    <input type="text" name="owner_home_state" value="${conv.owner_home_state || conv.owner_state || conv.business_state || conv.us_state || ''}" ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'disabled' : ''} required placeholder="Oklahoma" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                                    <input type="text" name="owner_home_zip" value="${conv.owner_home_zip || conv.owner_zip || conv.business_zip || conv.zip || ''}" ${!conv.owner_home_address || conv.owner_home_address === conv.business_address ? 'disabled' : ''} required placeholder="73034" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <input type="text" name="owner_city"
+                                        value="${conv.owner_city || conv.business_city || conv.city || ''}"
+                                        ${!conv.owner_address || conv.owner_address === conv.business_address || conv.owner_address === conv.address ? 'disabled' : ''}
+                                        placeholder="Edmond"
+                                        style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <input type="text" name="owner_state"
+                                        value="${conv.owner_state || ''}"
+                                        ${!conv.owner_address || conv.owner_address === conv.business_address || conv.owner_address === conv.address ? 'disabled' : ''}
+                                        placeholder="Oklahoma"
+                                        style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <input type="text" name="owner_zip"
+                                        value="${conv.owner_zip || conv.business_zip || conv.zip || ''}"
+                                        ${!conv.owner_address || conv.owner_address === conv.business_address || conv.owner_address === conv.address ? 'disabled' : ''}
+                                        placeholder="73034"
+                                        style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
 
                             <!-- Ownership %, SSN, DOB -->
                             <div style="display: grid; grid-template-columns: 100px 1fr 1fr; gap: 12px;">
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Ownership % <span style="color: #ef4444;">*</span></label>
-                                    <input type="number" name="ownership_percent" value="${conv.ownership_percent || '100'}" required placeholder="100" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Ownership %
+                                    </label>
+                                    <input type="number" name="ownership_percentage" value="${conv.ownership_percentage || '100'}"
+                                        placeholder="100"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">SSN <span style="color: #ef4444;">*</span></label>
-                                    <input type="text" name="ssn" value="${conv.ssn || conv.owner_ssn || ''}" required placeholder="604-27-0200" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        SSN
+                                    </label>
+                                    <input type="text" name="ssn" value="${conv.ssn || ''}"
+                                        placeholder="604-27-0200"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">Date of Birth <span style="color: #ef4444;">*</span></label>
-                                    <input type="date" name="date_of_birth" value="${conv.date_of_birth || conv.owner_dob || ''}" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Date of Birth
+                                    </label>
+                                    <input type="date" name="date_of_birth" value="${conv.date_of_birth || ''}"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- LOAN INFORMATION -->
-                    <div style="margin-bottom: 32px;">
-                        <h3 style="color: #1e40af; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #3b82f6;">Loan Information</h3>
+                    <div style="margin-bottom: 28px;">
+                        <h3 style="
+                            color: #1e40af;
+                            font-size: 16px;
+                            font-weight: 700;
+                            margin: 0 0 16px 0;
+                            padding-bottom: 8px;
+                            border-bottom: 2px solid #3b82f6;
+                        ">Loan Information</h3>
 
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">Payment Methods Accepted</label>
+                            <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">
+                                Payment Methods Accepted
+                            </label>
                             <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" name="payment_methods" value="Visa/MasterCard" ${conv.payment_methods?.includes('Visa/MasterCard') ? 'checked' : ''}><span style="font-size: 14px;">Visa/MasterCard</span></label>
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" name="payment_methods" value="Amex" ${conv.payment_methods?.includes('Amex') || !conv.payment_methods ? 'checked' : ''}><span style="font-size: 14px;">Amex</span></label>
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" name="payment_methods" value="Discover" ${conv.payment_methods?.includes('Discover') ? 'checked' : ''}><span style="font-size: 14px;">Discover</span></label>
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" name="payment_methods" value="Debit" ${conv.payment_methods?.includes('Debit') ? 'checked' : ''}><span style="font-size: 14px;">Debit</span></label>
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" name="payment_methods" value="EBT" ${conv.payment_methods?.includes('EBT') ? 'checked' : ''}><span style="font-size: 14px;">EBT</span></label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" name="payment_methods" value="Visa/MasterCard"
+                                        ${conv.payment_methods?.includes('Visa/MasterCard') ? 'checked' : ''}>
+                                    <span style="font-size: 14px;">Visa/MasterCard</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" name="payment_methods" value="Amex"
+                                        ${conv.payment_methods?.includes('Amex') || !conv.payment_methods ? 'checked' : ''}>
+                                    <span style="font-size: 14px;">Amex</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" name="payment_methods" value="Discover"
+                                        ${conv.payment_methods?.includes('Discover') ? 'checked' : ''}>
+                                    <span style="font-size: 14px;">Discover</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" name="payment_methods" value="Debit"
+                                        ${conv.payment_methods?.includes('Debit') ? 'checked' : ''}>
+                                    <span style="font-size: 14px;">Debit</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" name="payment_methods" value="EBT"
+                                        ${conv.payment_methods?.includes('EBT') ? 'checked' : ''}>
+                                    <span style="font-size: 14px;">EBT</span>
+                                </label>
                             </div>
                         </div>
                     </div>
 
                     <!-- Actions -->
-                    <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 24px; border-top: 2px solid #e5e7eb;">
-                        <button type="button" id="cancelEditBtn" style="padding: 10px 24px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Cancel</button>
-                        <button type="submit" style="padding: 10px 24px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">💾 Save Changes</button>
-                        <button type="button" id="generateAppBtn" style="padding: 10px 24px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">📄 Generate PDF</button>
+                    <div style="
+                        display: flex;
+                        gap: 12px;
+                        justify-content: flex-end;
+                        padding-top: 20px;
+                        border-top: 2px solid #e5e7eb;
+                    ">
+                        <button type="button" onclick="document.getElementById('editLeadModal').remove()" style="
+                            padding: 10px 24px;
+                            background: white;
+                            color: #374151;
+                            border: 1px solid #d1d5db;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: 500;
+                        ">Cancel</button>
+                        <button type="submit" style="
+                            padding: 10px 24px;
+                            background: #10b981;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: 600;
+                        ">💾 Save & Close</button>
+                        <button type="button" id="generateAppBtnModal" style="
+                            padding: 10px 24px;
+                            background: #667eea;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: 600;
+                        ">📄 Generate PDF</button>
                     </div>
                 </form>
             </div>
-        `;
+        </div>
+    `;
 
-        // Handle form submission (Save)
-        document.getElementById('editLeadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleEditLeadSave(conv);
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // ✅ Add ZIP code auto-lookup for business address
+    const businessZipField = document.querySelector('[name="business_zip"]');
+    if (businessZipField) {
+        businessZipField.addEventListener('input', async (e) => {
+            const zip = e.target.value.replace(/\D/g, '');
+            if (zip.length === 5) {
+                await this.utils.lookupZipCode(zip, 'business');
+            }
         });
+    }
 
-        // Handle cancel button
-        document.getElementById('cancelEditBtn').addEventListener('click', () => {
-            document.querySelector('[data-tab="ai-assistant"]').click();
+    // ✅ Add ZIP code auto-lookup for owner address
+    const ownerZipField = document.querySelector('[name="owner_zip"]');
+    if (ownerZipField) {
+        ownerZipField.addEventListener('input', async (e) => {
+            const zip = e.target.value.replace(/\D/g, '');
+            if (zip.length === 5) {
+                await this.utils.lookupZipCode(zip, 'owner');
+            }
         });
+    }
 
-        // Handle Generate PDF button
-        document.getElementById('generateAppBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            await this.handleEditLeadSave(conv);
+    // Handle form submission (Save & Close)
+    document.getElementById('editLeadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const saved = await this.handleEditLeadSave(conv);
+        if (saved) {
+            // Close modal
+            document.getElementById('editLeadModal').remove();
+
+            // ✅ Switch to AI Agent tab to see updated data
+            const aiAgentTab = document.querySelector('[data-tab="ai-assistant"]');
+            if (aiAgentTab) {
+                aiAgentTab.click();
+            }
+        }
+    });
+
+    // Handle Generate PDF button
+    document.getElementById('generateAppBtnModal').addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        // Save first
+        const saved = await this.handleEditLeadSave(conv);
+
+        if (saved) {
+            // Check required fields
+            const missingFields = this.checkRequiredFieldsForPDF(conv);
+
+            if (missingFields.length > 0) {
+                const fieldList = missingFields.map(f => f.label).join(', ');
+                this.utils.showNotification(
+                    `Please fill in required fields: ${fieldList}`,
+                    'error'
+                );
+
+                // Highlight missing fields
+                missingFields.forEach(field => {
+                    const input = document.querySelector(`[name="${field.field}"]`);
+                    if (input) {
+                        input.style.border = '2px solid #ef4444';
+                        setTimeout(() => {
+                            input.style.border = '';
+                        }, 3000);
+                    }
+                });
+
+                return;
+            }
+
+            // Close modal
+            document.getElementById('editLeadModal').remove();
+
+            // ✅ Switch to Documents tab (where PDF will appear)
+            const documentsTab = document.querySelector('[data-tab="documents"]');
+            if (documentsTab) {
+                documentsTab.click();
+            }
+
+            // Generate PDF
             await this.proceedWithPDFGeneration(conv);
-        });
+        }
+    });
     }
 
     async handleEditLeadSave(conv) {
         const form = document.getElementById('editLeadForm');
+        if (!form) {
+            console.error('Edit form not found');
+            return false;
+        }
+
+        // ✅ Get the submit button and add loading state
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalButtonHTML = submitButton ? submitButton.innerHTML : '';
+
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.style.opacity = '0.6';
+            submitButton.style.cursor = 'not-allowed';
+            submitButton.innerHTML = `
+                <span style="display: inline-flex; align-items: center; gap: 8px;">
+                    <span style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite;"></span>
+                    Saving...
+                </span>
+            `;
+        }
+
         const formData = new FormData(form);
 
-        // Build update object with correct field mapping
+        // Build update object
         const updates = {};
 
-        // Get all form fields and map to database columns
+        // Get all form fields
         for (let [key, value] of formData.entries()) {
             if (key === 'payment_methods') {
                 if (!updates.payment_methods) updates.payment_methods = [];
@@ -631,40 +961,7 @@ class IntelligenceTabs {
             } else {
                 // Only include non-empty values
                 if (value && value.trim() !== '') {
-                    // ✅ Map frontend field names to database column names
-                    switch(key) {
-                        case 'business_address':
-                            updates.address = value;
-                            break;
-                        case 'business_city':
-                            updates.city = value;
-                            break;
-                        case 'business_state':
-                            updates.us_state = value;
-                            break;
-                        case 'business_zip':
-                            updates.zip = value;
-                            break;
-                        case 'tax_id':
-                            updates.federal_tax_id = value;
-                            break;
-                        case 'business_start_date':
-                            updates.business_start_date = value;
-                            break;
-                        case 'annual_revenue':
-                            updates.annual_revenue = parseFloat(value);
-                            updates.monthly_revenue = parseFloat(value) / 12;
-                            break;
-                        case 'entity_type':
-                            updates.entity_type = value;
-                            break;
-                        case 'industry_type':
-                            updates.industry_type = value;
-                            break;
-                        default:
-                            // All other fields keep same name
-                            updates[key] = value;
-                    }
+                    updates[key] = value;
                 }
             }
         }
@@ -677,17 +974,25 @@ class IntelligenceTabs {
         }
 
         // Copy business address to owner if checkbox is checked
-        if (document.getElementById('sameAsBusinessAddressEdit')?.checked) {
-            updates.owner_home_address = updates.address;
-            updates.owner_home_city = updates.city;
-            updates.owner_home_state = updates.us_state;
-            updates.owner_home_zip = updates.zip;
+        const sameAddressCheckbox = document.getElementById('sameAsBusinessAddress');
+        if (sameAddressCheckbox && sameAddressCheckbox.checked) {
+            updates.owner_address = updates.business_address || updates.address;
+            updates.owner_city = updates.business_city || updates.city;
+            updates.owner_state = updates.us_state;
+            updates.owner_zip = updates.business_zip || updates.zip;
         }
+
+        // Remove any undefined values before sending
+        Object.keys(updates).forEach(key => {
+            if (updates[key] === undefined || updates[key] === null || updates[key] === '') {
+                delete updates[key];
+            }
+        });
 
         console.log('📤 Saving lead data:', updates);
 
         try {
-            // Save to database
+            // Save to backend
             const response = await this.parent.apiCall(`/api/conversations/${conv.id}`, {
                 method: 'PUT',
                 body: JSON.stringify(updates)
@@ -695,25 +1000,102 @@ class IntelligenceTabs {
 
             console.log('✅ Save response:', response);
 
-            // Update local conversation object
-            Object.assign(conv, updates);
+            // ✅ UPDATE 1: Update the conversation object in the Map
+            if (this.parent.conversationUI && this.parent.conversationUI.conversations) {
+                const conversation = this.parent.conversationUI.conversations.get(conv.id);
+                if (conversation) {
+                    Object.assign(conversation, updates);
+                    console.log('✅ Conversation Map updated with:', updates);
+                }
+            }
 
-            // Update conversation list
-            await this.parent.loadConversations();
+            // ✅ UPDATE 2: Update the selected conversation reference
+            const selectedConversation = this.parent.getSelectedConversation();
+            if (selectedConversation && selectedConversation.id === conv.id) {
+                Object.assign(selectedConversation, updates);
+                console.log('✅ Selected conversation updated with:', updates);
+            }
 
-            // Show success
-            this.utils.showNotification('Lead information saved!', 'success');
+            // ✅ UPDATE 3: Refresh the conversations list in the sidebar
+            if (this.parent.conversationUI && typeof this.parent.conversationUI.renderConversationsList === 'function') {
+                this.parent.conversationUI.renderConversationsList();
+                console.log('✅ Conversations list refreshed in sidebar');
+            }
+
+            // ✅ UPDATE 4: Refresh the conversation header/details
+            if (this.parent.conversationUI && typeof this.parent.conversationUI.showConversationDetails === 'function') {
+                this.parent.conversationUI.showConversationDetails();
+                console.log('✅ Conversation details refreshed');
+            }
+
+            // ✅ Show success feedback with button animation
+            if (submitButton) {
+                submitButton.innerHTML = `
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                        ✅ Saved!
+                    </span>
+                `;
+                submitButton.style.background = '#10b981';
+
+                // Brief pause to show success state
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            // Show success notification
+            if (this.utils && this.utils.showNotification) {
+                this.utils.showNotification('Lead information saved!', 'success');
+            }
+
+            return true;
 
         } catch (error) {
             console.error('❌ Error saving lead:', error);
-            console.error('Data that failed:', updates);
 
-            let errorMsg = 'Failed to save';
-            if (error.message) {
-                errorMsg += ': ' + error.message;
+            // ✅ Restore button on error
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.style.opacity = '1';
+                submitButton.style.cursor = 'pointer';
+                submitButton.innerHTML = originalButtonHTML;
             }
-            this.utils.showNotification(errorMsg, 'error');
+
+            if (this.utils && this.utils.showNotification) {
+                this.utils.showNotification('Failed to save lead information', 'error');
+            }
+            return false;
         }
+    }
+
+    checkRequiredFieldsForPDF(conv) {
+        const required = [];
+
+        // Business Information - REQUIRED for PDF
+        if (!conv.business_name) required.push({ field: 'business_name', label: 'Business Name' });
+        if (!conv.address && !conv.business_address) required.push({ field: 'business_address', label: 'Business Address' });
+        if (!conv.city && !conv.business_city) required.push({ field: 'business_city', label: 'City' });
+        if (!conv.us_state && !conv.business_state) required.push({ field: 'business_state', label: 'State' });
+        if (!conv.zip && !conv.business_zip) required.push({ field: 'business_zip', label: 'Zip Code' });
+        if (!conv.federal_tax_id && !conv.tax_id) required.push({ field: 'tax_id', label: 'Tax ID' });
+        if (!conv.business_start_date) required.push({ field: 'business_start_date', label: 'Date Started' });
+        if (!conv.entity_type) required.push({ field: 'entity_type', label: 'Entity Type' });
+        if (!conv.industry_type && !conv.business_type) required.push({ field: 'industry_type', label: 'Type of Business' });
+        if (!conv.use_of_proceeds) required.push({ field: 'use_of_proceeds', label: 'Use of Proceeds' });
+        if (!conv.requested_amount && !conv.funding_amount) required.push({ field: 'requested_amount', label: 'Requested Amount' });
+        if (!conv.annual_revenue) required.push({ field: 'annual_revenue', label: 'Annual Revenue' });
+
+        // Owner Information - REQUIRED for PDF
+        if (!conv.first_name) required.push({ field: 'first_name', label: 'Owner First Name' });
+        if (!conv.last_name) required.push({ field: 'last_name', label: 'Owner Last Name' });
+        if (!conv.ssn && !conv.owner_ssn) required.push({ field: 'ssn', label: 'SSN' });
+        if (!conv.date_of_birth && !conv.owner_dob) required.push({ field: 'date_of_birth', label: 'Date of Birth' });
+        if (!conv.ownership_percent) required.push({ field: 'ownership_percent', label: 'Ownership %' });
+
+        // Owner address (can default to business address)
+        if (!conv.owner_home_address && !conv.owner_address && !conv.address && !conv.business_address) {
+            required.push({ field: 'owner_home_address', label: 'Owner Address' });
+        }
+
+        return required;
     }
 
     openEditModal() {
@@ -1296,12 +1678,12 @@ class IntelligenceTabs {
                     if (this.parent) {
                         this.parent.selectedConversation = updatedConversation;
 
-                        if (this.parent.core) {
-                            this.parent.core.conversations.set(conversationId, updatedConversation);
-                            this.parent.core.selectedConversation = updatedConversation;
-                            this.parent.core.showConversationDetails();
+                        if (this.parent.conversationUI) {
+                            this.parent.conversationUI.conversations.set(conversationId, updatedConversation);
+                            this.parent.conversationUI.selectedConversation = updatedConversation;
+                            this.parent.conversationUI.showConversationDetails();
                             // Refresh the conversation list panel to show updated name
-                            this.parent.core.renderConversationsList();
+                            this.parent.conversationUI.renderConversationsList();
                         }
                     }
                 } catch (refreshError) {
@@ -1754,7 +2136,7 @@ class IntelligenceTabs {
                                         <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
                                             State <span style="color: #ef4444;">*</span>
                                         </label>
-                                        <input type="text" name="business_state" value="${conv.business_state || conv.us_state || ''}" required
+                                        <input type="text" name="us_state" value="${conv.us_state || conv.state || conv.business_state || ''}" required
                                             placeholder="Oklahoma"
                                             style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                     </div>
@@ -1889,7 +2271,7 @@ class IntelligenceTabs {
                                                 if (this.checked) {
                                                     ownerAddr.value = document.querySelector('[name=business_address]').value;
                                                     ownerCity.value = document.querySelector('[name=business_city]').value;
-                                                    ownerState.value = document.querySelector('[name=business_state]').value;
+                                                    ownerState.value = document.querySelector('[name=us_state]').value;
                                                     ownerZip.value = document.querySelector('[name=business_zip]').value;
                                                     ownerAddr.disabled = true;
                                                     ownerCity.disabled = true;
@@ -2027,7 +2409,7 @@ class IntelligenceTabs {
                     case 'business_city':
                         updates.city = value;
                         break;
-                    case 'business_state':
+                    case 'us_state':
                         updates.us_state = value;
                         break;
                     case 'business_zip':

@@ -107,6 +107,23 @@ class AIAssistant {
             await this.loadAIContext();
 
             // Call the AI API endpoint with enhanced context
+            console.log('🚀 Calling /api/ai/chat with:', { conversationId, query: message.substring(0, 50) });
+
+            // TEMP: Test if route is reachable
+            if (message.toLowerCase() === 'ping') {
+                console.log('🏓 Using ping endpoint for testing...');
+                const pingData = await this.parent.apiCall(`/api/ai/ping`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        query: message,
+                        conversationId: conversationId
+                    })
+                });
+                this.hideTypingIndicator();
+                this.addMessageToChat('assistant', pingData.response + '\n\n✅ Route is working! The issue is with the OpenAI call.', true);
+                return;
+            }
+
             const data = await this.parent.apiCall(`/api/ai/chat`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -116,10 +133,23 @@ class AIAssistant {
                 })
             });
 
+            console.log('📥 Received AI response:', {
+                success: data.success,
+                hasResponse: !!data.response,
+                error: data.error,
+                responsePreview: data.response?.substring(0, 100)
+            });
+
             this.hideTypingIndicator();
 
-            if (data.success && data.response) {
+            // Check if we got ANY response (either success or fallback)
+            if (data.response) {
                 this.addMessageToChat('assistant', data.response, true);
+
+                // Show warning if the response was a fallback due to error
+                if (!data.success && data.error) {
+                    console.warn('⚠️ AI responded with fallback due to error:', data.error);
+                }
             } else {
                 throw new Error(data.error || 'AI response was empty');
             }

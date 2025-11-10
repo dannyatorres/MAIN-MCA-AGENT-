@@ -13,14 +13,22 @@ router.post('/chat', async (req, res) => {
     try {
         const { conversationId, query, includeContext = true } = req.body;
 
+        console.log('🤖 [AI CHAT] Route handler called:', {
+            conversationId,
+            hasQuery: !!query,
+            queryLength: query?.length,
+            includeContext
+        });
+
         if (!query) {
+            console.log('❌ [AI CHAT] No query provided');
             return res.status(400).json({
                 success: false,
                 error: 'Query is required'
             });
         }
 
-        console.log('🤖 AI Chat Request:', { conversationId, query: query.substring(0, 50) + '...' });
+        console.log('🤖 [AI CHAT] Processing request:', { conversationId, query: query.substring(0, 50) + '...' });
 
         const db = getDatabase();
         let conversationContext = null;
@@ -158,10 +166,25 @@ router.post('/chat', async (req, res) => {
         });
 
         // Call AI service
+        console.log('🚀 [AI CHAT] Calling aiService.generateResponse()...');
+        console.log('📋 [AI CHAT] Context summary:', {
+            hasContext: !!conversationContext,
+            businessName: conversationContext?.business_name,
+            messagesCount: conversationContext?.recent_messages?.length
+        });
+
         const aiPromise = aiService.generateResponse(query, conversationContext);
 
         // Race between AI call and timeout
         const result = await Promise.race([aiPromise, timeoutPromise]);
+
+        console.log('📥 [AI CHAT] AI Service returned:', {
+            success: result.success,
+            hasResponse: !!result.response,
+            hasFallback: !!result.fallback,
+            error: result.error,
+            responseLength: (result.response || result.fallback)?.length
+        });
 
         const responseTime = Date.now() - startTime;
 
@@ -214,21 +237,40 @@ router.post('/chat', async (req, res) => {
         const responseTime = Date.now() - startTime;
         console.error('❌ AI Chat Error:', error.message);
 
+        // Provide helpful fallback responses for different error types
+        let fallbackResponse = 'I apologize, but I encountered an error. ';
+
         if (error.message.includes('timeout')) {
-            return res.json({
-                success: false,
-                error: 'Request timed out after 30 seconds',
-                response: 'The AI service is taking too long to respond. Please try again with a shorter question.',
-                responseTime: responseTime
-            });
+            fallbackResponse = 'The AI service is taking too long to respond. Please try again with a shorter question.';
+        } else if (error.message.includes('API key')) {
+            fallbackResponse = 'The AI service is not configured. Please contact your administrator to set up the OpenAI API key.';
+        } else if (error.message.includes('quota')) {
+            fallbackResponse = 'The AI service has reached its usage limit. Please contact your administrator.';
+        } else {
+            fallbackResponse = 'I encountered an error while processing your request. Please try again.';
         }
 
-        res.status(500).json({
+        // Return 200 with error details so frontend can display fallback
+        res.json({
             success: false,
             error: error.message,
+            response: fallbackResponse,
             responseTime: responseTime
         });
     }
+});
+
+// Quick ping test (no OpenAI call)
+router.post('/ping', async (req, res) => {
+    console.log('🏓 [AI PING] Received ping request');
+    const { query, conversationId } = req.body;
+
+    res.json({
+        success: true,
+        response: `Pong! I received your message: "${query?.substring(0, 50)}..." for conversation ${conversationId}. OpenAI would be called here.`,
+        test: true,
+        timestamp: Date.now()
+    });
 });
 
 // Test AI connection
