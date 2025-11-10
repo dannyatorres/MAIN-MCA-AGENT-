@@ -225,13 +225,22 @@ router.post('/chat', async (req, res) => {
 
         console.log(`✅ AI Response generated in ${responseTime}ms`);
 
-        res.json({
+        const responsePayload = {
             success: result.success,
             response: result.response || result.fallback,
             responseTime: responseTime,
             usage: result.usage,
             error: result.error || null
+        };
+
+        console.log('📤 [AI CHAT] Sending response to frontend:', {
+            success: responsePayload.success,
+            responseLength: responsePayload.response?.length,
+            hasError: !!responsePayload.error,
+            responsePreview: responsePayload.response?.substring(0, 100)
         });
+
+        res.json(responsePayload);
 
     } catch (error) {
         const responseTime = Date.now() - startTime;
