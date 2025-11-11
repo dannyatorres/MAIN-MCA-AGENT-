@@ -59,42 +59,72 @@ class AIAssistant {
     }
 
     async sendAIMessage() {
-        console.log('=== sendAIMessage called ===');
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('🤖 [FRONTEND] sendAIMessage CALLED');
+        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('🔍 Step 1: Function entry');
 
         const input = document.getElementById('aiChatInput');
         const messagesContainer = document.getElementById('aiChatMessages');
 
+        console.log('🔍 Step 2: Got DOM elements:', {
+            hasInput: !!input,
+            hasContainer: !!messagesContainer,
+            inputValue: input?.value
+        });
+
         if (!input || !messagesContainer) {
-            console.error('Input or container not found');
+            console.error('❌ ABORT: Input or container not found');
             return;
         }
 
         const message = input.value.trim();
+        console.log('🔍 Step 3: Message value:', message);
+
         if (!message) {
-            console.log('No message to send');
+            console.log('❌ ABORT: No message to send');
             return;
         }
 
         // Clear input
+        console.log('🔍 Step 4: Clearing input');
         input.value = '';
         input.style.height = 'auto';
 
         // Add user message
+        console.log('🔍 Step 5: Adding user message to chat (will save to DB)');
         this.addMessageToChat('user', message, true);
 
         // Show typing indicator
+        console.log('🔍 Step 6: Showing typing indicator');
         this.showTypingIndicator();
 
         try {
             const conversationId = this.parent.getCurrentConversationId();
+            console.log('🔍 Step 7: Got conversation ID:', conversationId);
             console.log('🚀 Sending AI request:', { conversationId, query: message.substring(0, 50) });
 
             // Refresh AI context
+            console.log('🔍 Step 8: Loading AI context...');
             await this.loadAIContext();
+            console.log('✅ Step 8: AI context loaded successfully');
 
             // Build the full URL
             const apiUrl = `${this.apiBaseUrl || window.location.origin}/api/ai/chat`;
-            console.log('📍 API URL:', apiUrl);
+            console.log('🔍 Step 9: Built API URL:', apiUrl);
+            console.log('📍 Full URL details:', {
+                apiBaseUrl: this.apiBaseUrl,
+                windowOrigin: window.location.origin,
+                finalUrl: apiUrl
+            });
+
+            console.log('🔍 Step 10: About to make fetch request...');
+            console.log('📤 Request payload:', {
+                query: message,
+                conversationId: conversationId,
+                contextLength: this.aiContext?.length
+            });
 
             // Make direct fetch call with proper settings
             const response = await fetch(apiUrl, {
@@ -110,41 +140,55 @@ class AIAssistant {
                 })
             });
 
-            console.log('📡 Response status:', response.status, response.statusText);
+            console.log('✅ Step 10: Fetch completed!');
+            console.log('📡 Step 11: Response status:', response.status, response.statusText);
 
             if (!response.ok) {
+                console.log('❌ Step 11: Response NOT OK');
                 const errorText = await response.text();
                 console.error('❌ API Error:', response.status, errorText);
                 throw new Error(`API error: ${response.status} - ${errorText}`);
             }
 
+            console.log('🔍 Step 12: Parsing response JSON...');
             const data = await response.json();
-            console.log('📥 Received AI response:', {
+            console.log('✅ Step 12: JSON parsed successfully');
+            console.log('📥 Step 13: Received AI response:', {
                 success: data.success,
                 hasResponse: !!data.response,
-                responseLength: data.response?.length
+                responseLength: data.response?.length,
+                responsePreview: data.response?.substring(0, 100)
             });
 
+            console.log('🔍 Step 14: Hiding typing indicator');
             this.hideTypingIndicator();
 
             if (data.response) {
-                console.log('✅ Adding AI response to chat');
+                console.log('✅ Step 15: Got response, adding to chat');
                 this.addMessageToChat('assistant', data.response, true);
 
                 if (!data.success && data.error) {
                     console.warn('⚠️ AI responded with fallback:', data.error);
                 }
+                console.log('═══════════════════════════════════════════════════════════════');
+                console.log('🎉 [FRONTEND] AI CHAT COMPLETED SUCCESSFULLY');
+                console.log('═══════════════════════════════════════════════════════════════');
             } else {
+                console.log('❌ Step 15: No response in data');
                 throw new Error(data.error || 'No response received');
             }
 
         } catch (error) {
+            console.log('═══════════════════════════════════════════════════════════════');
+            console.log('❌ [FRONTEND] AI CHAT ERROR CAUGHT');
+            console.log('═══════════════════════════════════════════════════════════════');
             console.error('❌ AI chat error:', error);
             console.error('Error details:', {
                 name: error.name,
                 message: error.message,
                 stack: error.stack
             });
+            console.log('═══════════════════════════════════════════════════════════════');
 
             this.hideTypingIndicator();
 
