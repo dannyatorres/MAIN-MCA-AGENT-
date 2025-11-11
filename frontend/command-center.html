@@ -1471,19 +1471,42 @@
         // Initialize WebSocket connection immediately after Socket.io loads
         if (typeof io !== 'undefined') {
             console.log('✅ Socket.io loaded successfully');
+            console.log('ℹ️  WebSocket is for real-time updates only - AI chat works independently');
 
-            // Create global WebSocket connection using current domain
+            // Create global WebSocket connection with robust error handling
             window.globalSocket = io(window.location.origin, {
-                transports: ['websocket', 'polling'],
-                timeout: 20000
+                transports: ['polling', 'websocket'],  // Try polling first, then websocket
+                timeout: 30000,
+                reconnection: true,
+                reconnectionDelay: 2000,
+                reconnectionDelayMax: 10000,
+                reconnectionAttempts: 5
             });
-            
+
+            // Prevent socket errors from breaking the app
             window.globalSocket.on('connect', () => {
-                console.log('🔌 Connected to WebSocket server:', window.globalSocket.id);
+                console.log('✅ Socket connected:', window.globalSocket.id);
             });
-            
-            window.globalSocket.on('disconnect', () => {
-                console.log('❌ Disconnected from WebSocket server');
+
+            window.globalSocket.on('disconnect', (reason) => {
+                console.log('🔌 Socket disconnected:', reason);
+                // DO NOT reload page or reset state
+                // AI chat continues to work without WebSocket
+            });
+
+            window.globalSocket.on('connect_error', (error) => {
+                console.warn('⚠️ Socket connection error (non-fatal):', error.message);
+                // Continue working - AI chat doesn't need WebSocket
+            });
+
+            window.globalSocket.on('error', (error) => {
+                console.warn('⚠️ Socket error (non-fatal):', error.message);
+                // Don't let socket errors break the app
+            });
+
+            window.globalSocket.on('reconnect_failed', () => {
+                console.warn('⚠️ Socket reconnection failed - continuing without real-time updates');
+                // App continues to work, just no real-time message updates
             });
             
             window.globalSocket.on('new_message', (data) => {
