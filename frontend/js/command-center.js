@@ -1,18 +1,15 @@
 // MCA Command Center Main Application
 class CommandCenter {
     constructor() {
-        // Auto-detect environment: use api.mcagent.io unless on localhost
-        const isDev = window.location.hostname === 'localhost';
-        const apiDomain = isDev ? 'http://localhost:3001' : 'https://api.mcagent.io';
-
-        this.wsUrl = apiDomain.replace('http', 'ws').replace('https', 'wss');
+        // Use dynamic URLs based on current domain
+        const isHttps = window.location.protocol === 'https:';
+        this.wsUrl = `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}`;
         this.userId = 'default';
-        this.apiBaseUrl = apiDomain;
+        this.apiBaseUrl = window.location.origin;
         this.apiAuth = 'Basic ' + btoa('admin:Ronpaul2025!');
         this.isInitialized = false;
 
         console.log('🔧 CommandCenter initialized with:');
-        console.log('   Environment:', isDev ? 'Development (localhost)' : 'Production');
         console.log('   WebSocket URL:', this.wsUrl);
         console.log('   API Base URL:', this.apiBaseUrl);
 
