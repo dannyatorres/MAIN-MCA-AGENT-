@@ -28,7 +28,7 @@ console.log('✅ dotenv loaded');
 const app = express();
 const server = http.createServer(app);
 
-// Setup Socket.io (CORS will be configured after allowedOrigins is set)
+// Setup Socket.io with improved timeout settings for Railway stability
 const io = new Server(server, {
     cors: {
         origin: (origin, callback) => {
@@ -41,7 +41,12 @@ const io = new Server(server, {
             }
         },
         credentials: true
-    }
+    },
+    // Timeout settings for better Railway stability
+    pingTimeout: 60000,      // How long to wait for ping response (60s)
+    pingInterval: 25000,     // How often to send ping (25s)
+    upgradeTimeout: 30000,   // Time to wait for upgrade (30s)
+    transports: ['websocket', 'polling']  // Support both transports
 });
 
 // Make io available globally for routes to use

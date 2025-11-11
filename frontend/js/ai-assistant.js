@@ -63,107 +63,91 @@ class AIAssistant {
         const input = document.getElementById('aiChatInput');
         const messagesContainer = document.getElementById('aiChatMessages');
 
-        console.log('sendAIMessage called', {
-            input: !!input,
-            inputValue: input?.value,
-            container: !!messagesContainer
-        });
-
-        if (!input) {
-            console.error('Input element not found');
-            return;
-        }
-
-        if (!messagesContainer) {
-            console.error('Messages container not found');
+        if (!input || !messagesContainer) {
+            console.error('Input or container not found');
             return;
         }
 
         const message = input.value.trim();
-        console.log('Message to send:', message);
-
         if (!message) {
-            console.log('No message to send - empty input');
+            console.log('No message to send');
             return;
         }
 
-        // Clear input
+        // Clear input FIRST (before any potential disconnects)
         input.value = '';
         input.style.height = 'auto';
 
-        // Add user message
+        // Add user message FIRST (before any potential disconnects)
         this.addMessageToChat('user', message, true);
 
         // Show typing indicator
         this.showTypingIndicator();
 
         try {
-            // Get current conversation ID
             const conversationId = this.parent.getCurrentConversationId();
-
-            console.log('Sending AI request for conversation:', conversationId);
-
-            // Refresh AI context before sending (to get latest FCS data)
-            await this.loadAIContext();
-
-            // Call the AI API endpoint with enhanced context
             console.log('🚀 Calling /api/ai/chat with:', { conversationId, query: message.substring(0, 50) });
 
-            // TEMP: Test if route is reachable
-            if (message.toLowerCase() === 'ping') {
-                console.log('🏓 Using ping endpoint for testing...');
-                const pingData = await this.parent.apiCall(`/api/ai/ping`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        query: message,
-                        conversationId: conversationId
-                    })
-                });
-                this.hideTypingIndicator();
-                this.addMessageToChat('assistant', pingData.response + '\n\n✅ Route is working! The issue is with the OpenAI call.', true);
-                return;
-            }
+            // Refresh AI context before sending
+            await this.loadAIContext();
 
-            const data = await this.parent.apiCall(`/api/ai/chat`, {
+            // Make the API call with a longer timeout - DIRECT FETCH, NO WEBSOCKET DEPENDENCY
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+            const response = await fetch(`${this.apiBaseUrl}/api/ai/chat`, {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                signal: controller.signal,
                 body: JSON.stringify({
                     query: message,
                     conversationId: conversationId,
-                    context: this.aiContext // Include FCS-enhanced context
+                    context: this.aiContext
                 })
             });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
 
             console.log('📥 Received AI response:', {
                 success: data.success,
                 hasResponse: !!data.response,
-                error: data.error,
+                responseLength: data.response?.length,
                 responsePreview: data.response?.substring(0, 100)
             });
 
             this.hideTypingIndicator();
 
-            // Check if we got ANY response (either success or fallback)
+            // Add the AI response to chat
             if (data.response) {
+                console.log('✅ Adding AI message to UI');
                 this.addMessageToChat('assistant', data.response, true);
 
-                // Show warning if the response was a fallback due to error
                 if (!data.success && data.error) {
-                    console.warn('⚠️ AI responded with fallback due to error:', data.error);
+                    console.warn('⚠️ AI responded with fallback:', data.error);
                 }
             } else {
-                throw new Error(data.error || 'AI response was empty');
+                throw new Error(data.error || 'No response received');
             }
 
         } catch (error) {
-            console.error('AI chat error:', error);
+            console.error('❌ AI chat error:', error);
             this.hideTypingIndicator();
 
-            // Show a helpful error message
             let errorMessage = 'I apologize, but I encountered an error. ';
-            if (error.message.includes('AI API error')) {
-                errorMessage += 'The AI service is currently unavailable. Please try again later.';
-            } else if (error.message.includes('fetch')) {
-                errorMessage += 'Unable to connect to the AI service. Please check your connection.';
+
+            if (error.name === 'AbortError') {
+                errorMessage = 'The request took too long. Please try a shorter question.';
+            } else if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'Connection lost. Please check your internet and try again.';
             } else {
                 errorMessage += 'Please try again.';
             }
