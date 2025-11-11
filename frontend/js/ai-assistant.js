@@ -102,9 +102,9 @@ class AIAssistant {
         input.value = '';
         input.style.height = 'auto';
 
-        // Add user message
-        console.log('🔍 Step 5: Adding user message to chat (will save to DB)');
-        this.addMessageToChat('user', message, true);
+        // Add user message to UI only (backend will save both messages after AI responds)
+        console.log('🔍 Step 5: Adding user message to chat UI (NOT saving to DB yet)');
+        this.addMessageToChat('user', message, false);
 
         // Show typing indicator
         console.log('🔍 Step 6: Showing typing indicator');
@@ -174,8 +174,9 @@ class AIAssistant {
             this.hideTypingIndicator();
 
             if (data.response) {
-                console.log('✅ Step 15: Got response, adding to chat');
-                this.addMessageToChat('assistant', data.response, true);
+                console.log('✅ Step 15: Got response, adding to chat UI');
+                console.log('ℹ️  Backend already saved both messages to database');
+                this.addMessageToChat('assistant', data.response, false);
 
                 if (!data.success && data.error) {
                     console.warn('⚠️ AI responded with fallback:', data.error);
