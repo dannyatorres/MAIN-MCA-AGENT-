@@ -1471,9 +1471,9 @@
         // Initialize WebSocket connection immediately after Socket.io loads
         if (typeof io !== 'undefined') {
             console.log('✅ Socket.io loaded successfully');
-            
-            // Create global WebSocket connection
-            window.globalSocket = io('http://localhost:3001', {
+
+            // Create global WebSocket connection using current domain
+            window.globalSocket = io(window.location.origin, {
                 transports: ['websocket', 'polling'],
                 timeout: 20000
             });
@@ -1976,7 +1976,7 @@
         window.testAPI = async function() {
             console.log('🧪 Testing API connection...');
             try {
-                const response = await fetch('http://localhost:3001/api/conversations');
+                const response = await fetch('/api/conversations');
                 const data = await response.json();
                 console.log('✅ API Response:', data);
                 return data;
@@ -1989,7 +1989,7 @@
         // Force conversations reload
         window.forceReload = function() {
             console.log('🚀 Force reload conversations...');
-            fetch('http://localhost:3001/api/conversations')
+            fetch('/api/conversations')
                 .then(response => response.json())
                 .then(data => {
                     console.log('📋 Got conversations data:', data);
@@ -2092,7 +2092,7 @@
                         
                         console.log('📤 Sending lead data:', leadData);
                         
-                        const response = await fetch('http://localhost:3001/api/conversations', {
+                        const response = await fetch('/api/conversations', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(leadData)
@@ -2322,7 +2322,7 @@
                 showNotification('Loading lead data...', 'info');
 
                 // Get lead data using existing endpoint
-                const response = await fetch(`http://localhost:3001/api/conversations/${selectedConversationId}`);
+                const response = await fetch(`/api/conversations/${selectedConversationId}`);
                 const result = await response.json();
 
                 if (!response.ok) {
@@ -2559,7 +2559,7 @@
 
                 if (mode === 'create') {
                     // CREATE mode - POST to /api/conversations
-                    response = await fetch('http://localhost:3001/api/conversations', {
+                    response = await fetch('/api/conversations', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -2568,7 +2568,7 @@
                     });
                 } else {
                     // EDIT mode - PUT to /api/conversations/:id
-                    response = await fetch(`http://localhost:3001/api/conversations/${currentEditingLeadId}`, {
+                    response = await fetch(`/api/conversations/${currentEditingLeadId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json'
@@ -2700,7 +2700,7 @@
             try {
                 showNotification('Cloning lead...', 'info');
 
-                const response = await fetch(`http://localhost:3001/api/conversations/${selectedConversationId}/clone`, {
+                const response = await fetch(`/api/conversations/${selectedConversationId}/clone`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2786,7 +2786,7 @@
             try {
                 showNotification('Archiving lead...', 'info');
 
-                const response = await fetch(`http://localhost:3001/api/conversations/${currentConversationId}/archive`, {
+                const response = await fetch(`/api/conversations/${currentConversationId}/archive`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2820,7 +2820,7 @@
             try {
                 showNotification('Deleting lead...', 'info');
 
-                const response = await fetch(`http://localhost:3001/api/conversations/${selectedConversationId}`, {
+                const response = await fetch(`/api/conversations/${selectedConversationId}`, {
                     method: 'DELETE'
                 });
 
@@ -3185,7 +3185,7 @@
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch('http://localhost:3001/api/conversations', {
+                const response = await fetch('/api/conversations', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)

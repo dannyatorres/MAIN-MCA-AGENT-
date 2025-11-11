@@ -1,11 +1,17 @@
 // MCA Command Center Main Application
 class CommandCenter {
     constructor() {
-        this.wsUrl = 'wss://api.mcagent.io';
+        // Use dynamic URLs based on current domain
+        const isHttps = window.location.protocol === 'https:';
+        this.wsUrl = `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}`;
         this.userId = 'default';
-        this.apiBaseUrl = 'https://api.mcagent.io';
+        this.apiBaseUrl = window.location.origin;
         this.apiAuth = 'Basic ' + btoa('admin:Ronpaul2025!');
         this.isInitialized = false;
+
+        console.log('🔧 CommandCenter initialized with:');
+        console.log('   WebSocket URL:', this.wsUrl);
+        console.log('   API Base URL:', this.apiBaseUrl);
 
         // Initialize utilities FIRST (they have no dependencies)
         this.utils = new Utilities(this);
