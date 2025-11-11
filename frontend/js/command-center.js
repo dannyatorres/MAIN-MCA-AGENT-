@@ -35,6 +35,7 @@ class CommandCenter {
     async apiCall(endpoint, options = {}) {
         const config = {
             ...options,
+            credentials: 'include', // Important for authentication
             headers: {
                 'Authorization': this.apiAuth,
                 'Content-Type': 'application/json',

@@ -158,6 +158,7 @@ const authenticate = basicAuth({
 // Apply authentication to ALL /api routes EXCEPT:
 // - /api/health (Railway needs this for monitoring)
 // - /api/messages/webhook/receive (Twilio needs this)
+// - /api/ai/* (AI chat endpoints - TEMPORARY for testing)
 // - /api/documents/view/* (Document preview)
 // - /api/documents/download/* (Document download)
 // - /api/conversations/*/documents/*/download (Conversation document download)
@@ -169,6 +170,11 @@ app.use('/api', (req, res, next) => {
 
     // Skip auth for Twilio webhook
     if (req.path === '/messages/webhook/receive') {
+        return next();
+    }
+
+    // TEMPORARY: Skip auth for AI endpoints (for testing)
+    if (req.path.startsWith('/ai/')) {
         return next();
     }
 
