@@ -168,18 +168,23 @@ const authenticate = basicAuth({
 // - /api/documents/download/* (Document download)
 // - /api/conversations/*/documents/*/download (Conversation document download)
 app.use('/api', (req, res, next) => {
+    console.log('🔐 Auth check for:', req.method, req.path);
+
     // Skip auth for health check
     if (req.path === '/health') {
+        console.log('✅ Skipping auth for health check');
         return next();
     }
 
     // Skip auth for Twilio webhook
     if (req.path === '/messages/webhook/receive') {
+        console.log('✅ Skipping auth for Twilio webhook');
         return next();
     }
 
     // TEMPORARY: Skip auth for AI endpoints (for testing)
-    if (req.path.startsWith('/ai/')) {
+    if (req.path.startsWith('/ai/') || req.path === '/ai/chat' || req.path === '/ai/status' || req.path === '/ai/ping') {
+        console.log('✅ Skipping auth for AI route:', req.path);
         return next();
     }
 
@@ -187,6 +192,7 @@ app.use('/api', (req, res, next) => {
     if (req.path.startsWith('/documents/view/') ||
         req.path.startsWith('/documents/download/') ||
         req.path.match(/^\/conversations\/[^/]+\/documents\/[^/]+\/download$/)) {
+        console.log('✅ Skipping auth for document route');
         return next();
     }
 

@@ -17,6 +17,16 @@ router.options('/chat', (req, res) => {
 
 // Main AI chat endpoint with conversation context
 router.post('/chat', async (req, res) => {
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('🤖 [AI CHAT] REQUEST RECEIVED');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('Time:', new Date().toISOString());
+    console.log('Headers:', req.headers);
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('');
+
     // Add CORS headers explicitly
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
