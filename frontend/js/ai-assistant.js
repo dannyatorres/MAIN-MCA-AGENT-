@@ -176,7 +176,18 @@ class AIAssistant {
             if (data.response) {
                 console.log('✅ Step 15: Got response, adding to chat UI');
                 console.log('ℹ️  Backend already saved both messages to database');
+
+                // Prevent any reloads during message display
+                window.aiChatPreventReload = true;
+                console.log('🔒 Preventing reloads for 2 seconds');
+
                 this.addMessageToChat('assistant', data.response, false);
+
+                // Re-enable reloads after message is displayed
+                setTimeout(() => {
+                    window.aiChatPreventReload = false;
+                    console.log('🔓 Reloads re-enabled');
+                }, 2000);
 
                 if (!data.success && data.error) {
                     console.warn('⚠️ AI responded with fallback:', data.error);
@@ -254,13 +265,15 @@ class AIAssistant {
             this.saveMessageToDatabase(role, content);
         }
 
-        // Trigger cache update for tab switching (immediate for better reliability)
+        // DISABLED: Cache update was causing reload during message display
+        // Only save cache when user manually switches tabs, not after every message
+        /*
         if (this.parent.intelligence && this.parent.intelligence.saveAIChatState) {
-            // Use requestAnimationFrame for better timing
             requestAnimationFrame(() => {
                 this.parent.intelligence.saveAIChatState();
             });
         }
+        */
     }
 
     formatAIResponse(content) {
@@ -314,6 +327,12 @@ class AIAssistant {
     }
 
     async loadChatHistory() {
+        // Prevent reload during message display
+        if (window.aiChatPreventReload) {
+            console.log('⚠️ Prevented chat history reload during message display');
+            return;
+        }
+
         const conversationId = this.parent.getCurrentConversationId();
         if (!conversationId) return;
 
