@@ -1468,14 +1468,25 @@
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <script>
+        // Auto-detect environment and set API URL globally
+        const isDev = window.location.hostname === 'localhost';
+        const API_BASE_URL = isDev ? 'http://localhost:3001' : 'https://api.mcagent.io';
+        window.API_BASE_URL = API_BASE_URL; // Make it globally accessible
+
+        console.log('🔧 Environment:', isDev ? 'Development' : 'Production');
+        console.log('🔧 API Base URL:', API_BASE_URL);
+
         // Initialize WebSocket connection immediately after Socket.io loads
         if (typeof io !== 'undefined') {
             console.log('✅ Socket.io loaded successfully');
+            console.log('🔧 Connecting Socket.io to:', API_BASE_URL);
 
-            // Create global WebSocket connection using current domain
-            window.globalSocket = io(window.location.origin, {
+            window.globalSocket = io(API_BASE_URL, {
                 transports: ['websocket', 'polling'],
-                timeout: 20000
+                timeout: 20000,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 5
             });
             
             window.globalSocket.on('connect', () => {
@@ -1976,7 +1987,7 @@
         window.testAPI = async function() {
             console.log('🧪 Testing API connection...');
             try {
-                const response = await fetch('/api/conversations');
+                const response = await fetch(`${API_BASE_URL}/api/conversations`);
                 const data = await response.json();
                 console.log('✅ API Response:', data);
                 return data;
@@ -1989,7 +2000,7 @@
         // Force conversations reload
         window.forceReload = function() {
             console.log('🚀 Force reload conversations...');
-            fetch('/api/conversations')
+            fetch(`${API_BASE_URL}/api/conversations`)
                 .then(response => response.json())
                 .then(data => {
                     console.log('📋 Got conversations data:', data);
@@ -2092,7 +2103,7 @@
                         
                         console.log('📤 Sending lead data:', leadData);
                         
-                        const response = await fetch('/api/conversations', {
+                        const response = await fetch(`${API_BASE_URL}/api/conversations`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(leadData)
@@ -2559,7 +2570,7 @@
 
                 if (mode === 'create') {
                     // CREATE mode - POST to /api/conversations
-                    response = await fetch('/api/conversations', {
+                    response = await fetch(`${API_BASE_URL}/api/conversations`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -3185,7 +3196,7 @@
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch('/api/conversations', {
+                const response = await fetch(`${API_BASE_URL}/api/conversations`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
