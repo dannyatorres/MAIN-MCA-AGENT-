@@ -1,4 +1,10 @@
-// ai-assistant.js - Fixed AI assistant chat functionality
+// ai-assistant.js - AI assistant chat functionality
+//
+// IMPORTANT: This module is WEBSOCKET-INDEPENDENT
+// - Uses HTTP fetch() for all AI communication
+// - Does NOT require WebSocket connection
+// - Will work even if WebSocket is disconnected
+// - Only saves messages to database via HTTP POST
 
 class AIAssistant {
     constructor(parent) {
@@ -62,6 +68,10 @@ class AIAssistant {
         console.log('');
         console.log('═══════════════════════════════════════════════════════════════');
         console.log('🤖 [FRONTEND] sendAIMessage CALLED');
+        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('ℹ️  AI Chat is WEBSOCKET-INDEPENDENT - Uses HTTP fetch() only');
+        console.log('ℹ️  WebSocket state:', window.globalSocket?.connected ? 'Connected' : 'Disconnected/Not Initialized');
+        console.log('ℹ️  AI chat will work regardless of WebSocket state');
         console.log('═══════════════════════════════════════════════════════════════');
         console.log('🔍 Step 1: Function entry');
 
