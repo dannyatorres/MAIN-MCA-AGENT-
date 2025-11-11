@@ -3,7 +3,8 @@
 class AIAssistant {
     constructor(parent) {
         this.parent = parent;
-        this.apiBaseUrl = parent.apiBaseUrl;
+        this.apiBaseUrl = parent.apiBaseUrl || window.location.origin;
+        console.log('🔧 AI Assistant API Base URL:', this.apiBaseUrl);
         this.utils = parent.utils;
 
         // AI state
@@ -74,11 +75,11 @@ class AIAssistant {
             return;
         }
 
-        // Clear input FIRST (before any potential disconnects)
+        // Clear input
         input.value = '';
         input.style.height = 'auto';
 
-        // Add user message FIRST (before any potential disconnects)
+        // Add user message
         this.addMessageToChat('user', message, true);
 
         // Show typing indicator
@@ -86,22 +87,22 @@ class AIAssistant {
 
         try {
             const conversationId = this.parent.getCurrentConversationId();
-            console.log('🚀 Calling /api/ai/chat with:', { conversationId, query: message.substring(0, 50) });
+            console.log('🚀 Sending AI request:', { conversationId, query: message.substring(0, 50) });
 
-            // Refresh AI context before sending
+            // Refresh AI context
             await this.loadAIContext();
 
-            // Make the API call with a longer timeout - DIRECT FETCH, NO WEBSOCKET DEPENDENCY
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            // Build the full URL
+            const apiUrl = `${this.apiBaseUrl || window.location.origin}/api/ai/chat`;
+            console.log('📍 API URL:', apiUrl);
 
-            const response = await fetch(`${this.apiBaseUrl}/api/ai/chat`, {
+            // Make direct fetch call with proper settings
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include',
-                signal: controller.signal,
+                credentials: 'include', // Important for cookies/auth
                 body: JSON.stringify({
                     query: message,
                     conversationId: conversationId,
@@ -109,26 +110,25 @@ class AIAssistant {
                 })
             });
 
-            clearTimeout(timeoutId);
+            console.log('📡 Response status:', response.status, response.statusText);
 
             if (!response.ok) {
-                throw new Error(`API error: ${response.status} ${response.statusText}`);
+                const errorText = await response.text();
+                console.error('❌ API Error:', response.status, errorText);
+                throw new Error(`API error: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
-
             console.log('📥 Received AI response:', {
                 success: data.success,
                 hasResponse: !!data.response,
-                responseLength: data.response?.length,
-                responsePreview: data.response?.substring(0, 100)
+                responseLength: data.response?.length
             });
 
             this.hideTypingIndicator();
 
-            // Add the AI response to chat
             if (data.response) {
-                console.log('✅ Adding AI message to UI');
+                console.log('✅ Adding AI response to chat');
                 this.addMessageToChat('assistant', data.response, true);
 
                 if (!data.success && data.error) {
@@ -140,14 +140,22 @@ class AIAssistant {
 
         } catch (error) {
             console.error('❌ AI chat error:', error);
+            console.error('Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
+
             this.hideTypingIndicator();
 
-            let errorMessage = 'I apologize, but I encountered an error. ';
+            let errorMessage = 'I apologize, but I encountered an error connecting to the AI service. ';
 
-            if (error.name === 'AbortError') {
-                errorMessage = 'The request took too long. Please try a shorter question.';
-            } else if (error.message.includes('Failed to fetch')) {
-                errorMessage = 'Connection lost. Please check your internet and try again.';
+            if (error.message.includes('401')) {
+                errorMessage = 'Authentication failed. Please refresh the page and try again.';
+            } else if (error.message.includes('404')) {
+                errorMessage = 'AI service endpoint not found. Please contact support.';
+            } else if (error.message.includes('Load failed') || error.message.includes('fetch')) {
+                errorMessage = 'Unable to connect to the server. Please check your connection and try again.';
             } else {
                 errorMessage += 'Please try again.';
             }

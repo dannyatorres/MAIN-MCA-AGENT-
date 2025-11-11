@@ -6,8 +6,23 @@ const router = express.Router();
 const { getDatabase } = require('../services/database');
 const aiService = require('../services/aiService');
 
+// Handle OPTIONS preflight for CORS
+router.options('/chat', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.sendStatus(200);
+});
+
 // Main AI chat endpoint with conversation context
 router.post('/chat', async (req, res) => {
+    // Add CORS headers explicitly
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
     const startTime = Date.now();
 
     try {
