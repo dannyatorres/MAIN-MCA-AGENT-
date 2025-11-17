@@ -148,6 +148,9 @@ class CommandCenter {
             // Setup global keyboard shortcuts
             this.setupKeyboardShortcuts();
 
+            // Setup tab switching behavior
+            this.setupTabSwitching();
+
             // Setup global error handling
             this.setupErrorHandling();
 
@@ -224,6 +227,27 @@ class CommandCenter {
 
         window.addEventListener('unhandledrejection', (event) => {
             console.error('Unhandled promise rejection:', event.reason);
+        });
+    }
+
+    setupTabSwitching() {
+        // Listen for tab switches
+        document.addEventListener('click', (event) => {
+            const tabButton = event.target.closest('.tab-button');
+            if (tabButton) {
+                const tabName = tabButton.getAttribute('data-tab');
+
+                // When switching to AI Agent tab, reload the current conversation
+                if (tabName === 'ai-agent' && this.conversationUI && this.currentConversationId) {
+                    setTimeout(() => {
+                        console.log('Tab switched to AI Agent, reloading conversation...');
+                        const conversation = this.conversationUI.conversations.get(this.currentConversationId);
+                        if (conversation) {
+                            this.conversationUI.selectConversation(this.currentConversationId);
+                        }
+                    }, 100); // Small delay to ensure tab is visible
+                }
+            }
         });
     }
 
