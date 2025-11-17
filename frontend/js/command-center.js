@@ -233,17 +233,25 @@ class CommandCenter {
     setupTabSwitching() {
         // Listen for tab switches
         document.addEventListener('click', (event) => {
-            const tabButton = event.target.closest('.tab-button');
+            const tabButton = event.target.closest('.tab-btn');
             if (tabButton) {
                 const tabName = tabButton.getAttribute('data-tab');
 
-                // When switching to AI Agent tab, reload the current conversation
-                if (tabName === 'ai-agent' && this.conversationUI && this.currentConversationId) {
+                // When switching to AI Assistant tab, force reload of AI messages
+                if (tabName === 'ai-assistant' && this.intelligence && this.currentConversationId) {
                     setTimeout(() => {
-                        console.log('Tab switched to AI Agent, reloading conversation...');
-                        const conversation = this.conversationUI.conversations.get(this.currentConversationId);
-                        if (conversation) {
-                            this.conversationUI.selectConversation(this.currentConversationId);
+                        console.log('Tab switched to AI Assistant, clearing cache and reloading...');
+
+                        // Clear the cache for this conversation to force fresh reload
+                        if (this.intelligence.aiChatCache) {
+                            this.intelligence.aiChatCache.delete(this.currentConversationId);
+                            console.log('Cache cleared for conversation:', this.currentConversationId);
+                        }
+
+                        // Force re-initialize AI chat to load fresh messages
+                        if (this.ai) {
+                            console.log('Re-initializing AI chat...');
+                            this.ai.initializeAIChat();
                         }
                     }, 100); // Small delay to ensure tab is visible
                 }

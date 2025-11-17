@@ -141,17 +141,14 @@ class IntelligenceTabs {
 
         // NEW: Reload conversation when switching back to AI Assistant tab
         if (tab === 'ai-assistant') {
-            console.log('Returning to AI Assistant tab, reloading conversation...');
-            if (this.parent.conversationUI && this.parent.currentConversationId) {
-                // Reload the current conversation
-                const conversationData = this.parent.conversationUI.conversations.get(
-                    this.parent.currentConversationId
-                );
-                if (conversationData) {
-                    console.log('Reloading conversation:', this.parent.currentConversationId);
-                    this.parent.conversationUI.selectConversation(
-                        this.parent.currentConversationId
-                    );
+            console.log('Returning to AI Assistant tab, forcing fresh reload...');
+            const convId = this.parent.getCurrentConversationId();
+
+            if (convId) {
+                // Clear the cache for this conversation to force fresh reload
+                if (this.aiChatCache && this.aiChatCache.has(convId)) {
+                    this.aiChatCache.delete(convId);
+                    console.log('Cache cleared for conversation:', convId);
                 }
             }
         }
