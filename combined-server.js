@@ -516,6 +516,42 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Socket.io connection handlers
+io.on('connection', (socket) => {
+    console.log('✅ Client connected:', socket.id);
+
+    // Join user room
+    socket.on('join:user', (data) => {
+        const { userId } = data;
+        socket.join(`user:${userId}`);
+        console.log(`User ${userId} joined their room`);
+    });
+
+    // Join conversation room
+    socket.on('join:conversation', (data) => {
+        const { conversationId } = data;
+        socket.join(`conversation:${conversationId}`);
+        console.log(`Socket ${socket.id} joined conversation:${conversationId}`);
+    });
+
+    // Leave conversation room
+    socket.on('leave:conversation', (data) => {
+        const { conversationId } = data;
+        socket.leave(`conversation:${conversationId}`);
+        console.log(`Socket ${socket.id} left conversation:${conversationId}`);
+    });
+
+    // Handle disconnect
+    socket.on('disconnect', (reason) => {
+        console.log('❌ Client disconnected:', socket.id, 'Reason:', reason);
+    });
+
+    // Handle errors
+    socket.on('error', (error) => {
+        console.error('Socket error:', error);
+    });
+});
+
 // Catch-all for frontend routes (MUST be last)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'command-center.html'));
