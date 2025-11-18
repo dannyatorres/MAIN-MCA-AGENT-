@@ -153,22 +153,36 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 
-        // Remove empty state if it exists
+        // 1. Remove empty state if it exists
         const emptyState = container.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
 
-        // 🛑 DUPLICATE CHECK: Don't add if it already exists
-        // This handles the race condition between API response and WebSocket
+        // 2. Duplicate Check
         if (document.querySelector(`.message[data-message-id="${message.id}"]`)) {
             console.log('Skipping duplicate message render:', message.id);
             return;
         }
 
-        // Render the message
+        // 3. Generate HTML
         const html = this.parent.templates.messageItem(message);
-        container.insertAdjacentHTML('beforeend', html);
 
-        // Scroll to bottom
+        // 4. TARGET THE CORRECT WRAPPER (The Fix)
+        // We must append to .messages-list, otherwise CSS alignment won't work.
+        let list = container.querySelector('.messages-list');
+
+        if (list) {
+            // Wrapper exists, append to it
+            list.insertAdjacentHTML('beforeend', html);
+        } else {
+            // Wrapper doesn't exist (first message), create it
+            container.innerHTML = `
+                <div class="messages-list">
+                    ${html}
+                </div>
+            `;
+        }
+
+        // 5. Scroll to bottom
         this.scrollToBottom();
     }
 
