@@ -146,7 +146,7 @@ class AIAssistant {
                 body: JSON.stringify({
                     query: message,
                     conversationId: conversationId,
-                    context: this.aiContext
+                    includeContext: true  // Backend builds its own context
                 })
             });
 

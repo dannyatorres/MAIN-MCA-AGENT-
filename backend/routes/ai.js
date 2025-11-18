@@ -38,6 +38,13 @@ router.post('/chat', async (req, res) => {
     try {
         const { conversationId, query, includeContext = true } = req.body;
 
+        console.log('🔍 Parsed request body:', {
+            conversationId,
+            query: query?.substring(0, 50),
+            includeContext,
+            fullBody: JSON.stringify(req.body)
+        });
+
         console.log('🤖 [AI CHAT] Route handler called:', {
             conversationId,
             hasQuery: !!query,
