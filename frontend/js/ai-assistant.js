@@ -65,24 +65,10 @@ class AIAssistant {
     }
 
     async sendAIMessage() {
-        console.log('');
-        console.log('═══════════════════════════════════════════════════════════════');
-        console.log('🤖 [FRONTEND] sendAIMessage CALLED');
-        console.log('═══════════════════════════════════════════════════════════════');
-        console.log('ℹ️  AI Chat is WEBSOCKET-INDEPENDENT - Uses HTTP fetch() only');
-        console.log('ℹ️  WebSocket state:', window.globalSocket?.connected ? 'Connected' : 'Disconnected/Not Initialized');
-        console.log('ℹ️  AI chat will work regardless of WebSocket state');
-        console.log('═══════════════════════════════════════════════════════════════');
-        console.log('🔍 Step 1: Function entry');
+        console.log('🤖 [FRONTEND] sendAIMessage Triggered');
 
         const input = document.getElementById('aiChatInput');
         const messagesContainer = document.getElementById('aiChatMessages');
-
-        console.log('🔍 Step 2: Got DOM elements:', {
-            hasInput: !!input,
-            hasContainer: !!messagesContainer,
-            inputValue: input?.value
-        });
 
         if (!input || !messagesContainer) {
             console.error('❌ ABORT: Input or container not found');
@@ -90,143 +76,64 @@ class AIAssistant {
         }
 
         const message = input.value.trim();
-        console.log('🔍 Step 3: Message value:', message);
+        const conversationId = this.parent.getCurrentConversationId();
 
-        if (!message) {
-            console.log('❌ ABORT: No message to send');
+        if (!message) return;
+        if (!conversationId) {
+            console.error('❌ ABORT: No conversation ID selected');
+            this.parent.utils.showNotification('Please select a conversation first', 'error');
             return;
         }
 
-        // Clear input
-        console.log('🔍 Step 4: Clearing input');
+        // 1. Clear input & Reset Height
         input.value = '';
         input.style.height = 'auto';
 
-        // Add user message to UI only (backend will save both messages after AI responds)
-        console.log('🔍 Step 5: Adding user message to chat UI (NOT saving to DB yet)');
+        // 2. Add User Message to UI
         this.addMessageToChat('user', message, false);
 
-        // Show typing indicator
-        console.log('🔍 Step 6: Showing typing indicator');
+        // 3. Show Typing Indicator
         this.showTypingIndicator();
 
         try {
-            const conversationId = this.parent.getCurrentConversationId();
-            console.log('🔍 Step 7: Got conversation ID:', conversationId);
-            console.log('🚀 Sending AI request:', { conversationId, query: message.substring(0, 50) });
+            console.log('🚀 Sending AI Request for Conversation:', conversationId);
 
-            // Refresh AI context
-            console.log('🔍 Step 8: Loading AI context...');
-            await this.loadAIContext();
-            console.log('✅ Step 8: AI context loaded successfully');
-
-            // Build the full URL
-            const apiUrl = `${this.apiBaseUrl || window.location.origin}/api/ai/chat`;
-            console.log('🔍 Step 9: Built API URL:', apiUrl);
-            console.log('📍 Full URL details:', {
-                apiBaseUrl: this.apiBaseUrl,
-                windowOrigin: window.location.origin,
-                finalUrl: apiUrl
-            });
-
-            console.log('🔍 Step 10: About to make fetch request...');
-            console.log('📤 Request payload:', {
-                query: message,
-                conversationId: conversationId,
-                contextLength: this.aiContext?.length
-            });
-
-            // Make direct fetch call with proper settings
-            const response = await fetch(apiUrl, {
+            // 4. Use Central API Call (Fixes URL, Auth, and Headers)
+            const data = await this.parent.apiCall('/api/ai/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include', // Important for cookies/auth
                 body: JSON.stringify({
                     query: message,
                     conversationId: conversationId,
-                    includeContext: true  // Backend builds its own context
+                    includeContext: true // ✅ Tells backend to load DB context
                 })
             });
 
-            console.log('✅ Step 10: Fetch completed!');
-            console.log('📡 Step 11: Response status:', response.status, response.statusText);
+            console.log('📥 Received AI Response:', data);
 
-            if (!response.ok) {
-                console.log('❌ Step 11: Response NOT OK');
-                const errorText = await response.text();
-                console.error('❌ API Error:', response.status, errorText);
-                throw new Error(`API error: ${response.status} - ${errorText}`);
-            }
-
-            console.log('🔍 Step 12: Parsing response JSON...');
-            const data = await response.json();
-            console.log('✅ Step 12: JSON parsed successfully');
-            console.log('📥 Step 13: Received AI response:', {
-                success: data.success,
-                hasResponse: !!data.response,
-                responseLength: data.response?.length,
-                responsePreview: data.response?.substring(0, 100)
-            });
-
-            console.log('🔍 Step 14: Hiding typing indicator');
+            // 5. Remove Typing Indicator
             this.hideTypingIndicator();
 
-            if (data.response) {
-                console.log('✅ Step 15: Got response, adding to chat UI');
-                console.log('ℹ️  Backend already saved both messages to database');
-
-                // Prevent any reloads during message display
+            // 6. Add AI Response to UI
+            if (data.success && (data.response || data.fallback)) {
+                // Prevent reloading history while adding the new message
                 window.aiChatPreventReload = true;
-                console.log('🔒 Preventing reloads for 2 seconds');
 
-                this.addMessageToChat('assistant', data.response, false);
+                this.addMessageToChat('assistant', data.response || data.fallback, false);
 
-                // Re-enable reloads after message is displayed
+                // Re-enable history reloading after a moment
                 setTimeout(() => {
                     window.aiChatPreventReload = false;
-                    console.log('🔓 Reloads re-enabled');
                 }, 2000);
-
-                if (!data.success && data.error) {
-                    console.warn('⚠️ AI responded with fallback:', data.error);
-                }
-                console.log('═══════════════════════════════════════════════════════════════');
-                console.log('🎉 [FRONTEND] AI CHAT COMPLETED SUCCESSFULLY');
-                console.log('═══════════════════════════════════════════════════════════════');
             } else {
-                console.log('❌ Step 15: No response in data');
-                throw new Error(data.error || 'No response received');
+                throw new Error(data.error || 'Unknown error from AI service');
             }
 
         } catch (error) {
-            console.log('═══════════════════════════════════════════════════════════════');
-            console.log('❌ [FRONTEND] AI CHAT ERROR CAUGHT');
-            console.log('═══════════════════════════════════════════════════════════════');
-            console.error('❌ AI chat error:', error);
-            console.error('Error details:', {
-                name: error.name,
-                message: error.message,
-                stack: error.stack
-            });
-            console.log('═══════════════════════════════════════════════════════════════');
-
+            console.error('❌ AI Chat Error:', error);
             this.hideTypingIndicator();
 
-            let errorMessage = 'I apologize, but I encountered an error connecting to the AI service. ';
-
-            if (error.message.includes('401')) {
-                errorMessage = 'Authentication failed. Please refresh the page and try again.';
-            } else if (error.message.includes('404')) {
-                errorMessage = 'AI service endpoint not found. Please contact support.';
-            } else if (error.message.includes('Load failed') || error.message.includes('fetch')) {
-                errorMessage = 'Unable to connect to the server. Please check your connection and try again.';
-            } else {
-                errorMessage += 'Please try again.';
-            }
-
-            this.addMessageToChat('assistant', errorMessage, false);
+            // Show error in chat bubble
+            this.addMessageToChat('assistant', 'I apologize, but I encountered a connection error. Please try again.', false);
         }
     }
 
