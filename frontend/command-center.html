@@ -1466,83 +1466,19 @@
     <div class="notifications" id="notifications"></div>
 
     <!-- Scripts -->
+    <!-- Load Socket.io library (required by js/websocket.js) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
-    <script>
-        // Initialize WebSocket connection immediately after Socket.io loads
-        if (typeof io !== 'undefined') {
-            console.log('✅ Socket.io loaded successfully');
-            console.log('ℹ️  WebSocket is for real-time updates only - AI chat works independently');
 
-            // Create global WebSocket connection with robust error handling
-            window.globalSocket = io(window.location.origin, {
-                transports: ['polling', 'websocket'],  // Try polling first, then websocket
-                timeout: 30000,
-                reconnection: true,
-                reconnectionDelay: 2000,
-                reconnectionDelayMax: 10000,
-                reconnectionAttempts: 5
-            });
+    <!-- 🛑 REMOVED: Duplicate window.globalSocket initialization -->
+    <!-- WebSocket connection is now properly managed by WebSocketManager class in js/websocket.js -->
 
-            // Prevent socket errors from breaking the app
-            window.globalSocket.on('connect', () => {
-                console.log('✅ Socket connected:', window.globalSocket.id);
-            });
-
-            window.globalSocket.on('disconnect', (reason) => {
-                console.log('🔌 Socket disconnected:', reason);
-                // DO NOT reload page or reset state
-                // AI chat continues to work without WebSocket
-            });
-
-            window.globalSocket.on('connect_error', (error) => {
-                console.warn('⚠️ Socket connection error (non-fatal):', error.message);
-                // Continue working - AI chat doesn't need WebSocket
-            });
-
-            window.globalSocket.on('error', (error) => {
-                console.warn('⚠️ Socket error (non-fatal):', error.message);
-                // Don't let socket errors break the app
-            });
-
-            window.globalSocket.on('reconnect_failed', () => {
-                console.warn('⚠️ Socket reconnection failed - continuing without real-time updates');
-                // App continues to work, just no real-time message updates
-            });
-            
-            window.globalSocket.on('new_message', (data) => {
-                console.log('📨 New message received via WebSocket:', data);
-                
-                // If we have conversation UI loaded, use the new handler method
-                if (window.conversationUI && window.conversationUI.handleIncomingMessage) {
-                    window.conversationUI.handleIncomingMessage(data);
-                } else {
-                    console.log('⚠️ ConversationUI not yet loaded, message will be shown when UI initializes');
-                }
-            });
-            
-            window.globalSocket.on('conversation_updated', (data) => {
-                console.log('📋 Conversation updated via WebSocket:', data);
-                
-                // Refresh conversation list
-                if (window.conversationUI) {
-                    window.conversationUI.loadConversations();
-                }
-            });
-            
-            // Test connection
-            window.globalSocket.emit('test', 'Hello from frontend!');
-            
-        } else {
-            console.error('❌ Socket.io failed to load from CDN');
-        }
-    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
     <!-- 1. Utilities FIRST (no dependencies) -->
     <script src="js/templates-utilities.js"></script>
 
-    <!-- 2. WebSocket (no dependencies on other modules) -->
+    <!-- 2. WebSocket (depends on Socket.io library loaded above) -->
     <script src="js/websocket.js"></script>
 
     <!-- 3. Core modules (depend on utilities) -->
@@ -2150,77 +2086,46 @@
             console.log('✅ Comprehensive form initialized');
         }
         
-        // Initialize the command center
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 DOM Content Loaded');
-
-            // Initialize comprehensive form - Re-enabled for standalone Add Lead modal
-            setTimeout(initializeComprehensiveForm, 100);
-            
-            // Run debug checks
-            setTimeout(debugClasses, 100);
-            setTimeout(debugDOM, 500);
-            
-            try {
-                // Check if classes are available
-                if (typeof CommandCenter === 'undefined') {
-                    console.error('❌ CommandCenter class not loaded!');
-                    return;
-                }
-                
-                window.commandCenter = new CommandCenter();
-                console.log('✅ CommandCenter instance created and initialized');
-                
-                // Add reload conversations function
-                window.reloadConversations = function() {
-                    console.log('🔄 Manual reload conversations triggered');
-                    if (window.commandCenter && window.commandCenter.conversationUI) {
-                        window.commandCenter.conversationUI.loadConversations();
-                    } else {
-                        console.error('❌ CommandCenter or ConversationUI not available');
-                    }
-                };
-                
-                // Add manual reload function for button
-                window.manualReloadConversations = function() {
-                    console.log('🔄 Manual button reload triggered');
-                    try {
-                        if (window.commandCenter && window.commandCenter.conversationUI) {
-                            console.log('📡 Calling loadInitialData...');
-                            window.commandCenter.conversationUI.loadInitialData();
-                        } else {
-                            console.error('❌ CommandCenter or ConversationUI not available');
-                            alert('CommandCenter not initialized yet. Please wait and try again.');
-                        }
-                    } catch (error) {
-                        console.error('❌ Manual reload error:', error);
-                        alert('Error reloading: ' + error.message);
-                    }
-                };
-                
-                // Auto-retry conversations loading after delay
-                setTimeout(() => {
-                    console.log('⏰ Auto-retry conversations loading...');
-                    if (window.commandCenter && window.commandCenter.conversationUI) {
-                        const conversationsList = document.getElementById('conversationsList');
-                        if (conversationsList && conversationsList.innerHTML.includes('Loading conversations...')) {
-                            console.log('🔄 Still loading - retrying...');
-                            window.commandCenter.conversationUI.loadConversations();
-                        }
-                    }
-                }, 3000);
-                
-            } catch (error) {
-                console.error('❌ Error initializing CommandCenter:', error);
-                console.error('Stack trace:', error.stack);
-            }
-        });
-        
         // Global error handler
         window.addEventListener('error', (e) => {
             console.error('🚨 Global JavaScript Error:', e.error);
-            console.error('File:', e.filename);
-            console.error('Line:', e.lineno);
+        });
+
+        // Global Modal Helpers (Keep these if your buttons rely on onclick="...")
+        window.reloadConversations = function() {
+            if (window.commandCenter?.conversationUI) {
+                window.commandCenter.conversationUI.loadConversations();
+            }
+        };
+
+        // Initialize simple UI interactions that don't depend on the main app
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DOM Content Loaded');
+
+            // 🛑 REMOVED: window.commandCenter = new CommandCenter();
+            // Why: command-center.js already does this!
+
+            // Initialize comprehensive form - Re-enabled for standalone Add Lead modal
+            setTimeout(initializeComprehensiveForm, 100);
+
+            // Run debug checks
+            setTimeout(debugClasses, 100);
+            setTimeout(debugDOM, 500);
+
+            // Setup basic UI toggles that might exist outside the main app logic
+            const leadActionsBtn = document.getElementById('leadActionsBtn');
+            if (leadActionsBtn) {
+                leadActionsBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const menu = document.getElementById('leadActionsMenu');
+                    if (menu) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+                });
+
+                document.addEventListener('click', () => {
+                    const menu = document.getElementById('leadActionsMenu');
+                    if (menu) menu.style.display = 'none';
+                });
+            }
         });
 
         // Lead Management Functionality

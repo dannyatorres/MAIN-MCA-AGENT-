@@ -22,7 +22,13 @@ router.post('/chat', async (req, res) => {
     console.log('🤖 [AI CHAT] REQUEST RECEIVED');
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('Time:', new Date().toISOString());
-    console.log('Headers:', req.headers);
+
+    // 🛡️ SECURITY FIX: Mask sensitive headers in logs
+    const safeHeaders = { ...req.headers };
+    if (safeHeaders.authorization) safeHeaders.authorization = '[REDACTED]';
+    if (safeHeaders.cookie) safeHeaders.cookie = '[REDACTED]';
+    console.log('Headers:', safeHeaders);
+
     console.log('Body:', JSON.stringify(req.body, null, 2));
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('');

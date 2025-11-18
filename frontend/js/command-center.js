@@ -6,7 +6,9 @@ class CommandCenter {
         this.wsUrl = `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}`;
         this.userId = 'default';
         this.apiBaseUrl = window.location.origin;
-        this.apiAuth = 'Basic ' + btoa('admin:Ronpaul2025!');
+
+        // 🛡️ SECURITY FIX: Removed hardcoded credentials (this.apiAuth)
+
         this.isInitialized = false;
 
         console.log('🔧 CommandCenter initialized with:');
@@ -41,16 +43,20 @@ class CommandCenter {
     async apiCall(endpoint, options = {}) {
         const config = {
             ...options,
-            credentials: 'include', // Important for authentication
+            credentials: 'include', // 🛡️ SECURITY FIX: Sends existing session cookies/auth
             headers: {
-                'Authorization': this.apiAuth,
+                // 🛡️ SECURITY FIX: Removed hardcoded 'Authorization' header.
                 'Content-Type': 'application/json',
                 ...(options.headers || {})
             }
         };
 
-        // FIX: use parentheses not backticks!
         const response = await fetch(`${this.apiBaseUrl}${endpoint}`, config);
+
+        if (response.status === 401) {
+            console.error("⚠️ Unauthorized access. Please log in.");
+            throw new Error("Unauthorized: Please log in");
+        }
 
         if (!response.ok) throw new Error(`HTTP ${response.status}:`);
         return response.json();

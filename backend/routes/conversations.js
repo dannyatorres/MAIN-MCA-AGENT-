@@ -933,30 +933,14 @@ router.put('/:conversationId/documents/:documentId', async (req, res) => {
         console.log(`📝 Renaming document from "${originalName}" to "${finalFilename}"`);
 
         // Update document
-        let result;
-        try {
-            result = await db.query(`
-                UPDATE documents
-                SET original_filename = $1
-                WHERE id = $2 AND conversation_id = $3
-                RETURNING *
-            `, [finalFilename, documentId, conversationId]);
-        } catch (dbError) {
-            // If trigger fails, drop the trigger and try again
-            if (dbError.message.includes('updated_at')) {
-                console.warn('⚠️ Document update failed due to trigger issue, dropping trigger and retrying...');
-                await db.query('DROP TRIGGER IF EXISTS update_documents_updated_at ON documents');
-                result = await db.query(`
-                    UPDATE documents
-                    SET original_filename = $1
-                    WHERE id = $2 AND conversation_id = $3
-                    RETURNING *
-                `, [finalFilename, documentId, conversationId]);
-                console.log('✅ Document updated successfully after dropping trigger');
-            } else {
-                throw dbError;
-            }
-        }
+        // ✅ FIX: Removed dangerous DROP TRIGGER logic.
+        // If the DB trigger fails, we should let it fail and fix the schema, not delete the trigger.
+        const result = await db.query(`
+            UPDATE documents
+            SET original_filename = $1
+            WHERE id = $2 AND conversation_id = $3
+            RETURNING *
+        `, [finalFilename, documentId, conversationId]);
 
         console.log('📊 UPDATE RESULT:', result.rows[0]);
 

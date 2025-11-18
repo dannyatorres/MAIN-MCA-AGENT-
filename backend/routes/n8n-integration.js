@@ -345,7 +345,7 @@ router.get('/leads/pending', async (req, res) => {
     }
 });
 
-// Batch update conversations
+// FIXED: Batch update with SQL Injection protection
 router.post('/batch-update', async (req, res) => {
     try {
         const { conversation_ids, updates } = req.body;
@@ -358,16 +358,51 @@ router.post('/batch-update', async (req, res) => {
             });
         }
 
-        // Build dynamic update query
-        const fields = Object.keys(updates);
-        const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
-        const values = [...Object.values(updates), conversation_ids];
+        // 🛡️ SECURITY: Strict Allowlist of permitted columns
+        const ALLOWED_COLUMNS = [
+            'state',
+            'current_step',
+            'priority',
+            'assigned_to',
+            'lead_source',
+            'next_follow_up'
+        ];
 
-        await db.query(`
+        const fields = Object.keys(updates);
+        const validFields = [];
+        const values = [];
+        let paramIndex = 1;
+
+        // Validate every field against the allowlist
+        for (const field of fields) {
+            if (ALLOWED_COLUMNS.includes(field)) {
+                validFields.push(`${field} = $${paramIndex}`); // Safe column name
+                values.push(updates[field]);                   // Parameterized value
+                paramIndex++;
+            } else {
+                console.warn(`⚠️ Blocked attempt to update unauthorized column: ${field}`);
+            }
+        }
+
+        if (validFields.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No valid update fields provided'
+            });
+        }
+
+        // Add the ID array as the final parameter
+        values.push(conversation_ids);
+        const idParamIndex = paramIndex;
+
+        // Construct the query safely
+        const query = `
             UPDATE conversations
-            SET ${setClause}, last_activity = NOW()
-            WHERE id = ANY($${fields.length + 1}::uuid[])
-        `, values);
+            SET ${validFields.join(', ')}, last_activity = NOW()
+            WHERE id = ANY($${idParamIndex}::uuid[])
+        `;
+
+        await db.query(query, values);
 
         console.log(`📦 Batch update: ${conversation_ids.length} conversations updated`);
 
