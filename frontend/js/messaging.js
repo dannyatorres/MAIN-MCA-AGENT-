@@ -145,8 +145,10 @@ class MessagingModule {
 
         container.innerHTML = this.templates.messagesList(messages);
 
-        // Scroll to bottom
-        container.scrollTop = container.scrollHeight;
+        // Scroll to bottom (Wrapped in timeout to ensure DOM paint)
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 50);
     }
 
     addMessage(message) {
