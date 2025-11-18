@@ -328,7 +328,7 @@ class ConversationCore {
 
     renderFilteredConversations(conversations, isSearchResults = false) {
         const container = document.getElementById('conversationsList');
-        console.log('renderFilteredConversations called with:', conversations.length, 'conversations');
+        // console.log('renderFilteredConversations called with:', conversations.length, 'conversations');
 
         if (!container) {
             console.error('conversationsList container not found!');
@@ -346,7 +346,15 @@ class ConversationCore {
             return;
         }
 
+        // Sort by last activity
         conversations.sort((a, b) => new Date(b.last_activity) - new Date(a.last_activity));
+
+        // 🚀 PERFORMANCE FIX: Render Limit
+        // Only render the top 50 items to prevent browser freezing (DOM overload).
+        // This makes searching 5,000 leads feel instant.
+        const RENDER_LIMIT = 50;
+        const visibleConversations = conversations.slice(0, RENDER_LIMIT);
+        const remainingCount = conversations.length - RENDER_LIMIT;
 
         let indicator = '';
         const searchTerm = document.getElementById('searchInput')?.value.trim();
@@ -360,9 +368,22 @@ class ConversationCore {
             `;
         }
 
-        container.innerHTML = indicator + conversations.map(conv =>
+        // Generate HTML only for the visible slice
+        let listHtml = visibleConversations.map(conv =>
             this.templates.conversationItem(conv)
         ).join('');
+
+        // Add a subtle footer if items are hidden
+        if (remainingCount > 0) {
+            listHtml += `
+                <div class="list-limit-message" style="text-align: center; padding: 15px; color: #9ca3af; font-size: 12px; border-top: 1px solid #f3f4f6;">
+                    Showing top 50 of ${conversations.length} matches.<br>
+                    Refine your search to see more.
+                </div>
+            `;
+        }
+
+        container.innerHTML = indicator + listHtml;
 
         // Re-add click listeners
         this.attachConversationListeners(container);

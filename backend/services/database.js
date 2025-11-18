@@ -44,6 +44,30 @@ async function initialize() {
         console.warn('⚠️ Could not verify documents table:', err.message);
     }
 
+    // 🚀 PERFORMANCE FIX: Create indices for high-speed dashboard loading
+    try {
+        await pool.query(`
+            -- Optimizes the "Pending Leads" and Dashboard sorting
+            CREATE INDEX IF NOT EXISTS idx_conversations_priority_activity
+            ON conversations(priority DESC, last_activity DESC);
+
+            -- Optimizes filtering by State (New, Qualified, etc)
+            CREATE INDEX IF NOT EXISTS idx_conversations_state
+            ON conversations(state);
+
+            -- Optimizes general list views
+            CREATE INDEX IF NOT EXISTS idx_conversations_created_at
+            ON conversations(created_at DESC);
+
+            -- Optimizes message lookups
+            CREATE INDEX IF NOT EXISTS idx_messages_conversation_id
+            ON messages(conversation_id);
+        `);
+        console.log('✅ Database performance indices verified');
+    } catch (err) {
+        console.warn('⚠️ Could not verify indices:', err.message);
+    }
+
     initialized = true;
 }
 
