@@ -139,7 +139,10 @@ class IntelligenceTabs {
             return;
         }
 
-        // NEW: Reload conversation when switching back to AI Assistant tab
+        // OPTIONAL: Disable cache deletion for instant tab switching
+        // Previously this forced a reload every time, causing loading spinner.
+        // Now the AI tab loads instantly from cache and only refreshes if needed.
+        /*
         if (tab === 'ai-assistant') {
             console.log('Returning to AI Assistant tab, forcing fresh reload...');
             const convId = this.parent.getCurrentConversationId();
@@ -152,6 +155,7 @@ class IntelligenceTabs {
                 }
             }
         }
+        */
 
         console.log(`Rendering tab: ${tab}`);
         switch (tab) {
@@ -331,6 +335,14 @@ class IntelligenceTabs {
         // Initialize AI chat functionality
         setTimeout(() => {
             if (this.parent.ai) {
+                // 🔴 CRITICAL FIX START: Reset AI module state
+                // We just destroyed and recreated the DOM, so we must tell the AI module
+                // to forget its previous state and re-attach event listeners.
+                console.log('🔄 Forcing AI Assistant re-initialization...');
+                this.parent.ai.isInitialized = false;
+                this.parent.ai.currentConversationId = null;
+                // 🔴 CRITICAL FIX END
+
                 this.parent.ai.initializeAIChat();
                 // Cache the initial state after initialization
                 setTimeout(() => this.saveAIChatState(), 200);
