@@ -125,15 +125,40 @@ router.post('/chat', async (req, res) => {
                 // Get FCS report if available (with error handling)
                 let fcsResult = { rows: [] };
                 try {
+                    // ✅ FIX: Query 'fcs_analyses' (the correct table) instead of 'fcs_reports'
+                    // We map 'fcs_report' to 'report_content' so the rest of the logic works unchanged.
                     fcsResult = await db.query(`
-                        SELECT report_content, generated_at, business_name, statement_count
-                        FROM fcs_reports
-                        WHERE conversation_id = $1
-                        ORDER BY generated_at DESC
+                        SELECT
+                            fcs_report as report_content,
+                            completed_at as generated_at,
+                            extracted_business_name as business_name,
+                            statement_count
+                        FROM fcs_analyses
+                        WHERE conversation_id = $1 AND status = 'completed'
+                        ORDER BY completed_at DESC
                         LIMIT 1
                     `, [conversationId]);
+
+                    // Fallback: If no analysis found, check for legacy 'fcs_results' data
+                    if (fcsResult.rows.length === 0) {
+                        try {
+                            const legacyResult = await db.query(`
+                                SELECT analysis_notes as report_content, created_at as generated_at
+                                FROM fcs_results
+                                WHERE conversation_id = $1
+                                ORDER BY created_at DESC LIMIT 1
+                            `, [conversationId]);
+
+                            if (legacyResult.rows.length > 0) {
+                                fcsResult = legacyResult;
+                                console.log('📊 Found legacy FCS data in fcs_results');
+                            }
+                        } catch (legacyError) {
+                            // Ignore legacy table errors
+                        }
+                    }
                 } catch (err) {
-                    console.log('📊 FCS reports table not available:', err.message);
+                    console.log('📊 FCS table lookup error:', err.message);
                 }
 
                 // Get lender submissions (with error handling)
