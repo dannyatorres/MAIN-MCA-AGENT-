@@ -347,6 +347,15 @@ class IntelligenceTabs {
                 // Cache the initial state after initialization
                 setTimeout(() => this.saveAIChatState(), 200);
 
+                // 📜 SCROLL FIX: Force scroll to bottom after rendering
+                setTimeout(() => {
+                    const messagesDiv = document.getElementById('aiChatMessages');
+                    if (messagesDiv) {
+                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        console.log('📜 Forced scroll to bottom');
+                    }
+                }, 150);
+
                 // Safety timeout: If loading dots are still visible after 10 seconds, clear them
                 setTimeout(() => {
                     const messagesDiv = document.getElementById('aiChatMessages');
