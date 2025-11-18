@@ -149,83 +149,76 @@ class MessagingModule {
         container.scrollTop = container.scrollHeight;
     }
 
-    // IMPROVED: Add message with duplicate detection
     addMessage(message) {
-        const conversationId = this.parent.getCurrentConversationId();
-        if (message.conversation_id !== conversationId) return;
+        const container = document.getElementById('messagesContainer');
+        if (!container) return;
 
-        const messagesContainer = document.getElementById('messagesContainer');
-        const messagesList = messagesContainer?.querySelector('.messages-list');
+        // Remove empty state if it exists
+        const emptyState = container.querySelector('.empty-state');
+        if (emptyState) emptyState.remove();
 
-        if (!messagesList) return;
-
-        // Check if message already exists (prevent duplicates)
-        const existingMessage = messagesList.querySelector(`[data-message-id="${message.id}"]`);
-        if (existingMessage) {
-            console.log('⚠️ Message already exists, skipping duplicate:', message.id);
+        // 🛑 DUPLICATE CHECK: Don't add if it already exists
+        // This handles the race condition between API response and WebSocket
+        if (document.querySelector(`.message[data-message-id="${message.id}"]`)) {
+            console.log('Skipping duplicate message render:', message.id);
             return;
         }
 
-        // Create and add new message
-        const messageElement = document.createElement('div');
-        messageElement.innerHTML = this.templates.messageItem(message);
-        messagesList.appendChild(messageElement.firstElementChild);
+        // Render the message
+        const html = this.parent.templates.messageItem(message);
+        container.insertAdjacentHTML('beforeend', html);
 
-        // Smooth scroll to bottom
-        messagesContainer.scrollTo({
-            top: messagesContainer.scrollHeight,
-            behavior: 'smooth'
-        });
+        // Scroll to bottom
+        this.scrollToBottom();
+    }
 
-        console.log('✅ New message added to UI:', message.id);
+    scrollToBottom() {
+        const container = document.getElementById('messagesContainer');
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
     }
 
     async sendMessage() {
+        const input = document.getElementById('messageInput');
+        const content = input.value.trim();
+        const conversationId = this.parent.getCurrentConversationId();
+
+        if (!content || !conversationId) return;
+
         // Request notification permission on first message
         if (this.firstMessageSent !== true) {
             this.firstMessageSent = true;
             this.requestNotificationPermissionOnDemand();
         }
 
-        const messageInput = document.getElementById('messageInput');
-        const conversationId = this.parent.getCurrentConversationId();
-
-        if (!messageInput || !conversationId) return;
-
-        const message = messageInput.value.trim();
-        if (!message) return;
-
-        // Clear input immediately
-        messageInput.value = '';
+        // Clear input immediately for better UX
+        input.value = '';
+        input.style.height = 'auto'; // Reset height
 
         try {
             const result = await this.parent.apiCall(`/api/conversations/${conversationId}/messages`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    message_content: message,
+                    message_content: content,
                     sender_type: 'user'
                 })
             });
 
-            console.log('✅ Message sent successfully:', result);
-
-            // Add the message to UI immediately (optimistic update)
-            if (result.message) {
+            if (result && result.message) {
+                // ✅ INSTANT UPDATE: Manually add the message to the UI
+                // We don't wait for the WebSocket here.
                 this.addMessage(result.message);
-            } else {
-                // Fallback: reload all messages
-                await this.loadConversationMessages();
             }
 
             // Update conversation timestamp
             this.updateConversationAfterMessage(conversationId);
+
         } catch (error) {
             console.error('Error sending message:', error);
-            // Restore message in input if failed
-            if (messageInput.value === '') {
-                messageInput.value = message;
-            }
-            this.utils.showNotification(`Failed to send message: ${error.message}`, 'error');
+            this.parent.utils.showNotification('Failed to send message', 'error');
+            // Restore the text so the user doesn't lose it
+            input.value = content;
         }
     }
 
