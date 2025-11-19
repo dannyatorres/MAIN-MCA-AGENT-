@@ -20,8 +20,32 @@ async function initialize() {
 
     console.log('✅ Database connection pool created');
 
-    // AUTO-FIX: Create documents table if missing
+    // 🛠️ PERMANENT FIX: Ensure Schema is Correct on Startup
     try {
+        console.log('🔧 Verifying database schema...');
+
+        // 1. Fix 'csv_imports' table (Adding missing columns)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS csv_imports (
+                id UUID PRIMARY KEY,
+                filename VARCHAR(255),
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS total_rows INTEGER DEFAULT 0;
+            ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS imported_rows INTEGER DEFAULT 0;
+            ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS error_rows INTEGER DEFAULT 0;
+            ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS errors JSONB DEFAULT '[]'::jsonb;
+            ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'processing';
+            ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
+        `);
+
+        // 2. Fix 'messages' table (Adding Twilio ID)
+        await pool.query(`
+            ALTER TABLE messages ADD COLUMN IF NOT EXISTS external_id VARCHAR(255);
+            ALTER TABLE messages ADD COLUMN IF NOT EXISTS twilio_sid VARCHAR(255);
+        `);
+
+        // 3. Fix 'documents' table (Ensure it exists)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS documents (
                 id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -39,13 +63,8 @@ async function initialize() {
 
             CREATE INDEX IF NOT EXISTS idx_documents_conversation_id ON documents(conversation_id);
         `);
-        console.log('✅ Documents table verified');
-    } catch (err) {
-        console.warn('⚠️ Could not verify documents table:', err.message);
-    }
 
-    // 🚀 PERFORMANCE FIX: Create indices for high-speed dashboard loading
-    try {
+        // 4. Create Performance Indices
         await pool.query(`
             -- Optimizes the "Pending Leads" and Dashboard sorting
             CREATE INDEX IF NOT EXISTS idx_conversations_priority_activity
@@ -63,9 +82,10 @@ async function initialize() {
             CREATE INDEX IF NOT EXISTS idx_messages_conversation_id
             ON messages(conversation_id);
         `);
-        console.log('✅ Database performance indices verified');
+
+        console.log('✅ Database schema verified and repaired');
     } catch (err) {
-        console.warn('⚠️ Could not verify indices:', err.message);
+        console.warn('⚠️ Schema verification warning (non-fatal):', err.message);
     }
 
     initialized = true;
