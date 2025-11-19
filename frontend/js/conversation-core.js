@@ -91,34 +91,11 @@ class ConversationCore {
     }
 
     setupWebSocketEvents() {
-        if (!this.wsManager) {
-            console.warn('WebSocket manager not available - real-time updates disabled');
-            return;
-        }
-
-        this.wsManager.on('conversation_updated', (data) => {
-            this.conversations.set(data.conversation.id, data.conversation);
-
-            if (data.conversation.id === this.currentConversationId) {
-                this.selectedConversation = data.conversation;
-                this.showConversationDetails();
-            }
-
-            this.updateConversationInList(data.conversation);
-        });
-
-        this.wsManager.on('new_message', (data) => {
-            if (data.conversation_id === this.currentConversationId) {
-                this.parent.messaging?.addMessage(data.message);
-            }
-
-            this.updateConversationPreview(data.conversation_id, data.message);
-            this.parent.messaging?.handleIncomingMessage(data);
-        });
-
-        this.wsManager.on('stats_updated', (data) => {
-            this.updateStats(data);
-        });
+        // 🛑 REMOVED: Old listener logic.
+        // The new WebSocketManager pushes updates directly to
+        // loadConversations() and updateConversationPreview(),
+        // so we don't need manual listeners here anymore.
+        console.log('✅ ConversationCore ready for WebSocket events');
     }
 
     async loadInitialData() {
