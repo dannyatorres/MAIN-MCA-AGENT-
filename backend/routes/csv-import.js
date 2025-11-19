@@ -1,4 +1,4 @@
-// routes/csv-import.js - HANDLES: Importing leads from CSV files with Fuzzy Matching
+// routes/csv-import.js - HANDLES: Importing leads from CSV files with Schema Safety
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -24,17 +24,16 @@ const storage = multer.diskStorage({
 
 const csvUpload = multer({ storage: storage });
 
-// Helper: Normalize string for fuzzy matching (removes spaces, _, -, and makes lowercase)
+// Helper: Normalize string for fuzzy matching
 const normalize = (str) => str ? str.toString().toLowerCase().replace(/[\s_\-]/g, '') : '';
 
-// Helper: Find value in row using multiple possible header names (Fuzzy Match)
+// Helper: Fuzzy Match Value
 const getFuzzyValue = (row, possibleHeaders) => {
     const rowHeaders = Object.keys(row);
     const normalizedRowHeaders = rowHeaders.map(h => ({ original: h, normalized: normalize(h) }));
 
     for (const target of possibleHeaders) {
         const normalizedTarget = normalize(target);
-        // Find matching header in row
         const match = normalizedRowHeaders.find(h => h.normalized === normalizedTarget);
         if (match && row[match.original]) {
             return row[match.original].toString().trim();
@@ -55,10 +54,14 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         const db = getDatabase();
         importId = uuidv4();
 
-        // 1. Create import record
+        // 1. Create import record (Fixed: Added column_mapping to satisfy NOT NULL constraint)
         await db.query(`
-            INSERT INTO csv_imports (id, filename, original_filename, status, total_rows, imported_rows, created_at)
-            VALUES ($1, $2, $3, 'processing', 0, 0, NOW())
+            INSERT INTO csv_imports (
+                id, filename, original_filename, status,
+                total_rows, imported_rows, error_rows,
+                column_mapping, created_at
+            )
+            VALUES ($1, $2, $3, 'processing', 0, 0, 0, '{}', NOW())
         `, [importId, req.file.filename, req.file.originalname]);
 
         // 2. Parse CSV
@@ -73,7 +76,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
 
         console.log(`📊 CSV Loaded: ${rows.length} rows found.`);
 
-        // 3. Map Data using Fuzzy Logic
+        // 3. Map Data
         const validLeads = [];
 
         rows.forEach((row, index) => {
@@ -81,64 +84,42 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 const id = uuidv4();
 
                 // Basic Info
-                const business_name = getFuzzyValue(row, ['Company Name', 'Company', 'Business', 'Legal Name', 'Entity Name']);
-                const phone = getFuzzyValue(row, ['Phone', 'Phone Number', 'Mobile', 'Cell', 'Contact Phone']);
-                const email = getFuzzyValue(row, ['Email', 'Business Email', 'Contact Email']);
+                const business_name = getFuzzyValue(row, ['Company Name', 'Company', 'Business', 'Legal Name']);
+                const phone = getFuzzyValue(row, ['Phone', 'Phone Number', 'Mobile', 'Cell']);
+                const email = getFuzzyValue(row, ['Email', 'Business Email']);
 
-                // Skip invalid rows
                 if (!business_name && !phone) return;
-
-                // Detailed Info (The "Zero Entry" Data)
-                const tax_id = getFuzzyValue(row, ['Tax ID', 'TaxID', 'EIN', 'Federal Tax ID', 'FEIN']);
-                const ssn = getFuzzyValue(row, ['SSN', 'Social Security', 'Owner SSN', 'Social']);
-                const dob = getFuzzyValue(row, ['DOB', 'Date of Birth', 'Birth Date']);
-                const annual_rev = getFuzzyValue(row, ['Annual Revenue', 'Revenue', 'Sales', 'Gross Sales', 'Annual Sales']);
-                const monthly_rev = getFuzzyValue(row, ['Monthly Revenue', 'Avg Monthly Sales']);
-                const requested = getFuzzyValue(row, ['Requested Amount', 'Funding Amount', 'Amount Needed', 'Funding']);
-                const industry = getFuzzyValue(row, ['Industry', 'Business Type', 'Industry Type']);
-                const state = getFuzzyValue(row, ['State', 'Business State', 'Province']);
-                const city = getFuzzyValue(row, ['City', 'Business City']);
-                const zip = getFuzzyValue(row, ['Zip', 'Zip Code', 'Postal Code']);
-                const address = getFuzzyValue(row, ['Address', 'Business Address', 'Street']);
-                const firstName = getFuzzyValue(row, ['First Name', 'Owner First Name']);
-                const lastName = getFuzzyValue(row, ['Last Name', 'Owner Last Name']);
 
                 // Clean numeric data
                 const cleanMoney = (val) => val ? parseFloat(val.replace(/[^0-9.]/g, '')) : null;
 
-                // DEBUG: Log the first row to verify mapping works
-                if (index === 0) {
-                    console.log('🧐 MAPPING CHECK (Row 1):');
-                    console.log(`   - Business: ${business_name}`);
-                    console.log(`   - Tax ID:   ${tax_id || '❌ MISSING'}`);
-                    console.log(`   - SSN:      ${ssn || '❌ MISSING'}`);
-                    console.log(`   - Revenue:  ${annual_rev || '❌ MISSING'}`);
-                }
+                const annual_rev = cleanMoney(getFuzzyValue(row, ['Annual Revenue', 'Revenue', 'Sales']));
+                const monthly_rev = cleanMoney(getFuzzyValue(row, ['Monthly Revenue'])) || (annual_rev ? annual_rev / 12 : 0);
+                const requested = cleanMoney(getFuzzyValue(row, ['Requested Amount', 'Funding Amount', 'Funding']));
 
                 const lead = {
                     id,
                     csv_import_id: importId,
                     business_name,
                     lead_phone: phone,
-                    email,
-                    state,
-                    city,
-                    zip,
-                    address,
-                    industry,
-                    first_name: firstName,
-                    last_name: lastName,
+                    email: email,
+                    us_state: getFuzzyValue(row, ['State', 'Business State', 'Province']),
+                    city: getFuzzyValue(row, ['City', 'Business City']),
+                    zip: getFuzzyValue(row, ['Zip', 'Zip Code']),
+                    address: getFuzzyValue(row, ['Address', 'Business Address']),
+                    first_name: getFuzzyValue(row, ['First Name', 'Owner First Name']),
+                    last_name: getFuzzyValue(row, ['Last Name', 'Owner Last Name']),
 
-                    // Financials
-                    monthly_revenue: cleanMoney(monthly_rev) || (cleanMoney(annual_rev) ? cleanMoney(annual_rev) / 12 : 0),
-                    annual_revenue: cleanMoney(annual_rev),
-                    requested_amount: cleanMoney(requested),
+                    // Details (Move industry/requested to details)
+                    industry: getFuzzyValue(row, ['Industry', 'Business Type']),
+                    annual_revenue: annual_rev,
+                    requested_amount: requested,
 
-                    // Sensitive Data
-                    tax_id,
-                    ssn,
-                    date_of_birth: dob,
-                    business_start_date: getFuzzyValue(row, ['Start Date', 'Business Start Date', 'Established'])
+                    // Sensitive
+                    tax_id: getFuzzyValue(row, ['Tax ID', 'TaxID', 'EIN']),
+                    ssn: getFuzzyValue(row, ['SSN', 'Social Security']),
+                    date_of_birth: getFuzzyValue(row, ['DOB', 'Date of Birth']),
+                    business_start_date: getFuzzyValue(row, ['Start Date', 'Business Start Date'])
                 };
 
                 validLeads.push(lead);
@@ -147,27 +128,32 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             }
         });
 
-        // 4. Bulk Insert (Double Insert Strategy)
+        // 4. Bulk Insert
         const BATCH_SIZE = 500;
 
         for (let i = 0; i < validLeads.length; i += BATCH_SIZE) {
             const batch = validLeads.slice(i, i + BATCH_SIZE);
 
-            // A. Insert into Conversations
+            // A. Insert into Conversations (SAFE COLUMNS ONLY)
             const convValues = [];
             const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
-                const offset = idx * 15;
-                // FIXED: Changed `lead_email` to `email` in the INSERT statement below
-                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, $${offset+12}, $${offset+13}, $${offset+14}, $${offset+15}, NOW())`);
+                const offset = idx * 11;
+                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, NOW())`);
 
                 convValues.push(
-                    lead.id, lead.business_name, lead.lead_phone, lead.email,
-                    lead.state, lead.address, lead.city, lead.zip,
-                    lead.industry, lead.monthly_revenue, 0,
-                    lead.requested_amount, lead.csv_import_id,
-                    lead.first_name, lead.last_name
+                    lead.id,
+                    lead.business_name,
+                    lead.lead_phone,
+                    lead.email,
+                    lead.us_state,
+                    lead.address,
+                    lead.city,
+                    lead.zip,
+                    lead.csv_import_id,
+                    lead.first_name,
+                    lead.last_name
                 );
             });
 
@@ -175,20 +161,18 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 await db.query(`
                     INSERT INTO conversations (
                         id, business_name, lead_phone, email, us_state,
-                        address, city, zip, industry, monthly_revenue, time_in_business_months,
-                        requested_amount, csv_import_id, first_name, last_name, created_at
+                        address, city, zip, csv_import_id, first_name, last_name, created_at
                     ) VALUES ${convPlaceholders.join(', ')}
                     ON CONFLICT (lead_phone) DO NOTHING
                 `, convValues);
 
-                // B. Insert into Lead Details (The Zero-Entry Data)
+                // B. Insert into Lead Details (Rich Data)
                 const detailValues = [];
                 const detailPlaceholders = [];
                 let dIdx = 0;
 
                 batch.forEach((lead) => {
-                    // Only insert detail record if we actually have detail data
-                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue) {
+                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue || lead.industry) {
                         const offset = dIdx * 8;
                         detailPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, NOW())`);
 
@@ -197,10 +181,10 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                             lead.annual_revenue,
                             lead.business_start_date,
                             lead.date_of_birth,
-                            lead.tax_id, // Mapped to tax_id_encrypted
-                            lead.ssn,    // Mapped to ssn_encrypted
-                            lead.industry,
-                            lead.requested_amount
+                            lead.tax_id,        // tax_id_encrypted
+                            lead.ssn,           // ssn_encrypted
+                            lead.industry,      // business_type
+                            lead.requested_amount // funding_amount
                         );
                         dIdx++;
                     }
@@ -215,7 +199,9 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                         ON CONFLICT (conversation_id) DO UPDATE SET
                         tax_id_encrypted = EXCLUDED.tax_id_encrypted,
                         ssn_encrypted = EXCLUDED.ssn_encrypted,
-                        annual_revenue = EXCLUDED.annual_revenue
+                        annual_revenue = EXCLUDED.annual_revenue,
+                        business_type = EXCLUDED.business_type,
+                        funding_amount = EXCLUDED.funding_amount
                     `, detailValues);
                 }
 
@@ -226,7 +212,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         // 5. Cleanup
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
-        await db.query(`UPDATE csv_imports SET status = 'completed', imported_rows = $1 WHERE id = $2`, [importedCount, importId]);
+        await db.query(`UPDATE csv_imports SET status = 'completed', imported_rows = $1, error_rows = $2 WHERE id = $3`, [importedCount, errors.length, importId]);
 
         res.json({ success: true, import_id: importId, imported_count: importedCount, errors });
 
