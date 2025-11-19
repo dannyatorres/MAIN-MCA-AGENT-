@@ -52,15 +52,16 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         const db = getDatabase();
         importId = uuidv4();
 
-        // 1. Create import record (Fixed: Includes original_filename)
+        // 1. Create import record (Fixed: Added column_mapping to satisfy NOT NULL constraint)
         try {
             await db.query(`
                 INSERT INTO csv_imports (
-                    id, filename, original_filename,
-                    status, total_rows, imported_rows, error_rows, created_at
+                    id, filename, original_filename, status,
+                    total_rows, imported_rows, error_rows,
+                    column_mapping, created_at
                 )
-                VALUES ($1, $2, $3, 'processing', 0, 0, 0, NOW())
-            `, [importId, req.file.filename, req.file.originalname]); // Pass both filenames
+                VALUES ($1, $2, $3, 'processing', 0, 0, 0, '{}', NOW())
+            `, [importId, req.file.filename, req.file.originalname]);
         } catch (err) {
             // Auto-fix table if columns are missing (Fallback safety)
             if (err.message.includes('column')) {
@@ -71,15 +72,17 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     ADD COLUMN IF NOT EXISTS imported_rows INTEGER DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS error_rows INTEGER DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS errors JSONB DEFAULT '[]'::jsonb,
+                    ADD COLUMN IF NOT EXISTS column_mapping JSONB DEFAULT '{}'::jsonb,
                     ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255);
                 `);
-                // Retry insert (Fixed: Includes original_filename)
+                // Retry insert
                 await db.query(`
                     INSERT INTO csv_imports (
-                        id, filename, original_filename,
-                        status, total_rows, imported_rows, error_rows, created_at
+                        id, filename, original_filename, status,
+                        total_rows, imported_rows, error_rows,
+                        column_mapping, created_at
                     )
-                    VALUES ($1, $2, $3, 'processing', 0, 0, 0, NOW())
+                    VALUES ($1, $2, $3, 'processing', 0, 0, 0, '{}', NOW())
                 `, [importId, req.file.filename, req.file.originalname]);
             } else {
                 throw err;

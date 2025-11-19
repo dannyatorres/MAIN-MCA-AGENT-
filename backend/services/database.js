@@ -30,9 +30,11 @@ async function initialize() {
                 id UUID PRIMARY KEY,
                 filename VARCHAR(255),
                 original_filename VARCHAR(255),
+                column_mapping JSONB DEFAULT '{}'::jsonb,
                 created_at TIMESTAMP DEFAULT NOW()
             );
             ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255);
+            ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS column_mapping JSONB DEFAULT '{}'::jsonb;
             ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS total_rows INTEGER DEFAULT 0;
             ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS imported_rows INTEGER DEFAULT 0;
             ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS error_rows INTEGER DEFAULT 0;
