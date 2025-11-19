@@ -38,7 +38,7 @@ const csvUpload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// Upload and import CSV (Performance Optimized - Bulk Insert Strategy)
+// Upload and import CSV (Optimized - Bulk Insert into TWO Tables)
 router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
     let importId = null;
     const errors = [];
@@ -48,8 +48,6 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ success: false, error: 'No file uploaded' });
         }
-
-        console.log('📁 CSV file uploaded:', req.file.originalname);
 
         const db = getDatabase();
         importId = uuidv4();
@@ -70,36 +68,68 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 .on('error', reject);
         });
 
-        console.log(`📊 CSV parsed: ${rows.length} rows found`);
-
-        // Update total rows count immediately
+        // Update total rows count
         await db.query('UPDATE csv_imports SET total_rows = $1 WHERE id = $2', [rows.length, importId]);
 
-        // 3. Prepare data for Bulk Insert
+        // 3. Prepare data arrays
         const validLeads = [];
 
         rows.forEach((row, index) => {
             try {
-                // Map fields
+                const id = uuidv4(); // Generate ID here so we can use it for both tables
+
+                // Helper to find value case-insensitively
+                const getVal = (keys) => {
+                    for (const key of keys) {
+                        if (row[key]) return row[key].trim();
+                        // Case-insensitive check
+                        const found = Object.keys(row).find(k => k.toLowerCase() === key.toLowerCase());
+                        if (found && row[found]) return row[found].trim();
+                    }
+                    return null;
+                };
+
+                // Map Conversation Fields (Basic Info)
                 const lead = {
-                    id: uuidv4(),
-                    business_name: row.business_name || row['Business Name'] || row.BusinessName,
-                    lead_phone: row.phone || row.lead_phone || row['Phone'] || row['Lead Phone'],
-                    lead_email: row.email || row.lead_email || row['Email'] || row['Lead Email'],
-                    state: row.state || row.State,
-                    business_address: row.address || row.business_address || row['Business Address'],
-                    industry: row.industry || row.Industry,
-                    monthly_revenue: parseFloat(row.monthly_revenue || row['Monthly Revenue'] || 0) || null,
-                    time_in_business_months: parseInt(row.time_in_business || row['Time In Business'] || 0) || null,
-                    credit_score: parseInt(row.credit_score || row['Credit Score'] || 0) || null,
-                    requested_amount: parseFloat(row.requested_amount || row['Requested Amount'] || 0) || null,
-                    priority: row.priority || 'medium',
+                    id: id,
+                    business_name: getVal(['Business Name', 'Company', 'Legal Name', 'BusinessName']),
+                    lead_phone: getVal(['Phone', 'Cell', 'Mobile', 'Lead Phone', 'Cell Phone']),
+                    lead_email: getVal(['Email', 'Business Email', 'Lead Email']),
+                    us_state: getVal(['State', 'Business State', 'US State']),
+                    business_address: getVal(['Address', 'Business Address', 'Street']),
+                    city: getVal(['City', 'Business City']),
+                    zip: getVal(['Zip', 'Zip Code', 'Postal Code']),
+                    industry: getVal(['Industry', 'Business Type', 'Industry Type']),
+                    monthly_revenue: parseFloat(getVal(['Monthly Revenue', 'Revenue', 'Sales'])?.replace(/[^0-9.]/g, '') || 0) || null,
+                    time_in_business_months: parseInt(getVal(['Time In Business', 'Months in Business'])?.replace(/\D/g, '') || 0) || null,
+                    credit_score: parseInt(getVal(['Credit Score', 'FICO', 'Credit'])?.replace(/\D/g, '') || 0) || null,
+                    requested_amount: parseFloat(getVal(['Requested Amount', 'Funding Amount', 'Amount'])?.replace(/[^0-9.]/g, '') || 0) || null,
+                    priority: 'medium',
+
+                    // Extended Details (For lead_details table)
+                    annual_revenue: parseFloat(getVal(['Annual Revenue', 'Annual Sales'])?.replace(/[^0-9.]/g, '') || 0) || null,
+                    tax_id: getVal(['Tax ID', 'EIN', 'Federal Tax ID', 'FEIN']),
+                    ssn: getVal(['SSN', 'Social Security', 'Owner SSN']),
+                    date_of_birth: getVal(['DOB', 'Date of Birth', 'Owner DOB']),
+                    business_start_date: getVal(['Start Date', 'Business Start Date', 'Established']),
+
+                    // Owner Info (Can be mapped to conversation or lead_details)
+                    first_name: getVal(['First Name', 'Owner First Name', 'Owner Name']),
+                    last_name: getVal(['Last Name', 'Owner Last Name']),
+
                     csv_import_id: importId
                 };
 
+                // Split "Owner Name" if provided as one field
+                if (!lead.last_name && lead.first_name && lead.first_name.includes(' ')) {
+                    const parts = lead.first_name.split(' ');
+                    lead.last_name = parts.pop();
+                    lead.first_name = parts.join(' ');
+                }
+
                 // Validation
                 if (!lead.business_name || !lead.lead_phone) {
-                    throw new Error('Missing required fields: business_name or lead_phone');
+                    throw new Error('Missing required fields: Business Name or Phone');
                 }
 
                 validLeads.push(lead);
@@ -109,51 +139,95 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         });
 
         // 4. Execute Bulk Insert (Batched)
-        // We insert in batches of 500 to avoid hitting SQL parameter limits (65,535 params max)
         const BATCH_SIZE = 500;
 
         for (let i = 0; i < validLeads.length; i += BATCH_SIZE) {
             const batch = validLeads.slice(i, i + BATCH_SIZE);
-            const values = [];
-            const valuePlaceholders = [];
+
+            // --- INSERT CONVERSATIONS ---
+            const convValues = [];
+            const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
-                const offset = idx * 15; // 15 columns per row
-                valuePlaceholders.push(`(
+                const offset = idx * 18;
+                convPlaceholders.push(`(
                     $${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5},
                     $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10},
                     $${offset + 11}, 'initial_contact', 'NEW', $${offset + 12}, $${offset + 13},
-                    $${offset + 14}, $${offset + 15}, NOW(), NOW()
+                    $${offset + 14}, $${offset + 15}, $${offset + 16}, $${offset + 17}, $${offset + 18},
+                    NOW(), NOW()
                 )`);
 
-                values.push(
-                    lead.id, lead.business_name, lead.lead_phone, lead.lead_email, lead.state,
-                    lead.business_address, lead.industry, lead.monthly_revenue, lead.time_in_business_months,
+                convValues.push(
+                    lead.id, lead.business_name, lead.lead_phone, lead.lead_email, lead.us_state,
+                    lead.business_address, lead.city, lead.zip, // Added City/Zip
+                    lead.industry, lead.monthly_revenue, lead.time_in_business_months,
                     lead.credit_score, lead.requested_amount, lead.priority, lead.csv_import_id,
-                    lead.business_name, // display_name fallback
-                    lead.lead_phone // fallback for contact field
+                    lead.first_name, lead.last_name, // Added Owner Names
+                    lead.business_name, lead.lead_phone
                 );
             });
 
             if (batch.length > 0) {
-                const query = `
+                const convQuery = `
                     INSERT INTO conversations (
-                        id, business_name, lead_phone, lead_email, state,
-                        business_address, industry, monthly_revenue, time_in_business_months,
+                        id, business_name, lead_phone, lead_email, us_state,
+                        address, city, zip,
+                        industry, monthly_revenue, time_in_business_months,
                         credit_score, requested_amount, current_step, state, priority,
-                        csv_import_id, display_name, contact, created_at, last_activity
+                        csv_import_id, first_name, last_name,
+                        display_name, contact, created_at, last_activity
                     )
-                    VALUES ${valuePlaceholders.join(', ')}
+                    VALUES ${convPlaceholders.join(', ')}
+                    ON CONFLICT (lead_phone) DO NOTHING
                 `;
 
-                await db.query(query, values);
+                await db.query(convQuery, convValues);
+
+                // --- INSERT LEAD DETAILS (Linked by ID) ---
+                const detailValues = [];
+                const detailPlaceholders = [];
+                let insertedCount = 0;
+
+                batch.forEach((lead, idx) => {
+                    const offset = idx * 8;
+                    detailPlaceholders.push(`(
+                        $${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4},
+                        $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, NOW()
+                    )`);
+
+                    detailValues.push(
+                        lead.id, // conversation_id
+                        lead.annual_revenue,
+                        lead.business_start_date,
+                        lead.date_of_birth,
+                        lead.tax_id, // tax_id_encrypted
+                        lead.ssn,    // ssn_encrypted
+                        lead.industry, // business_type
+                        lead.requested_amount // funding_amount
+                    );
+                    insertedCount++;
+                });
+
+                if (insertedCount > 0) {
+                    const detailQuery = `
+                        INSERT INTO lead_details (
+                            conversation_id, annual_revenue, business_start_date, date_of_birth,
+                            tax_id_encrypted, ssn_encrypted, business_type, funding_amount, created_at
+                        )
+                        VALUES ${detailPlaceholders.join(', ')}
+                        ON CONFLICT (conversation_id) DO NOTHING
+                    `;
+                    await db.query(detailQuery, detailValues);
+                }
+
                 importedCount += batch.length;
-                console.log(`✅ Batch inserted: ${batch.length} rows (Total: ${importedCount}/${validLeads.length})`);
+                console.log(`✅ Batch processed: ${batch.length} rows`);
             }
         }
 
-        // 5. Final cleanup & status update
-        fs.unlinkSync(req.file.path); // Delete temp file
+        // 5. Cleanup
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
         await db.query(`
             UPDATE csv_imports
@@ -163,11 +237,10 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             errors.length > 0 ? 'completed_with_errors' : 'completed',
             importedCount,
             errors.length,
-            JSON.stringify(errors.slice(0, 100)), // Store first 100 errors only to save space
+            JSON.stringify(errors.slice(0, 100)),
             importId
         ]);
 
-        // Notify frontend via WebSocket
         if (global.io) {
             global.io.emit('csv_import_completed', {
                 import_id: importId,
@@ -176,28 +249,17 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             });
         }
 
-        console.log(`🎉 CSV import completed: ${importedCount} imported, ${errors.length} errors`);
-
         res.json({
             success: true,
             import_id: importId,
             total_rows: rows.length,
             imported_count: importedCount,
-            error_count: errors.length,
             errors: errors.slice(0, 10)
         });
 
     } catch (error) {
         console.error('❌ Import Error:', error);
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-
-        if (importId) {
-            const db = getDatabase();
-            await db.query(`
-                UPDATE csv_imports SET status = 'failed', errors = $1 WHERE id = $2
-            `, [JSON.stringify([{ error: error.message }]), importId]);
-        }
-
         res.status(500).json({ success: false, error: error.message });
     }
 });
