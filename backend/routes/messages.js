@@ -163,12 +163,12 @@ router.post('/send', async (req, res) => {
 
                 // Update message status to sent
                 await db.query(
-                    'UPDATE messages SET status = $1, external_id = $2 WHERE id = $3',
+                    'UPDATE messages SET status = $1, twilio_sid = $2 WHERE id = $3',
                     ['sent', twilioMessage.sid, newMessage.id]
                 );
 
                 newMessage.status = 'sent';
-                newMessage.external_id = twilioMessage.sid;
+                newMessage.twilio_sid = twilioMessage.sid;
 
             } catch (twilioError) {
                 console.error('❌ Twilio error:', twilioError.message);
@@ -262,7 +262,7 @@ router.post('/webhook/receive', async (req, res) => {
         const msgResult = await db.query(`
             INSERT INTO messages (
                 conversation_id, content, direction, message_type,
-                sent_by, external_id, timestamp, status
+                sent_by, twilio_sid, timestamp, status
             )
             VALUES ($1, $2, 'inbound', 'sms', 'lead', $3, NOW(), 'received')
             RETURNING *
