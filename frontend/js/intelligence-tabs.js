@@ -477,6 +477,18 @@ class IntelligenceTabs {
             existingModal.remove();
         }
 
+        // Helper to safely format dates for input (YYYY-MM-DD)
+        // This fixes the "blank date" issue by stripping timestamps
+        const safeDate = (val) => {
+            if (!val) return '';
+            try {
+                // Handle standard Date objects or strings
+                const d = new Date(val);
+                if (isNaN(d.getTime())) return '';
+                return d.toISOString().split('T')[0];
+            } catch (e) { return ''; }
+        };
+
         const modalHTML = `
             <div id="editLeadModal" style="
                 position: fixed;
@@ -548,7 +560,6 @@ class IntelligenceTabs {
                         ">Business Information</h3>
 
                         <div style="display: flex; flex-direction: column; gap: 14px;">
-                            <!-- Legal/Corporate Name & DBA -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div>
                                     <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
@@ -568,7 +579,25 @@ class IntelligenceTabs {
                                 </div>
                             </div>
 
-                            <!-- Physical Address -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Business Email
+                                    </label>
+                                    <input type="email" name="email" value="${conv.email || conv.business_email || ''}"
+                                        placeholder="business@example.com"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background-color: #f0fdf4; border-color: #86efac;">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                        Primary Phone
+                                    </label>
+                                    <input type="tel" name="lead_phone" value="${conv.lead_phone || conv.phone || ''}"
+                                        placeholder="(555) 123-4567"
+                                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                </div>
+                            </div>
+
                             <div>
                                 <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
                                     Physical Address
@@ -605,7 +634,7 @@ class IntelligenceTabs {
                                     <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
                                         Date Business Started
                                     </label>
-                                    <input type="date" name="date_started" value="${conv.date_started || conv.business_start_date || ''}"
+                                    <input type="date" name="business_start_date" value="${safeDate(conv.date_started || conv.business_start_date)}"
                                         style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
@@ -777,7 +806,7 @@ class IntelligenceTabs {
                                     <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px;">
                                         Date of Birth
                                     </label>
-                                    <input type="date" name="date_of_birth" value="${conv.date_of_birth || ''}"
+                                    <input type="date" name="date_of_birth" value="${safeDate(conv.date_of_birth)}"
                                         style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 </div>
                             </div>
