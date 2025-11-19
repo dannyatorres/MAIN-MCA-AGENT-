@@ -42,6 +42,17 @@ const getFuzzyValue = (row, possibleHeaders) => {
     return null;
 };
 
+// Helper: Clean Date to YYYY-MM-DD (Required for Frontend <input type="date">)
+const cleanDate = (val) => {
+    if (!val) return null;
+    const date = new Date(val);
+    if (isNaN(date.getTime())) return null; // Return null if invalid date
+    return date.toISOString().split('T')[0]; // Returns 'YYYY-MM-DD'
+};
+
+// Helper: Clean Money
+const cleanMoney = (val) => val ? parseFloat(val.replace(/[^0-9.]/g, '')) : null;
+
 router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
     let importId = null;
     const errors = [];
@@ -91,11 +102,16 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 if (!business_name && !phone) return;
 
                 // Clean numeric data
-                const cleanMoney = (val) => val ? parseFloat(val.replace(/[^0-9.]/g, '')) : null;
-
                 const annual_rev = cleanMoney(getFuzzyValue(row, ['Annual Revenue', 'Revenue', 'Sales']));
                 const monthly_rev = cleanMoney(getFuzzyValue(row, ['Monthly Revenue'])) || (annual_rev ? annual_rev / 12 : 0);
                 const requested = cleanMoney(getFuzzyValue(row, ['Requested Amount', 'Funding Amount', 'Funding']));
+
+                // Capture Dates and Clean Them
+                const rawDob = getFuzzyValue(row, ['DOB', 'Date of Birth']);
+                const rawStart = getFuzzyValue(row, ['Start Date', 'Business Start Date', 'Est. Date']);
+
+                const dob = cleanDate(rawDob);
+                const start_date = cleanDate(rawStart);
 
                 const lead = {
                     id,
@@ -118,8 +134,8 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     // Sensitive
                     tax_id: getFuzzyValue(row, ['Tax ID', 'TaxID', 'EIN']),
                     ssn: getFuzzyValue(row, ['SSN', 'Social Security']),
-                    date_of_birth: getFuzzyValue(row, ['DOB', 'Date of Birth']),
-                    business_start_date: getFuzzyValue(row, ['Start Date', 'Business Start Date'])
+                    date_of_birth: dob,             // Cleaned YYYY-MM-DD
+                    business_start_date: start_date // Cleaned YYYY-MM-DD
                 };
 
                 validLeads.push(lead);
@@ -135,17 +151,17 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             const batch = validLeads.slice(i, i + BATCH_SIZE);
 
             // A. Insert into Conversations
-            // REMOVED: csv_import_id (causing crash)
-            // FIXED: placeholders count matches values (10 params)
+            // FIXED: placeholders count matches values (11 params with csv_import_id)
             const convValues = [];
             const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
-                const offset = idx * 10;
-                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, NOW())`);
+                const offset = idx * 11;
+                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, NOW())`);
 
                 convValues.push(
                     lead.id,
+                    lead.csv_import_id,
                     lead.business_name,
                     lead.lead_phone,
                     lead.email,
@@ -161,7 +177,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             if (batch.length > 0) {
                 await db.query(`
                     INSERT INTO conversations (
-                        id, business_name, lead_phone, email, us_state,
+                        id, csv_import_id, business_name, lead_phone, email, us_state,
                         address, city, zip, first_name, last_name, created_at
                     ) VALUES ${convPlaceholders.join(', ')}
                     ON CONFLICT (lead_phone) DO NOTHING
