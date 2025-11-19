@@ -2708,13 +2708,15 @@ class IntelligenceTabs {
     }
 }
 
-// OVERRIDE: Connect the HTML "New Conversation" button to our new modal
-window.openNewConversationModal = () => {
+// EXPORT: Connect the HTML button to our new modal
+// We use a UNIQUE name "openRichCreateModal" to avoid conflicts with old code.
+window.openRichCreateModal = () => {
+    console.log('🚀 Launching Zero-Entry Create Modal...');
     if (window.commandCenter && window.commandCenter.conversationUI && window.commandCenter.conversationUI.intelligence) {
         window.commandCenter.conversationUI.intelligence.showCreateLeadModal();
     } else {
-        console.error('Intelligence module not loaded yet');
-        // Fallback if module isn't ready yet
+        console.error('❌ Intelligence module not loaded yet.');
+        console.log('Window Object:', window.commandCenter);
         alert('System loading... please try again in a moment.');
     }
 };
