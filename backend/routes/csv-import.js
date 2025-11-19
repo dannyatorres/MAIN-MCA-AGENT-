@@ -54,7 +54,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         const db = getDatabase();
         importId = uuidv4();
 
-        // 1. Create import record (Fixed: Added column_mapping to satisfy NOT NULL constraint)
+        // 1. Create import record (Fixed: Added column_mapping)
         await db.query(`
             INSERT INTO csv_imports (
                 id, filename, original_filename, status,
@@ -110,7 +110,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     first_name: getFuzzyValue(row, ['First Name', 'Owner First Name']),
                     last_name: getFuzzyValue(row, ['Last Name', 'Owner Last Name']),
 
-                    // Details (Move industry/requested to details)
+                    // Details
                     industry: getFuzzyValue(row, ['Industry', 'Business Type']),
                     annual_revenue: annual_rev,
                     requested_amount: requested,
@@ -134,13 +134,15 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         for (let i = 0; i < validLeads.length; i += BATCH_SIZE) {
             const batch = validLeads.slice(i, i + BATCH_SIZE);
 
-            // A. Insert into Conversations (SAFE COLUMNS ONLY)
+            // A. Insert into Conversations
+            // REMOVED: csv_import_id (causing crash)
+            // FIXED: placeholders count matches values (10 params)
             const convValues = [];
             const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
-                const offset = idx * 11;
-                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, NOW())`);
+                const offset = idx * 10;
+                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, NOW())`);
 
                 convValues.push(
                     lead.id,
@@ -151,7 +153,6 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     lead.address,
                     lead.city,
                     lead.zip,
-                    lead.csv_import_id,
                     lead.first_name,
                     lead.last_name
                 );
@@ -161,12 +162,12 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 await db.query(`
                     INSERT INTO conversations (
                         id, business_name, lead_phone, email, us_state,
-                        address, city, zip, csv_import_id, first_name, last_name, created_at
+                        address, city, zip, first_name, last_name, created_at
                     ) VALUES ${convPlaceholders.join(', ')}
                     ON CONFLICT (lead_phone) DO NOTHING
                 `, convValues);
 
-                // B. Insert into Lead Details (Rich Data)
+                // B. Insert into Lead Details
                 const detailValues = [];
                 const detailPlaceholders = [];
                 let dIdx = 0;
@@ -212,7 +213,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         // 5. Cleanup
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
-        await db.query(`UPDATE csv_imports SET status = 'completed', imported_rows = $1, error_rows = $2 WHERE id = $3`, [importedCount, errors.length, importId]);
+        await db.query(`UPDATE csv_imports SET status = 'completed', imported_rows = $1 WHERE id = $2`, [importedCount, importId]);
 
         res.json({ success: true, import_id: importId, imported_count: importedCount, errors });
 
