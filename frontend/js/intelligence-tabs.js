@@ -470,13 +470,11 @@ class IntelligenceTabs {
         });
     }
 
-    // NEW: Full "Create Mode" (All fields available, only Name/Phone required)
+    // NEW: Full "Create Mode" with Auto-Formatting & Zip Lookup
     showCreateLeadModal() {
         // Remove any existing modal
         const existingModal = document.getElementById('editLeadModal');
         if (existingModal) existingModal.remove();
-
-        const usStates = this.utils.getUSStates();
 
         const modalHTML = `
             <div id="editLeadModal" style="
@@ -491,7 +489,7 @@ class IntelligenceTabs {
                     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                 ">
                     <div style="
-                        background: linear-gradient(135deg, #10b981 0%, #059669 100%); /* Green Header */
+                        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
                         color: white; padding: 20px 24px; border-radius: 8px 8px 0 0;
                         display: flex; justify-content: space-between; align-items: center;
                         position: sticky; top: 0; z-index: 10;
@@ -499,7 +497,7 @@ class IntelligenceTabs {
                         <div>
                             <h2 style="margin: 0; font-size: 20px;">Create New Conversation</h2>
                             <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">
-                                <span style="font-weight:600;">*</span> Indicates required fields. All others are optional.
+                                <span style="font-weight:600;">*</span> Required. Auto-formatting enabled.
                             </p>
                         </div>
                         <button onclick="document.getElementById('editLeadModal').remove()" style="
@@ -508,7 +506,6 @@ class IntelligenceTabs {
                     </div>
 
                     <form id="createLeadForm" style="padding: 24px;">
-
                         <div style="margin-bottom: 28px;">
                             <h3 style="color: #059669; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #10b981;">Business Information</h3>
 
@@ -530,7 +527,7 @@ class IntelligenceTabs {
                                 </div>
                                 <div>
                                     <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Primary Phone <span style="color:#ef4444">*</span></label>
-                                    <input type="tel" name="lead_phone" required placeholder="(555) 123-4567" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                    <input type="tel" name="lead_phone" id="inputPhone" required placeholder="(555) 123-4567" maxlength="14" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                                 </div>
                             </div>
 
@@ -540,15 +537,15 @@ class IntelligenceTabs {
                             </div>
 
                             <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                                <input type="text" name="business_city" placeholder="City" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
-                                <input type="text" name="us_state" placeholder="State" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
-                                <input type="text" name="business_zip" placeholder="Zip" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                <input type="text" name="business_city" placeholder="City" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;">
+                                <input type="text" name="us_state" placeholder="State" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;">
+                                <input type="text" name="business_zip" id="inputZip" placeholder="Zip (5 digits)" maxlength="5" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                             </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div>
-                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Tax ID</label>
-                                    <input type="text" name="tax_id" placeholder="12-3456789" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Tax ID (EIN)</label>
+                                    <input type="text" name="tax_id" id="inputTax" placeholder="12-3456789" maxlength="10" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                                 </div>
                                 <div>
                                     <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date Started</label>
@@ -556,7 +553,7 @@ class IntelligenceTabs {
                                 </div>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
                                 <div>
                                     <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Entity Type</label>
                                     <select name="entity_type" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
@@ -615,7 +612,7 @@ class IntelligenceTabs {
                                 <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
                                     <input type="text" name="owner_city" placeholder="City" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                                     <input type="text" name="owner_state" placeholder="State" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
-                                    <input type="text" name="owner_zip" placeholder="Zip" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                    <input type="text" name="owner_zip" id="inputOwnerZip" placeholder="Zip" maxlength="5" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                                 </div>
                             </div>
 
@@ -626,7 +623,7 @@ class IntelligenceTabs {
                                 </div>
                                 <div>
                                     <label style="display:block;font-size:13px;font-weight:600;color:#374151;">SSN</label>
-                                    <input type="text" name="ssn" placeholder="000-00-0000" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                    <input type="text" name="ssn" id="inputSSN" placeholder="000-00-0000" maxlength="11" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                                 </div>
                                 <div>
                                     <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date of Birth</label>
@@ -646,9 +643,75 @@ class IntelligenceTabs {
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
+        // --- AUTO-FORMATTING LOGIC ---
+
+        // 1. Phone: (555) 123-4567
+        const phoneInput = document.getElementById('inputPhone');
+        phoneInput.addEventListener('input', (e) => {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+            e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+        });
+
+        // 2. SSN: 000-00-0000
+        const ssnInput = document.getElementById('inputSSN');
+        ssnInput.addEventListener('input', (e) => {
+            let val = e.target.value.replace(/\D/g, '');
+            let newVal = '';
+            if(val.length > 4) {
+                newVal += val.substr(0, 3) + '-';
+                newVal += val.substr(3, 2) + '-';
+                newVal += val.substr(5, 4);
+            } else if(val.length > 2) {
+                newVal += val.substr(0, 3) + '-';
+                newVal += val.substr(3);
+            } else {
+                newVal = val;
+            }
+            e.target.value = newVal.substring(0, 11);
+        });
+
+        // 3. Tax ID (EIN): 12-3456789
+        const taxInput = document.getElementById('inputTax');
+        taxInput.addEventListener('input', (e) => {
+            let val = e.target.value.replace(/\D/g, '');
+            let newVal = '';
+            if(val.length > 2) {
+                newVal += val.substr(0, 2) + '-';
+                newVal += val.substr(2, 7);
+            } else {
+                newVal = val;
+            }
+            e.target.value = newVal.substring(0, 10);
+        });
+
+        // 4. Zip Code Auto-Lookup
+        const zipInput = document.getElementById('inputZip');
+        zipInput.addEventListener('input', async (e) => {
+            const zip = e.target.value.replace(/\D/g, '');
+            e.target.value = zip; // Force numbers only
+
+            if (zip.length === 5) {
+                // Call existing utility
+                if (this.utils && this.utils.lookupZipCode) {
+                    await this.utils.lookupZipCode(zip, 'business');
+                }
+            }
+        });
+
+         const ownerZipInput = document.getElementById('inputOwnerZip');
+         ownerZipInput.addEventListener('input', async (e) => {
+             const zip = e.target.value.replace(/\D/g, '');
+             e.target.value = zip;
+             if (zip.length === 5) {
+                 if (this.utils && this.utils.lookupZipCode) {
+                     await this.utils.lookupZipCode(zip, 'owner');
+                 }
+             }
+         });
+
         // --- LOGIC HANDLERS ---
 
-        // 1. Address Checkbox Logic
+        // 5. Address Checkbox Logic
         const sameAddressCheckbox = document.getElementById('sameAsBusinessAddressCreate');
         if (sameAddressCheckbox) {
             sameAddressCheckbox.addEventListener('change', function() {
@@ -671,20 +734,7 @@ class IntelligenceTabs {
             });
         }
 
-        // 2. ZIP Code Lookup Logic
-        const attachZipLookup = (field, type) => {
-            const input = document.querySelector(`[name="${field}"]`);
-            if (input) {
-                input.addEventListener('input', async (e) => {
-                    const zip = e.target.value.replace(/\D/g, '');
-                    if (zip.length === 5) await this.utils.lookupZipCode(zip, type);
-                });
-            }
-        };
-        attachZipLookup('business_zip', 'business');
-        attachZipLookup('owner_zip', 'owner');
-
-        // 3. Submit Logic (Create + Enrich)
+        // 6. Submit Logic (Create + Enrich)
         document.getElementById('createLeadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
