@@ -29,8 +29,10 @@ async function initialize() {
             CREATE TABLE IF NOT EXISTS csv_imports (
                 id UUID PRIMARY KEY,
                 filename VARCHAR(255),
+                original_filename VARCHAR(255),
                 created_at TIMESTAMP DEFAULT NOW()
             );
+            ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255);
             ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS total_rows INTEGER DEFAULT 0;
             ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS imported_rows INTEGER DEFAULT 0;
             ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS error_rows INTEGER DEFAULT 0;
