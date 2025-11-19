@@ -226,62 +226,74 @@ router.post('/webhook/receive', async (req, res) => {
 
         console.log('📥 Incoming webhook message:', { From, To, Body });
 
-        // Find conversation by phone number
+        // 1. NORMALIZE PHONE NUMBERS
+        // Twilio sends "+15165550123". We need to match "5165550123", "(516) 555-0123", etc.
+        // We strip all non-numeric characters from the incoming 'From' number.
+        const cleanPhone = From.replace(/\D/g, '');
+        // If it starts with '1' (US Country code) and is 11 digits, remove the '1'
+        const searchPhone = (cleanPhone.length === 11 && cleanPhone.startsWith('1'))
+            ? cleanPhone.substring(1)
+            : cleanPhone;
+
+        console.log('🔍 Searching for phone match:', searchPhone);
+
+        // 2. FUZZY SEARCH QUERY
+        // Look for any lead_phone that contains these last 10 digits
+        // We use regex to strip the DB column before comparing
         const convResult = await db.query(
-            'SELECT id FROM conversations WHERE lead_phone = $1 LIMIT 1',
-            [From]
+            `SELECT id, business_name
+             FROM conversations
+             WHERE regexp_replace(lead_phone, '\\D', '', 'g') LIKE '%' || $1
+             ORDER BY last_activity DESC
+             LIMIT 1`,
+            [searchPhone]
         );
 
         if (convResult.rows.length === 0) {
             console.log('⚠️ No conversation found for phone:', From);
-            return res.status(404).json({
-                success: false,
-                error: 'Conversation not found'
-            });
+            // Return 200 OK anyway so Twilio doesn't keep retrying and spamming error logs
+            return res.status(200).send('No conversation found');
         }
 
-        const conversationId = convResult.rows[0].id;
+        const conversation = convResult.rows[0];
+        console.log(`✅ Found conversation: ${conversation.business_name} (${conversation.id})`);
 
-        // Insert incoming message
+        // 3. Insert Message
         const msgResult = await db.query(`
             INSERT INTO messages (
                 conversation_id, content, direction, message_type,
-                sent_by, external_id, timestamp
+                sent_by, external_id, timestamp, status
             )
-            VALUES ($1, $2, 'inbound', 'sms', 'lead', $3, NOW())
+            VALUES ($1, $2, 'inbound', 'sms', 'lead', $3, NOW(), 'received')
             RETURNING *
-        `, [conversationId, Body, MessageSid]);
+        `, [conversation.id, Body, MessageSid]);
 
         const newMessage = msgResult.rows[0];
 
-        // Update conversation last_activity
+        // 4. Update Conversation Activity
         await db.query(
             'UPDATE conversations SET last_activity = NOW() WHERE id = $1',
-            [conversationId]
+            [conversation.id]
         );
 
-        // Emit WebSocket event
+        // 5. Emit WebSocket Event (Real-time update)
         if (global.io) {
-            global.io.to(`conversation_${conversationId}`).emit('new_message', {
-                conversation_id: conversationId,
+            global.io.to(`conversation_${conversation.id}`).emit('new_message', {
+                conversation_id: conversation.id,
                 message: newMessage
             });
-            console.log(`📨 WebSocket event emitted for incoming message`);
+            console.log(`📨 WebSocket event emitted`);
         }
 
         console.log(`✅ Incoming message saved: ${newMessage.id}`);
 
-        res.json({
-            success: true,
-            message: newMessage
-        });
+        // 6. Reply to Twilio (Empty TwiML to prevent auto-reply errors)
+        res.set('Content-Type', 'text/xml');
+        res.send('<Response></Response>');
 
     } catch (error) {
         console.error('Error processing webhook:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        res.status(500).send(error.message);
     }
 });
 
