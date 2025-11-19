@@ -1,4 +1,4 @@
-// routes/csv-import.js - HANDLES: Importing leads from CSV files with Schema Safety
+// routes/csv-import.js - FINAL VERSION: Date Fix + Schema Fix
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -42,12 +42,12 @@ const getFuzzyValue = (row, possibleHeaders) => {
     return null;
 };
 
-// Helper: Clean Date to YYYY-MM-DD (Required for Frontend <input type="date">)
+// Helper: Clean Date to YYYY-MM-DD
 const cleanDate = (val) => {
     if (!val) return null;
     const date = new Date(val);
-    if (isNaN(date.getTime())) return null; // Return null if invalid date
-    return date.toISOString().split('T')[0]; // Returns 'YYYY-MM-DD'
+    if (isNaN(date.getTime())) return null;
+    return date.toISOString().split('T')[0];
 };
 
 // Helper: Clean Money
@@ -65,7 +65,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         const db = getDatabase();
         importId = uuidv4();
 
-        // 1. Create import record (Fixed: Added column_mapping)
+        // 1. Create import record
         await db.query(`
             INSERT INTO csv_imports (
                 id, filename, original_filename, status,
@@ -101,17 +101,17 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
 
                 if (!business_name && !phone) return;
 
-                // Clean numeric data
-                const annual_rev = cleanMoney(getFuzzyValue(row, ['Annual Revenue', 'Revenue', 'Sales']));
-                const monthly_rev = cleanMoney(getFuzzyValue(row, ['Monthly Revenue'])) || (annual_rev ? annual_rev / 12 : 0);
-                const requested = cleanMoney(getFuzzyValue(row, ['Requested Amount', 'Funding Amount', 'Funding']));
-
-                // Capture Dates and Clean Them
+                // Clean Dates
                 const rawDob = getFuzzyValue(row, ['DOB', 'Date of Birth']);
                 const rawStart = getFuzzyValue(row, ['Start Date', 'Business Start Date', 'Est. Date']);
 
                 const dob = cleanDate(rawDob);
                 const start_date = cleanDate(rawStart);
+
+                // Clean Financials
+                const annual_rev = cleanMoney(getFuzzyValue(row, ['Annual Revenue', 'Revenue', 'Sales']));
+                const monthly_rev = cleanMoney(getFuzzyValue(row, ['Monthly Revenue'])) || (annual_rev ? annual_rev / 12 : 0);
+                const requested = cleanMoney(getFuzzyValue(row, ['Requested Amount', 'Funding Amount', 'Funding']));
 
                 const lead = {
                     id,
@@ -134,8 +134,8 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     // Sensitive
                     tax_id: getFuzzyValue(row, ['Tax ID', 'TaxID', 'EIN']),
                     ssn: getFuzzyValue(row, ['SSN', 'Social Security']),
-                    date_of_birth: dob,             // Cleaned YYYY-MM-DD
-                    business_start_date: start_date // Cleaned YYYY-MM-DD
+                    date_of_birth: dob,
+                    business_start_date: start_date
                 };
 
                 validLeads.push(lead);
@@ -151,17 +151,16 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             const batch = validLeads.slice(i, i + BATCH_SIZE);
 
             // A. Insert into Conversations
-            // FIXED: placeholders count matches values (11 params with csv_import_id)
+            // FIXED: Removed csv_import_id - Schema Safe (10 params)
             const convValues = [];
             const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
-                const offset = idx * 11;
-                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, NOW())`);
+                const offset = idx * 10;
+                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, NOW())`);
 
                 convValues.push(
                     lead.id,
-                    lead.csv_import_id,
                     lead.business_name,
                     lead.lead_phone,
                     lead.email,
@@ -177,7 +176,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             if (batch.length > 0) {
                 await db.query(`
                     INSERT INTO conversations (
-                        id, csv_import_id, business_name, lead_phone, email, us_state,
+                        id, business_name, lead_phone, email, us_state,
                         address, city, zip, first_name, last_name, created_at
                     ) VALUES ${convPlaceholders.join(', ')}
                     ON CONFLICT (lead_phone) DO NOTHING
@@ -189,7 +188,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 let dIdx = 0;
 
                 batch.forEach((lead) => {
-                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue || lead.industry) {
+                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue || lead.industry || lead.business_start_date) {
                         const offset = dIdx * 8;
                         detailPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, NOW())`);
 
@@ -198,10 +197,10 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                             lead.annual_revenue,
                             lead.business_start_date,
                             lead.date_of_birth,
-                            lead.tax_id,        // tax_id_encrypted
-                            lead.ssn,           // ssn_encrypted
-                            lead.industry,      // business_type
-                            lead.requested_amount // funding_amount
+                            lead.tax_id,
+                            lead.ssn,
+                            lead.industry,
+                            lead.requested_amount
                         );
                         dIdx++;
                     }
@@ -218,7 +217,9 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                         ssn_encrypted = EXCLUDED.ssn_encrypted,
                         annual_revenue = EXCLUDED.annual_revenue,
                         business_type = EXCLUDED.business_type,
-                        funding_amount = EXCLUDED.funding_amount
+                        funding_amount = EXCLUDED.funding_amount,
+                        business_start_date = EXCLUDED.business_start_date,
+                        date_of_birth = EXCLUDED.date_of_birth
                     `, detailValues);
                 }
 
