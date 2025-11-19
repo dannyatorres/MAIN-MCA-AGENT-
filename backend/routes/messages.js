@@ -264,7 +264,7 @@ router.post('/webhook/receive', async (req, res) => {
                 conversation_id, content, direction, message_type,
                 sent_by, twilio_sid, timestamp, status
             )
-            VALUES ($1, $2, 'inbound', 'sms', 'lead', $3, NOW(), 'received')
+            VALUES ($1, $2, 'inbound', 'sms', 'lead', $3, NOW(), 'delivered')
             RETURNING *
         `, [conversation.id, Body, MessageSid]);
 
