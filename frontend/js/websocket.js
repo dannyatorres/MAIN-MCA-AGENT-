@@ -97,8 +97,19 @@ class WebSocketManager {
         // 2. Conversation Updated (e.g. State Change)
         this.socket.on('conversation_updated', (data) => {
             console.log('📋 WebSocket: conversation_updated', data);
+
             if (this.app.conversationUI) {
+                // Always reload the list to update status/time
                 this.app.conversationUI.loadConversations();
+
+                // If we are looking at this conversation, refresh details
+                if (this.app.currentConversationId === data.conversation_id) {
+                    console.log('🔄 Refreshing current conversation details...');
+                    // Reload messages
+                    if (this.app.messaging) this.app.messaging.loadConversationMessages();
+                    // Reload details
+                    this.app.conversationUI.selectConversation(data.conversation_id);
+                }
             }
         });
 
