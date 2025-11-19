@@ -120,18 +120,19 @@ router.post('/', async (req, res) => {
         const conversationData = req.body;
         const db = getDatabase();
 
+        // FIXED: Changed 'lead_email' to 'email' to match your DB schema
         const result = await db.query(`
             INSERT INTO conversations (
-                business_name, lead_phone, lead_email, state,
-                business_address, current_step, priority
+                business_name, lead_phone, email, us_state,
+                address, current_step, priority
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `, [
             conversationData.business_name,
             conversationData.lead_phone,
-            conversationData.lead_email,
-            conversationData.state,
+            conversationData.email, // Correct column name
+            conversationData.us_state,
             conversationData.business_address,
             'initial_contact',
             conversationData.priority || 'medium'

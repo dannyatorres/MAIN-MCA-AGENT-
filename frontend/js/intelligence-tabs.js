@@ -470,6 +470,137 @@ class IntelligenceTabs {
         });
     }
 
+    // NEW: "Create Mode" for the modal
+    showCreateLeadModal() {
+        // Remove any existing modal
+        const existingModal = document.getElementById('editLeadModal');
+        if (existingModal) existingModal.remove();
+
+        const modalHTML = `
+            <div id="editLeadModal" style="
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 10000;
+                display: flex; align-items: center; justify-content: center;
+                overflow-y: auto; padding: 20px;
+            ">
+                <div style="
+                    background: white; border-radius: 8px; width: 100%;
+                    max-width: 700px; max-height: 90vh; overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                ">
+                    <div style="
+                        background: linear-gradient(135deg, #10b981 0%, #059669 100%); /* Green Header */
+                        color: white; padding: 20px 24px; border-radius: 8px 8px 0 0;
+                        display: flex; justify-content: space-between; align-items: center;
+                        position: sticky; top: 0; z-index: 10;
+                    ">
+                        <div>
+                            <h2 style="margin: 0; font-size: 20px;">Create New Conversation</h2>
+                            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Enter lead details manually</p>
+                        </div>
+                        <button onclick="document.getElementById('editLeadModal').remove()" style="
+                            background: none; border: none; color: white; font-size: 28px; cursor: pointer;
+                        ">×</button>
+                    </div>
+
+                    <form id="createLeadForm" style="padding: 24px;">
+                        <div style="margin-bottom: 28px;">
+                            <h3 style="color: #059669; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #10b981;">Business Information</h3>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Legal/Corporate Name</label>
+                                <input type="text" name="business_name" required placeholder="Business Name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">DBA</label>
+                                <input type="text" name="dba_name" placeholder="DBA" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Business Email</label>
+                                <input type="email" name="email" placeholder="email@example.com" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f0fdf4;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Primary Phone</label>
+                                <input type="tel" name="lead_phone" required placeholder="(555) 123-4567" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            </div>
+
+                            <div style="margin-bottom: 12px;"><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Address</label>
+                            <input type="text" name="business_address" placeholder="123 Main St" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <input type="text" name="business_city" placeholder="City" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                <input type="text" name="us_state" placeholder="State" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                <input type="text" name="business_zip" placeholder="Zip" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Tax ID</label>
+                                <input type="text" name="tax_id" placeholder="12-3456789" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date Started</label>
+                                <input type="date" name="business_start_date" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 28px;">
+                            <h3 style="color: #059669; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #10b981;">Owner Information</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">First Name</label>
+                                <input type="text" name="first_name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Last Name</label>
+                                <input type="text" name="last_name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">SSN</label>
+                                <input type="text" name="ssn" placeholder="000-00-0000" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date of Birth</label>
+                                <input type="date" name="date_of_birth" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                            <button type="button" onclick="document.getElementById('editLeadModal').remove()" style="padding:10px 24px;border:1px solid #d1d5db;border-radius:6px;background:white;">Cancel</button>
+                            <button type="submit" style="padding:10px 24px;background:#10b981;color:white;border:none;border-radius:6px;font-weight:600;">Create Lead</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Handle Submission
+        document.getElementById('createLeadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                // 1. Create Base Lead
+                const createRes = await this.parent.apiCall('/api/conversations', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+
+                if (createRes.success) {
+                    // 2. Update with Details (SSN, Tax ID)
+                    const newId = createRes.conversation.id;
+                    await this.parent.apiCall(`/api/conversations/${newId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(data)
+                    });
+
+                    this.utils.showNotification('Lead created successfully!', 'success');
+                    document.getElementById('editLeadModal').remove();
+
+                    // Refresh sidebar
+                    if (this.parent.conversationUI) {
+                        this.parent.conversationUI.loadConversations();
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                this.utils.showNotification('Error creating lead', 'error');
+            }
+        });
+    }
+
     showEditLeadModal(conv) {
         // Remove any existing modal
         const existingModal = document.getElementById('editLeadModal');
@@ -2576,3 +2707,14 @@ class IntelligenceTabs {
         }
     }
 }
+
+// OVERRIDE: Connect the HTML "New Conversation" button to our new modal
+window.openNewConversationModal = () => {
+    if (window.commandCenter && window.commandCenter.conversationUI && window.commandCenter.conversationUI.intelligence) {
+        window.commandCenter.conversationUI.intelligence.showCreateLeadModal();
+    } else {
+        console.error('Intelligence module not loaded yet');
+        // Fallback if module isn't ready yet
+        alert('System loading... please try again in a moment.');
+    }
+};
