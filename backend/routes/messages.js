@@ -193,13 +193,13 @@ router.post('/send', async (req, res) => {
             [actualConversationId]
         );
 
-        // Emit WebSocket event for real-time update
+        // Emit WebSocket event (BROADCAST TO ALL)
         if (global.io) {
-            global.io.to(`conversation_${actualConversationId}`).emit('new_message', {
+            console.log(`📨 Broadcasting new_message to ALL clients`);
+            global.io.emit('new_message', {
                 conversation_id: actualConversationId,
                 message: newMessage
             });
-            console.log(`📨 WebSocket event emitted for conversation ${actualConversationId}`);
         }
 
         console.log(`✅ Message sent successfully: ${newMessage.id}`);
@@ -276,13 +276,17 @@ router.post('/webhook/receive', async (req, res) => {
             [conversation.id]
         );
 
-        // 5. Emit WebSocket Event (Real-time update)
+        // 5. Emit WebSocket Event (BROADCAST TO ALL)
         if (global.io) {
-            global.io.to(`conversation_${conversation.id}`).emit('new_message', {
+            console.log(`📨 Broadcasting new_message to ALL clients`);
+
+            // ✅ USE THIS: .emit() sends to everyone (Global)
+            // ❌ NOT THIS: .to().emit() sends only to specific rooms
+            global.io.emit('new_message', {
                 conversation_id: conversation.id,
-                message: newMessage
+                message: newMessage,
+                business_name: conversation.business_name
             });
-            console.log(`📨 WebSocket event emitted`);
         }
 
         console.log(`✅ Incoming message saved: ${newMessage.id}`);
