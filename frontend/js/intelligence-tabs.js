@@ -688,10 +688,34 @@ class IntelligenceTabs {
         document.getElementById('createLeadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
+            let data = Object.fromEntries(formData.entries());
 
-            // Handle Payment Methods (Multi-select simulation if needed, or default empty)
-            data.payment_methods = [];
+            // --- DATA CLEANING (Fixes HTTP 500 Errors) ---
+            const cleanData = (obj) => {
+                const cleaned = { ...obj };
+                const numericFields = [
+                    'annual_revenue', 'monthly_revenue', 'requested_amount',
+                    'ownership_percentage', 'credit_score'
+                ];
+
+                for (const key of Object.keys(cleaned)) {
+                    // 1. Convert empty strings to null (DB hates empty strings for numbers)
+                    if (cleaned[key] === '') {
+                        cleaned[key] = null;
+                    }
+                    // 2. Strip currency symbols/commas from numbers
+                    else if (numericFields.includes(key)) {
+                        cleaned[key] = parseFloat(cleaned[key].toString().replace(/[^0-9.]/g, ''));
+                    }
+                }
+                // 3. Ensure payment_methods is an array (or ignore if not needed)
+                cleaned.payment_methods = [];
+
+                return cleaned;
+            };
+
+            data = cleanData(data);
+            // ----------------------------------------------
 
             try {
                 // A. Create Base Conversation
@@ -717,7 +741,8 @@ class IntelligenceTabs {
                     }
                 }
             } catch (err) {
-                console.error(err);
+                console.error('Create Error:', err);
+                // Show the actual error message from the server if available
                 this.utils.showNotification('Error creating lead: ' + err.message, 'error');
             }
         });
