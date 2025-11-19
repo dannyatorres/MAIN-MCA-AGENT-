@@ -470,11 +470,13 @@ class IntelligenceTabs {
         });
     }
 
-    // NEW: "Create Mode" for the modal
+    // NEW: Full "Create Mode" (All fields available, only Name/Phone required)
     showCreateLeadModal() {
         // Remove any existing modal
         const existingModal = document.getElementById('editLeadModal');
         if (existingModal) existingModal.remove();
+
+        const usStates = this.utils.getUSStates();
 
         const modalHTML = `
             <div id="editLeadModal" style="
@@ -485,7 +487,7 @@ class IntelligenceTabs {
             ">
                 <div style="
                     background: white; border-radius: 8px; width: 100%;
-                    max-width: 700px; max-height: 90vh; overflow-y: auto;
+                    max-width: 800px; max-height: 90vh; overflow-y: auto;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                 ">
                     <div style="
@@ -496,7 +498,9 @@ class IntelligenceTabs {
                     ">
                         <div>
                             <h2 style="margin: 0; font-size: 20px;">Create New Conversation</h2>
-                            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Enter lead details manually</p>
+                            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">
+                                <span style="font-weight:600;">*</span> Indicates required fields. All others are optional.
+                            </p>
                         </div>
                         <button onclick="document.getElementById('editLeadModal').remove()" style="
                             background: none; border: none; color: white; font-size: 28px; cursor: pointer;
@@ -504,25 +508,36 @@ class IntelligenceTabs {
                     </div>
 
                     <form id="createLeadForm" style="padding: 24px;">
+
                         <div style="margin-bottom: 28px;">
                             <h3 style="color: #059669; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #10b981;">Business Information</h3>
 
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Legal/Corporate Name</label>
-                                <input type="text" name="business_name" required placeholder="Business Name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">DBA</label>
-                                <input type="text" name="dba_name" placeholder="DBA" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Legal/Corporate Name <span style="color:#ef4444">*</span></label>
+                                    <input type="text" name="business_name" required placeholder="Business Name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">DBA</label>
+                                    <input type="text" name="dba_name" placeholder="DBA" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
                             </div>
 
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Business Email</label>
-                                <input type="email" name="email" placeholder="email@example.com" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f0fdf4;"></div>
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Primary Phone</label>
-                                <input type="tel" name="lead_phone" required placeholder="(555) 123-4567" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Business Email</label>
+                                    <input type="email" name="email" placeholder="email@example.com" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f0fdf4;">
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Primary Phone <span style="color:#ef4444">*</span></label>
+                                    <input type="tel" name="lead_phone" required placeholder="(555) 123-4567" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
                             </div>
 
-                            <div style="margin-bottom: 12px;"><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Address</label>
-                            <input type="text" name="business_address" placeholder="123 Main St" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            <div style="margin-bottom: 12px;">
+                                <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Physical Address</label>
+                                <input type="text" name="business_address" placeholder="123 Main St" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                            </div>
 
                             <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                                 <input type="text" name="business_city" placeholder="City" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
@@ -530,33 +545,99 @@ class IntelligenceTabs {
                                 <input type="text" name="business_zip" placeholder="Zip" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                             </div>
 
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Tax ID</label>
+                                    <input type="text" name="tax_id" placeholder="12-3456789" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date Started</label>
+                                    <input type="date" name="business_start_date" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                            </div>
+
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Tax ID</label>
-                                <input type="text" name="tax_id" placeholder="12-3456789" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date Started</label>
-                                <input type="date" name="business_start_date" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Entity Type</label>
+                                    <select name="entity_type" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                        <option value="">Select...</option>
+                                        <option value="Sole Proprietorship">Sole Proprietorship</option>
+                                        <option value="LLC">LLC</option>
+                                        <option value="Corporation">Corporation</option>
+                                        <option value="Partnership">Partnership</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Type of Business</label>
+                                    <input type="text" name="industry" placeholder="e.g. Construction" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 28px;">
+                            <h3 style="color: #059669; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #10b981;">Financial Information</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Use of Proceeds</label>
+                                    <input type="text" name="use_of_proceeds" placeholder="Working Capital" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Requested Amount</label>
+                                    <input type="number" name="requested_amount" placeholder="50000" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Annual Revenue</label>
+                                    <input type="number" name="annual_revenue" placeholder="500000" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
                             </div>
                         </div>
 
                         <div style="margin-bottom: 28px;">
                             <h3 style="color: #059669; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #10b981;">Owner Information</h3>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">First Name</label>
-                                <input type="text" name="first_name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Last Name</label>
-                                <input type="text" name="last_name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">First Name</label>
+                                    <input type="text" name="first_name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Last Name</label>
+                                    <input type="text" name="last_name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">SSN</label>
-                                <input type="text" name="ssn" placeholder="000-00-0000" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
-                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date of Birth</label>
-                                <input type="date" name="date_of_birth" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="sameAsBusinessAddressCreate">
+                                    <span style="font-weight: 600;">Owner home address same as business</span>
+                                </label>
+                                <input type="text" name="owner_address" placeholder="Home Address" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;">
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+                                    <input type="text" name="owner_city" placeholder="City" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                    <input type="text" name="owner_state" placeholder="State" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                    <input type="text" name="owner_zip" placeholder="Zip" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 100px 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Ownership %</label>
+                                    <input type="number" name="ownership_percentage" placeholder="100" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">SSN</label>
+                                    <input type="text" name="ssn" placeholder="000-00-0000" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date of Birth</label>
+                                    <input type="date" name="date_of_birth" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
                             </div>
                         </div>
 
                         <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
                             <button type="button" onclick="document.getElementById('editLeadModal').remove()" style="padding:10px 24px;border:1px solid #d1d5db;border-radius:6px;background:white;">Cancel</button>
-                            <button type="submit" style="padding:10px 24px;background:#10b981;color:white;border:none;border-radius:6px;font-weight:600;">Create Lead</button>
+                            <button type="submit" style="padding:10px 24px;background:#10b981;color:white;border:none;border-radius:6px;font-weight:600;box-shadow:0 4px 6px rgba(16, 185, 129, 0.2);">Create Lead</button>
                         </div>
                     </form>
                 </div>
@@ -565,21 +646,62 @@ class IntelligenceTabs {
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-        // Handle Submission
+        // --- LOGIC HANDLERS ---
+
+        // 1. Address Checkbox Logic
+        const sameAddressCheckbox = document.getElementById('sameAsBusinessAddressCreate');
+        if (sameAddressCheckbox) {
+            sameAddressCheckbox.addEventListener('change', function() {
+                const ownerAddr = document.querySelector('[name=owner_address]');
+                const ownerCity = document.querySelector('[name=owner_city]');
+                const ownerState = document.querySelector('[name=owner_state]');
+                const ownerZip = document.querySelector('[name=owner_zip]');
+
+                if (this.checked) {
+                    ownerAddr.value = document.querySelector('[name=business_address]').value;
+                    ownerCity.value = document.querySelector('[name=business_city]').value;
+                    ownerState.value = document.querySelector('[name=us_state]').value;
+                    ownerZip.value = document.querySelector('[name=business_zip]').value;
+                } else {
+                    ownerAddr.value = '';
+                    ownerCity.value = '';
+                    ownerState.value = '';
+                    ownerZip.value = '';
+                }
+            });
+        }
+
+        // 2. ZIP Code Lookup Logic
+        const attachZipLookup = (field, type) => {
+            const input = document.querySelector(`[name="${field}"]`);
+            if (input) {
+                input.addEventListener('input', async (e) => {
+                    const zip = e.target.value.replace(/\D/g, '');
+                    if (zip.length === 5) await this.utils.lookupZipCode(zip, type);
+                });
+            }
+        };
+        attachZipLookup('business_zip', 'business');
+        attachZipLookup('owner_zip', 'owner');
+
+        // 3. Submit Logic (Create + Enrich)
         document.getElementById('createLeadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
 
+            // Handle Payment Methods (Multi-select simulation if needed, or default empty)
+            data.payment_methods = [];
+
             try {
-                // 1. Create Base Lead
+                // A. Create Base Conversation
                 const createRes = await this.parent.apiCall('/api/conversations', {
                     method: 'POST',
                     body: JSON.stringify(data)
                 });
 
                 if (createRes.success) {
-                    // 2. Update with Details (SSN, Tax ID)
+                    // B. Update Lead Details (SSN, Tax ID, etc.)
                     const newId = createRes.conversation.id;
                     await this.parent.apiCall(`/api/conversations/${newId}`, {
                         method: 'PUT',
@@ -589,14 +711,14 @@ class IntelligenceTabs {
                     this.utils.showNotification('Lead created successfully!', 'success');
                     document.getElementById('editLeadModal').remove();
 
-                    // Refresh sidebar
+                    // C. Reload Sidebar
                     if (this.parent.conversationUI) {
                         this.parent.conversationUI.loadConversations();
                     }
                 }
             } catch (err) {
                 console.error(err);
-                this.utils.showNotification('Error creating lead', 'error');
+                this.utils.showNotification('Error creating lead: ' + err.message, 'error');
             }
         });
     }
