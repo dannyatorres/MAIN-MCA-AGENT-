@@ -34,7 +34,8 @@ const io = new Server(server, {
         origin: (origin, callback) => {
             // Allow same origins as Express CORS
             if (!origin) return callback(null, true);
-            if (origin.includes('localhost') || origin.includes('railway.app')) {
+            // ✅ FIX: Added 'mcagent.io' to the allow list
+            if (origin.includes('localhost') || origin.includes('railway.app') || origin.includes('mcagent.io')) {
                 callback(null, true);
             } else {
                 callback(new Error('Not allowed by CORS'));
@@ -86,8 +87,8 @@ const corsOptions = {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
 
-        // Allow Railway domains or localhost
-        if (allowedOrigins.includes(origin) || origin.includes('railway.app')) {
+        // ✅ FIX: Added 'mcagent.io' to the allow list
+        if (allowedOrigins.includes(origin) || origin.includes('railway.app') || origin.includes('mcagent.io')) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
