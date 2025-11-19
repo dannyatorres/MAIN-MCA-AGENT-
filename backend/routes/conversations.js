@@ -120,7 +120,7 @@ router.post('/', async (req, res) => {
         const conversationData = req.body;
         const db = getDatabase();
 
-        // FIXED: Changed 'lead_email' to 'email' to match your DB schema
+        // FIXED: Changed priority default from 'medium' to 1 (Integer) to fix DB error
         const result = await db.query(`
             INSERT INTO conversations (
                 business_name, lead_phone, email, us_state,
@@ -131,11 +131,12 @@ router.post('/', async (req, res) => {
         `, [
             conversationData.business_name,
             conversationData.lead_phone,
-            conversationData.email, // Correct column name
+            conversationData.email,
             conversationData.us_state,
             conversationData.business_address,
             'initial_contact',
-            conversationData.priority || 'medium'
+            // Fix: Send a number (1) instead of a string ("medium")
+            conversationData.priority ? parseInt(conversationData.priority) : 1
         ]);
 
         console.log(`✅ New conversation created: ${result.rows[0].id}`);
