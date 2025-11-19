@@ -7,57 +7,34 @@ class WebSocketManager {
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 3000;
         this.isConnecting = false;
-        this.eventListeners = {}; // Event emitter for module communication
 
         console.log('WebSocketManager: Initializing...');
         this.connect();
     }
 
-    // Event emitter methods
-    on(event, callback) {
-        if (!this.eventListeners[event]) {
-            this.eventListeners[event] = [];
-        }
-        this.eventListeners[event].push(callback);
-    }
-
-    trigger(event, data) {
-        if (this.eventListeners[event]) {
-            this.eventListeners[event].forEach(callback => {
-                try {
-                    callback(data);
-                } catch (error) {
-                    console.error(`Error in event listener for ${event}:`, error);
-                }
-            });
-        }
-    }
-
     connect() {
         if (this.isConnecting || (this.socket && this.socket.connected)) {
-            console.log('WebSocketManager: Already connected or connecting');
             return;
         }
 
         this.isConnecting = true;
-        console.log(`WebSocketManager: Connecting to ${this.app.wsUrl}...`);
+
+        // Dynamic URL handling
+        const wsUrl = this.app.wsUrl || window.location.origin;
+        console.log(`WebSocketManager: Connecting to ${wsUrl}...`);
 
         try {
-            // Initialize Socket.io connection
-            this.socket = io(this.app.wsUrl, {
+            this.socket = io(wsUrl, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionDelay: this.reconnectDelay,
-                reconnectionAttempts: this.maxReconnectAttempts,
-                auth: {
-                    userId: this.app.userId || 'default'
-                }
+                reconnectionAttempts: this.maxReconnectAttempts
             });
 
             this.setupEventHandlers();
 
-            // Make socket globally available
-            window.socket = this.socket;
+            // Make socket globally available for debugging
+            window.globalSocket = this.socket;
 
         } catch (error) {
             console.error('WebSocketManager: Connection error:', error);
@@ -66,124 +43,93 @@ class WebSocketManager {
     }
 
     setupEventHandlers() {
-        // Connection events
+        // --- Connection Events ---
         this.socket.on('connect', () => {
-            console.log(' WebSocket connected');
+            console.log('✅ WebSocket connected:', this.socket.id);
             this.isConnecting = false;
             this.reconnectAttempts = 0;
-            this.onConnect();
-        });
 
-        this.socket.on('disconnect', (reason) => {
-            console.log('L WebSocket disconnected:', reason);
-            this.isConnecting = false;
-            this.onDisconnect(reason);
-        });
+            // Update UI status dot
+            const statusDot = document.querySelector('.connection-status .status-dot');
+            const statusText = document.querySelector('.connection-status .status-text');
+            if (statusDot) {
+                statusDot.classList.remove('disconnected');
+                statusDot.classList.add('connected');
+            }
+            if (statusText) statusText.textContent = 'Connected';
 
-        this.socket.on('connect_error', (error) => {
-            console.error('WebSocket connection error:', error);
-            this.isConnecting = false;
-            this.reconnectAttempts++;
-
-            if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-                console.error('Max reconnection attempts reached');
+            // Join room if we have a current conversation
+            if (this.app.currentConversationId) {
+                this.joinConversation(this.app.currentConversationId);
             }
         });
 
-        this.socket.on('reconnect', (attemptNumber) => {
-            console.log(' WebSocket reconnected after', attemptNumber, 'attempts');
-            this.reconnectAttempts = 0;
+        this.socket.on('disconnect', (reason) => {
+            console.log('🔌 WebSocket disconnected:', reason);
+            this.isConnecting = false;
+
+            const statusDot = document.querySelector('.connection-status .status-dot');
+            const statusText = document.querySelector('.connection-status .status-text');
+            if (statusDot) {
+                statusDot.classList.remove('connected');
+                statusDot.classList.add('disconnected');
+            }
+            if (statusText) statusText.textContent = 'Reconnecting...';
         });
 
-        // Data events
-        this.socket.on('conversation:update', (data) => {
-            console.log('=� Conversation update received:', data);
-            this.handleConversationUpdate(data);
+        // --- Data Events (FIXED NAMES) ---
+
+        // 1. New Message Received
+        this.socket.on('new_message', (data) => {
+            console.log('📨 WebSocket: new_message received', data);
+
+            // Update the list order (Move to top)
+            if (this.app.conversationUI) {
+                this.app.conversationUI.updateConversationPreview(data.conversation_id, data.message);
+            }
+
+            // Show notification / Update chat view
+            if (this.app.messaging) {
+                this.app.messaging.handleIncomingMessage(data);
+            }
         });
 
-        this.socket.on('message:new', (data) => {
-            console.log('=� New message received:', data);
-            this.handleNewMessage(data);
+        // 2. Conversation Updated (e.g. State Change)
+        this.socket.on('conversation_updated', (data) => {
+            console.log('📋 WebSocket: conversation_updated', data);
+            if (this.app.conversationUI) {
+                this.app.conversationUI.loadConversations();
+            }
         });
 
-        this.socket.on('document:update', (data) => {
-            console.log('=� Document update received:', data);
-            this.handleDocumentUpdate(data);
+        // 3. Document Uploaded
+        this.socket.on('document_uploaded', (data) => {
+            console.log('📄 WebSocket: document_uploaded', data);
+            // Only refresh if we are looking at this conversation's docs
+            if (this.app.currentConversationId === data.conversation_id && this.app.documents) {
+                this.app.documents.loadDocuments();
+            }
         });
 
-        this.socket.on('fcs:status', (data) => {
-            console.log('=� FCS status update received:', data);
-            this.handleFCSUpdate(data);
+        // 4. FCS/Lender Updates
+        this.socket.on('fcs_completed', (data) => {
+            console.log('📊 WebSocket: fcs_completed', data);
+            if (this.app.currentConversationId === data.conversation_id) {
+                this.app.utils.showNotification('FCS Report Ready!', 'success');
+                if (this.app.fcs) this.app.fcs.loadFCSData();
+            }
         });
     }
 
-    onConnect() {
-        // Join user's room
-        if (this.app.userId) {
-            this.socket.emit('join:user', { userId: this.app.userId });
-        }
-    }
-
-    onDisconnect(reason) {
-        // Handle disconnect
-        if (reason === 'io server disconnect') {
-            // Server disconnected, try to reconnect
-            this.socket.connect();
-        }
-    }
-
-    // Handle incoming data
-    handleConversationUpdate(data) {
-        this.trigger('conversation_updated', data);
-        if (this.app.conversationUI && this.app.conversationUI.handleConversationUpdate) {
-            this.app.conversationUI.handleConversationUpdate(data);
-        }
-    }
-
-    handleNewMessage(data) {
-        this.trigger('message_new', data);
-        if (this.app.messaging && this.app.messaging.handleNewMessage) {
-            this.app.messaging.handleNewMessage(data);
-        }
-    }
-
-    handleDocumentUpdate(data) {
-        this.trigger('document_updated', data);
-        if (this.app.documents && this.app.documents.handleDocumentUpdate) {
-            this.app.documents.handleDocumentUpdate(data);
-        }
-    }
-
-    handleFCSUpdate(data) {
-        this.trigger('fcs_updated', data);
-        if (this.app.fcs && this.app.fcs.handleFCSUpdate) {
-            this.app.fcs.handleFCSUpdate(data);
-        }
-    }
-
-    // Emit events
-    emit(event, data) {
-        if (this.socket && this.socket.connected) {
-            this.socket.emit(event, data);
-        } else {
-            console.warn('WebSocketManager: Cannot emit, socket not connected');
-        }
-    }
-
-    // Join/leave rooms
     joinConversation(conversationId) {
-        this.emit('join:conversation', { conversationId });
-    }
-
-    leaveConversation(conversationId) {
-        this.emit('leave:conversation', { conversationId });
-    }
-
-    // Disconnect
-    disconnect() {
-        if (this.socket) {
-            this.socket.disconnect();
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('join_conversation', conversationId);
         }
+    }
+
+    // Helper to manually refresh data
+    refreshData() {
+        if (this.app.conversationUI) this.app.conversationUI.loadConversations();
     }
 }
 

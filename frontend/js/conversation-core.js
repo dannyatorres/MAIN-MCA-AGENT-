@@ -432,24 +432,55 @@ class ConversationCore {
     }
 
     updateConversationPreview(conversationId, message) {
+        // 1. Update the data in memory
         const conversation = this.conversations.get(conversationId);
         if (conversation) {
             conversation.last_message = message.content;
             conversation.last_activity = message.created_at || new Date().toISOString();
+            // If it's not the currently selected conversation, increment unread count
+            if (this.currentConversationId !== conversationId) {
+                const currentUnread = this.unreadMessages.get(conversationId) || 0;
+                this.unreadMessages.set(conversationId, currentUnread + 1);
+            }
             this.conversations.set(conversationId, conversation);
         }
 
-        const conversationItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
-        if (conversationItem) {
-            const timeAgoElement = conversationItem.querySelector('.time-ago');
-            if (timeAgoElement) {
-                timeAgoElement.textContent = 'Just now';
+        // 2. Update the DOM (The Visual Move)
+        const container = document.getElementById('conversationsList');
+        let item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+
+        if (item && container) {
+            // Update the preview text and time
+            const messagePreview = item.querySelector('.message-preview') || item.querySelector('.business-name');
+            const timeAgo = item.querySelector('.time-ago');
+
+            // Visual update
+            if (timeAgo) timeAgo.textContent = 'Just now';
+
+            // Add "unread" styling if not selected
+            if (this.currentConversationId !== conversationId) {
+                item.classList.add('has-unread');
+                // Add/Update badge
+                let badge = item.querySelector('.unread-badge');
+                if (!badge) {
+                    badge = document.createElement('div');
+                    badge.className = 'unread-badge';
+                    item.appendChild(badge);
+                }
+                badge.textContent = this.unreadMessages.get(conversationId) || '1';
             }
 
-            const conversationsList = conversationItem.parentElement;
-            if (conversationsList && conversationsList.firstChild !== conversationItem) {
-                conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
+            // 🚀 MOVE TO TOP ANIMATION
+            // Only move if it's not already the first item
+            if (container.firstElementChild !== item) {
+                // Optional: Fade out, move, fade in
+                item.style.transition = 'transform 0.3s ease';
+                container.prepend(item);
             }
+        } else if (conversation && container) {
+            // If item doesn't exist in DOM (e.g. under the render limit), re-render list
+            // This ensures new active conversations appear even if they were hidden
+            this.renderConversationsList();
         }
     }
 
