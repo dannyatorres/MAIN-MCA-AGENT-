@@ -1938,7 +1938,7 @@ class IntelligenceTabs {
             iframeDoc.write(htmlContent);
             iframeDoc.close();
 
-            // Inject CSS fixes for input fields to ensure text shows up
+            // Inject CSS fixes for input fields and printing
             const style = iframeDoc.createElement('style');
             style.textContent = `
                 input {
@@ -1949,21 +1949,22 @@ class IntelligenceTabs {
                     border: none !important;
                 }
                 .form-field { overflow: visible !important; }
-                body { -webkit-print-color-adjust: exact; }
+                body { -webkit-print-color-adjust: exact; background-color: white; }
             `;
             iframeDoc.head.appendChild(style);
 
-            // Wait for render (increased to 1s for safety)
+            // Wait for render (images/fonts to load)
             await new Promise(r => setTimeout(r, 1000));
 
-            // CAPTURE with minimal options (No CORS, no external resources)
+            // CAPTURE - STRICT LOCAL MODE
+            // Removed useCORS and allowTaint to prevent security errors with Base64
             const canvas = await html2canvas(iframeDoc.body, {
                 scale: 2,
-                logging: true, // Enable to see what's being rendered
+                logging: true, // Keep logging to see issues in console
                 width: 1000,
                 height: iframeDoc.body.scrollHeight + 50,
-                backgroundColor: '#ffffff',
-                removeContainer: true
+                windowWidth: 1000,
+                backgroundColor: '#ffffff' // Ensure white background
             });
 
             document.body.removeChild(iframe);
