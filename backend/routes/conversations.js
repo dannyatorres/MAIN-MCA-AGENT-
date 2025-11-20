@@ -782,46 +782,63 @@ router.get('/:conversationId/documents/:documentId/download', async (req, res) =
         const { documentId } = req.params;
         const db = getDatabase();
 
-        // Get document from database
+        // 1. Get document info from DB
         const result = await db.query(
-            'SELECT * FROM documents WHERE id = $1',
+            'SELECT filename, original_filename, s3_key, mime_type FROM documents WHERE id = $1',
             [documentId]
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Document not found' });
+            return res.status(404).send('Document not found');
         }
 
-        const document = result.rows[0];
+        const doc = result.rows[0];
 
-        // If S3 URL exists, redirect to S3
-        if (document.s3_url) {
-            // Generate signed URL for secure download
-            const AWS = require('aws-sdk');
-            AWS.config.update({
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-                region: process.env.AWS_REGION || 'us-east-1'
-            });
-
-            const s3 = new AWS.S3();
-            const signedUrl = s3.getSignedUrl('getObject', {
-                Bucket: process.env.S3_DOCUMENTS_BUCKET,
-                Key: document.s3_key,
-                Expires: 300 // URL expires in 5 minutes
-            });
-
-            res.redirect(signedUrl);
-        } else {
-            // No S3 URL - document needs to be re-uploaded
-            res.status(404).json({
-                error: 'Document not found in S3. Please re-upload this document.'
-            });
+        if (!doc.s3_key) {
+            return res.status(404).send('Document not found in S3. Please re-upload this document.');
         }
+
+        // 2. Prepare the Filename
+        // Use the real filename, or fallback to 'document.pdf'
+        let downloadName = doc.filename || doc.original_filename || 'document.pdf';
+
+        // FIX: Remove dangerous characters (like newlines/quotes) that break headers
+        downloadName = downloadName.replace(/"/g, "'").replace(/[\r\n]/g, "");
+
+        console.log('📥 Downloading document:', downloadName);
+
+        // 3. Set Headers - QUOTES ARE CRITICAL: filename="${downloadName}"
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+        res.setHeader('Content-Type', doc.mime_type || 'application/pdf');
+
+        // 4. Stream file from S3
+        const AWS = require('aws-sdk');
+        AWS.config.update({
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            region: process.env.AWS_REGION || 'us-east-1'
+        });
+
+        const s3 = new AWS.S3();
+        const s3Stream = s3.getObject({
+            Bucket: process.env.S3_DOCUMENTS_BUCKET,
+            Key: doc.s3_key
+        }).createReadStream();
+
+        // Handle Stream Errors (File missing in S3)
+        s3Stream.on('error', (s3Err) => {
+            console.error('❌ S3 Stream Error:', s3Err);
+            if (!res.headersSent) {
+                res.status(404).send('File not found in storage');
+            }
+        });
+
+        // Pipe to response
+        s3Stream.pipe(res);
 
     } catch (error) {
-        console.error('❌ Error downloading document:', error);
-        res.status(500).json({ error: 'Failed to download document' });
+        console.error('❌ Download Route Error:', error);
+        if (!res.headersSent) res.status(500).send('Server Error');
     }
 });
 

@@ -183,36 +183,52 @@ router.get('/download/:documentId', async (req, res) => {
 
         // Get document info from database
         const result = await db.query(
-            'SELECT * FROM documents WHERE id = $1',
+            'SELECT filename, original_filename, s3_key, s3_bucket, mime_type FROM documents WHERE id = $1',
             [documentId]
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Document not found'
-            });
+            return res.status(404).send('Document not found');
         }
 
-        const document = result.rows[0];
+        const doc = result.rows[0];
 
-        // Generate pre-signed URL for download (expires in 1 hour)
-        const url = s3.getSignedUrl('getObject', {
-            Bucket: document.s3_bucket,
-            Key: document.s3_key,
-            Expires: 3600,
-            ResponseContentDisposition: `attachment; filename="${document.original_filename}"`
+        if (!doc.s3_key) {
+            return res.status(404).send('Document not found in S3');
+        }
+
+        // Prepare the Filename
+        let downloadName = doc.filename || doc.original_filename || 'document.pdf';
+
+        // FIX: Remove dangerous characters (like newlines/quotes) that break headers
+        downloadName = downloadName.replace(/"/g, "'").replace(/[\r\n]/g, "");
+
+        console.log('📥 Downloading document:', downloadName);
+
+        // Set Headers - QUOTES ARE CRITICAL: filename="${downloadName}"
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+        res.setHeader('Content-Type', doc.mime_type || 'application/pdf');
+
+        // Stream file from S3
+        const s3Stream = s3.getObject({
+            Bucket: doc.s3_bucket || process.env.S3_DOCUMENTS_BUCKET,
+            Key: doc.s3_key
+        }).createReadStream();
+
+        // Handle Stream Errors
+        s3Stream.on('error', (s3Err) => {
+            console.error('❌ S3 Stream Error:', s3Err);
+            if (!res.headersSent) {
+                res.status(404).send('File not found in storage');
+            }
         });
 
-        // Redirect to pre-signed URL
-        res.redirect(url);
+        // Pipe to response
+        s3Stream.pipe(res);
 
     } catch (error) {
-        console.error('Error downloading document:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('❌ Download Route Error:', error);
+        if (!res.headersSent) res.status(500).send('Server Error');
     }
 });
 
