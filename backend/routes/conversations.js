@@ -1495,10 +1495,15 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
 
         console.log('📝 HTML template populated');
 
-        // 2. Launch Puppeteer
+        // 2. Launch Puppeteer (Production-Ready Configuration)
         browser = await puppeteer.launch({
             headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox'] // Required for Docker/Heroku
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage', // Vital for Docker/Heroku memory limits
+                '--disable-gpu'
+            ]
         });
 
         const page = await browser.newPage();
