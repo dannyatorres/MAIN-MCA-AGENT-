@@ -1929,9 +1929,9 @@ class IntelligenceTabs {
             });
 
             // --- RENDER & SAVE (Existing Logic) ---
-            // Create invisible iframe
+            // Create invisible iframe with fixed width to prevent canvas errors
             const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed; left:-10000px; top:0; width:940px; height:1200px; border:none;';
+            iframe.style.cssText = 'position:fixed; left:-10000px; top:0; width:1000px; height:1200px; border:none;';
             document.body.appendChild(iframe);
 
             const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -1939,20 +1939,31 @@ class IntelligenceTabs {
             iframeDoc.write(htmlContent);
             iframeDoc.close();
 
-            // Add styles fixes
+            // Add styles fixes and ensure no broken images
             const style = iframeDoc.createElement('style');
             style.textContent = `
                 input { line-height: normal !important; padding: 0 4px !important; height: auto !important; }
                 .form-field { overflow: visible !important; }
+                img { display: none !important; } /* Hide any broken images that cause canvas errors */
             `;
             iframeDoc.head.appendChild(style);
 
             await new Promise(r => setTimeout(r, 500)); // Wait for render
 
-            // Capture
+            console.log('📸 Starting PDF capture...');
+
+            // Capture with error handling
             const canvas = await html2canvas(iframeDoc.body, {
-                scale: 2, useCORS: true, allowTaint: true,
-                width: 940, height: iframeDoc.body.scrollHeight
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                width: 1000,
+                height: iframeDoc.body.scrollHeight,
+                backgroundColor: '#ffffff'
+            }).catch(error => {
+                console.error('❌ html2canvas error:', error);
+                throw new Error('PDF capture failed: ' + error.message);
             });
 
             document.body.removeChild(iframe);

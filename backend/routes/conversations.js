@@ -221,19 +221,25 @@ router.put('/:id', async (req, res) => {
             notes: 'notes',
             entityType: 'entity_type',
             entity_type: 'entity_type',
+            dba_name: 'dba_name',
+            dbaName: 'dba_name',
             ownershipPercent: 'ownership_percent',
             ownership_percent: 'ownership_percent',
+            ownership_percentage: 'ownership_percent', // ADDED: Frontend sends this
             ownerHomeAddress: 'owner_home_address',
             owner_home_address: 'owner_home_address',
-            owner_address: 'owner_home_address',
+            owner_address: 'owner_home_address', // ADDED: Frontend sends this
             ownerHomeAddress2: 'owner_home_address2',
             owner_home_address2: 'owner_home_address2',
             ownerHomeCity: 'owner_home_city',
             owner_home_city: 'owner_home_city',
+            owner_city: 'owner_home_city', // ADDED: Frontend sends this
             ownerHomeState: 'owner_home_state',
             owner_home_state: 'owner_home_state',
+            owner_state: 'owner_home_state', // ADDED: Frontend sends this
             ownerHomeZip: 'owner_home_zip',
             owner_home_zip: 'owner_home_zip',
+            owner_zip: 'owner_home_zip', // ADDED: Frontend sends this
             ownerHomeCountry: 'owner_home_country',
             owner_home_country: 'owner_home_country',
             ownerEmail: 'owner_email',
