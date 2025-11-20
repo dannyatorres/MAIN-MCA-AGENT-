@@ -6,54 +6,56 @@
     <title>Merchant Cash Advance Application</title>
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
-        /* COMPACT ONE-PAGE STYLING */
-        @page { margin: 0.4in; } /* Reduced margins to fit vertical layout */
+        /* PROFESSIONAL COMPACT STYLING */
+        @page { margin: 0.3in; } /* Tighter print margins */
 
         body {
-            font-family: Arial, sans-serif;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
             max-width: 100%;
             margin: 0 auto;
-            color: #333;
-            font-size: 10px; /* Compact font */
-            line-height: 1.2;
+            color: #222;
+            font-size: 10px;
+            line-height: 1.1;
         }
 
         /* HEADER */
         .header {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             border-bottom: 2px solid #2c3e50;
             padding-bottom: 5px;
         }
         .logo {
-            max-width: 160px;
+            max-width: 150px; /* Smaller logo to save space */
             height: auto;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             display: block;
             margin-left: auto;
             margin-right: auto;
         }
         h1 {
             color: #2c3e50;
-            font-size: 18px;
+            font-size: 16px;
+            font-weight: 800;
             margin: 0;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         }
 
         /* SECTIONS */
         .section {
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            margin-bottom: 8px; /* Reduced gap between sections */
+            border: 1px solid #ccc;
+            border-radius: 3px;
         }
         .section-header {
             background-color: #2c3e50;
             color: white;
             padding: 3px 8px;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* GRID SYSTEM */
@@ -63,11 +65,13 @@
             gap: 0;
         }
         .form-group {
-            padding: 3px 6px;
+            padding: 2px 6px; /* Very tight padding */
             border-right: 1px solid #eee;
             border-bottom: 1px solid #eee;
             display: flex;
             flex-direction: column;
+            justify-content: center;
+            min-height: 22px;
         }
         /* Grid Spans */
         .col-12 { grid-column: span 12; }
@@ -77,12 +81,11 @@
 
         /* INPUTS */
         label {
-            font-size: 8px;
+            font-size: 7px;
             color: #666;
-            font-weight: bold;
+            font-weight: 700;
             text-transform: uppercase;
             margin-bottom: 1px;
-            display: block;
         }
         input[type="text"] {
             width: 100%;
@@ -94,76 +97,91 @@
             padding: 0;
             margin: 0;
             height: 12px;
+            line-height: 12px;
         }
 
-        /* SIGNATURES - VERTICAL STACK */
+        /* SIGNATURES - REFINED */
         .signatures-container {
+            margin-top: 10px;
             display: flex;
             flex-direction: column;
-            gap: 15px; /* Space between Owner 1 and Owner 2 */
-            margin-top: 15px;
+            gap: 10px;
             page-break-inside: avoid;
         }
 
-        /* This row holds the Signature and the Date side-by-side */
         .sig-row {
             display: flex;
-            align-items: flex-end; /* CRITICAL: Aligns bottom of text to bottom of line */
-            gap: 20px;
+            align-items: flex-end;
+            gap: 15px;
             width: 100%;
         }
 
         .sig-block-left {
-            flex: 1; /* Takes up most space */
+            flex: 1;
         }
 
         .sig-block-right {
-            width: 120px; /* Fixed width for Date */
+            width: 100px;
         }
 
-        .line {
-            border-bottom: 2px solid #333;
-            margin-bottom: 4px; /* Space between line and metadata */
+        /* The line is created by the border-bottom of the container */
+        .input-line {
+            border-bottom: 1px solid #000;
+            margin-bottom: 3px;
+            position: relative; /* For absolute positioning if needed */
+            height: 35px; /* Fixed height ensures consistent look */
+            display: flex;
+            align-items: flex-end; /* Aligns signature to bottom */
         }
 
-        /* Fancy Fonts */
+        /* The Cursive Signature */
         .cursive-sig {
             font-family: 'Great Vibes', cursive;
-            font-size: 32px;
-            line-height: 0.7;
-            margin-bottom: 2px;
-            margin-left: 10px;
-            transform: rotate(-2deg);
-            white-space: nowrap;
+            font-size: 24px; /* Reduced from 32px */
+            line-height: 1;
             color: #000;
+            margin-left: 10px;
+            margin-bottom: -4px; /* Pulls signature down onto the line */
+            transform: rotate(-2deg); /* Slight natural tilt */
         }
+
+        /* Metadata under the line */
+        .meta-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
         .printed-name {
             font-family: Arial, sans-serif;
-            font-size: 11px;
-            font-weight: bold;
-            color: #333;
+            font-size: 10px;
+            font-weight: 800;
+            color: #000;
             text-transform: uppercase;
-            margin-bottom: 2px;
         }
+
         .digital-stamp {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 7px;
+            font-size: 6.5px; /* Small system font */
             color: #555;
-            line-height: 1.2;
+            text-align: right;
+            line-height: 1.1;
         }
+
         .date-text {
-            font-size: 12px;
-            font-weight: bold;
-            padding-bottom: 5px;
+            font-size: 11px;
+            font-weight: 700;
+            padding-left: 5px;
+            margin-bottom: 2px;
         }
 
         .footer {
             margin-top: 15px;
             text-align: center;
             font-size: 8px;
-            color: #999;
+            color: #aaa;
             border-top: 1px solid #eee;
-            padding-top: 5px;
+            padding-top: 4px;
         }
 
     </style>
@@ -234,36 +252,46 @@
         <div class="sig-row">
             <div class="sig-block-left">
                 <label>Owner 1 Signature</label>
-                <div class="line">
+                <div class="input-line">
                     <div class="cursive-sig">{{signature_name_1}}</div>
-                    <div class="printed-name">{{signature_name_1}}</div>
                 </div>
-                <div class="digital-stamp">
-                    <div>TimeStamp: {{timestamp_str_1}}</div>
-                    <div>Customer IP: {{ip_str_1}}</div>
+                <div class="meta-container">
+                    <div class="printed-name">{{signature_name_1}}</div>
+                    <div class="digital-stamp">
+                        <div>TimeStamp: {{timestamp_str_1}}</div>
+                        <div>Customer IP: {{ip_str_1}}</div>
+                    </div>
                 </div>
             </div>
+
             <div class="sig-block-right">
                 <label>Date</label>
-                <div class="line date-text">{{signature_date}}</div>
+                <div class="input-line">
+                    <div class="date-text">{{signature_date}}</div>
+                </div>
             </div>
         </div>
 
         <div class="sig-row">
             <div class="sig-block-left">
                 <label>Owner 2 Signature</label>
-                <div class="line">
+                <div class="input-line">
                     <div class="cursive-sig">{{signature_name_2}}</div>
-                    <div class="printed-name">{{signature_name_2}}</div>
                 </div>
-                <div class="digital-stamp">
-                    <div>{{timestamp_str_2}}</div>
-                    <div>{{ip_str_2}}</div>
+                <div class="meta-container">
+                    <div class="printed-name">{{signature_name_2}}</div>
+                    <div class="digital-stamp">
+                        <div>{{timestamp_str_2}}</div>
+                        <div>{{ip_str_2}}</div>
+                    </div>
                 </div>
             </div>
+
             <div class="sig-block-right">
                 <label>Date</label>
-                <div class="line date-text">{{signature_date}}</div>
+                <div class="input-line">
+                    <div class="date-text">{{signature_date}}</div>
+                </div>
             </div>
         </div>
 
