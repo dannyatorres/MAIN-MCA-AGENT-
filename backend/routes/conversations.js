@@ -1351,7 +1351,7 @@ router.post('/:id/generate-html-template', async (req, res) => {
     try {
         const { applicationData, ownerName } = req.body;
 
-        // Generate digital signature data
+        // Generate digital signature data for both owners
         const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || '127.0.0.1';
 
         // Format date exactly like PDF (Nov-19-2025 01:26:22 PM)
@@ -1372,9 +1372,17 @@ router.post('/:id/generate-html-template', async (req, res) => {
 
         const fullTimestamp = `${datePart} ${timePart}`;
 
-        applicationData.signature_name = ownerName;
-        applicationData.timestamp_str = fullTimestamp;
-        applicationData.ip_str = clientIp;
+        // Owner 1 Signature Data
+        const owner1FullName = `${applicationData.ownerFirstName || ''} ${applicationData.ownerLastName || ''}`.trim();
+        applicationData.signature_name_1 = owner1FullName || ownerName || '';
+        applicationData.timestamp_str_1 = fullTimestamp;
+        applicationData.ip_str_1 = clientIp;
+
+        // Owner 2 Signature Data (if exists)
+        const owner2FullName = `${applicationData.owner2FirstName || ''} ${applicationData.owner2LastName || ''}`.trim();
+        applicationData.signature_name_2 = owner2FullName || '';
+        applicationData.timestamp_str_2 = owner2FullName ? fullTimestamp : '';
+        applicationData.ip_str_2 = owner2FullName ? clientIp : '';
 
         // Point this to where your app5.html lives on the server
         // Assuming it's in a 'templates' folder next to 'routes', or root 'templates'
@@ -1394,44 +1402,57 @@ router.post('/:id/generate-html-template', async (req, res) => {
             html = html.replace(regex, value || '');
         };
 
-        // Map Frontend Data -> HTML Placeholders
-        // Business
-        replaceTag('business_name', applicationData.legalName);
-        replaceTag('dba_name', applicationData.dba);
+        // Map data to template (using camelCase field names)
+        // Business Information
+        replaceTag('legalName', applicationData.legalName);
+        replaceTag('dba', applicationData.dba);
         replaceTag('address', applicationData.address);
         replaceTag('city', applicationData.city);
         replaceTag('state', applicationData.state);
         replaceTag('zip', applicationData.zip);
-        replaceTag('phone', applicationData.telephone);
-        replaceTag('email', applicationData.businessEmail);
-        replaceTag('tax_id', applicationData.federalTaxId);
-        replaceTag('business_start_date', applicationData.dateBusinessStarted);
-        replaceTag('entity_type', applicationData.entityType);
-        replaceTag('industry', applicationData.typeOfBusiness);
+        replaceTag('telephone', applicationData.telephone);
+        replaceTag('businessEmail', applicationData.businessEmail);
+        replaceTag('federalTaxId', applicationData.federalTaxId);
+        replaceTag('dateBusinessStarted', applicationData.dateBusinessStarted);
+        replaceTag('entityType', applicationData.entityType);
+        replaceTag('typeOfBusiness', applicationData.typeOfBusiness);
+        replaceTag('useOfFunds', applicationData.useOfFunds);
 
-        // Financials
-        replaceTag('revenue', applicationData.annualRevenue);
-        replaceTag('requested_amount', applicationData.requestedAmount);
-        replaceTag('use_of_proceeds', applicationData.useOfFunds);
+        // Financial Information
+        replaceTag('annualRevenue', applicationData.annualRevenue);
+        replaceTag('requestedAmount', applicationData.requestedAmount);
 
-        // Owner
-        replaceTag('owner_name', ownerName);
-        replaceTag('owner_first_name', applicationData.ownerFirstName);
-        replaceTag('owner_last_name', applicationData.ownerLastName);
-        replaceTag('owner_address', applicationData.ownerAddress);
-        replaceTag('owner_city', applicationData.ownerCity);
-        replaceTag('owner_state', applicationData.ownerState);
-        replaceTag('owner_zip', applicationData.ownerZip);
-        replaceTag('owner_email', applicationData.ownerEmail);
-        replaceTag('ssn', applicationData.ownerSSN);
-        replaceTag('dob', applicationData.ownerDOB);
-        replaceTag('ownership_percent', applicationData.ownershipPercentage);
+        // Owner 1 Information
+        replaceTag('ownerFirstName', applicationData.ownerFirstName);
+        replaceTag('ownerLastName', applicationData.ownerLastName);
+        replaceTag('ownerTitle', applicationData.ownerTitle);
+        replaceTag('ownerAddress', applicationData.ownerAddress);
+        replaceTag('ownerCity', applicationData.ownerCity);
+        replaceTag('ownerState', applicationData.ownerState);
+        replaceTag('ownerZip', applicationData.ownerZip);
+        replaceTag('ownerEmail', applicationData.ownerEmail);
+        replaceTag('ownerSSN', applicationData.ownerSSN);
+        replaceTag('ownerDOB', applicationData.ownerDOB);
+        replaceTag('ownershipPercentage', applicationData.ownershipPercentage);
+        replaceTag('creditScore', applicationData.creditScore);
 
-        // Signature
+        // Owner 2 Information
+        replaceTag('owner2FirstName', applicationData.owner2FirstName);
+        replaceTag('owner2LastName', applicationData.owner2LastName);
+        replaceTag('owner2Address', applicationData.owner2Address);
+        replaceTag('owner2Email', applicationData.owner2Email);
+        replaceTag('owner2SSN', applicationData.owner2SSN);
+        replaceTag('owner2DOB', applicationData.owner2DOB);
+        replaceTag('owner2Percentage', applicationData.owner2Percentage);
+
+        // Signature Data
         replaceTag('signature_date', applicationData.signatureDate);
-        replaceTag('signature_name', applicationData.signature_name);
-        replaceTag('timestamp_str', applicationData.timestamp_str);
-        replaceTag('ip_str', applicationData.ip_str);
+        replaceTag('signature_name_1', applicationData.signature_name_1);
+        replaceTag('timestamp_str_1', applicationData.timestamp_str_1);
+        replaceTag('ip_str_1', applicationData.ip_str_1);
+        replaceTag('signature_name_2', applicationData.signature_name_2);
+        replaceTag('timestamp_str_2', applicationData.timestamp_str_2);
+        replaceTag('ip_str_2', applicationData.ip_str_2);
 
         res.send(html);
 
@@ -1495,7 +1516,7 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
 
         console.log('🚀 Starting Puppeteer PDF generation...');
 
-        // 1. GENERATE DIGITAL SIGNATURE DATA
+        // 1. GENERATE DIGITAL SIGNATURE DATA FOR BOTH OWNERS
         // Get Client IP (works with 'trust proxy' enabled)
         const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || '127.0.0.1';
 
@@ -1519,13 +1540,21 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
 
         const fullTimestamp = `${datePart} ${timePart}`;
 
-        // Inject data into application object as separate fields
-        applicationData.signature_name = ownerName;
-        applicationData.timestamp_str = fullTimestamp;
-        applicationData.ip_str = clientIp;
+        // Owner 1 Signature Data
+        const owner1FullName = `${applicationData.ownerFirstName || ''} ${applicationData.ownerLastName || ''}`.trim();
+        applicationData.signature_name_1 = owner1FullName || ownerName || '';
+        applicationData.timestamp_str_1 = fullTimestamp;
+        applicationData.ip_str_1 = clientIp;
+
+        // Owner 2 Signature Data (if exists)
+        const owner2FullName = `${applicationData.owner2FirstName || ''} ${applicationData.owner2LastName || ''}`.trim();
+        applicationData.signature_name_2 = owner2FullName || '';
+        applicationData.timestamp_str_2 = owner2FullName ? fullTimestamp : '';
+        applicationData.ip_str_2 = owner2FullName ? clientIp : '';
 
         console.log('🔏 Digital signature data generated:', {
-            name: ownerName,
+            owner1: owner1FullName,
+            owner2: owner2FullName,
             timestamp: fullTimestamp,
             ip: clientIp
         });
@@ -1544,37 +1573,57 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
             htmlContent = htmlContent.replace(regex, value || '');
         };
 
-        // Map data to template
-        replaceTag('business_name', applicationData.legalName);
-        replaceTag('dba_name', applicationData.dba);
+        // Map data to template (using camelCase field names)
+        // Business Information
+        replaceTag('legalName', applicationData.legalName);
+        replaceTag('dba', applicationData.dba);
         replaceTag('address', applicationData.address);
         replaceTag('city', applicationData.city);
         replaceTag('state', applicationData.state);
         replaceTag('zip', applicationData.zip);
-        replaceTag('phone', applicationData.telephone);
-        replaceTag('email', applicationData.businessEmail);
-        replaceTag('tax_id', applicationData.federalTaxId);
-        replaceTag('business_start_date', applicationData.dateBusinessStarted);
-        replaceTag('entity_type', applicationData.entityType);
-        replaceTag('industry', applicationData.typeOfBusiness);
-        replaceTag('revenue', applicationData.annualRevenue);
-        replaceTag('requested_amount', applicationData.requestedAmount);
-        replaceTag('use_of_proceeds', applicationData.useOfFunds);
-        replaceTag('owner_name', ownerName);
-        replaceTag('owner_first_name', applicationData.ownerFirstName);
-        replaceTag('owner_last_name', applicationData.ownerLastName);
-        replaceTag('owner_address', applicationData.ownerAddress);
-        replaceTag('owner_city', applicationData.ownerCity);
-        replaceTag('owner_state', applicationData.ownerState);
-        replaceTag('owner_zip', applicationData.ownerZip);
-        replaceTag('owner_email', applicationData.ownerEmail);
-        replaceTag('ssn', applicationData.ownerSSN);
-        replaceTag('dob', applicationData.ownerDOB);
-        replaceTag('ownership_percent', applicationData.ownershipPercentage);
+        replaceTag('telephone', applicationData.telephone);
+        replaceTag('businessEmail', applicationData.businessEmail);
+        replaceTag('federalTaxId', applicationData.federalTaxId);
+        replaceTag('dateBusinessStarted', applicationData.dateBusinessStarted);
+        replaceTag('entityType', applicationData.entityType);
+        replaceTag('typeOfBusiness', applicationData.typeOfBusiness);
+        replaceTag('useOfFunds', applicationData.useOfFunds);
+
+        // Financial Information
+        replaceTag('annualRevenue', applicationData.annualRevenue);
+        replaceTag('requestedAmount', applicationData.requestedAmount);
+
+        // Owner 1 Information
+        replaceTag('ownerFirstName', applicationData.ownerFirstName);
+        replaceTag('ownerLastName', applicationData.ownerLastName);
+        replaceTag('ownerTitle', applicationData.ownerTitle);
+        replaceTag('ownerAddress', applicationData.ownerAddress);
+        replaceTag('ownerCity', applicationData.ownerCity);
+        replaceTag('ownerState', applicationData.ownerState);
+        replaceTag('ownerZip', applicationData.ownerZip);
+        replaceTag('ownerEmail', applicationData.ownerEmail);
+        replaceTag('ownerSSN', applicationData.ownerSSN);
+        replaceTag('ownerDOB', applicationData.ownerDOB);
+        replaceTag('ownershipPercentage', applicationData.ownershipPercentage);
+        replaceTag('creditScore', applicationData.creditScore);
+
+        // Owner 2 Information
+        replaceTag('owner2FirstName', applicationData.owner2FirstName);
+        replaceTag('owner2LastName', applicationData.owner2LastName);
+        replaceTag('owner2Address', applicationData.owner2Address);
+        replaceTag('owner2Email', applicationData.owner2Email);
+        replaceTag('owner2SSN', applicationData.owner2SSN);
+        replaceTag('owner2DOB', applicationData.owner2DOB);
+        replaceTag('owner2Percentage', applicationData.owner2Percentage);
+
+        // Signature Data
         replaceTag('signature_date', applicationData.signatureDate);
-        replaceTag('signature_name', applicationData.signature_name);
-        replaceTag('timestamp_str', applicationData.timestamp_str);
-        replaceTag('ip_str', applicationData.ip_str);
+        replaceTag('signature_name_1', applicationData.signature_name_1);
+        replaceTag('timestamp_str_1', applicationData.timestamp_str_1);
+        replaceTag('ip_str_1', applicationData.ip_str_1);
+        replaceTag('signature_name_2', applicationData.signature_name_2);
+        replaceTag('timestamp_str_2', applicationData.timestamp_str_2);
+        replaceTag('ip_str_2', applicationData.ip_str_2);
 
         console.log('📝 HTML template populated');
 

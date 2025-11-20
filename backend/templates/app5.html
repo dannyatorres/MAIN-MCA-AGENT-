@@ -4,67 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Merchant Cash Advance Application</title>
-    <!-- Google Fonts for consistent rendering across all servers -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Herr+Von+Muellerhoff&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
+        /* COMPACT ONE-PAGE STYLING */
+        @page { margin: 0.4in; } /* Reduced margins to fit vertical layout */
+
         body {
-            font-family: 'Open Sans', Arial, sans-serif;
-            max-width: 900px;
+            font-family: Arial, sans-serif;
+            max-width: 100%;
             margin: 0 auto;
-            padding: 40px;
             color: #333;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 10px; /* Compact font */
+            line-height: 1.2;
         }
+
+        /* HEADER */
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             border-bottom: 2px solid #2c3e50;
-            padding-bottom: 20px;
-            page-break-after: avoid; /* Prevent page break after header */
+            padding-bottom: 5px;
         }
-        /* FIXED: Added explicit width to logo to prevent layout shift */
         .logo {
-            max-width: 200px;
+            max-width: 160px;
             height: auto;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
             display: block;
             margin-left: auto;
             margin-right: auto;
         }
         h1 {
             color: #2c3e50;
-            font-size: 24px;
+            font-size: 18px;
             margin: 0;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
+
+        /* SECTIONS */
         .section {
-            margin-bottom: 25px;
+            margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            overflow: hidden; /* Ensures borders contain floats */
-            page-break-inside: avoid; /* Keep sections together on one page */
         }
         .section-header {
             background-color: #2c3e50;
             color: white;
-            padding: 8px 15px;
+            padding: 3px 8px;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 11px;
             text-transform: uppercase;
         }
+
+        /* GRID SYSTEM */
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(12, 1fr); /* 12-column grid for flexibility */
-            gap: 0; /* No gap, borders handled by cells */
-            border-collapse: collapse;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 0;
         }
         .form-group {
-            padding: 8px 10px;
+            padding: 3px 6px;
             border-right: 1px solid #eee;
             border-bottom: 1px solid #eee;
             display: flex;
@@ -75,273 +74,203 @@
         .col-6 { grid-column: span 6; }
         .col-4 { grid-column: span 4; }
         .col-3 { grid-column: span 3; }
-        .col-8 { grid-column: span 8; }
 
+        /* INPUTS */
         label {
-            font-size: 10px;
+            font-size: 8px;
             color: #666;
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
             display: block;
         }
-
-        /* FIXED: Input styling for PDF rendering */
-        input[type="text"],
-        input[type="email"],
-        input[type="tel"],
-        input[type="date"],
-        input[type="number"] {
+        input[type="text"] {
             width: 100%;
             border: none;
             background: transparent;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 600;
             color: #000;
             padding: 0;
             margin: 0;
-            height: auto;
-            line-height: normal;
-        }
-
-        .checkbox-group {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            padding-top: 5px;
-        }
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 11px;
-        }
-        .checkbox-box {
-            width: 12px;
             height: 12px;
-            border: 1px solid #333;
-            display: inline-block;
         }
 
-        .disclaimer {
-            font-size: 9px;
+        /* SIGNATURES - VERTICAL STACK */
+        .signatures-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Space between Owner 1 and Owner 2 */
+            margin-top: 15px;
+            page-break-inside: avoid;
+        }
+
+        /* This row holds the Signature and the Date side-by-side */
+        .sig-row {
+            display: flex;
+            align-items: flex-end; /* CRITICAL: Aligns bottom of text to bottom of line */
+            gap: 20px;
+            width: 100%;
+        }
+
+        .sig-block-left {
+            flex: 1; /* Takes up most space */
+        }
+
+        .sig-block-right {
+            width: 120px; /* Fixed width for Date */
+        }
+
+        .line {
+            border-bottom: 2px solid #333;
+            margin-bottom: 4px; /* Space between line and metadata */
+        }
+
+        /* Fancy Fonts */
+        .cursive-sig {
+            font-family: 'Great Vibes', cursive;
+            font-size: 32px;
+            line-height: 0.7;
+            margin-bottom: 2px;
+            margin-left: 10px;
+            transform: rotate(-2deg);
+            white-space: nowrap;
+            color: #000;
+        }
+        .printed-name {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            font-weight: bold;
+            color: #333;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .digital-stamp {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 7px;
             color: #555;
-            text-align: justify;
-            margin-top: 10px;
-            padding: 10px;
-            line-height: 1.3;
+            line-height: 1.2;
+        }
+        .date-text {
+            font-size: 12px;
+            font-weight: bold;
+            padding-bottom: 5px;
         }
 
-        .signature-section {
-            margin-top: 30px;
-            display: flex;
-            gap: 30px;
-        }
-        .signature-box {
-            flex: 1;
-            border-top: 1px solid #333;
-            padding-top: 5px;
-        }
-        .signature-line {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 25px;
-        }
         .footer {
-            margin-top: 40px;
+            margin-top: 15px;
             text-align: center;
-            font-size: 10px;
+            font-size: 8px;
             color: #999;
             border-top: 1px solid #eee;
-            padding-top: 10px;
+            padding-top: 5px;
         }
+
     </style>
 </head>
 <body>
 
     <div class="header">
-        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-             alt="Logo"
-             class="logo"
-             style="max-width: 200px; height: auto; display: block; margin: 0 auto 15px auto;"
-             crossorigin="anonymous">
         <h1>Merchant Cash Advance Application</h1>
     </div>
 
     <div class="section">
         <div class="section-header">Business Information</div>
         <div class="form-grid">
-            <div class="form-group col-6">
-                <label>Legal/Corporate Name</label>
-                <input type="text" value="{{business_name}}" readonly>
-            </div>
-            <div class="form-group col-6">
-                <label>DBA (Doing Business As)</label>
-                <input type="text" value="{{dba_name}}" readonly>
-            </div>
-
-            <div class="form-group col-12">
-                <label>Physical Address</label>
-                <input type="text" value="{{address}}" readonly>
-            </div>
-
-            <div class="form-group col-4">
-                <label>City</label>
-                <input type="text" value="{{city}}" readonly>
-            </div>
-            <div class="form-group col-4">
-                <label>State</label>
-                <input type="text" value="{{state}}" readonly>
-            </div>
-            <div class="form-group col-4">
-                <label>Zip Code</label>
-                <input type="text" value="{{zip}}" readonly>
-            </div>
-
-            <div class="form-group col-6">
-                <label>Business Phone</label>
-                <input type="text" value="{{phone}}" readonly>
-            </div>
-            <div class="form-group col-6">
-                <label>Business Email</label>
-                <input type="text" value="{{email}}" readonly>
-            </div>
-
-            <div class="form-group col-4">
-                <label>Federal Tax ID (EIN)</label>
-                <input type="text" value="{{tax_id}}" readonly>
-            </div>
-            <div class="form-group col-4">
-                <label>Date Business Started</label>
-                <input type="text" value="{{business_start_date}}" readonly>
-            </div>
-            <div class="form-group col-4">
-                <label>Entity Type</label>
-                <input type="text" value="{{entity_type}}" readonly>
-            </div>
-
-            <div class="form-group col-6">
-                <label>Industry / Type of Business</label>
-                <input type="text" value="{{industry}}" readonly>
-            </div>
-            <div class="form-group col-6">
-                <label>Use of Proceeds</label>
-                <input type="text" value="{{use_of_proceeds}}" readonly>
-            </div>
+            <div class="form-group col-6"><label>Legal/Corporate Name</label><input type="text" value="{{legalName}}"></div>
+            <div class="form-group col-6"><label>DBA</label><input type="text" value="{{dba}}"></div>
+            <div class="form-group col-12"><label>Physical Address</label><input type="text" value="{{address}}"></div>
+            <div class="form-group col-4"><label>City</label><input type="text" value="{{city}}"></div>
+            <div class="form-group col-4"><label>State</label><input type="text" value="{{state}}"></div>
+            <div class="form-group col-4"><label>Zip Code</label><input type="text" value="{{zip}}"></div>
+            <div class="form-group col-6"><label>Business Phone</label><input type="text" value="{{telephone}}"></div>
+            <div class="form-group col-6"><label>Business Email</label><input type="text" value="{{businessEmail}}"></div>
+            <div class="form-group col-4"><label>Federal Tax ID (EIN)</label><input type="text" value="{{federalTaxId}}"></div>
+            <div class="form-group col-4"><label>Date Started</label><input type="text" value="{{dateBusinessStarted}}"></div>
+            <div class="form-group col-4"><label>Entity Type</label><input type="text" value="{{entityType}}"></div>
+            <div class="form-group col-6"><label>Industry</label><input type="text" value="{{typeOfBusiness}}"></div>
+            <div class="form-group col-6"><label>Use of Proceeds</label><input type="text" value="{{useOfFunds}}"></div>
         </div>
     </div>
 
     <div class="section">
         <div class="section-header">Financial Information</div>
         <div class="form-grid">
-            <div class="form-group col-6">
-                <label>Annual Revenue</label>
-                <input type="text" value="${{revenue}}" readonly>
-            </div>
-            <div class="form-group col-6">
-                <label>Requested Amount</label>
-                <input type="text" value="${{requested_amount}}" readonly>
-            </div>
+            <div class="form-group col-6"><label>Annual Revenue</label><input type="text" value="{{annualRevenue}}"></div>
+            <div class="form-group col-6"><label>Requested Amount</label><input type="text" value="{{requestedAmount}}"></div>
         </div>
     </div>
 
     <div class="section">
-        <div class="section-header">Owner / Officer Information</div>
+        <div class="section-header">Owner / Officer 1 Information</div>
         <div class="form-grid">
-            <div class="form-group col-6">
-                <label>Owner First Name</label>
-                <input type="text" value="{{owner_first_name}}" readonly>
-            </div>
-            <div class="form-group col-6">
-                <label>Owner Last Name</label>
-                <input type="text" value="{{owner_last_name}}" readonly>
-            </div>
-
-            <div class="form-group col-12">
-                <label>Home Address</label>
-                <input type="text" value="{{owner_address}}" readonly>
-            </div>
-
-            <div class="form-group col-4">
-                <label>City</label>
-                <input type="text" value="{{owner_city}}" readonly>
-            </div>
-            <div class="form-group col-4">
-                <label>State</label>
-                <input type="text" value="{{owner_state}}" readonly>
-            </div>
-            <div class="form-group col-4">
-                <label>Zip Code</label>
-                <input type="text" value="{{owner_zip}}" readonly>
-            </div>
-
-            <div class="form-group col-6">
-                <label>Email Address</label>
-                <input type="text" value="{{owner_email}}" readonly>
-            </div>
-            <div class="form-group col-6">
-                <label>Phone / Cell</label>
-                <input type="text" value="{{phone}}" readonly>
-            </div>
-
-            <div class="form-group col-4">
-                <label>Social Security Number</label>
-                <input type="text" value="{{ssn}}" readonly>
-            </div>
-            <div class="form-group col-4">
-                <label>Date of Birth</label>
-                <input type="text" value="{{dob}}" readonly>
-            </div>
-            <div class="form-group col-4">
-                <label>Ownership %</label>
-                <input type="text" value="{{ownership_percent}}%" readonly>
-            </div>
+            <div class="form-group col-6"><label>Name</label><input type="text" value="{{ownerFirstName}} {{ownerLastName}}"></div>
+            <div class="form-group col-6"><label>Title</label><input type="text" value="{{ownerTitle}}"></div>
+            <div class="form-group col-12"><label>Home Address</label><input type="text" value="{{ownerAddress}} {{ownerCity}} {{ownerState}} {{ownerZip}}"></div>
+            <div class="form-group col-6"><label>Email</label><input type="text" value="{{ownerEmail}}"></div>
+            <div class="form-group col-6"><label>SSN</label><input type="text" value="{{ownerSSN}}"></div>
+            <div class="form-group col-4"><label>Date of Birth</label><input type="text" value="{{ownerDOB}}"></div>
+            <div class="form-group col-4"><label>Ownership %</label><input type="text" value="{{ownershipPercentage}}%"></div>
+            <div class="form-group col-4"><label>Credit Score</label><input type="text" value="{{creditScore}}"></div>
         </div>
     </div>
 
     <div class="section">
-        <div class="section-header">Authorization</div>
-        <div class="disclaimer">
-            By signing below, the Merchant and Owner/Officer (individually and as a duly authorized representative of the Merchant) certify that all information provided in this application is true and accurate. The Merchant and Owner/Officer authorize Fund My Deal AI and its affiliates, assigns, agents, and partners to investigate their creditworthiness, including obtaining credit reports from consumer reporting agencies, and to share such information with potential lenders or funding partners for the purpose of securing financing. This authorization shall remain in effect during the application process and for any subsequent reviews or renewals. The undersigned acknowledges that this is an application for a business transaction, not a consumer loan.
+        <div class="section-header">Owner / Officer 2 Information</div>
+        <div class="form-grid">
+            <div class="form-group col-6"><label>Name</label><input type="text" value="{{owner2FirstName}} {{owner2LastName}}"></div>
+            <div class="form-group col-6"><label>Title</label><input type="text" value=""></div>
+            <div class="form-group col-12"><label>Home Address</label><input type="text" value="{{owner2Address}}"></div>
+            <div class="form-group col-6"><label>Email</label><input type="text" value="{{owner2Email}}"></div>
+            <div class="form-group col-6"><label>SSN</label><input type="text" value="{{owner2SSN}}"></div>
+            <div class="form-group col-4"><label>Date of Birth</label><input type="text" value="{{owner2DOB}}"></div>
+            <div class="form-group col-4"><label>Ownership %</label><input type="text" value="{{owner2Percentage}}%"></div>
+            <div class="form-group col-4"><label>Credit Score</label><input type="text" value=""></div>
         </div>
     </div>
 
-    <div class="signature-section">
-        <div class="signature-box" style="border: none;">
-            <div class="signature-line" style="display: flex; align-items: flex-end; gap: 20px;">
+    <div class="signatures-container">
 
-                <div style="flex: 1;">
-                    <label style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #666;">Owner Signature</label>
-
-                    <div style="border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 5px;">
-                        <div style="font-family: 'Great Vibes', 'Herr Von Muellerhoff', cursive; font-size: 28px; color: #000; margin-bottom: 4px;">
-                            {{signature_name}}
-                        </div>
-
-                        <div style="font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; color: #333;">
-                            {{signature_name}}
-                        </div>
-                    </div>
-
-                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 9px; color: #444; line-height: 1.4;">
-                        <div>TimeStamp: {{timestamp_str}}</div>
-                        <div>Customer IP: {{ip_str}}</div>
-                    </div>
+        <div class="sig-row">
+            <div class="sig-block-left">
+                <label>Owner 1 Signature</label>
+                <div class="line">
+                    <div class="cursive-sig">{{signature_name_1}}</div>
+                    <div class="printed-name">{{signature_name_1}}</div>
                 </div>
-
-                <div style="width: 120px;">
-                    <label style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #666;">Date</label>
-                    <div style="border-bottom: 1px solid #333; height: 25px; display: flex; align-items: flex-end; font-size: 12px;">
-                        {{signature_date}}
-                    </div>
+                <div class="digital-stamp">
+                    <div>TimeStamp: {{timestamp_str_1}}</div>
+                    <div>Customer IP: {{ip_str_1}}</div>
                 </div>
-
+            </div>
+            <div class="sig-block-right">
+                <label>Date</label>
+                <div class="line date-text">{{signature_date}}</div>
             </div>
         </div>
+
+        <div class="sig-row">
+            <div class="sig-block-left">
+                <label>Owner 2 Signature</label>
+                <div class="line">
+                    <div class="cursive-sig">{{signature_name_2}}</div>
+                    <div class="printed-name">{{signature_name_2}}</div>
+                </div>
+                <div class="digital-stamp">
+                    <div>{{timestamp_str_2}}</div>
+                    <div>{{ip_str_2}}</div>
+                </div>
+            </div>
+            <div class="sig-block-right">
+                <label>Date</label>
+                <div class="line date-text">{{signature_date}}</div>
+            </div>
+        </div>
+
     </div>
 
     <div class="footer">
-        <p class="footer-text">Generated via Fund My Deal AI - {{signature_date}}</p>
+        Generated via MCA Agent - {{signature_date}}
     </div>
 
 </body>
