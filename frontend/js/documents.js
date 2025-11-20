@@ -725,6 +725,8 @@ class DocumentsModule {
     }
 
     async previewDocument(documentId) {
+        console.log('👁️ Preview clicked for:', documentId);
+
         const conversation = this.parent.getSelectedConversation();
         let conversationId = conversation?.id || this.parent.getCurrentConversationId() ||
                           this.getConversationIdFromDocument(documentId);
@@ -735,36 +737,27 @@ class DocumentsModule {
             return;
         }
 
+        // 1. Construct the direct file URL (This is the actual PDF/Image)
+        // We add a timestamp to prevent caching issues
+        const directFileUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/preview?t=${Date.now()}`;
+        console.log('🔗 Target URL:', directFileUrl);
+
         try {
-            // First try to open the direct file URL (for PDF viewing)
-            const directFileUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/file`;
-            console.log('Attempting to open direct file URL:', directFileUrl);
+            this.utils.showNotification('Opening document...', 'info');
 
-            // Check if the file is available by making a HEAD request
-            try {
-                const response = await fetch(directFileUrl, { method: 'HEAD' });
-
-                if (response.ok) {
-                    // File exists, open it directly (PDF will display in browser)
-                    window.open(directFileUrl, '_blank');
-                    this.utils.showNotification('Opening document...', 'success');
-                    return;
-                }
-            } catch (headError) {
-                console.log('Direct file not available, falling back to preview page');
-            }
-
-            // Fall back to HTML preview if direct file isn't available
-            const previewUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/preview`;
-            console.log('Opening preview URL:', previewUrl);
-
-            // Open in new tab without window parameters to avoid popup window
-            const newWindow = window.open(previewUrl, '_blank');
+            // 2. Try to open immediately (Best for Pop-up blockers)
+            // We do this BEFORE any await/fetch to satisfy "User Activation" rules
+            const newWindow = window.open(directFileUrl, '_blank');
 
             if (newWindow) {
-                this.utils.showNotification('Opening document preview in new tab', 'success');
+                // Success! The window opened.
+                newWindow.focus();
+                console.log('✅ Window opened successfully');
             } else {
-                this.utils.showNotification('Please allow popups to preview documents', 'warning');
+                // Failed! Pop-up blocker active.
+                console.warn('⚠️ Pop-up blocked. Falling back to current tab.');
+                this.utils.showNotification('Pop-up blocked. Opening in current tab...', 'warning');
+                window.location.href = directFileUrl;
             }
 
         } catch (error) {
