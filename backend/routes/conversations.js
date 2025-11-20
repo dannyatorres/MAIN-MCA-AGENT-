@@ -243,7 +243,42 @@ router.put('/:id', async (req, res) => {
             ownerHomeCountry: 'owner_home_country',
             owner_home_country: 'owner_home_country',
             ownerEmail: 'owner_email',
-            owner_email: 'owner_email'
+            owner_email: 'owner_email',
+
+            // --- PARTNER / OWNER 2 INFO ---
+            owner2FirstName: 'owner2_first_name',
+            owner2_first_name: 'owner2_first_name',
+            owner2LastName: 'owner2_last_name',
+            owner2_last_name: 'owner2_last_name',
+            owner2Email: 'owner2_email',
+            owner2_email: 'owner2_email',
+            owner2Phone: 'owner2_phone',
+            owner2_phone: 'owner2_phone',
+            owner2OwnershipPercent: 'owner2_ownership_percent',
+            owner2_ownership_percent: 'owner2_ownership_percent',
+            owner2_ownership_percentage: 'owner2_ownership_percent',
+            owner2HomeAddress: 'owner2_address',
+            owner2_home_address: 'owner2_address',
+            owner2_address: 'owner2_address',
+            owner2Address: 'owner2_address',
+            owner2HomeCity: 'owner2_city',
+            owner2_home_city: 'owner2_city',
+            owner2_city: 'owner2_city',
+            owner2City: 'owner2_city',
+            owner2HomeState: 'owner2_state',
+            owner2_home_state: 'owner2_state',
+            owner2_state: 'owner2_state',
+            owner2State: 'owner2_state',
+            owner2HomeZip: 'owner2_zip',
+            owner2_home_zip: 'owner2_zip',
+            owner2_zip: 'owner2_zip',
+            owner2Zip: 'owner2_zip',
+            owner2SSN: 'owner2_ssn',
+            owner2_ssn: 'owner2_ssn',
+            owner2_s_s_n: 'owner2_ssn',
+            owner2DOB: 'owner2_dob',
+            owner2_dob: 'owner2_dob',
+            owner2_d_o_b: 'owner2_dob'
         };
 
         const leadDetailsFields = {
