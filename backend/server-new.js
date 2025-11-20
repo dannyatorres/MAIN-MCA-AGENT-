@@ -145,54 +145,86 @@ const aiRoutes = require('./routes/ai');
 
 console.log('✅ All routes loaded successfully!');
 
-// Authentication setup
-const basicAuth = require('express-basic-auth');
+// --- SESSION-BASED AUTHENTICATION SETUP ---
+const session = require('express-session');
 
-// Authentication middleware
-const authenticate = basicAuth({
-    users: {
-        'admin': process.env.ADMIN_PASSWORD || 'Ronpaul2025!',
-        'agent': process.env.AGENT_PASSWORD || 'Ronpaul2025!'
-    },
-    challenge: true,
-    realm: 'MCA Command Center',
-    unauthorizedResponse: (req) => {
-        return { error: 'Unauthorized - Please login' };
+// 1. Configure Session Middleware
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'mca-secret-key-change-me',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // Set to true if using HTTPS in production
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// 2. Create the Login Route
+app.post('/api/auth/login', (req, res) => {
+    const { username, password } = req.body;
+
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'Ronpaul2025!';
+
+    if (username === adminUser && password === adminPass) {
+        req.session.isAuthenticated = true;
+        req.session.user = username;
+        req.session.save(() => {
+            return res.json({ success: true });
+        });
+    } else {
+        return res.status(401).json({ error: 'Invalid credentials' });
     }
 });
 
-// Apply authentication to ALL /api routes EXCEPT:
-// - /api/health (Railway needs this for monitoring)
-// - /api/messages/webhook/receive (Twilio needs this)
-// - /api/documents/view/* (Document preview)
-// - /api/documents/download/* (Document download)
-// - /api/conversations/*/documents/*/download (Conversation document download)
-app.use('/api', (req, res, next) => {
-    console.log('🔐 Auth check for:', req.method, req.path);
-
-    // Skip auth for health check
-    if (req.path === '/health') {
-        console.log('✅ Skipping auth for health check');
-        return next();
-    }
-
-    // Skip auth for Twilio webhook
-    if (req.path === '/messages/webhook/receive') {
-        console.log('✅ Skipping auth for Twilio webhook');
-        return next();
-    }
-
-    // Skip auth for document viewing/downloading
-    if (req.path.startsWith('/documents/view/') ||
-        req.path.startsWith('/documents/download/') ||
-        req.path.match(/^\/conversations\/[^/]+\/documents\/[^/]+\/download$/)) {
-        console.log('✅ Skipping auth for document route');
-        return next();
-    }
-
-    // Everything else requires auth (including AI routes)
-    return authenticate(req, res, next);
+// 3. Create the Logout Route
+app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
 });
+
+// 4. The Middleware to Protect Routes
+const requireAuth = (req, res, next) => {
+    console.log('🔐 Auth check for:', req.method, req.path, '| Authenticated:', req.session?.isAuthenticated);
+
+    // Allow public endpoints
+    const publicPaths = [
+        '/api/auth/login',
+        '/api/health',
+        '/api/messages/webhook/receive'
+    ];
+
+    if (publicPaths.includes(req.path)) {
+        console.log('✅ Public endpoint, skipping auth');
+        return next();
+    }
+
+    // Allow document viewing/downloading
+    if (req.path.startsWith('/api/documents/view/') ||
+        req.path.startsWith('/api/documents/download/') ||
+        req.path.match(/^\/api\/conversations\/[^/]+\/documents\/[^/]+\/download$/)) {
+        console.log('✅ Document route, skipping auth');
+        return next();
+    }
+
+    // Check if user is authenticated
+    if (req.session.isAuthenticated) {
+        return next();
+    }
+
+    // If accessing API without login -> 401
+    if (req.path.startsWith('/api')) {
+        console.log('❌ Unauthorized API access');
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // If accessing pages without login -> Redirect to login
+    console.log('❌ Unauthorized page access, redirecting to login');
+    return res.redirect('/');
+};
+
+// Apply Auth Middleware globally
+app.use(requireAuth);
 
 // Serve static frontend files
 const path = require('path');
@@ -210,10 +242,20 @@ app.use('/api/lookups', lookupsRoutes);
 app.use('/api/n8n', n8nRoutes);
 app.use('/api/ai', aiRoutes);
 
-// Catch-all route for SPA - serve index.html for any non-API routes
+// Catch-all route for SPA
 app.get('*', (req, res) => {
     if (!req.path.startsWith('/api')) {
-        res.sendFile(path.join(__dirname, '../frontend/command-center.html'));
+        if (req.session && req.session.isAuthenticated) {
+            // If logged in, show the command center
+            if (req.path === '/' || req.path === '/index.html') {
+                res.redirect('/command-center.html');
+            } else {
+                res.sendFile(path.join(__dirname, '../frontend/command-center.html'));
+            }
+        } else {
+            // If NOT logged in, show the login page
+            res.sendFile(path.join(__dirname, '../frontend/index.html'));
+        }
     }
 });
 
