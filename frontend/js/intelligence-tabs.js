@@ -1956,15 +1956,14 @@ class IntelligenceTabs {
             // Wait for render (increased to 1s for safety)
             await new Promise(r => setTimeout(r, 1000));
 
-            // CAPTURE with FIXED options (Removed allowTaint)
+            // CAPTURE with minimal options (No CORS, no external resources)
             const canvas = await html2canvas(iframeDoc.body, {
                 scale: 2,
-                useCORS: true,
-                // allowTaint: true,  <-- REMOVED THIS (Caused the crash)
-                logging: false,
+                logging: true, // Enable to see what's being rendered
                 width: 1000,
                 height: iframeDoc.body.scrollHeight + 50,
-                windowWidth: 1000
+                backgroundColor: '#ffffff',
+                removeContainer: true
             });
 
             document.body.removeChild(iframe);
