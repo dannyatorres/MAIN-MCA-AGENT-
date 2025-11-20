@@ -1960,15 +1960,14 @@ class IntelligenceTabs {
             iframeDoc.head.appendChild(style);
 
             // Wait for render (images/fonts to load)
-            // Increased timeout slightly to ensure DOM is fully painted
             await new Promise(r => setTimeout(r, 1500));
 
             // CAPTURE
             const canvas = await html2canvas(iframeDoc.body, {
                 scale: 2,
                 logging: true,
-                useCORS: true,   // FIX: Re-enable CORS handling
-                allowTaint: true, // FIX: Allow taint to prevent security blocks
+                useCORS: true,     // Keep this: Attempts to load images with CORS headers
+                allowTaint: false, // FIX 2: CRITICAL! Must be false to use .toDataURL()
                 width: 1000,
                 height: iframeDoc.body.scrollHeight + 50,
                 windowWidth: 1000,
@@ -1977,16 +1976,16 @@ class IntelligenceTabs {
 
             document.body.removeChild(iframe);
 
-            // Convert to PDF
             // Verify canvas has content before proceeding
             if (canvas.width === 0 || canvas.height === 0) {
                 throw new Error("Canvas rendering failed: Output is empty");
             }
 
+            // Convert to PDF
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
 
-            // FIX: Explicitly specify format to ensure pattern matching works
+            // This line previously crashed because the canvas was tainted
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
             const imgWidth = 210; // A4 width in mm
