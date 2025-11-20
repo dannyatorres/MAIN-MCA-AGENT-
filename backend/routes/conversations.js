@@ -1351,15 +1351,30 @@ router.post('/:id/generate-html-template', async (req, res) => {
     try {
         const { applicationData, ownerName } = req.body;
 
-        // Generate digital signature
-        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
-        const timestamp = new Date().toLocaleString('en-US', {
-            timeZone: 'America/New_York',
-            dateStyle: 'short',
-            timeStyle: 'short'
+        // Generate digital signature data
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || '127.0.0.1';
+
+        // Format date exactly like PDF (Nov-19-2025 01:26:22 PM)
+        const now = new Date();
+
+        const datePart = now.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric'
+        }).replace(/ /g, '-').replace(',', '');
+
+        const timePart = now.toLocaleTimeString('en-US', {
+            hour12: true,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
         });
-        const signatureString = `/s/ ${ownerName} (IP: ${clientIp} | ${timestamp})`;
-        applicationData.digital_signature = signatureString;
+
+        const fullTimestamp = `${datePart} ${timePart}`;
+
+        applicationData.signature_name = ownerName;
+        applicationData.timestamp_str = fullTimestamp;
+        applicationData.ip_str = clientIp;
 
         // Point this to where your app5.html lives on the server
         // Assuming it's in a 'templates' folder next to 'routes', or root 'templates'
@@ -1414,7 +1429,9 @@ router.post('/:id/generate-html-template', async (req, res) => {
 
         // Signature
         replaceTag('signature_date', applicationData.signatureDate);
-        replaceTag('digital_signature', applicationData.digital_signature);
+        replaceTag('signature_name', applicationData.signature_name);
+        replaceTag('timestamp_str', applicationData.timestamp_str);
+        replaceTag('ip_str', applicationData.ip_str);
 
         res.send(html);
 
@@ -1478,23 +1495,40 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
 
         console.log('🚀 Starting Puppeteer PDF generation...');
 
-        // 1. GENERATE DIGITAL SIGNATURE
+        // 1. GENERATE DIGITAL SIGNATURE DATA
         // Get Client IP (works with 'trust proxy' enabled)
-        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || '127.0.0.1';
 
-        // Create Timestamp (e.g., 11/20/2025, 2:30:00 PM)
-        const timestamp = new Date().toLocaleString('en-US', {
-            timeZone: 'America/New_York', // Set your preferred timezone
-            dateStyle: 'short',
-            timeStyle: 'short'
+        // Format date exactly like PDF (Nov-19-2025 01:26:22 PM)
+        const now = new Date();
+
+        // Get Month-Day-Year (Nov-19-2025)
+        const datePart = now.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric'
+        }).replace(/ /g, '-').replace(',', ''); // Removes comma, replaces space with dash
+
+        // Get Time (01:26:22 PM)
+        const timePart = now.toLocaleTimeString('en-US', {
+            hour12: true,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
         });
 
-        // Format the signature string
-        const signatureString = `/s/ ${ownerName} (IP: ${clientIp} | ${timestamp})`;
-        console.log('🔏 Digital signature generated:', signatureString);
+        const fullTimestamp = `${datePart} ${timePart}`;
 
-        // Add it to the data object so it replaces {{digital_signature}}
-        applicationData.digital_signature = signatureString;
+        // Inject data into application object as separate fields
+        applicationData.signature_name = ownerName;
+        applicationData.timestamp_str = fullTimestamp;
+        applicationData.ip_str = clientIp;
+
+        console.log('🔏 Digital signature data generated:', {
+            name: ownerName,
+            timestamp: fullTimestamp,
+            ip: clientIp
+        });
 
         // 2. Read and populate HTML template
         const templatePath = path.join(__dirname, '../templates/app5.html');
@@ -1538,7 +1572,9 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
         replaceTag('dob', applicationData.ownerDOB);
         replaceTag('ownership_percent', applicationData.ownershipPercentage);
         replaceTag('signature_date', applicationData.signatureDate);
-        replaceTag('digital_signature', applicationData.digital_signature);
+        replaceTag('signature_name', applicationData.signature_name);
+        replaceTag('timestamp_str', applicationData.timestamp_str);
+        replaceTag('ip_str', applicationData.ip_str);
 
         console.log('📝 HTML template populated');
 
