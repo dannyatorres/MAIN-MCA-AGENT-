@@ -1857,7 +1857,8 @@ class IntelligenceTabs {
     }
 
     async proceedWithPDFGeneration(conv) {
-        console.log('Proceeding with PDF generation...');
+        console.log('Proceeding with Server-Side PDF generation...');
+        this.utils.showNotification('Generating PDF on server...', 'info');
 
         try {
             // Date Helper
@@ -1870,7 +1871,7 @@ class IntelligenceTabs {
                 } catch (e) { return ''; }
             };
 
-            // 1. Prepare application data
+            // Prepare application data
             const rawSSN = conv.ssn || conv.owner_ssn || conv.ssn_encrypted || '';
             const rawTaxId = conv.tax_id || conv.federal_tax_id || conv.tax_id_encrypted || '';
             const rawPhone = conv.lead_phone || conv.phone || '';
@@ -1882,7 +1883,7 @@ class IntelligenceTabs {
                 city: conv.business_city || conv.city || '',
                 state: conv.business_state || conv.us_state || '',
                 zip: conv.business_zip || conv.zip || '',
-                telephone: rawPhone, // HTML template handles formatting usually, or format here
+                telephone: rawPhone,
                 fax: conv.fax_phone || '',
 
                 // Financials
@@ -1916,10 +1917,11 @@ class IntelligenceTabs {
 
             const ownerName = `${applicationData.ownerFirstName} ${applicationData.ownerLastName}`.trim() || 'Authorized Signatory';
 
-            console.log('Generating PDF with data:', applicationData);
+            console.log('📤 Sending data to Puppeteer endpoint:', applicationData);
 
-            // 2. Get HTML template from backend
-            const htmlContent = await this.parent.apiCall(`/api/conversations/${conv.id}/generate-html-template`, {
+            // Call the NEW Backend Endpoint (Puppeteer)
+            // Note: We send the DATA, not the HTML. The backend builds the PDF.
+            const result = await this.parent.apiCall(`/api/conversations/${conv.id}/generate-pdf-document`, {
                 method: 'POST',
                 body: JSON.stringify({
                     applicationData: applicationData,
@@ -1927,115 +1929,22 @@ class IntelligenceTabs {
                 })
             });
 
-            // 3. RENDER & SNAPSHOT
-            // Create invisible iframe
-            const iframe = document.createElement('iframe');
-            // FIX: Do NOT use visibility:hidden. Use z-index and off-screen positioning.
-            iframe.style.cssText = 'position:fixed; left:-10000px; top:0; width:1000px; height:1400px; border:none; z-index:-9999; background:white;';
-            document.body.appendChild(iframe);
-
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(htmlContent);
-            iframeDoc.close();
-
-            // Inject CSS fixes for input fields and printing
-            const style = iframeDoc.createElement('style');
-            style.textContent = `
-                input {
-                    line-height: normal !important;
-                    padding: 4px !important;
-                    height: auto !important;
-                    background: transparent !important;
-                    border: none !important;
-                }
-                .form-field { overflow: visible !important; }
-                body {
-                    -webkit-print-color-adjust: exact;
-                    background-color: white;
-                    margin: 0;
-                    padding: 40px;
-                }
-            `;
-            iframeDoc.head.appendChild(style);
-
-            // Wait for render (images/fonts to load)
-            await new Promise(r => setTimeout(r, 1500));
-
-            // CAPTURE
-            const canvas = await html2canvas(iframeDoc.body, {
-                scale: 2,
-                logging: true,
-                useCORS: true,     // Keep this: Attempts to load images with CORS headers
-                allowTaint: false, // FIX 2: CRITICAL! Must be false to use .toDataURL()
-                width: 1000,
-                height: iframeDoc.body.scrollHeight + 50,
-                windowWidth: 1000,
-                backgroundColor: '#ffffff'
-            });
-
-            document.body.removeChild(iframe);
-
-            // Verify canvas has content before proceeding
-            if (canvas.width === 0 || canvas.height === 0) {
-                throw new Error("Canvas rendering failed: Output is empty");
-            }
-
-            // Convert to PDF
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-
-            // This line previously crashed because the canvas was tainted
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-            const imgWidth = 210; // A4 width in mm
-            const pageHeight = 297; // A4 height in mm
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-
-            // Handle multi-page
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-            }
-
-            const filename = `WCA_${conv.business_name || 'Application'}.pdf`;
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
-
-            // Upload
-            this.utils.showNotification('Uploading PDF...', 'info');
-            const saveResult = await this.parent.apiCall(`/api/conversations/${conv.id}/save-generated-pdf`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    conversationId: conv.id,
-                    pdfBase64: pdfBase64,
-                    filename: filename,
-                    documentId: crypto.randomUUID()
-                })
-            });
-
-            if (saveResult.success) {
+            if (result.success) {
                 this.utils.showNotification('PDF Generated & Saved!', 'success');
+
+                // Refresh documents tab
                 if (this.parent.documents) {
                     await this.parent.documents.loadDocuments();
-                    // Switch to documents tab
                     const docTab = document.querySelector('[data-tab="documents"]');
                     if (docTab) docTab.click();
                 }
             } else {
-                throw new Error(saveResult.error);
+                throw new Error(result.error || 'Unknown server error');
             }
 
         } catch (error) {
             console.error('Error generating PDF:', error);
-            this.utils.showNotification('Failed to generate PDF. Check console for details.', 'error');
+            this.utils.showNotification('Failed to generate PDF: ' + error.message, 'error');
         }
     }
 

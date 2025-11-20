@@ -44,7 +44,7 @@
     "pdf-to-png-converter": "^3.7.1",
     "pdf2pic": "^3.2.0",
     "pg": "^8.16.3",
-    "puppeteer": "^24.22.2",
+    "puppeteer": "^24.30.0",
     "sharp": "^0.34.3",
     "socket.io": "^4.7.5",
     "twilio": "^4.20.0",
