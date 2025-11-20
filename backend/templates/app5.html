@@ -6,9 +6,9 @@
     <title>Merchant Cash Advance Application</title>
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
-        /* BALANCED ONE-PAGE STYLING */
+        /* PAGE SETUP */
         @page {
-            margin: 0.5in; /* Standard professional margins */
+            margin: 0.5in;
         }
 
         body {
@@ -16,47 +16,47 @@
             max-width: 100%;
             margin: 0 auto;
             color: #222;
-            font-size: 11px;
-            line-height: 1.3;
+            font-size: 10px;
+            line-height: 1.2;
         }
 
-        /* HEADER */
+        /* HEADER - Compacted */
         .header {
             text-align: center;
-            margin-bottom: 25px; /* Breathing room */
+            margin-bottom: 15px;
             border-bottom: 2px solid #2c3e50;
-            padding-bottom: 15px;
+            padding-bottom: 10px;
         }
         .logo {
-            max-width: 180px;
+            max-width: 160px;
             height: auto;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             display: block;
             margin-left: auto;
             margin-right: auto;
         }
         h1 {
             color: #2c3e50;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
             margin: 0;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        /* SECTIONS */
+        /* SECTIONS - Tighter Vertical Gaps */
         .section {
-            margin-bottom: 20px; /* Clear separation between sections */
+            margin-bottom: 12px;
             border: 1px solid #ccc;
-            border-radius: 4px;
+            border-radius: 3px;
             background-color: #fff;
         }
         .section-header {
             background-color: #2c3e50;
             color: white;
-            padding: 6px 12px;
+            padding: 4px 10px;
             font-weight: 700;
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -68,13 +68,13 @@
             gap: 0;
         }
         .form-group {
-            padding: 6px 10px; /* Comfortable padding */
+            padding: 4px 8px;
             border-right: 1px solid #eee;
             border-bottom: 1px solid #eee;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            min-height: 35px;
+            min-height: 28px;
         }
         .col-12 { grid-column: span 12; }
         .col-6 { grid-column: span 6; }
@@ -83,29 +83,29 @@
 
         /* INPUTS */
         label {
-            font-size: 9px;
+            font-size: 8px;
             color: #666;
             font-weight: 700;
             text-transform: uppercase;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
         input[type="text"] {
             width: 100%;
             border: none;
             background: transparent;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: #000;
             padding: 0;
             margin: 0;
         }
 
-        /* SIGNATURES - VERTICAL & FLOATING */
+        /* SIGNATURES - FIXED */
         .signatures-container {
-            margin-top: 30px;
+            margin-top: 20px;
             display: flex;
             flex-direction: column;
-            gap: 30px; /* Nice vertical gap between owners */
+            gap: 25px; /* Slightly increased for better separation */
             page-break-inside: avoid;
         }
 
@@ -118,87 +118,90 @@
 
         .sig-block-left {
             flex: 1;
-            position: relative; /* Crucial anchor for floating signature */
+            position: relative;
+            min-height: 70px; /* Added fixed height for consistent positioning */
         }
 
         .sig-block-right {
-            width: 140px;
+            width: 130px;
             position: relative;
+            min-height: 70px; /* Added fixed height for consistency */
         }
 
         .sig-label {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
             color: #666;
             text-transform: uppercase;
-            margin-bottom: 30px; /* Clear space above line for the signature */
+            margin-bottom: 3px; /* Reduced - signature will sit above line */
+            display: block;
         }
 
         .sig-line {
             border-bottom: 1px solid #000;
-            margin-bottom: 6px;
+            margin-bottom: 8px; /* Increased for metadata spacing */
+            position: relative;
+            height: 35px; /* Added height to contain signature */
         }
 
-        /* THE GHOST SIGNATURE (Fixed Size & Position) */
+        /* GHOST SIGNATURE - FIXED POSITIONING */
         .cursive-sig {
             font-family: 'Great Vibes', cursive;
-
-            /* 22px = Safe, professional size. Not huge. */
-            font-size: 22px;
-
+            font-size: 24px; /* Slightly larger */
             color: #000;
-
-            /* ABSOLUTE POSITIONING: Floats ON TOP of the line */
             position: absolute;
-            bottom: 18px; /* Sits perfectly on the line */
+            bottom: 0px; /* Sits just above the line */
             left: 5px;
-
             transform: rotate(-2deg);
             white-space: nowrap;
             z-index: 10;
-            text-shadow: 0 0 1px rgba(0,0,0,0.1); /* Smooths edges */
+            text-shadow: 0 0 1px rgba(0,0,0,0.1);
+            line-height: 1;
         }
 
-        /* Metadata Container */
+        /* Metadata */
         .meta-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            gap: 10px;
         }
 
         .printed-name {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
             color: #000;
             text-transform: uppercase;
+            flex-shrink: 0;
         }
 
         .digital-stamp {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 8px;
+            font-size: 7px;
             color: #555;
             text-align: right;
             line-height: 1.3;
+            flex-shrink: 0;
         }
 
         .date-val {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             position: absolute;
-            bottom: 8px;
+            bottom: 0px; /* Aligned to sit just above line */
             left: 5px;
+            line-height: 1;
         }
 
         .footer {
-            margin-top: 40px;
+            margin-top: 20px;
             text-align: center;
-            font-size: 9px;
+            font-size: 8px;
             color: #aaa;
             border-top: 1px solid #eee;
-            padding-top: 10px;
+            padding-top: 5px;
         }
-
     </style>
 </head>
 <body>
@@ -267,11 +270,10 @@
 
         <div class="sig-row">
             <div class="sig-block-left">
-                <div class="cursive-sig">{{signature_name_1}}</div>
-
-                <div class="sig-label">Owner 1 Signature</div>
-                <div class="sig-line"></div>
-
+                <label class="sig-label">Owner 1 Signature</label>
+                <div class="sig-line">
+                    <div class="cursive-sig">{{signature_name_1}}</div>
+                </div>
                 <div class="meta-row">
                     <div class="printed-name">{{signature_name_1}}</div>
                     <div class="digital-stamp">
@@ -282,32 +284,33 @@
             </div>
 
             <div class="sig-block-right">
-                <div class="sig-label">Date</div>
-                <div class="sig-line"></div>
-                <div class="date-val">{{signature_date}}</div>
+                <label class="sig-label">Date</label>
+                <div class="sig-line">
+                    <div class="date-val">{{signature_date}}</div>
+                </div>
             </div>
         </div>
 
         <div class="sig-row">
             <div class="sig-block-left">
-                <div class="cursive-sig">{{signature_name_2}}</div>
-
-                <div class="sig-label">Owner 2 Signature</div>
-                <div class="sig-line"></div>
-
+                <label class="sig-label">Owner 2 Signature</label>
+                <div class="sig-line">
+                    <div class="cursive-sig">{{signature_name_2}}</div>
+                </div>
                 <div class="meta-row">
                     <div class="printed-name">{{signature_name_2}}</div>
                     <div class="digital-stamp">
-                        <div>{{timestamp_str_2}}</div>
-                        <div>{{ip_str_2}}</div>
+                        <div>TimeStamp: {{timestamp_str_2}}</div>
+                        <div>Customer IP: {{ip_str_2}}</div>
                     </div>
                 </div>
             </div>
 
             <div class="sig-block-right">
-                <div class="sig-label">Date</div>
-                <div class="sig-line"></div>
-                <div class="date-val">{{signature_date}}</div>
+                <label class="sig-label">Date</label>
+                <div class="sig-line">
+                    <div class="date-val">{{signature_date}}</div>
+                </div>
             </div>
         </div>
 
