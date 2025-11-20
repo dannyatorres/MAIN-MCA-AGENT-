@@ -1319,4 +1319,117 @@ router.get('/:id/fcs', async (req, res) => {
     }
 });
 
+// ============================================================================
+// PDF GENERATION ENDPOINTS (The Missing Piece)
+// ============================================================================
+
+// 1. Generate HTML Template (Reads app5.html and fills it with data)
+router.post('/:id/generate-html-template', async (req, res) => {
+    try {
+        const { applicationData, ownerName } = req.body;
+
+        // Point this to where your app5.html lives on the server
+        // Assuming it's in a 'templates' folder next to 'routes', or root 'templates'
+        // Adjust '../templates/app5.html' if your path is different
+        const templatePath = path.join(__dirname, '../templates/app5.html');
+
+        if (!fs.existsSync(templatePath)) {
+            console.error('❌ Template not found:', templatePath);
+            return res.status(404).json({ error: 'HTML template not found on server' });
+        }
+
+        let html = fs.readFileSync(templatePath, 'utf8');
+
+        // Helper to replace {{key}} with value
+        const replaceTag = (tag, value) => {
+            const regex = new RegExp(`{{${tag}}}`, 'g');
+            html = html.replace(regex, value || '');
+        };
+
+        // Map Frontend Data -> HTML Placeholders
+        // Business
+        replaceTag('business_name', applicationData.legalName);
+        replaceTag('dba_name', applicationData.dba);
+        replaceTag('address', applicationData.address);
+        replaceTag('city', applicationData.city);
+        replaceTag('state', applicationData.state);
+        replaceTag('zip', applicationData.zip);
+        replaceTag('phone', applicationData.telephone);
+        replaceTag('email', applicationData.businessEmail);
+        replaceTag('tax_id', applicationData.federalTaxId);
+        replaceTag('business_start_date', applicationData.dateBusinessStarted);
+        replaceTag('entity_type', applicationData.entityType);
+        replaceTag('industry', applicationData.typeOfBusiness);
+
+        // Financials
+        replaceTag('revenue', applicationData.annualRevenue);
+        replaceTag('requested_amount', applicationData.requestedAmount);
+        replaceTag('use_of_proceeds', applicationData.useOfFunds);
+
+        // Owner
+        replaceTag('owner_name', ownerName);
+        replaceTag('owner_first_name', applicationData.ownerFirstName);
+        replaceTag('owner_last_name', applicationData.ownerLastName);
+        replaceTag('owner_address', applicationData.ownerAddress);
+        replaceTag('owner_city', applicationData.ownerCity);
+        replaceTag('owner_state', applicationData.ownerState);
+        replaceTag('owner_zip', applicationData.ownerZip);
+        replaceTag('owner_email', applicationData.ownerEmail);
+        replaceTag('ssn', applicationData.ownerSSN);
+        replaceTag('dob', applicationData.ownerDOB);
+        replaceTag('ownership_percent', applicationData.ownershipPercentage);
+
+        // Signature
+        replaceTag('signature_date', applicationData.signatureDate);
+
+        res.send(html);
+
+    } catch (error) {
+        console.error('❌ Error generating template:', error);
+        res.status(500).json({ error: 'Failed to generate HTML template' });
+    }
+});
+
+// 2. Save Generated PDF to S3 and Database
+router.post('/:id/save-generated-pdf', async (req, res) => {
+    try {
+        const { conversationId, pdfBase64, filename, documentId } = req.body;
+        const db = getDatabase();
+
+        const buffer = Buffer.from(pdfBase64, 'base64');
+        const s3Key = `generated/${conversationId}/${Date.now()}_${filename}`;
+
+        // Upload to S3
+        await s3.putObject({
+            Bucket: process.env.S3_DOCUMENTS_BUCKET,
+            Key: s3Key,
+            Body: buffer,
+            ContentType: 'application/pdf'
+        }).promise();
+
+        // Save to Database
+        const docId = documentId || uuidv4();
+        await db.query(`
+            INSERT INTO documents (
+                id, conversation_id, s3_key, original_filename,
+                mime_type, file_size, created_at
+            )
+            VALUES ($1, $2, $3, $4, 'application/pdf', $5, NOW())
+        `, [
+            docId,
+            conversationId,
+            s3Key,
+            filename,
+            buffer.length
+        ]);
+
+        console.log(`✅ PDF Saved: ${filename}`);
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error('❌ Error saving PDF:', error);
+        res.status(500).json({ error: 'Failed to save PDF to S3/DB' });
+    }
+});
+
 module.exports = router;
