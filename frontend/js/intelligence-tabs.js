@@ -1660,66 +1660,71 @@ class IntelligenceTabs {
     createPartnerSection(conv, leadDetails) {
         const usStates = this.utils.getUSStates();
 
+        // Helper to get value from root conv OR lead_details
+        const getVal = (key) => conv[key] || leadDetails[key] || '';
+
+        // Note: CamelCase names here will be converted to snake_case by handleEditFormSubmit
+        // e.g. name="owner2FirstName" -> saves as "owner2_first_name"
+
         return `
             <div class="form-section">
-                <h4>Partner / Owner 2 Information</h4>
+                <div class="section-header" style="background: #525252;">
+                    <h4>Owner / Officer 2 Information (Optional)</h4>
+                </div>
                 <div class="form-row-six">
                     <div class="form-group">
                         <label>First Name</label>
-                        <input type="text" name="owner2FirstName" value="${conv.owner2_first_name || ''}" class="form-input">
+                        <input type="text" name="owner2FirstName" value="${getVal('owner2_first_name')}" class="form-input">
                     </div>
                     <div class="form-group">
                         <label>Last Name</label>
-                        <input type="text" name="owner2LastName" value="${conv.owner2_last_name || ''}" class="form-input">
+                        <input type="text" name="owner2LastName" value="${getVal('owner2_last_name')}" class="form-input">
                     </div>
                     <div class="form-group">
-                        <label>Partner Email</label>
-                        <input type="email" name="owner2Email" value="${conv.owner2_email || ''}" class="form-input">
+                        <label>Email</label>
+                        <input type="email" name="owner2Email" value="${getVal('owner2_email')}" class="form-input">
                     </div>
                     <div class="form-group">
                         <label>Ownership %</label>
-                        <input type="number" name="owner2Percentage" value="${conv.owner2_percentage || ''}" class="form-input" min="0" max="100">
+                        <input type="number" name="owner2OwnershipPercent" value="${getVal('owner2_ownership_percent')}" class="form-input" min="0" max="100">
                     </div>
                     <div class="form-group">
-                        <label>Partner Home Address</label>
-                        <input type="text" name="owner2Address" value="${conv.owner2_address || ''}" class="form-input">
+                        <label>Home Address</label>
+                        <input type="text" name="owner2Address" value="${getVal('owner2_address')}" class="form-input">
                     </div>
                     <div class="form-group">
-                        <label>Partner Address Line 2</label>
-                        <input type="text" name="owner2Address2" value="${conv.owner2_address2 || ''}" class="form-input">
+                        <label>City</label>
+                        <input type="text" name="owner2City" value="${getVal('owner2_city')}" class="form-input">
                     </div>
                 </div>
                 <div class="form-row-six">
                     <div class="form-group">
-                        <label>Partner City</label>
-                        <input type="text" name="owner2City" value="${conv.owner2_city || ''}" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label>Partner State</label>
+                        <label>State</label>
                         <select name="owner2State" class="form-input">
+                            <option value="">Select State</option>
                             ${usStates.map(state =>
-                                `<option value="${state.value}" ${conv.owner2_state === state.value ? 'selected' : ''}>${state.label}</option>`
+                                `<option value="${state.value}" ${getVal('owner2_state') === state.value ? 'selected' : ''}>${state.label}</option>`
                             ).join('')}
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Partner ZIP</label>
-                        <input type="text" name="owner2Zip" value="${conv.owner2_zip || ''}"
-                               class="form-input" maxlength="10" placeholder="12345"
+                        <label>ZIP</label>
+                        <input type="text" name="owner2Zip" value="${getVal('owner2_zip')}"
+                               class="form-input" maxlength="10"
                                onblur="window.conversationUI.utils.lookupZipCode(this.value, 'owner2')"
                                onkeyup="if(this.value.replace(/\\D/g, '').length === 5) window.conversationUI.utils.lookupZipCode(this.value, 'owner2')">
                     </div>
                     <div class="form-group">
-                        <label>Partner Country</label>
-                        <input type="text" name="owner2Country" value="${conv.owner2_country || 'United States'}" class="form-input">
+                        <label>Phone</label>
+                        <input type="tel" name="owner2Phone" value="${getVal('owner2_phone')}" class="form-input">
                     </div>
                     <div class="form-group">
                         <label>SSN</label>
-                        <input type="text" name="owner2SSN" value="${conv.owner2_ssn || ''}" class="form-input">
+                        <input type="text" name="owner2SSN" value="${getVal('owner2_ssn')}" class="form-input">
                     </div>
                     <div class="form-group">
                         <label>Date of Birth</label>
-                        <input type="date" name="owner2DOB" value="${this.utils.formatDate(conv.owner2_dob, 'input')}" class="form-input">
+                        <input type="date" name="owner2DOB" value="${this.utils.formatDate(getVal('owner2_dob'), 'input')}" class="form-input">
                     </div>
                 </div>
             </div>
@@ -1743,7 +1748,7 @@ class IntelligenceTabs {
 
             // Handle numeric fields
             if (['annual_revenue', 'monthly_revenue', 'requested_amount', 'credit_score',
-                 'years_in_business', 'factor_rate', 'term_months', 'ownership_percent', 'owner2_percentage'].includes(snakeCase)) {
+                 'years_in_business', 'factor_rate', 'term_months', 'ownership_percent', 'owner2_ownership_percent'].includes(snakeCase)) {
                 updateData[snakeCase] = value ? parseFloat(value.toString().replace(/[$,\s%]/g, '')) : null;
             }
             // Strip formatting from SSN, phone, and EIN fields
