@@ -1866,12 +1866,11 @@ class IntelligenceTabs {
                 try {
                     const d = new Date(val);
                     if (isNaN(d.getTime())) return '';
-                    // Return MM/DD/YYYY for PDF
                     return d.toLocaleDateString('en-US');
                 } catch (e) { return ''; }
             };
 
-            // Prepare application data
+            // 1. Prepare application data
             const rawSSN = conv.ssn || conv.owner_ssn || conv.ssn_encrypted || '';
             const rawTaxId = conv.tax_id || conv.federal_tax_id || conv.tax_id_encrypted || '';
             const rawPhone = conv.lead_phone || conv.phone || '';
@@ -1883,11 +1882,11 @@ class IntelligenceTabs {
                 city: conv.business_city || conv.city || '',
                 state: conv.business_state || conv.us_state || '',
                 zip: conv.business_zip || conv.zip || '',
-                telephone: this.formatPhone(rawPhone),
-                fax: this.formatPhone(conv.fax_phone || ''),
+                telephone: rawPhone, // HTML template handles formatting usually, or format here
+                fax: conv.fax_phone || '',
 
                 // Financials
-                federalTaxId: this.formatEIN(rawTaxId),
+                federalTaxId: rawTaxId,
                 dateBusinessStarted: formatDate(conv.business_start_date),
                 annualRevenue: conv.annual_revenue || '',
                 requestedAmount: conv.requested_amount || conv.funding_amount || '',
@@ -1895,7 +1894,7 @@ class IntelligenceTabs {
 
                 // Details
                 entityType: conv.entity_type || '',
-                businessEmail: conv.email || conv.business_email || '', // Checks both
+                businessEmail: conv.email || conv.business_email || '',
                 typeOfBusiness: conv.industry_type || conv.industry || '',
 
                 // Owner
@@ -1909,7 +1908,7 @@ class IntelligenceTabs {
                 ownerZip: conv.owner_zip || conv.business_zip || '',
                 ownershipPercentage: conv.ownership_percentage || '',
                 creditScore: conv.credit_score || '',
-                ownerSSN: this.formatSSN(rawSSN),
+                ownerSSN: rawSSN,
                 ownerDOB: formatDate(conv.date_of_birth),
 
                 signatureDate: new Date().toLocaleDateString('en-US')
@@ -1919,7 +1918,7 @@ class IntelligenceTabs {
 
             console.log('Generating PDF with data:', applicationData);
 
-            // Get HTML template from backend
+            // 2. Get HTML template from backend
             const htmlContent = await this.parent.apiCall(`/api/conversations/${conv.id}/generate-html-template`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -1928,10 +1927,10 @@ class IntelligenceTabs {
                 })
             });
 
-            // --- RENDER & SAVE (Existing Logic) ---
-            // Create invisible iframe with fixed width to prevent canvas errors
+            // 3. RENDER & SNAPSHOT
+            // Create invisible iframe
             const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed; left:-10000px; top:0; width:1000px; height:1200px; border:none;';
+            iframe.style.cssText = 'position:fixed; left:-10000px; top:0; width:1000px; height:1400px; border:none; visibility:hidden;';
             document.body.appendChild(iframe);
 
             const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -1939,31 +1938,33 @@ class IntelligenceTabs {
             iframeDoc.write(htmlContent);
             iframeDoc.close();
 
-            // Add styles fixes and ensure no broken images
+            // Inject CSS fixes for input fields to ensure text shows up
             const style = iframeDoc.createElement('style');
             style.textContent = `
-                input { line-height: normal !important; padding: 0 4px !important; height: auto !important; }
+                input {
+                    line-height: normal !important;
+                    padding: 4px !important;
+                    height: auto !important;
+                    background: transparent !important;
+                    border: none !important;
+                }
                 .form-field { overflow: visible !important; }
-                img { display: none !important; } /* Hide any broken images that cause canvas errors */
+                body { -webkit-print-color-adjust: exact; }
             `;
             iframeDoc.head.appendChild(style);
 
-            await new Promise(r => setTimeout(r, 500)); // Wait for render
+            // Wait for render (increased to 1s for safety)
+            await new Promise(r => setTimeout(r, 1000));
 
-            console.log('📸 Starting PDF capture...');
-
-            // Capture with error handling
+            // CAPTURE with FIXED options (Removed allowTaint)
             const canvas = await html2canvas(iframeDoc.body, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: true,
+                // allowTaint: true,  <-- REMOVED THIS (Caused the crash)
                 logging: false,
                 width: 1000,
-                height: iframeDoc.body.scrollHeight,
-                backgroundColor: '#ffffff'
-            }).catch(error => {
-                console.error('❌ html2canvas error:', error);
-                throw new Error('PDF capture failed: ' + error.message);
+                height: iframeDoc.body.scrollHeight + 50,
+                windowWidth: 1000
             });
 
             document.body.removeChild(iframe);
@@ -1971,13 +1972,24 @@ class IntelligenceTabs {
             // Convert to PDF
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            const imgData = canvas.toDataURL('image/jpeg', 0.95); // This line was failing before
             const imgWidth = 210;
             const pageHeight = 297;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-            // Handle multi-page if needed (simplified here)
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            // Handle multi-page
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
 
             const filename = `WCA_${conv.business_name || 'Application'}.pdf`;
             const pdfBase64 = pdf.output('datauristring').split(',')[1];
@@ -1999,7 +2011,8 @@ class IntelligenceTabs {
                 if (this.parent.documents) {
                     await this.parent.documents.loadDocuments();
                     // Switch to documents tab
-                    document.querySelector('[data-tab="documents"]')?.click();
+                    const docTab = document.querySelector('[data-tab="documents"]');
+                    if (docTab) docTab.click();
                 }
             } else {
                 throw new Error(saveResult.error);
@@ -2007,7 +2020,7 @@ class IntelligenceTabs {
 
         } catch (error) {
             console.error('Error generating PDF:', error);
-            this.utils.showNotification('Failed to generate PDF: ' + error.message, 'error');
+            this.utils.showNotification('Failed to generate PDF. Check console for details.', 'error');
         }
     }
 
