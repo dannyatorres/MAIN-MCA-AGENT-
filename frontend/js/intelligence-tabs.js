@@ -1930,7 +1930,8 @@ class IntelligenceTabs {
             // 3. RENDER & SNAPSHOT
             // Create invisible iframe
             const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed; left:-10000px; top:0; width:1000px; height:1400px; border:none; visibility:hidden;';
+            // FIX: Do NOT use visibility:hidden. Use z-index and off-screen positioning.
+            iframe.style.cssText = 'position:fixed; left:-10000px; top:0; width:1000px; height:1400px; border:none; z-index:-9999; background:white;';
             document.body.appendChild(iframe);
 
             const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -1949,32 +1950,47 @@ class IntelligenceTabs {
                     border: none !important;
                 }
                 .form-field { overflow: visible !important; }
-                body { -webkit-print-color-adjust: exact; background-color: white; }
+                body {
+                    -webkit-print-color-adjust: exact;
+                    background-color: white;
+                    margin: 0;
+                    padding: 40px;
+                }
             `;
             iframeDoc.head.appendChild(style);
 
             // Wait for render (images/fonts to load)
-            await new Promise(r => setTimeout(r, 1000));
+            // Increased timeout slightly to ensure DOM is fully painted
+            await new Promise(r => setTimeout(r, 1500));
 
-            // CAPTURE - STRICT LOCAL MODE
-            // Removed useCORS and allowTaint to prevent security errors with Base64
+            // CAPTURE
             const canvas = await html2canvas(iframeDoc.body, {
                 scale: 2,
-                logging: true, // Keep logging to see issues in console
+                logging: true,
+                useCORS: true,   // FIX: Re-enable CORS handling
+                allowTaint: true, // FIX: Allow taint to prevent security blocks
                 width: 1000,
                 height: iframeDoc.body.scrollHeight + 50,
                 windowWidth: 1000,
-                backgroundColor: '#ffffff' // Ensure white background
+                backgroundColor: '#ffffff'
             });
 
             document.body.removeChild(iframe);
 
             // Convert to PDF
+            // Verify canvas has content before proceeding
+            if (canvas.width === 0 || canvas.height === 0) {
+                throw new Error("Canvas rendering failed: Output is empty");
+            }
+
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgData = canvas.toDataURL('image/jpeg', 0.95); // This line was failing before
-            const imgWidth = 210;
-            const pageHeight = 297;
+
+            // FIX: Explicitly specify format to ensure pattern matching works
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+            const imgWidth = 210; // A4 width in mm
+            const pageHeight = 297; // A4 height in mm
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             let heightLeft = imgHeight;
