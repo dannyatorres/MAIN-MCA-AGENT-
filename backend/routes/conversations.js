@@ -1351,6 +1351,16 @@ router.post('/:id/generate-html-template', async (req, res) => {
     try {
         const { applicationData, ownerName } = req.body;
 
+        // Generate digital signature
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+        const timestamp = new Date().toLocaleString('en-US', {
+            timeZone: 'America/New_York',
+            dateStyle: 'short',
+            timeStyle: 'short'
+        });
+        const signatureString = `/s/ ${ownerName} (IP: ${clientIp} | ${timestamp})`;
+        applicationData.digital_signature = signatureString;
+
         // Point this to where your app5.html lives on the server
         // Assuming it's in a 'templates' folder next to 'routes', or root 'templates'
         // Adjust '../templates/app5.html' if your path is different
@@ -1404,6 +1414,7 @@ router.post('/:id/generate-html-template', async (req, res) => {
 
         // Signature
         replaceTag('signature_date', applicationData.signatureDate);
+        replaceTag('digital_signature', applicationData.digital_signature);
 
         res.send(html);
 
@@ -1467,7 +1478,25 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
 
         console.log('🚀 Starting Puppeteer PDF generation...');
 
-        // 1. Read and populate HTML template
+        // 1. GENERATE DIGITAL SIGNATURE
+        // Get Client IP (works with 'trust proxy' enabled)
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+
+        // Create Timestamp (e.g., 11/20/2025, 2:30:00 PM)
+        const timestamp = new Date().toLocaleString('en-US', {
+            timeZone: 'America/New_York', // Set your preferred timezone
+            dateStyle: 'short',
+            timeStyle: 'short'
+        });
+
+        // Format the signature string
+        const signatureString = `/s/ ${ownerName} (IP: ${clientIp} | ${timestamp})`;
+        console.log('🔏 Digital signature generated:', signatureString);
+
+        // Add it to the data object so it replaces {{digital_signature}}
+        applicationData.digital_signature = signatureString;
+
+        // 2. Read and populate HTML template
         const templatePath = path.join(__dirname, '../templates/app5.html');
         if (!fs.existsSync(templatePath)) {
             return res.status(404).json({ success: false, error: 'Template not found' });
@@ -1509,6 +1538,7 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
         replaceTag('dob', applicationData.ownerDOB);
         replaceTag('ownership_percent', applicationData.ownershipPercentage);
         replaceTag('signature_date', applicationData.signatureDate);
+        replaceTag('digital_signature', applicationData.digital_signature);
 
         console.log('📝 HTML template populated');
 
