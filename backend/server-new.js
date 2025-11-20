@@ -14,6 +14,9 @@ require('dotenv').config();
 const app = express();
 const server = http.createServer(app);
 
+// --- TRUST PROXY (Required for Cloud/Load Balancers) ---
+app.set('trust proxy', 1);
+
 // --- 1. CLOUD CORS & ORIGIN SETUP ---
 // We define allowed origins dynamically so it works on Localhost AND Cloud
 const getAllowedOrigins = () => {
