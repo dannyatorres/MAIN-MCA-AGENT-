@@ -1539,11 +1539,11 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
         const docId = uuidv4();
         await db.query(`
             INSERT INTO documents (
-                id, conversation_id, s3_key, original_filename,
+                id, conversation_id, s3_key, filename, original_filename,
                 mime_type, file_size, created_at
             )
-            VALUES ($1, $2, $3, $4, 'application/pdf', $5, NOW())
-        `, [docId, conversationId, s3Key, filename, pdfBuffer.length]);
+            VALUES ($1, $2, $3, $4, $5, 'application/pdf', $6, NOW())
+        `, [docId, conversationId, s3Key, filename, filename, pdfBuffer.length]);
 
         console.log('💾 PDF metadata saved to database');
 
