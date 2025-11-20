@@ -941,6 +941,43 @@ class IntelligenceTabs {
                             </div>
                         </div>
 
+                        <div style="margin-bottom: 28px;">
+                            <h3 style="color: #4b5563; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #9ca3af;">Partner / Owner 2 Information</h3>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">First Name</label>
+                                <input type="text" name="owner2_first_name" value="${conv.owner2_first_name || ''}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Last Name</label>
+                                <input type="text" name="owner2_last_name" value="${conv.owner2_last_name || ''}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Email</label>
+                                <input type="email" name="owner2_email" value="${conv.owner2_email || ''}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Phone</label>
+                                <input type="tel" name="owner2_phone" value="${conv.owner2_phone || ''}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            </div>
+
+                            <div style="margin-bottom: 12px;">
+                                <label style="display:block;font-size:13px;font-weight:600;color:#374151; margin-bottom:4px;">Home Address</label>
+                                <input type="text" name="owner2_home_address" value="${conv.owner2_home_address || ''}" placeholder="Home Address" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;">
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+                                    <input type="text" name="owner2_home_city" value="${conv.owner2_home_city || ''}" placeholder="City" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                    <input type="text" name="owner2_home_state" value="${conv.owner2_home_state || ''}" placeholder="State" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                    <input type="text" name="owner2_home_zip" value="${conv.owner2_home_zip || ''}" placeholder="Zip" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 100px 1fr 1fr; gap: 12px;">
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Ownership %</label>
+                                <input type="number" name="owner2_ownership_percentage" value="${conv.owner2_ownership_percentage || ''}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">SSN</label>
+                                <input type="text" name="owner2_ssn" value="${conv.owner2_ssn || ''}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                                <div><label style="display:block;font-size:13px;font-weight:600;color:#374151;">Date of Birth</label>
+                                <input type="date" name="owner2_dob" value="${safeDate(conv.owner2_dob)}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;"></div>
+                            </div>
+                        </div>
+
                         <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
                             <button type="button" onclick="document.getElementById('editLeadModal').remove()" style="padding:10px 24px;border:1px solid #d1d5db;border-radius:6px;background:white;">Cancel</button>
                             <button type="submit" style="padding:10px 24px;background:#10b981;color:white;border:none;border-radius:6px;font-weight:600;">💾 Save & Close</button>
@@ -952,6 +989,12 @@ class IntelligenceTabs {
         `;
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Attach Input Formatters for the new fields
+        const form = document.getElementById('editLeadForm');
+        if (this.attachInputFormatters) {
+             this.attachInputFormatters(form);
+        }
 
         // Checkbox logic for "sameAsBusinessAddress"
         const sameAddressCheckbox = document.getElementById('sameAsBusinessAddress');
@@ -1022,7 +1065,8 @@ class IntelligenceTabs {
             // Fields that MUST be numbers in the database
             const numericFields = [
                 'annual_revenue', 'monthly_revenue', 'requested_amount',
-                'ownership_percentage', 'credit_score', 'years_in_business',
+                'ownership_percentage', 'owner2_ownership_percentage', // Added Partner field
+                'credit_score', 'years_in_business',
                 'factor_rate', 'term_months', 'funding_amount'
             ];
 
@@ -1847,8 +1891,8 @@ class IntelligenceTabs {
     }
 
     attachInputFormatters(form) {
-        // SSN fields
-        const ssnFields = form.querySelectorAll('input[name="ownerSSN"], input[name="owner1SSN"], input[name="owner2SSN"]');
+        // SSN fields - Added owner2_ssn
+        const ssnFields = form.querySelectorAll('input[name="ownerSSN"], input[name="owner1SSN"], input[name="owner2SSN"], input[name="ssn"], input[name="owner2_ssn"]');
         ssnFields.forEach(field => {
             // Format existing value on load
             if (field.value) {
@@ -1864,8 +1908,8 @@ class IntelligenceTabs {
             });
         });
 
-        // Phone fields
-        const phoneFields = form.querySelectorAll('input[name="primaryPhone"], input[name="cellPhone"], input[name="workPhone"], input[name="faxPhone"], input[name="owner1Phone"], input[name="owner2Phone"]');
+        // Phone fields - Added owner2_phone
+        const phoneFields = form.querySelectorAll('input[name="primaryPhone"], input[name="lead_phone"], input[name="cellPhone"], input[name="workPhone"], input[name="faxPhone"], input[name="owner1Phone"], input[name="owner2Phone"], input[name="owner2_phone"]');
         phoneFields.forEach(field => {
             // Format existing value on load
             if (field.value) {
@@ -1986,6 +2030,19 @@ class IntelligenceTabs {
                 creditScore: conv.credit_score || '',
                 ownerSSN: rawSSN,
                 ownerDOB: formatDate(conv.date_of_birth),
+
+                // ✅ PARTNER / OWNER 2 MAPPING
+                owner2FirstName: conv.owner2_first_name || '',
+                owner2LastName: conv.owner2_last_name || '',
+                owner2Email: conv.owner2_email || '',
+                owner2Phone: conv.owner2_phone || '',
+                owner2Address: conv.owner2_home_address || '',
+                owner2City: conv.owner2_home_city || '',
+                owner2State: conv.owner2_home_state || '',
+                owner2Zip: conv.owner2_home_zip || '',
+                owner2SSN: conv.owner2_ssn || '',
+                owner2DOB: formatDate(conv.owner2_dob),
+                owner2Percentage: conv.owner2_ownership_percentage || '',
 
                 signatureDate: new Date().toLocaleDateString('en-US')
             };
