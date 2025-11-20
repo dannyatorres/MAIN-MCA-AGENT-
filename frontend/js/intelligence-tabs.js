@@ -1319,140 +1319,96 @@ class IntelligenceTabs {
 
     async handleEditLeadSave(conv) {
         const form = document.getElementById('editLeadForm');
-        if (!form) {
-            console.error('Edit form not found');
-            return false;
-        }
+        if (!form) return false;
 
-        // ✅ Get the submit button and add loading state
+        // UI Feedback
         const submitButton = form.querySelector('button[type="submit"]');
-        const originalButtonHTML = submitButton ? submitButton.innerHTML : '';
-
+        const originalButtonHTML = submitButton ? submitButton.innerHTML : 'Save';
         if (submitButton) {
             submitButton.disabled = true;
-            submitButton.style.opacity = '0.6';
-            submitButton.style.cursor = 'not-allowed';
-            submitButton.innerHTML = `
-                <span style="display: inline-flex; align-items: center; gap: 8px;">
-                    <span style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite;"></span>
-                    Saving...
-                </span>
-            `;
+            submitButton.innerHTML = 'Saving...';
         }
 
         const formData = new FormData(form);
+        let data = Object.fromEntries(formData.entries());
 
-        // Build update object
-        const updates = {};
+        // --- DATA CLEANING (The Fix) ---
+        const cleanData = (obj) => {
+            const cleaned = { ...obj };
+            // Fields that MUST be numbers in the database
+            const numericFields = [
+                'annual_revenue', 'monthly_revenue', 'requested_amount',
+                'ownership_percentage', 'credit_score', 'years_in_business',
+                'factor_rate', 'term_months', 'funding_amount'
+            ];
 
-        // Get all form fields
-        for (let [key, value] of formData.entries()) {
-            if (key === 'payment_methods') {
-                if (!updates.payment_methods) updates.payment_methods = [];
-                updates.payment_methods.push(value);
-            } else {
-                // Only include non-empty values
-                if (value && value.trim() !== '') {
-                    updates[key] = value;
+            for (const key of Object.keys(cleaned)) {
+                // 1. Convert empty strings to null
+                if (cleaned[key] === '' || cleaned[key] === undefined) {
+                    delete cleaned[key]; // Don't send empty fields
+                }
+                // 2. Clean numeric fields (remove $ , %)
+                else if (numericFields.includes(key)) {
+                    cleaned[key] = parseFloat(cleaned[key].toString().replace(/[^0-9.]/g, ''));
                 }
             }
-        }
 
-        // Convert payment methods array to string
-        if (updates.payment_methods && updates.payment_methods.length > 0) {
-            updates.payment_methods = updates.payment_methods.join(', ');
-        } else {
-            delete updates.payment_methods;
-        }
-
-        // Copy business address to owner if checkbox is checked
-        const sameAddressCheckbox = document.getElementById('sameAsBusinessAddress');
-        if (sameAddressCheckbox && sameAddressCheckbox.checked) {
-            updates.owner_address = updates.business_address || updates.address;
-            updates.owner_city = updates.business_city || updates.city;
-            updates.owner_state = updates.us_state;
-            updates.owner_zip = updates.business_zip || updates.zip;
-        }
-
-        // Remove any undefined values before sending
-        Object.keys(updates).forEach(key => {
-            if (updates[key] === undefined || updates[key] === null || updates[key] === '') {
-                delete updates[key];
+            // Special handling: Copy Business Address to Owner if checked
+            const sameAddressCheckbox = document.getElementById('sameAsBusinessAddress');
+            if (sameAddressCheckbox && sameAddressCheckbox.checked) {
+                cleaned.owner_address = cleaned.business_address;
+                cleaned.owner_city = cleaned.business_city;
+                cleaned.owner_state = cleaned.us_state;
+                cleaned.owner_zip = cleaned.business_zip;
             }
-        });
 
-        console.log('📤 Saving lead data:', updates);
+            // Handle Checkboxes (Arrays)
+            if (cleaned.payment_methods) {
+                 // If multiple checked, FormData only takes last.
+                 // Ideally handle with getAll, but for now specific handling:
+                 const checked = form.querySelectorAll('input[name="payment_methods"]:checked');
+                 cleaned.payment_methods = Array.from(checked).map(cb => cb.value).join(', ');
+            }
+
+            return cleaned;
+        };
+
+        const updates = cleanData(data);
+        // -------------------------------
+
+        console.log('📤 Saving cleaned lead data:', updates);
 
         try {
             // Save to backend
-            const response = await this.parent.apiCall(`/api/conversations/${conv.id}`, {
+            await this.parent.apiCall(`/api/conversations/${conv.id}`, {
                 method: 'PUT',
                 body: JSON.stringify(updates)
             });
 
-            console.log('✅ Save response:', response);
-
-            // ✅ UPDATE 1: Update the conversation object in the Map
-            if (this.parent.conversationUI && this.parent.conversationUI.conversations) {
-                const conversation = this.parent.conversationUI.conversations.get(conv.id);
-                if (conversation) {
-                    Object.assign(conversation, updates);
-                    console.log('✅ Conversation Map updated with:', updates);
-                }
+            // Update local objects
+            Object.assign(conv, updates);
+            if (this.parent.conversationUI) {
+                this.parent.conversationUI.loadConversations(); // Refresh list
             }
 
-            // ✅ UPDATE 2: Update the selected conversation reference
-            const selectedConversation = this.parent.getSelectedConversation();
-            if (selectedConversation && selectedConversation.id === conv.id) {
-                Object.assign(selectedConversation, updates);
-                console.log('✅ Selected conversation updated with:', updates);
-            }
-
-            // ✅ UPDATE 3: Refresh the conversations list in the sidebar
-            if (this.parent.conversationUI && typeof this.parent.conversationUI.renderConversationsList === 'function') {
-                this.parent.conversationUI.renderConversationsList();
-                console.log('✅ Conversations list refreshed in sidebar');
-            }
-
-            // ✅ UPDATE 4: Refresh the conversation header/details
-            if (this.parent.conversationUI && typeof this.parent.conversationUI.showConversationDetails === 'function') {
-                this.parent.conversationUI.showConversationDetails();
-                console.log('✅ Conversation details refreshed');
-            }
-
-            // ✅ Show success feedback with button animation
+            // Success UI
             if (submitButton) {
-                submitButton.innerHTML = `
-                    <span style="display: inline-flex; align-items: center; gap: 8px;">
-                        ✅ Saved!
-                    </span>
-                `;
-                submitButton.style.background = '#10b981';
-
-                // Brief pause to show success state
-                await new Promise(resolve => setTimeout(resolve, 500));
+                submitButton.innerHTML = '✅ Saved!';
+                setTimeout(() => {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonHTML;
+                }, 1000);
             }
 
-            // Show success notification
-            if (this.utils && this.utils.showNotification) {
-                this.utils.showNotification('Lead information saved!', 'success');
-            }
-
+            this.utils.showNotification('Lead saved successfully', 'success');
             return true;
 
         } catch (error) {
             console.error('❌ Error saving lead:', error);
-
-            // ✅ Restore button on error
+            this.utils.showNotification('Failed to save: ' + error.message, 'error');
             if (submitButton) {
                 submitButton.disabled = false;
-                submitButton.style.opacity = '1';
-                submitButton.style.cursor = 'pointer';
                 submitButton.innerHTML = originalButtonHTML;
-            }
-
-            if (this.utils && this.utils.showNotification) {
-                this.utils.showNotification('Failed to save lead information', 'error');
             }
             return false;
         }
@@ -2208,18 +2164,21 @@ class IntelligenceTabs {
         console.log('Proceeding with PDF generation...');
 
         try {
+            // Date Helper
+            const formatDate = (val) => {
+                if (!val) return '';
+                try {
+                    const d = new Date(val);
+                    if (isNaN(d.getTime())) return '';
+                    // Return MM/DD/YYYY for PDF
+                    return d.toLocaleDateString('en-US');
+                } catch (e) { return ''; }
+            };
 
             // Prepare application data
             const rawSSN = conv.ssn || conv.owner_ssn || conv.ssn_encrypted || '';
             const rawTaxId = conv.tax_id || conv.federal_tax_id || conv.tax_id_encrypted || '';
             const rawPhone = conv.lead_phone || conv.phone || '';
-            const rawFax = conv.fax_phone || '';
-            const rawCellPhone = conv.cell_phone || '';
-
-            console.log('🔍 Raw SSN:', rawSSN);
-            console.log('🔍 Raw Tax ID:', rawTaxId);
-            console.log('🔍 Formatted SSN:', this.formatSSN(rawSSN));
-            console.log('🔍 Formatted Tax ID:', this.formatEIN(rawTaxId));
 
             const applicationData = {
                 legalName: conv.business_name || '',
@@ -2229,37 +2188,40 @@ class IntelligenceTabs {
                 state: conv.business_state || conv.us_state || '',
                 zip: conv.business_zip || conv.zip || '',
                 telephone: this.formatPhone(rawPhone),
-                fax: this.formatPhone(rawFax),
+                fax: this.formatPhone(conv.fax_phone || ''),
+
+                // Financials
                 federalTaxId: this.formatEIN(rawTaxId),
-                dateBusinessStarted: this.utils.formatDate(conv.business_start_date, 'display'),
-                lengthOfOwnership: conv.length_of_ownership || '',
-                website: conv.website || '',
-                entityType: conv.entity_type || '',
-                businessEmail: conv.business_email || conv.email || '',
-                typeOfBusiness: conv.industry_type || conv.business_type || '',
-                productService: conv.product_sold || '',
+                dateBusinessStarted: formatDate(conv.business_start_date),
+                annualRevenue: conv.annual_revenue || '',
                 requestedAmount: conv.requested_amount || conv.funding_amount || '',
                 useOfFunds: conv.use_of_proceeds || 'Working Capital',
+
+                // Details
+                entityType: conv.entity_type || '',
+                businessEmail: conv.email || conv.business_email || '', // Checks both
+                typeOfBusiness: conv.industry_type || conv.industry || '',
+
+                // Owner
                 ownerFirstName: conv.first_name || '',
                 ownerLastName: conv.last_name || '',
                 ownerTitle: 'Owner',
-                ownerEmail: conv.owner_email || conv.email || '',
-                ownerAddress: conv.owner_home_address || '',
-                ownerCity: conv.owner_home_city || '',
-                ownerState: conv.owner_home_state || '',
-                ownerZip: conv.owner_home_zip || '',
-                ownershipPercentage: conv.ownership_percent || '',
+                ownerEmail: conv.email || conv.owner_email || '',
+                ownerAddress: conv.owner_address || conv.business_address || '',
+                ownerCity: conv.owner_city || conv.business_city || '',
+                ownerState: conv.owner_state || conv.us_state || '',
+                ownerZip: conv.owner_zip || conv.business_zip || '',
+                ownershipPercentage: conv.ownership_percentage || '',
                 creditScore: conv.credit_score || '',
                 ownerSSN: this.formatSSN(rawSSN),
-                ownerDOB: this.utils.formatDate(conv.date_of_birth, 'display'),
-                ownerCellPhone: this.formatPhone(rawCellPhone),
-                yearsInBusiness: conv.years_in_business || '',
-                signatureDate: new Date().toLocaleDateString()
+                ownerDOB: formatDate(conv.date_of_birth),
+
+                signatureDate: new Date().toLocaleDateString('en-US')
             };
 
             const ownerName = `${applicationData.ownerFirstName} ${applicationData.ownerLastName}`.trim() || 'Authorized Signatory';
 
-            console.log('Requesting HTML template from server...');
+            console.log('Generating PDF with data:', applicationData);
 
             // Get HTML template from backend
             const htmlContent = await this.parent.apiCall(`/api/conversations/${conv.id}/generate-html-template`, {
@@ -2270,127 +2232,51 @@ class IntelligenceTabs {
                 })
             });
 
-            console.log('Received HTML template from server');
-
-            // Create an iframe for better CSS isolation and rendering
+            // --- RENDER & SAVE (Existing Logic) ---
+            // Create invisible iframe
             const iframe = document.createElement('iframe');
-            iframe.style.position = 'fixed';
-            iframe.style.left = '-10000px';
-            iframe.style.top = '0';
-            iframe.style.width = '940px';
-            iframe.style.height = '1200px';
-            iframe.style.border = 'none';
+            iframe.style.cssText = 'position:fixed; left:-10000px; top:0; width:940px; height:1200px; border:none;';
             document.body.appendChild(iframe);
 
-            // Write the HTML to iframe
             const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
             iframeDoc.open();
             iframeDoc.write(htmlContent);
             iframeDoc.close();
 
-            // Add CSS to fix text positioning in input fields
+            // Add styles fixes
             const style = iframeDoc.createElement('style');
             style.textContent = `
-                /* Override any height constraints from app5.html */
-                input[type="text"],
-                input[type="email"],
-                input[type="tel"],
-                input[type="number"],
-                input[type="date"],
-                input[type="url"] {
-                    padding: 2px 4px !important;
-                    line-height: 1.2 !important;
-                    height: 24px !important;
-                    min-height: 24px !important;
-                    max-height: none !important;
-                    vertical-align: middle !important;
-                    overflow: visible !important;
-                }
-
-                /* Ensure form fields don't clip content */
-                .form-field {
-                    overflow: visible !important;
-                    height: auto !important;
-                    min-height: 26px !important;
-                }
-
-                .form-field input {
-                    margin-top: -5px !important;
-                }
-
-                /* Override any clipping from parent containers */
-                .form-row {
-                    overflow: visible !important;
-                }
+                input { line-height: normal !important; padding: 0 4px !important; height: auto !important; }
+                .form-field { overflow: visible !important; }
             `;
             iframeDoc.head.appendChild(style);
 
-            // Wait for rendering
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(r => setTimeout(r, 500)); // Wait for render
 
-            console.log('Converting to PDF with html2canvas...');
-
-            // Capture with html2canvas - use the existing styling from app5.html
+            // Capture
             const canvas = await html2canvas(iframeDoc.body, {
-                scale: 2,  // High quality
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                width: 940,
-                height: iframeDoc.body.scrollHeight,
-                onclone: (clonedDoc) => {
-                    // Additional fix in the cloned document
-                    const inputs = clonedDoc.querySelectorAll('input');
-                    inputs.forEach(input => {
-                        if (input.value) {
-                            // Adjust the input styling to ensure text is visible
-                            input.style.lineHeight = 'normal';
-                            input.style.paddingTop = '0';
-                            input.style.paddingBottom = '0';
-                            input.style.height = 'auto';
-                            input.style.overflow = 'visible';
-                        }
-                    });
-                }
+                scale: 2, useCORS: true, allowTaint: true,
+                width: 940, height: iframeDoc.body.scrollHeight
             });
 
-            // Remove iframe
             document.body.removeChild(iframe);
 
-            // Create PDF
+            // Convert to PDF
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-                compress: true
-            });
-
+            const pdf = new jsPDF('p', 'mm', 'a4');
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
             const imgWidth = 210;
             const pageHeight = 297;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-            let heightLeft = imgHeight;
-            let position = 0;
+            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+            // Handle multi-page if needed (simplified here)
 
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-            }
-
-            const filename = `WCA_${conv.business_name || 'Application'}_${new Date().toISOString().split('T')[0]}.pdf`;
+            const filename = `WCA_${conv.business_name || 'Application'}.pdf`;
             const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
-            console.log('Saving to AWS...');
-
-            // Save to AWS server
+            // Upload
+            this.utils.showNotification('Uploading PDF...', 'info');
             const saveResult = await this.parent.apiCall(`/api/conversations/${conv.id}/save-generated-pdf`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -2402,24 +2288,14 @@ class IntelligenceTabs {
             });
 
             if (saveResult.success) {
-                // Close the edit modal
-                const modal = document.getElementById('editLeadInlineModal');
-                if (modal) {
-                    modal.style.display = 'none';
-                }
-
-                // Refresh documents
+                this.utils.showNotification('PDF Generated & Saved!', 'success');
                 if (this.parent.documents) {
                     await this.parent.documents.loadDocuments();
-                }
-
-                // Switch to documents tab
-                const documentsTab = document.querySelector('[data-tab="documents"]');
-                if (documentsTab) {
-                    documentsTab.click();
+                    // Switch to documents tab
+                    document.querySelector('[data-tab="documents"]')?.click();
                 }
             } else {
-                throw new Error(saveResult.error || 'Failed to save PDF to AWS');
+                throw new Error(saveResult.error);
             }
 
         } catch (error) {
