@@ -416,89 +416,87 @@ body {
 }
 
 /* ==========================================================================
-   [MODULE: LEFT_PANEL - LEGACY]
-   Conversation list, badges, search bars.
-   NOTE: Some of this is overridden by the Nuclear Patch below.
+   [MODULE: LEFT PANEL / CONVERSATIONS]
+   Consolidated "iPhone Style" list with search and filters.
    ========================================================================== */
 
-/* Conversations List */
+/* 1. Panel Container */
+.left-panel {
+    flex: 3 1 280px;
+    min-width: 260px;
+    background: var(--white);
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ensure full height */
+}
+
+/* 2. Header & Controls (Compact Mobile Style) */
+.left-panel .panel-header {
+    padding: 8px;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    flex-shrink: 0;
+}
+
+.left-panel .panel-actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.left-panel .panel-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+/* Compact Inputs for Header */
+.left-panel .state-filter {
+    height: 28px;
+    font-size: 12px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: 4px;
+    background: var(--white);
+    color: var(--gray-700);
+    flex-shrink: 0;
+}
+
+.left-panel .search-field {
+    height: 28px;
+    font-size: 12px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: 4px;
+    width: 100%; /* Fills remaining space */
+}
+
+/* 3. The Conversations List */
 .conversations-list {
     flex: 1;
     overflow-y: auto;
-    padding: 0;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    background: var(--white);
+    /* Remove scrollbar visual but keep function */
+    scrollbar-width: none;
+}
+.conversations-list::-webkit-scrollbar {
+    display: none;
 }
 
+/* 4. Conversation Item (iPhone Style) */
 .conversation-item {
-    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
     border-bottom: 1px solid #f3f4f6;
+    background: var(--white);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background 0.2s;
     position: relative;
     min-height: 60px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.conversation-checkbox {
-    flex-shrink: 0;
-    display: none; /* Hidden by default */
-    align-items: center;
-}
-
-/* Show checkboxes when in delete mode */
-.conversations-list.delete-mode .conversation-checkbox {
-    display: flex;
-}
-
-.delete-checkbox {
-    width: 14px;
-    height: 14px;
-    margin: 0;
-    cursor: pointer;
-}
-
-/* Avatar circle - iOS style */
-.conversation-avatar {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 8px;
-}
-
-.avatar-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #0ea5e9;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-}
-
-.conversation-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-width: 0;
-}
-
-.conversation-item.checked-for-deletion {
-    background: #fef2f2;
-    border-left: 3px solid #ef4444;
-}
-
-.conversation-item.checked-for-deletion:hover {
-    background: #fee2e2;
 }
 
 .conversation-item:hover {
@@ -506,26 +504,100 @@ body {
 }
 
 .conversation-item.active {
-    background: var(--light-green);
-    border-left: 4px solid var(--primary-green);
+    background: #e8f4fd; /* Light Blue Background */
+    border-left: 3px solid #007aff; /* Apple Blue Indicator */
 }
 
-/* Unread Message Indicators */
+/* 5. Avatars & Content */
+.conversation-avatar {
+    flex-shrink: 0;
+}
+
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #0ea5e9; /* Default Blue */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.conversation-content {
+    flex: 1;
+    min-width: 0; /* Required for text-overflow to work */
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* 6. Text Details */
+.conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.business-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.conversation-time {
+    font-size: 10px;
+    color: #8e8e93;
+}
+
+.conversation-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.phone-number {
+    font-size: 12px;
+    color: #8e8e93;
+}
+
+/* 7. Badges (States) */
+.state-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+/* State Colors */
+.state-badge.INTERESTED  { background: #dbeafe; color: #1e40af; } /* Blue */
+.state-badge.QUALIFIED   { background: #dcfce7; color: #166534; } /* Green */
+.state-badge.FCS_RUNNING { background: #fef3c7; color: #92400e; } /* Orange */
+.state-badge.NEW         { background: var(--gray-200); color: var(--gray-700); }
+
+/* 8. Unread Indicator */
 .unread-badge {
-    position: absolute !important;
-    top: 8px !important;
-    right: 8px !important;
-    background: #ef4444 !important;
-    color: white !important;
-    border-radius: 12px !important;
-    padding: 2px 8px !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    min-width: 18px !important;
-    text-align: center !important;
-    animation: pulse 2s infinite !important;
-    z-index: 10 !important;
-    line-height: 1.2 !important;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--red);
+    color: white;
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
@@ -540,137 +612,29 @@ body {
     }
 }
 
-.conversation-item.has-unread {
-    background: #fef2f2 !important;
-    border-left: 3px solid #ef4444 !important;
-}
-
-.conversation-item.has-unread:hover {
-    background: #fee2e2 !important;
-}
-
-/* New message notification dot */
-.new-message-dot {
-    display: inline-block !important;
-    width: 8px !important;
-    height: 8px !important;
-    background: #ef4444 !important;
-    border-radius: 50% !important;
-    margin-left: 6px !important;
-    animation: blink 1.5s infinite !important;
-    vertical-align: middle !important;
-}
-
-@keyframes blink {
-    0%, 50%, 100% { opacity: 1; }
-    25%, 75% { opacity: 0.3; }
-}
-
-/* SMS Message Preview Style */
-.conversation-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4px;
-    margin-bottom: 1px;
-    line-height: 1.1;
-}
-
-.business-name {
-    font-weight: 600;
-    font-size: 14px;
-    color: #000000;
-    line-height: 1.1;
-    margin: 0;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.phone-number {
+/* 9. Action Buttons (New/Import/Delete) */
+.action-button {
+    padding: 4px 10px;
+    border-radius: 4px;
     font-size: 11px;
-    color: #8e8e93;
-    line-height: 1.1;
-    margin: 0;
-    font-weight: 400;
-}
-
-.state-badge {
-    padding: 1px 3px;
-    border-radius: 6px;
-    font-size: 7px;
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.2px;
-    line-height: 1.2;
+    cursor: pointer;
+    border: 1px solid var(--gray-300);
+    background: var(--white);
+    transition: all 0.2s;
 }
 
-.state-badge.NEW {
-    background: var(--gray-100);
-    color: var(--gray-600);
-}
+.action-button:hover { background: var(--gray-50); }
+.action-button.primary { background: var(--gray-900); color: white; border-color: var(--gray-900); }
+.action-button.danger  { background: var(--red); color: white; border-color: var(--red); }
 
-.state-badge.INTERESTED {
-    background: #dbeafe;
-    color: #1e40af;
+/* 10. Checkbox Mode (For Deleting) */
+.conversation-checkbox {
+    display: none;
 }
-
-.state-badge.FCS_RUNNING {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.state-badge.QUALIFIED {
-    background: var(--light-green);
-    color: var(--dark-green);
-}
-
-.state-badge.OFFER_SENT {
-    background: #e0e7ff;
-    color: #5b21b6;
-}
-
-.state-badge.ACCEPTED {
-    background: var(--light-green);
-    color: var(--dark-green);
-}
-
-.conversation-meta {
+.conversations-list.delete-mode .conversation-checkbox {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 10px;
-    color: var(--gray-500);
-    line-height: 1.4;
-    margin-top: 1px;
-    gap: 4px;
-}
-
-.time-ago {
-    font-size: 8px;
-    color: var(--gray-400);
-    white-space: nowrap;
-    margin-left: 4px;
-}
-
-.last-activity {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.activity-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--gray-300);
-}
-
-.activity-dot.recent {
-    background: var(--primary-green);
+    margin-right: 8px;
 }
 
 
@@ -2856,83 +2820,6 @@ textarea.message-input:focus,
     flex-shrink: 0 !important;
 }
 
-/* SMS Interface Complete Override - iPhone Messages Style */
-.left-panel .conversations-list {
-    background: #ffffff;
-    border-radius: 4px 4px 0 0;
-    overflow-y: auto;
-    max-height: calc(100vh - 200px);
-    flex: 1;
-}
-
-.left-panel .conversation-item {
-    background: #ffffff;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.left-panel .conversation-item:hover {
-    background: #f5f5f5;
-}
-
-.left-panel .conversation-item.active {
-    background: #e8f4fd;
-    border-left: 3px solid #007aff;
-}
-
-.left-panel .business-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #000000;
-}
-
-.left-panel .phone-number {
-    font-size: 11px;
-    color: #8e8e93;
-    font-weight: 400;
-}
-
-.left-panel .state-badge {
-    font-size: 7px;
-    padding: 1px 3px;
-    border-radius: 6px;
-    background: #34d399;
-    color: #ffffff;
-}
-
-/* Timestamp styling for SMS interface */
-.left-panel .conversation-time {
-    font-size: 10px;
-    color: #8e8e93;
-    font-weight: 400;
-}
-
-/* List indicators for search results and recent leads */
-.list-indicator {
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-    font-size: 11px;
-    color: #6c757d;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.list-indicator.search-results {
-    background: #e3f2fd;
-    color: #1565c0;
-    border-bottom-color: #bbdefb;
-}
-
-.list-indicator.recent-leads {
-    background: #fff3e0;
-    color: #ef6c00;
-    border-bottom-color: #ffcc02;
-}
-
-.list-indicator i {
-    font-size: 10px;
-}
 
 /* Edit Tab Inline Form Styling */
 .edit-form-container {
