@@ -1,5 +1,10 @@
 /* MCA Command Center Styles */
 
+/* ==========================================================================
+   [MODULE: CORE]
+   Resets, Variables, Color Definitions, Z-Indices
+   ========================================================================== */
+
 /* Reset and base styles */
 * {
     margin: 0;
@@ -47,6 +52,11 @@ body {
     color: var(--gray-900);
     overflow: hidden;
 }
+
+/* ==========================================================================
+   [MODULE: LAYOUT]
+   Main Grid, Header Structure, Panel Widths (Flexbox props)
+   ========================================================================== */
 
 /* Command Center Layout */
 .command-center {
@@ -405,6 +415,12 @@ body {
     font-size: 11px;
 }
 
+/* ==========================================================================
+   [MODULE: LEFT_PANEL - LEGACY]
+   Conversation list, badges, search bars.
+   NOTE: Some of this is overridden by the Nuclear Patch below.
+   ========================================================================== */
+
 /* Conversations List */
 .conversations-list {
     flex: 1;
@@ -656,6 +672,12 @@ body {
 .activity-dot.recent {
     background: var(--primary-green);
 }
+
+/* ==========================================================================
+   [MODULE: CENTER_PANEL - LEGACY]
+   Old message styling and standard inputs.
+   WARNING: Heavily overridden by "Nuclear Patch".
+   ========================================================================== */
 
 /* Messages Container */
 .messages-container {
@@ -1021,6 +1043,12 @@ body {
 .qualify-lenders-btn:hover {
     background: #dbeafe;
 }
+
+/* ==========================================================================
+   [MODULE: RIGHT_PANEL]
+   Intelligence tabs, Drag & Drop, File Lists.
+   This module is stable.
+   ========================================================================== */
 
 /* Intelligence Panel */
 .intelligence-tabs {
@@ -3728,6 +3756,13 @@ textarea.message-input:focus,
 .conversation-panel #messageInputContainer {
     margin-top: 0 !important;
 }
+
+/* ==========================================================================
+   [MODULE: OVERRIDES_PATCH]
+   "The Nuclear Option"
+   Contains: iPhone-style bubbling, Floating Input, Hidden Scrollbars.
+   AUTHORITY: High (Overrides previous modules)
+   ========================================================================== */
 
 /* Nuclear option - override all spacing between these elements */
 .messages-container,
