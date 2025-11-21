@@ -225,60 +225,51 @@
     }
 }
 
-/* 9. Action Buttons (Polished) */
+/* 9. Action Buttons (Polished & Clean) */
 .action-button {
     padding: 6px 14px;
-    border-radius: 16px;   /* Soft rounded corners */
+    border-radius: 16px;   /* Keep the pill shape */
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
-    border: 1px solid transparent; /* Prep for border changes */
-    transition: all 0.2s;
+    transition: all 0.2s ease;
 }
 
-/* Make the primary button (Dark) stand out */
+/* Primary: Dark & Prominent */
 .action-button.primary {
     background: var(--gray-900);
     color: white;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    border: 1px solid var(--gray-900);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 .action-button.primary:hover {
     background: black;
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-/* Dark Gray 'Pill' for Secondary Actions */
+/* Secondary: White with Border (Reverted Style) */
 .action-button.secondary {
-    background: var(--gray-100); /* Light gray background */
-    color: var(--gray-700);      /* Dark text */
-    border: none;                /* Remove border for cleaner look */
-    font-weight: 600;
+    background: var(--white);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300); /* The border brings back the definition */
 }
-
 .action-button.secondary:hover {
-    background: var(--gray-200); /* Slightly darker on hover */
+    background: var(--gray-50);
+    border-color: var(--gray-400);
     color: var(--gray-900);
     transform: translateY(-1px);
 }
 
-/* OPTION B: If you want them TRULY dark (like the primary button) */
-/* Uncomment this block below to use this style instead */
-/*
-.action-button.secondary {
-    background: var(--gray-600);
-    color: white;
-    border: none;
-}
-.action-button.secondary:hover {
-    background: var(--gray-700);
-}
-*/
-
-/* Danger button styling */
+/* Danger: Red text on white (Optional, for Delete mode) */
 .action-button.danger {
-    background: var(--red);
-    color: white;
-    border-color: var(--red);
+    background: var(--white);
+    color: var(--red);
+    border: 1px solid var(--gray-200);
+}
+.action-button.danger:hover {
+    background: #fef2f2; /* Very light red */
+    border-color: #fecaca;
 }
 
 /* 10. Checkbox Mode (For Deleting) */
