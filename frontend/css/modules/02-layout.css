@@ -1,41 +1,108 @@
 /* ==========================================================================
    [MODULE: LAYOUT]
-   Main Grid, Header Structure, Panel Widths (Flexbox props)
+   Modern "Floating Card" Grid System
    ========================================================================== */
 
-/* Command Center Layout */
+/* 1. Main Container */
 .command-center {
     display: flex;
     flex-direction: column;
     height: 100vh;
     width: 100%;
+    background-color: var(--gray-100); /* Darker background for contrast */
 }
 
-/* Header */
+/* 2. Header (Floating Style) */
 .header {
-    height: var(--header-height);
+    height: 70px; /* Taller for modern feel */
     background: var(--white);
-    border-bottom: 1px solid var(--gray-200);
+    /* No border, just shadow for depth */
+    border-bottom: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 20px;
-    box-shadow: var(--shadow-sm);
+    padding: 0 24px;
     z-index: 50;
+    position: relative;
 }
 
-.header-left {
+/* 3. The Layout Grid (The Canvas) */
+.main-content {
+    flex: 1;
     display: flex;
-    align-items: center;
-    gap: 20px;
+    min-height: 0;
+    width: 100%;
+    padding: 12px; /* GAP around the entire app */
+    gap: 12px;     /* GAP between panels */
+    background: var(--gray-100);
 }
 
+/* 4. Unified Panel Architecture (The Cards) */
+.left-panel,
+.center-panel,
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+
+    /* THE FIX: Rounded Corners & Shadows instead of borders */
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.04); /* Very subtle border */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+
+    height: 100%;
+    overflow: hidden;
+}
+
+/* 5. Perfect Alignment Enforcer */
+/* This forces every header in every panel to be exactly the same height */
+.panel-header,
+.left-panel .panel-header,
+.center-panel .panel-header,
+.right-panel .panel-header {
+    min-height: 64px;     /* Strict height */
+    max-height: 64px;
+    padding: 0 16px;      /* Consistent padding */
+    display: flex;
+    align-items: center;  /* Vertically center everything */
+    justify-content: space-between;
+
+    border-bottom: 1px solid var(--gray-100);
+    background: var(--white); /* clean white headers */
+    flex-shrink: 0;
+}
+
+/* 6. Panel Sizes (Flex Ratios) */
+.left-panel {
+    flex: 0 0 300px; /* Fixed width for list */
+}
+
+.center-panel {
+    flex: 1;         /* Chat takes remaining space */
+    min-width: 350px;
+}
+
+.right-panel {
+    flex: 0 0 420px; /* Fixed width for info */
+    max-width: 40%;
+}
+
+/* 7. Header Components Consistency */
 .title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--gray-900);
+    letter-spacing: -0.5px;
 }
 
+.header-left, .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Connection Status */
 .connection-status {
     display: flex;
     align-items: center;
@@ -43,17 +110,11 @@
     font-size: 14px;
 }
 
-
 .status-text {
     display: none;
 }
 
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
+/* Stats Summary */
 .stats-summary {
     display: flex;
     gap: 16px;
@@ -79,6 +140,7 @@
     color: var(--gray-900);
 }
 
+/* Refresh Button */
 .refresh-btn {
     display: flex;
     align-items: center;
@@ -100,54 +162,7 @@
     font-size: 16px;
 }
 
-/* Main Content */
-.main-content {
-    flex: 1;
-    display: flex;
-    min-height: 0;
-    width: 100%;
-}
-
-/* Panel Base Styles */
-.left-panel,
-.center-panel,
-.right-panel {
-    display: flex;
-    flex-direction: column;
-    background: var(--white);
-    border-right: 1px solid var(--gray-200);
-}
-
-.left-panel {
-    flex: 3 1 280px;
-    min-width: 260px;
-}
-
-.center-panel {
-    flex: 3 1 400px;
-    min-width: 350px;
-}
-
-.right-panel {
-    flex: 3 0 450px;
-    border-right: none;
-    min-width: 450px;
-    max-width: 700px;
-    height: calc(100vh - var(--header-height));
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.panel-header {
-    padding: 8px 16px;  /* Reduced from 16px 20px */
-    border-bottom: 1px solid var(--gray-200);
-    background: var(--gray-50);
-    flex-shrink: 0;
-}
-
-/* Removed old conflicting panel-title rule */
-
+/* Panel Header Elements */
 .panel-header h2 {
     font-size: 16px;
     font-weight: 600;
@@ -240,7 +255,7 @@
         align-items: flex-start;
         gap: 8px;
     }
-    
+
     .toolbar-btn {
         width: 32px;
         height: 32px;

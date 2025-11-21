@@ -19,22 +19,16 @@
 
 /* 2. The Header (Fixed Top) */
 .center-panel .panel-header {
-    flex: 0 0 auto;        /* Fixed height */
-    height: 60px;
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--gray-200);
-    background: var(--gray-50);
+    /* Height, padding, border, and background now controlled by 02-layout.css */
+    flex: 0 0 auto;
     z-index: 10;           /* Sits above scrolling messages */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
 }
 
 /* 3. The Scrolling Messages Area */
 /* Matches HTML ID: id="messagesContainer" */
 #messagesContainer {
     position: absolute;
-    top: 60px;             /* Starts below the header */
+    top: 64px;             /* Starts below the header (matches new header height) */
     bottom: 0;             /* Stretches to the bottom */
     left: 0;
     right: 0;
