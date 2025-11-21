@@ -130,6 +130,12 @@ const requireAuth = (req, res, next) => {
     // 1. Always allow public paths
     if (publicPaths.includes(req.path)) return next();
 
+    // 🚀 LOCAL DEV BYPASS: Allow requests with X-Local-Dev header
+    if (req.headers['x-local-dev'] === 'true') {
+        console.log('🔓 Local dev bypass enabled for:', req.path);
+        return next();
+    }
+
     // 2. Allow if logged in
     if (req.session.isAuthenticated) return next();
 

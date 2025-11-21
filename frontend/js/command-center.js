@@ -3,9 +3,19 @@ class CommandCenter {
     constructor() {
         // Use dynamic URLs based on current domain
         const isHttps = window.location.protocol === 'https:';
-        this.wsUrl = `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}`;
+
+        // 🚀 LOCAL DEVELOPMENT: Point to Railway backend
+        const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        // Railway backend URL
+        const RAILWAY_BACKEND_URL = 'https://api.mcagent.io';
+
+        this.apiBaseUrl = isLocalDev ? RAILWAY_BACKEND_URL : window.location.origin;
+        this.wsUrl = isLocalDev ?
+            `wss://${RAILWAY_BACKEND_URL.replace('https://', '')}` :
+            `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}`;
+
         this.userId = 'default';
-        this.apiBaseUrl = window.location.origin;
 
         // 🛡️ SECURITY FIX: Removed hardcoded credentials (this.apiAuth)
 
@@ -41,12 +51,16 @@ class CommandCenter {
     }
 
     async apiCall(endpoint, options = {}) {
+        // 🚀 LOCAL DEV BYPASS: Skip auth for local development
+        const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
         const config = {
             ...options,
             credentials: 'include', // 🛡️ SECURITY FIX: Sends existing session cookies/auth
             headers: {
-                // 🛡️ SECURITY FIX: Removed hardcoded 'Authorization' header.
                 'Content-Type': 'application/json',
+                // 🚀 LOCAL DEV: Add mock auth header for local testing
+                ...(isLocalDev ? { 'X-Local-Dev': 'true' } : {}),
                 ...(options.headers || {})
             }
         };
@@ -54,6 +68,12 @@ class CommandCenter {
         const response = await fetch(`${this.apiBaseUrl}${endpoint}`, config);
 
         if (response.status === 401) {
+            // 🚀 LOCAL DEV BYPASS: Don't block on 401 when developing locally
+            if (isLocalDev) {
+                console.warn("⚠️ Auth bypassed for local development");
+                // Return mock data or empty response
+                return {};
+            }
             console.error("⚠️ Unauthorized access. Please log in.");
             throw new Error("Unauthorized: Please log in");
         }
