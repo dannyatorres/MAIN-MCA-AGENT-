@@ -29,31 +29,61 @@
     flex-wrap: wrap;
 }
 
+/* Compact Inputs for Header (Sleek Pills) */
 .left-panel .panel-controls {
     display: flex;
-    gap: 6px;
+    gap: 8px;             /* More breathing room between inputs */
     align-items: center;
+    margin-top: 4px;      /* Space from the buttons above */
 }
 
-/* Compact Inputs for Header */
-.left-panel .state-filter {
-    height: 28px;
-    font-size: 12px;
-    padding: 0 8px;
-    border: 1px solid var(--gray-300);
-    border-radius: 4px;
-    background: var(--white);
-    color: var(--gray-700);
-    flex-shrink: 0;
-}
-
+/* 1. Shared "Pill" Input Style */
+.left-panel .state-filter,
 .left-panel .search-field {
-    height: 28px;
+    height: 34px;                    /* Taller, matches buttons */
+    border-radius: 18px;             /* Full rounded pill */
+    border: 1px solid transparent;   /* No border by default */
+    background: var(--gray-100);     /* Light gray background */
+
+    padding: 0 14px;
     font-size: 12px;
-    padding: 0 8px;
-    border: 1px solid var(--gray-300);
-    border-radius: 4px;
+    color: var(--gray-800);
+    transition: all 0.2s ease;
+
+    /* Remove default iOS styling */
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* 2. Focus State (When typing) */
+.left-panel .state-filter:focus,
+.left-panel .search-field:focus {
+    background: var(--white);
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+
+/* 3. The Search Field specific */
+.left-panel .search-field {
     width: 100%; /* Fills remaining space */
+}
+.left-panel .search-field::placeholder {
+    color: var(--gray-500);
+}
+
+/* 4. The "All States" Dropdown - Custom Arrow Trick */
+.left-panel .state-filter {
+    flex-shrink: 0;
+    cursor: pointer;
+    padding-right: 32px; /* Room for the arrow */
+    font-weight: 500;
+
+    /* This SVG creates a tiny, sleek gray arrow */
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 10px;
 }
 
 /* 3. The Conversations List */
