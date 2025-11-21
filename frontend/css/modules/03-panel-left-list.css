@@ -217,16 +217,32 @@
     transform: translateY(-1px);
 }
 
-/* Clean up the secondary buttons */
+/* Dark Gray 'Pill' for Secondary Actions */
 .action-button.secondary {
-    background: var(--white);
-    border: 1px solid var(--gray-300);
-    color: var(--gray-700);
+    background: var(--gray-100); /* Light gray background */
+    color: var(--gray-700);      /* Dark text */
+    border: none;                /* Remove border for cleaner look */
+    font-weight: 600;
+}
+
+.action-button.secondary:hover {
+    background: var(--gray-200); /* Slightly darker on hover */
+    color: var(--gray-900);
+    transform: translateY(-1px);
+}
+
+/* OPTION B: If you want them TRULY dark (like the primary button) */
+/* Uncomment this block below to use this style instead */
+/*
+.action-button.secondary {
+    background: var(--gray-600);
+    color: white;
+    border: none;
 }
 .action-button.secondary:hover {
-    background: var(--gray-50);
-    border-color: var(--gray-400);
+    background: var(--gray-700);
 }
+*/
 
 /* Danger button styling */
 .action-button.danger {
