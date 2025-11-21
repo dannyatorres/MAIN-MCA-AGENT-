@@ -1,0 +1,223 @@
+   [MODULE: LEFT PANEL / CONVERSATIONS]
+   Consolidated "iPhone Style" list with search and filters.
+   ========================================================================== */
+
+/* 1. Panel Container */
+.left-panel {
+    flex: 3 1 280px;
+    min-width: 260px;
+    background: var(--white);
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ensure full height */
+}
+
+/* 2. Header & Controls (Compact Mobile Style) */
+.left-panel .panel-header {
+    padding: 8px;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    flex-shrink: 0;
+}
+
+.left-panel .panel-actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.left-panel .panel-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+/* Compact Inputs for Header */
+.left-panel .state-filter {
+    height: 28px;
+    font-size: 12px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: 4px;
+    background: var(--white);
+    color: var(--gray-700);
+    flex-shrink: 0;
+}
+
+.left-panel .search-field {
+    height: 28px;
+    font-size: 12px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: 4px;
+    width: 100%; /* Fills remaining space */
+}
+
+/* 3. The Conversations List */
+.conversations-list {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--white);
+    /* Remove scrollbar visual but keep function */
+    scrollbar-width: none;
+}
+.conversations-list::-webkit-scrollbar {
+    display: none;
+}
+
+/* 4. Conversation Item (iPhone Style) */
+.conversation-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    background: var(--white);
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+    min-height: 60px;
+}
+
+.conversation-item:hover {
+    background: var(--gray-50);
+}
+
+.conversation-item.active {
+    background: #e8f4fd; /* Light Blue Background */
+    border-left: 3px solid #007aff; /* Apple Blue Indicator */
+}
+
+/* 5. Avatars & Content */
+.conversation-avatar {
+    flex-shrink: 0;
+}
+
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #0ea5e9; /* Default Blue */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.conversation-content {
+    flex: 1;
+    min-width: 0; /* Required for text-overflow to work */
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* 6. Text Details */
+.conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.business-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.conversation-time {
+    font-size: 10px;
+    color: #8e8e93;
+}
+
+.conversation-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.phone-number {
+    font-size: 12px;
+    color: #8e8e93;
+}
+
+/* 7. Badges (States) */
+.state-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+/* State Colors */
+.state-badge.INTERESTED  { background: #dbeafe; color: #1e40af; } /* Blue */
+.state-badge.QUALIFIED   { background: #dcfce7; color: #166534; } /* Green */
+.state-badge.FCS_RUNNING { background: #fef3c7; color: #92400e; } /* Orange */
+.state-badge.NEW         { background: var(--gray-200); color: var(--gray-700); }
+
+/* 8. Unread Indicator */
+.unread-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--red);
+    color: white;
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* 9. Action Buttons (New/Import/Delete) */
+.action-button {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--gray-300);
+    background: var(--white);
+    transition: all 0.2s;
+}
+
+.action-button:hover { background: var(--gray-50); }
+.action-button.primary { background: var(--gray-900); color: white; border-color: var(--gray-900); }
+.action-button.danger  { background: var(--red); color: white; border-color: var(--red); }
+
+/* 10. Checkbox Mode (For Deleting) */
+.conversation-checkbox {
+    display: none;
+}
+.conversations-list.delete-mode .conversation-checkbox {
+    display: flex;
+    margin-right: 8px;
+}
+
+
+/* ==========================================================================

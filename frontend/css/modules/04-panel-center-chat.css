@@ -1,0 +1,161 @@
+   [MODULE: MESSAGING / CENTER PANEL]
+   Refactored to match command-center.html structure.
+   Uses absolute positioning for the "iPhone" floating input style.
+   ========================================================================== */
+
+/* 1. The Main Container */
+.center-panel {
+    flex: 3 1 400px;       /* Proportions */
+    min-width: 350px;
+    height: 100%;          /* Full height */
+    position: relative;    /* ANCHOR: Allows children to float inside */
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    border-right: 1px solid var(--gray-200);
+    overflow: hidden;      /* Clips content that slides out */
+}
+
+/* 2. The Header (Fixed Top) */
+.center-panel .panel-header {
+    flex: 0 0 auto;        /* Fixed height */
+    height: 60px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    z-index: 10;           /* Sits above scrolling messages */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* 3. The Scrolling Messages Area */
+/* Matches HTML ID: id="messagesContainer" */
+#messagesContainer {
+    position: absolute;
+    top: 60px;             /* Starts below the header */
+    bottom: 0;             /* Stretches to the bottom */
+    left: 0;
+    right: 0;
+    
+    /* Scroll Behavior */
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+    /* Spacing */
+    padding: 16px;
+    padding-bottom: 100px; /* CRITICAL: Space for the floating input at bottom */
+    
+    background: var(--white);
+    z-index: 1;
+}
+
+/* Optional: Hide scrollbar for cleaner look */
+#messagesContainer::-webkit-scrollbar {
+    display: none;
+}
+
+/* 4. The Floating Input Bar */
+/* Matches HTML ID: id="messageInputContainer" */
+#messageInputContainer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    
+    /* Visuals */
+    background: rgba(255, 255, 255, 0.95); /* Semi-transparent */
+    backdrop-filter: blur(5px);            /* Blur effect behind */
+    border-top: 1px solid var(--gray-200);
+    padding: 12px 16px;
+    z-index: 20;                           /* Sits ABOVE messages */
+    
+    display: flex; /* Note: HTML has style="display: none" initially, JS toggles this */
+    gap: 10px;
+    align-items: flex-end;
+}
+
+/* 5. Input Field & Buttons */
+.input-row {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+#messageInput {
+    flex: 1;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    max-height: 100px;
+    min-height: 40px;
+    resize: none;
+    outline: none;
+}
+
+#messageInput:focus {
+    background: var(--white);
+    border-color: var(--primary-green); /* Uses your var */
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.attachment-icon {
+    background: none;
+    border: none;
+    font-size: 20px;
+    padding-bottom: 10px;
+    cursor: pointer;
+    color: var(--gray-500);
+}
+
+/* 6. Message Bubbles */
+.message {
+    display: flex;
+    width: 100%;
+    margin-bottom: 8px;
+    animation: slideIn 0.2s ease-out;
+}
+
+.message.inbound { justify-content: flex-start; }
+.message.outbound { justify-content: flex-end; }
+
+.message-content {
+    max-width: 70%;
+    padding: 8px 14px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.message.inbound .message-content {
+    background: var(--gray-100);
+    color: var(--gray-900);
+    border-bottom-left-radius: 4px;
+}
+
+.message.outbound .message-content {
+    background: var(--primary-green);
+    color: var(--white);
+    border-bottom-right-radius: 4px;
+}
+
+.message-time {
+    font-size: 10px;
+    color: var(--gray-400);
+    margin-top: 2px;
+    padding: 0 4px;
+}
+.message.outbound .message-time { text-align: right; }
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
