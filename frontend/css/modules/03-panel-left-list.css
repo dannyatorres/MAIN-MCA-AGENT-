@@ -14,26 +14,31 @@
     height: 100%; /* Ensure full height */
 }
 
-/* 2. Header & Controls (Compact Mobile Style) */
+/* 2. Header & Controls (Aligned) */
 .left-panel .panel-header {
-    /* Padding, border, and background now controlled by 02-layout.css */
+    /* Layout handles the size/padding now. We just fill it. */
+    width: 100%;
+    height: 100%;
+    background: transparent; /* Let the Card white show through */
+    border: none;
+
+    display: flex;
     flex-direction: column;
-    align-items: stretch;
+    justify-content: center; /* Vertically center the content */
+    gap: 8px;
 }
 
 .left-panel .panel-actions {
     display: flex;
     gap: 6px;
-    margin-bottom: 8px;
     flex-wrap: wrap;
 }
 
-/* Compact Inputs for Header (Sleek Pills) */
+/* Ensure controls row fills the width */
 .left-panel .panel-controls {
+    width: 100%;
     display: flex;
-    gap: 8px;             /* More breathing room between inputs */
-    align-items: center;
-    margin-top: 4px;      /* Space from the buttons above */
+    gap: 8px;
 }
 
 /* 1. Shared "Pill" Input Style */

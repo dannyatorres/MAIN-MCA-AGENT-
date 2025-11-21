@@ -17,11 +17,36 @@
     overflow: hidden;      /* Clips content that slides out */
 }
 
-/* 2. The Header (Fixed Top) */
+/* 2. The Header (Aligned) */
 .center-panel .panel-header {
-    /* Height, padding, border, and background now controlled by 02-layout.css */
-    flex: 0 0 auto;
-    z-index: 10;           /* Sits above scrolling messages */
+    /* Inherits strict 64px height from Layout */
+    background: transparent;
+    border-bottom: 1px solid var(--gray-100);
+    z-index: 10;
+
+    display: flex;
+    flex-direction: row; /* Side by side */
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Add a wrapper for Title + Subtitle so they stack neatly */
+.conversation-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.2;
+}
+
+.conversation-info h2 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.conversation-info p {
+    font-size: 12px;
+    color: var(--gray-500);
 }
 
 /* 3. The Scrolling Messages Area */
