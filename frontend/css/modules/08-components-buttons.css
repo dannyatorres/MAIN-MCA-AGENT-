@@ -1,0 +1,68 @@
+/* ==========================================================================
+   [MODULE: BUTTONS]
+   Standard button styles (Primary, Secondary, Icons)
+   ========================================================================== */
+
+/* 1. Base Button Style */
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 2. Primary (Blue) */
+.btn-primary {
+    background-color: var(--blue);
+    color: var(--white);
+    box-shadow: 0 1px 2px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover {
+    background-color: #2563eb; /* Darker Blue */
+}
+
+/* 3. Secondary (Gray/White) */
+.btn-secondary {
+    background-color: var(--white);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-secondary:hover {
+    background-color: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+/* 4. Danger (Red) */
+.btn-danger {
+    background-color: var(--red);
+    color: var(--white);
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+/* 5. Small Variant */
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 11px;
+}
