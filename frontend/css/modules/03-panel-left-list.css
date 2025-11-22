@@ -410,4 +410,11 @@
     pointer-events: none;
 }
 
+/* Tool Button Active Danger State (for Delete Mode) */
+.tool-btn.active-danger {
+    background-color: #fee2e2; /* Light Red */
+    color: #dc2626; /* Dark Red */
+    border-color: #fca5a5;
+}
+
 /* ==========================================================================

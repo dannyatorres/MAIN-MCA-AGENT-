@@ -218,6 +218,33 @@ function refreshUI() {
 // Expose functions to window so HTML onclick="..." works
 function exposeGlobals() {
 
+    // RE-WIRE THE TRASH CAN (Delete Mode)
+    window.toggleDeleteMode = function() {
+        const list = document.getElementById('conversationsList');
+        const btn = document.getElementById('toggleDeleteModeBtn');
+
+        if (!list) return;
+
+        // Toggle the CSS class that reveals checkboxes
+        const isDeleteMode = list.classList.toggle('delete-mode');
+
+        // Optional: Visual feedback on the button
+        if (btn) {
+            if (isDeleteMode) {
+                btn.classList.add('active-danger'); // Make it look active/red
+            } else {
+                btn.classList.remove('active-danger');
+            }
+        }
+
+        // Notify ConversationUI if needed (to clear selections when canceling)
+        if (!isDeleteMode && window.commandCenter?.conversationUI) {
+            // Deselect all if we are cancelling delete mode
+            const checkboxes = document.querySelectorAll('.delete-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+    };
+
     // RE-WIRE THE + BUTTON
     window.openRichCreateModal = function() {
         console.log('🚀 Opening New Lead Form...');
