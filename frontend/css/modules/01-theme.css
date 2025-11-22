@@ -13,13 +13,38 @@
 }
 
 :root {
-    --primary-green: #22c55e;
-    --dark-green: #16a34a;
-    --light-green: #dcfce7;
+    /* The "Corgi" Brand Accent Colors - Use Sparingly */
+    --brand-accent: #D97B29;
+    --brand-accent-dim: #fff7ed;
+    --brand-accent-dark: #9a5415;
+
+    /* Corgi Palette Expansion */
+    --corgi-cream: #fff7ed;       /* The default card color */
+    --corgi-cream-hover: #ffedd5; /* Slightly darker for hover */
+    --corgi-hyper: #fb923c;       /* Adjusted orange (lighter) so black text reads better */
+    --corgi-hyper-pop: #fdba74;   /* Lighter orange for borders/glows */
+
+    /* Main UI Colors - Professional Black/Gray */
+    --primary-btn: var(--gray-900);
+    --primary-btn-hover: #000000;
+
+    /* Legacy Orange Variables (kept for compatibility) */
+    --primary-orange: #D97B29;
+    --dark-orange: #B86A22;
+    --light-orange: #FBEADA;
+
+    /* Re-mapping existing variables */
+    --primary-green: var(--primary-orange);
+    --dark-green: var(--dark-orange);
+    --light-green: var(--light-orange);
+    --blue: var(--primary-orange);
+
+    /* Keep these for errors/warnings */
     --red: #ef4444;
     --orange: #f59e0b;
-    --blue: #3b82f6;
     --purple: #8b5cf6;
+
+    /* Gray scale */
     --gray-50: #f9fafb;
     --gray-100: #f3f4f6;
     --gray-200: #e5e7eb;
@@ -29,7 +54,7 @@
     --gray-600: #4b5563;
     --gray-700: #374151;
     --gray-800: #1f2937;
-    --gray-900: #111827;
+    --gray-900: #111827; /* This matches the suit/text perfectly */
     --white: #ffffff;
     --black: #000000;
 
