@@ -266,7 +266,8 @@
     flex-direction: column;
     gap: 2px; /* Tight grouping like iMessage */
 
-    background: var(--white);
+    /* CHANGE: Transparent background */
+    background: transparent;
     z-index: 1;
 }
 

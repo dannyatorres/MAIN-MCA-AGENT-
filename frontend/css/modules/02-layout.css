@@ -35,7 +35,9 @@
 .right-panel {
     display: flex;
     flex-direction: column;
-    background: var(--white);
+
+    /* CHANGE: The whole box is now Grey */
+    background: var(--gray-100);
 
     /* THE FIX: Rounded Corners & Shadows instead of borders */
     border-radius: 16px;
@@ -58,8 +60,11 @@
     align-items: center;
     justify-content: space-between;
 
-    border-bottom: 1px solid var(--gray-100);
-    background: var(--white);
+    border-bottom: 1px solid rgba(0,0,0,0.05); /* Subtle border */
+
+    /* CHANGE: Transparent so it shows the Grey container background */
+    background: transparent;
+
     flex-shrink: 0;
 }
 

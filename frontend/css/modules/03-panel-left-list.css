@@ -25,10 +25,12 @@
     gap: 4px;               /* Very tight gap between Title and Search */
     justify-content: center;
 
-    background: var(--white);
+    /* CHANGE: Transparent header matches the Grey container */
+    background: transparent;
+
     display: flex;
     flex-direction: column;
-    border-bottom: 1px solid var(--gray-200);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
 /* 2. Row 1: Branding */
@@ -163,7 +165,10 @@
 .conversations-list {
     flex: 1;
     overflow-y: auto;
-    background: var(--white);
+
+    /* CHANGE: Transparent list allows Grey container to show */
+    background: transparent;
+
     /* Remove scrollbar visual but keep function */
     scrollbar-width: none;
     /* 5. FIX THE LIST SCROLLING */
