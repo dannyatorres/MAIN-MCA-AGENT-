@@ -2,11 +2,13 @@
 
 export class LendersTab {
     constructor(parent) {
-        this.parent = parent;
+        this.parent = parent; // Reference to CommandCenter
+        // Access the Lenders Module logic
+        this.lendersLogic = parent.lenders;
     }
 
     render(container) {
-        console.log('🏛️ Rendering Lenders Tab');
+        console.log('🏦 Rendering Lenders Tab');
 
         const conversation = this.parent.getSelectedConversation();
         if (!conversation) {
@@ -20,8 +22,8 @@ export class LendersTab {
             return;
         }
 
-        // Check if the core logic module is loaded
-        if (!this.parent.lenders) {
+        // Check if logic module is loaded
+        if (!this.lendersLogic) {
             container.innerHTML = `
                 <div class="error-state" style="text-align: center; padding: 40px;">
                     <div class="loading-spinner"></div>
@@ -31,7 +33,7 @@ export class LendersTab {
             return;
         }
 
-        // Render the Tab Content (Simple CTA Button)
+        // Render the Landing Page (The Button)
         container.innerHTML = `
             <div style="padding: 60px 40px; text-align: center;">
                 <div style="font-size: 64px; margin-bottom: 24px;">🤝</div>
@@ -49,21 +51,92 @@ export class LendersTab {
             </div>
         `;
 
-        // Attach Event Listener
         document.getElementById('openLendersModalBtn').addEventListener('click', () => {
-            this.openModal();
+            this.openModal(conversation);
         });
     }
 
-    openModal() {
-        // Delegate to the existing complex logic in lenders.js
-        if (this.parent.lenders) {
-            if (this.parent.lenders.openLenderModal) {
-                this.parent.lenders.openLenderModal();
+    openModal(conversation) {
+        console.log('🚀 Launching Lender Modal...');
+
+        const modal = document.getElementById('lendersInlineModal');
+        const modalContent = document.getElementById('lendersInlineContent');
+
+        if (!modal || !modalContent) {
+            console.error('❌ Lender modal elements not found in DOM');
+            return;
+        }
+
+        // 1. INJECT THE FORM HTML (The Missing Step!)
+        // We ask the Lenders Module to generate its template
+        if (this.lendersLogic.createLenderFormTemplate) {
+            modalContent.innerHTML = this.lendersLogic.createLenderFormTemplate(conversation);
+        } else {
+            modalContent.innerHTML = '<div class="error-state">Error: createLenderFormTemplate not found in LendersModule</div>';
+            return;
+        }
+
+        // 2. SHOW THE MODAL
+        modal.style.display = 'flex';
+
+        // 3. INITIALIZE LOGIC (Wake up the form)
+        // We use a timeout to ensure the DOM is painted
+        setTimeout(() => {
+            // A. Bind Inputs
+            if (this.lendersLogic.initializeLenderForm) {
+                this.lendersLogic.initializeLenderForm();
+            }
+
+            // B. Pre-fill Data
+            if (this.lendersLogic.populateLenderForm) {
+                this.lendersLogic.populateLenderForm();
+            }
+
+            // C. Restore Cache (if any)
+            if (this.lendersLogic.restoreLenderFormCacheIfNeeded) {
+                this.lendersLogic.restoreLenderFormCacheIfNeeded();
+            }
+
+            // D. Check for Cached Results or Load Fresh
+            this.handleCachedResults();
+
+        }, 100);
+
+        // 4. SETUP CLOSE HANDLERS
+        const closeBtn = document.getElementById('closeLendersInlineModal');
+        if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
+
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        };
+    }
+
+    handleCachedResults() {
+        const conversationId = this.parent.getCurrentConversationId();
+
+        // Check if the logic module has a cache we can use
+        if (conversationId && this.lendersLogic.lenderResultsCache) {
+            const cached = this.lendersLogic.lenderResultsCache.get(conversationId);
+
+            if (cached) {
+                console.log('♻️ Restoring cached lender results');
+                const resultsEl = document.getElementById('lenderResults');
+                if (resultsEl) {
+                    resultsEl.innerHTML = cached.html;
+                    resultsEl.style.display = 'block'; // Ensure visible
+                    resultsEl.classList.add('active');
+                }
+
+                // Restore internal state
+                if (cached.data && cached.data.qualified) {
+                    this.lendersLogic.qualifiedLenders = cached.data.qualified;
+                    this.lendersLogic.lastLenderCriteria = cached.criteria;
+                }
             } else {
-                // Fallback if the method name is different in your version
-                const modal = document.getElementById('lendersInlineModal');
-                if (modal) modal.style.display = 'flex';
+                // No cache? Load fresh data
+                if (this.lendersLogic.loadLenderData) {
+                    this.lendersLogic.loadLenderData();
+                }
             }
         }
     }
