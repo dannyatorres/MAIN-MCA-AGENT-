@@ -24,30 +24,53 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        /* 1. Turn the Container Grey */
-        .left-panel {
-            background-color: var(--gray-100) !important; /* The nice grey */
-            border-right: 1px solid rgba(0,0,0,0.05) !important;
+        /* 1. DEFINE THE COLOR FROM YOUR IMAGE */
+        :root {
+            --sidebar-dark: #4A4A55; /* The dark slate grey from your image */
         }
 
-        /* 2. Make the "MCAgent" Header Transparent (so it looks Grey) */
+        /* 2. Apply it to the Left Panel Container */
+        .left-panel {
+            background-color: var(--sidebar-dark) !important;
+            border-right: 1px solid rgba(0,0,0,0.1) !important;
+        }
+
+        /* 3. Make the Header Transparent & FIX TEXT COLOR */
         .left-panel .panel-header {
             background-color: transparent !important;
-            border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.1) !important; /* Light divider */
         }
 
-        /* 3. Make the List Background Transparent (so the Grey shows through) */
+        /* Fix "MCAgent" Title to be White */
+        .left-panel .brand-title {
+            color: #ffffff !important;
+        }
+
+        /* Fix Header Icons/Buttons to be Light Grey instead of Dark */
+        .left-panel .tool-btn {
+            color: rgba(255,255,255,0.7) !important;
+        }
+        .left-panel .tool-btn:hover {
+            color: #ffffff !important;
+            background: rgba(255,255,255,0.1) !important;
+        }
+
+        /* 4. Transparent List Background */
         .conversations-list {
             background-color: transparent !important;
-            padding-top: 8px !important; /* Breathing room */
+            padding-top: 12px !important;
         }
 
-        /* 4. Ensure Cards stay their original Cream color (Popping off the Grey) */
+        /* 5. Cards stay Cream (High Contrast Pop) */
         .conversation-item {
             background-color: var(--corgi-cream) !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-            margin-bottom: 6px !important; /* Space between cards */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+            margin-bottom: 8px !important;
+            border: none !important;
         }
+
+        /* Optional: Tweaking the card text slightly if needed,
+           but standard black text on cream cards looks great against dark grey. */
     </style>
 </head>
 <body>
