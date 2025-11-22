@@ -23,7 +23,6 @@ export class IntelligenceManager {
     setupTabListeners() {
         const tabButtons = document.querySelectorAll('.tab-btn');
         if (tabButtons.length === 0) {
-            console.warn('⚠️ No .tab-btn elements found!');
             return;
         }
 
@@ -51,43 +50,89 @@ export class IntelligenceManager {
         // Route to the correct handler
         switch (tabName) {
             case 'edit':
-                // ✅ USE THE NEW MODULE
                 this.formsTab.render(content);
                 break;
-
             case 'ai-assistant':
-                // ⚠️ LEGACY LOGIC (Fixed)
                 this.renderAITab(content);
                 break;
-
             case 'documents':
-                // ⚠️ LEGACY LOGIC
                 this.renderDocumentsTab(content);
                 break;
-
             case 'lenders':
-                // ⚠️ LEGACY LOGIC
                 this.renderLendersTab(content);
                 break;
-
             case 'fcs':
-                // ⚠️ LEGACY LOGIC
                 this.renderFCSTab(content);
                 break;
-
             default:
                 content.innerHTML = `<div class="empty-state">Tab ${tabName} coming soon</div>`;
         }
     }
 
-    // --- PROXY METHODS (Connecting Main.js to New Module) ---
+    // ============================================================
+    //  MISSING LINK: Data Loading Methods (Restored)
+    // ============================================================
+
+    async loadConversationIntelligence(conversationId = null) {
+        // 1. Determine ID
+        const convId = conversationId || this.parent.getCurrentConversationId();
+        if (!convId) {
+            console.warn('⚠️ No conversation ID for intelligence load');
+            return;
+        }
+
+        try {
+            console.log(`📥 Loading intelligence data for: ${convId}`);
+
+            // 2. Fetch Data
+            const data = await this.parent.apiCall(`/api/conversations/${convId}`);
+            const conversationData = data.conversation || data;
+
+            // 3. Update Parent State (Critical for other modules)
+            this.parent.selectedConversation = conversationData;
+            this.parent.currentConversationId = convId;
+
+            if (this.parent.conversationUI) {
+                this.parent.conversationUI.selectedConversation = conversationData;
+                this.parent.conversationUI.currentConversationId = convId;
+                this.parent.conversationUI.conversations.set(convId, conversationData);
+            }
+
+            // 4. Render
+            this.renderIntelligenceData(data);
+
+        } catch (error) {
+            console.error('❌ Failed to load conversation details:', error);
+            if (this.utils) this.utils.showNotification('Failed to load details', 'error');
+        }
+    }
+
+    renderIntelligenceData(data) {
+        const conversationData = data.conversation || data;
+
+        // 1. Update Header UI (Phone, Business Name, etc.)
+        if (this.parent.conversationUI && this.parent.conversationUI.showConversationDetails) {
+            this.parent.conversationUI.showConversationDetails();
+        }
+
+        // 2. Refresh the Current Tab
+        const currentActiveTab = document.querySelector('.tab-btn.active');
+        const currentTab = currentActiveTab?.dataset.tab || 'ai-assistant';
+
+        console.log(`Refresh tab: ${currentTab}`);
+        this.switchTab(currentTab);
+    }
+
+    // ============================================================
+    //  PROXY METHODS
+    // ============================================================
 
     showCreateLeadModal() {
         this.formsTab.openCreateModal();
     }
 
     // ============================================================
-    //  LEGACY HANDLERS (Fixed connection issues)
+    //  LEGACY HANDLERS
     // ============================================================
 
     renderAITab(content) {
@@ -97,10 +142,8 @@ export class IntelligenceManager {
             return;
         }
 
-        // Basic AI Layout check
         if (this.parent.ai) {
-            // Use the AI module if it exists
-            // We reconstruct the HTML structure the AI module expects
+            // Reconstruct HTML for AI Module
             content.innerHTML = `
                 <div class="ai-assistant-section" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
                     <div id="aiChatMessages" style="flex:1; overflow-y:auto; padding:20px;">
@@ -116,10 +159,9 @@ export class IntelligenceManager {
                 </div>
             `;
 
-            // 🚨 CRITICAL FIX: Reset the AI module so it re-attaches to this NEW DOM
+            // Reset & Re-init AI
             this.parent.ai.isInitialized = false;
-            this.parent.ai.currentConversationId = null; // Force it to accept the conversation again
-
+            this.parent.ai.currentConversationId = null;
             this.parent.ai.initializeAIChat();
         } else {
             content.innerHTML = '<div class="empty-state">AI Module Loading...</div>';
@@ -154,13 +196,10 @@ export class IntelligenceManager {
     }
 
     openLendersModal() {
-        // Use existing lender logic if available
         if(this.parent.lenders) {
-            // Try to use the lender module's native modal opener if it exists
             if (this.parent.lenders.openLenderModal) {
                 this.parent.lenders.openLenderModal();
             } else {
-                // Fallback to legacy behavior
                const modal = document.getElementById('lendersInlineModal');
                if (modal) modal.style.display = 'flex';
             }
