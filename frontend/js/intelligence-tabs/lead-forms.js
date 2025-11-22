@@ -352,3 +352,6 @@ export class LeadFormsTab {
         }
     }
 }
+
+// Expose globally for non-module scripts (optional, mainly used via IntelligenceManager)
+window.LeadFormsTab = LeadFormsTab;

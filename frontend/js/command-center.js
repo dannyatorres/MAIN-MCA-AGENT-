@@ -115,12 +115,12 @@ class CommandCenter {
                 console.error('DocumentsModule class not found!');
             }
 
-            // 5. Intelligence/Tabs Module
+            // 5. Intelligence/Tabs Module (NEW: Using IntelligenceManager)
             console.log('5. Initializing Intelligence...');
-            if (typeof IntelligenceTabs !== 'undefined') {
-                this.intelligence = new IntelligenceTabs(this);
+            if (typeof IntelligenceManager !== 'undefined') {
+                this.intelligence = new IntelligenceManager(this);
             } else {
-                console.error('IntelligenceTabs class not found!');
+                console.error('IntelligenceManager class not found!');
             }
 
             // 6. FCS Module
