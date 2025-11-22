@@ -218,6 +218,17 @@ function refreshUI() {
 // Expose functions to window so HTML onclick="..." works
 function exposeGlobals() {
 
+    // RE-WIRE THE + BUTTON
+    window.openRichCreateModal = function() {
+        console.log('🚀 Opening New Lead Form...');
+        if (window.commandCenter && window.commandCenter.intelligence) {
+            // Call the new module
+            window.commandCenter.intelligence.showCreateLeadModal();
+        } else {
+            console.error('❌ Intelligence module not ready');
+        }
+    };
+
     // Toggle Section (Accordions)
     window.toggleSection = (sectionId) => {
         const content = document.getElementById(sectionId);
