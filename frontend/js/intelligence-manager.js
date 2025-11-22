@@ -56,7 +56,7 @@ export class IntelligenceManager {
                 break;
 
             case 'ai-assistant':
-                // ⚠️ LEGACY LOGIC (Keep it here for now)
+                // ⚠️ LEGACY LOGIC (Fixed)
                 this.renderAITab(content);
                 break;
 
@@ -87,7 +87,7 @@ export class IntelligenceManager {
     }
 
     // ============================================================
-    //  LEGACY HANDLERS (To keep things working while we refactor)
+    //  LEGACY HANDLERS (Fixed connection issues)
     // ============================================================
 
     renderAITab(content) {
@@ -103,13 +103,23 @@ export class IntelligenceManager {
             // We reconstruct the HTML structure the AI module expects
             content.innerHTML = `
                 <div class="ai-assistant-section" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
-                    <div id="aiChatMessages" style="flex:1; overflow-y:auto; padding:20px;"></div>
+                    <div id="aiChatMessages" style="flex:1; overflow-y:auto; padding:20px;">
+                        <div style="text-align:center; color:#999; padding-top:20px;">
+                            <div class="loading-spinner small"></div>
+                            <p>Connecting to AI...</p>
+                        </div>
+                    </div>
                     <div class="ai-input-area" style="padding:20px; border-top:1px solid #eee;">
-                        <textarea id="aiChatInput" placeholder="Ask AI..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"></textarea>
-                        <button onclick="window.conversationUI.ai.sendAIMessage()" style="margin-top:10px; padding:8px 16px; background:#000; color:#fff; border-radius:6px;">Send</button>
+                        <textarea id="aiChatInput" placeholder="Ask AI..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:inherit;"></textarea>
+                        <button id="aiChatSend" onclick="window.conversationUI.ai.sendAIMessage()" style="margin-top:10px; padding:8px 16px; background:#000; color:#fff; border-radius:6px; cursor:pointer;">Send</button>
                     </div>
                 </div>
             `;
+
+            // 🚨 CRITICAL FIX: Reset the AI module so it re-attaches to this NEW DOM
+            this.parent.ai.isInitialized = false;
+            this.parent.ai.currentConversationId = null; // Force it to accept the conversation again
+
             this.parent.ai.initializeAIChat();
         } else {
             content.innerHTML = '<div class="empty-state">AI Module Loading...</div>';
@@ -146,9 +156,14 @@ export class IntelligenceManager {
     openLendersModal() {
         // Use existing lender logic if available
         if(this.parent.lenders) {
-            // Logic to open existing lender modal
-            // We can refactor this later
-            alert("Lender modal opening...");
+            // Try to use the lender module's native modal opener if it exists
+            if (this.parent.lenders.openLenderModal) {
+                this.parent.lenders.openLenderModal();
+            } else {
+                // Fallback to legacy behavior
+               const modal = document.getElementById('lendersInlineModal');
+               if (modal) modal.style.display = 'flex';
+            }
         }
     }
 
