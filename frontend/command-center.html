@@ -23,6 +23,32 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+    <style>
+        /* 1. Turn the Container Grey */
+        .left-panel {
+            background-color: var(--gray-100) !important; /* The nice grey */
+            border-right: 1px solid rgba(0,0,0,0.05) !important;
+        }
+
+        /* 2. Make the "MCAgent" Header Transparent (so it looks Grey) */
+        .left-panel .panel-header {
+            background-color: transparent !important;
+            border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+        }
+
+        /* 3. Make the List Background Transparent (so the Grey shows through) */
+        .conversations-list {
+            background-color: transparent !important;
+            padding-top: 8px !important; /* Breathing room */
+        }
+
+        /* 4. Ensure Cards stay their original Cream color (Popping off the Grey) */
+        .conversation-item {
+            background-color: var(--corgi-cream) !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+            margin-bottom: 6px !important; /* Space between cards */
+        }
+    </style>
 </head>
 <body>
     <div class="command-center">
