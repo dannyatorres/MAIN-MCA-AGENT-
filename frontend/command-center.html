@@ -24,53 +24,62 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        /* 1. DEFINE THE COLOR FROM YOUR IMAGE */
+        /* 1. DEFINE THE NEW MEDIUM GREY */
         :root {
-            --sidebar-dark: #4A4A55; /* The dark slate grey from your image */
+            /* A balanced "Steel Grey" - not too dark, not too light */
+            --sidebar-medium: #6E6E76;
         }
 
         /* 2. Apply it to the Left Panel Container */
         .left-panel {
-            background-color: var(--sidebar-dark) !important;
-            border-right: 1px solid rgba(0,0,0,0.1) !important;
+            background-color: var(--sidebar-medium) !important;
+            border-right: 1px solid rgba(255,255,255,0.1) !important; /* Subtle divider */
         }
 
-        /* 3. Make the Header Transparent & FIX TEXT COLOR */
+        /* 3. Make the Header Transparent */
         .left-panel .panel-header {
             background-color: transparent !important;
-            border-bottom: 1px solid rgba(255,255,255,0.1) !important; /* Light divider */
+            border-bottom: 1px solid rgba(255,255,255,0.15) !important;
         }
 
-        /* Fix "MCAgent" Title to be White */
+        /* 4. Keep Title White (Best contrast on medium grey) */
         .left-panel .brand-title {
             color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
-        /* Fix Header Icons/Buttons to be Light Grey instead of Dark */
+        /* 5. Buttons: Make them White/Light Grey */
         .left-panel .tool-btn {
-            color: rgba(255,255,255,0.7) !important;
+            color: rgba(255,255,255,0.85) !important;
         }
         .left-panel .tool-btn:hover {
             color: #ffffff !important;
-            background: rgba(255,255,255,0.1) !important;
+            background: rgba(255,255,255,0.15) !important;
         }
 
-        /* 4. Transparent List Background */
+        /* 6. Search Bar: Make it semi-transparent white */
+        .left-panel .search-field-clean {
+            background: rgba(255,255,255,0.15) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: white !important;
+        }
+        .left-panel .search-field-clean::placeholder {
+            color: rgba(255,255,255,0.5) !important;
+        }
+
+        /* 7. The List & Cards */
         .conversations-list {
             background-color: transparent !important;
             padding-top: 12px !important;
         }
 
-        /* 5. Cards stay Cream (High Contrast Pop) */
+        /* Cards stay Cream/White for pop */
         .conversation-item {
             background-color: var(--corgi-cream) !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
             margin-bottom: 8px !important;
             border: none !important;
         }
-
-        /* Optional: Tweaking the card text slightly if needed,
-           but standard black text on cream cards looks great against dark grey. */
     </style>
 </head>
 <body>
