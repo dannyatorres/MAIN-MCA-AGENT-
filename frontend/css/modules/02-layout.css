@@ -10,30 +10,21 @@
     height: 100vh;
     width: 100%;
     background-color: var(--gray-100); /* Darker background for contrast */
+    overflow: hidden; /* Prevent body scroll */
 }
 
-/* 2. Header (Floating Style) */
+/* 2. Hide the Old Header */
 .header {
-    height: 70px; /* Taller for modern feel */
-    background: var(--white);
-    /* No border, just shadow for depth */
-    border-bottom: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 24px;
-    z-index: 50;
-    position: relative;
+    display: none !important; /* Completely remove it */
 }
 
-/* 3. The Layout Grid (The Canvas) */
+/* 3. The Layout Grid (The Canvas) - Update to Fill Screen */
 .main-content {
-    flex: 1;
+    height: 100vh; /* Force full height */
     display: flex;
     min-height: 0;
     width: 100%;
-    padding: 12px; /* GAP around the entire app */
+    padding: 12px; /* GAP around the entire app - Keep the gap for the 'floating card' look */
     gap: 12px;     /* GAP between panels */
     background: var(--gray-100);
 }
@@ -370,6 +361,23 @@
 .state-select {
     min-width: 80px;
     font-size: 11px;
+}
+
+/* 1. Hide the Bottom Status Bar */
+.status-bar {
+    display: none !important;
+}
+
+/* 2. Ensure Main Content Stretches Fully */
+.main-content {
+    /* Make sure it takes all available height */
+    flex: 1;
+    height: 100vh;
+
+    /* Optional: If you want the cards to touch the bottom edge flush,
+       change 'padding-bottom' to 0.
+       Currently, it keeps a 12px gap for the 'floating' look. */
+    padding-bottom: 12px;
 }
 
 /* ==========================================================================

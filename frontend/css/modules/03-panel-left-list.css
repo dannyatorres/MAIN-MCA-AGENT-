@@ -14,85 +14,150 @@
     height: 100%; /* Ensure full height */
 }
 
-/* 2. Header & Controls (Corrected Fix) */
+/* 1. Panel Header Reset */
 .left-panel .panel-header {
-    width: 100%;
-    /* FIX: Remove height: 100% */
-    min-height: 64px;     /* Match the grid line */
-    height: auto;         /* Allow it to wrap content */
-    background: transparent;
-    border-bottom: 1px solid var(--gray-200); /* Restore the divider line */
+    /* 1. THE NEW HEIGHT: 70px */
+    height: 70px;
+    min-height: 70px;
 
+    /* 2. SQUEEZE THE CONTENT */
+    padding: 8px 12px;      /* Reduced from 12px */
+    gap: 4px;               /* Very tight gap between Title and Search */
+    justify-content: center;
+
+    background: var(--white);
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 10px;           /* Space between buttons and search */
-
-    padding: 12px 16px;  /* Breathing room */
-    flex-shrink: 0;      /* Don't let the list crush the header */
+    border-bottom: 1px solid var(--gray-200);
 }
 
-.left-panel .panel-actions {
+/* 2. Row 1: Branding */
+.app-brand-row {
     display: flex;
+    align-items: center;
     gap: 6px;
-    flex-wrap: wrap;
+    padding-left: 4px;
 }
 
-/* Ensure controls row fills the width */
-.left-panel .panel-controls {
-    width: 100%;
+.brand-title {
+    font-size: 14px; /* Was 15px */
+    font-weight: 800;
+    color: var(--gray-900);
+    letter-spacing: -0.3px;
+    margin-bottom: 2px;
+}
+
+/* The Status Dot */
+.app-brand-row .status-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50%;
+}
+
+/* 3. Row 2: Unified Toolbar */
+.unified-toolbar {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 6px; /* Space between elements */
+    width: 100%;
 }
 
-/* 1. Shared "Pill" Input Style */
-.left-panel .state-filter,
-.left-panel .search-field {
-    height: 34px;                    /* Taller, matches buttons */
-    border-radius: 18px;             /* Full rounded pill */
-    border: 1px solid transparent;   /* No border by default */
-    background: var(--gray-100);     /* Light gray background */
-
-    padding: 0 14px;
-    font-size: 12px;
-    color: var(--gray-800);
-    transition: all 0.2s ease;
-
-    /* Remove default iOS styling */
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-/* 2. Focus State (When typing) */
-.left-panel .state-filter:focus,
-.left-panel .search-field:focus {
-    background: var(--white);
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    outline: none;
-}
-
-/* 3. The Search Field specific */
-.left-panel .search-field {
-    width: 100%; /* Fills remaining space */
-}
-.left-panel .search-field::placeholder {
+/* --- A. Filter (Hidden Select Trick) --- */
+.filter-wrapper {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gray-100);
+    border-radius: 6px;
     color: var(--gray-500);
-}
-
-/* 4. The "All States" Dropdown - Custom Arrow Trick */
-.left-panel .state-filter {
-    flex-shrink: 0;
     cursor: pointer;
-    padding-right: 32px; /* Room for the arrow */
-    font-weight: 500;
-
-    /* This SVG creates a tiny, sleek gray arrow */
-    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 10px;
+    transition: all 0.2s;
 }
+.filter-wrapper:hover {
+    background: var(--gray-200);
+    color: var(--gray-900);
+}
+/* The actual select is invisible but clickable on top */
+.state-filter-icon {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0; /* Hidden */
+    cursor: pointer;
+    z-index: 2;
+}
+.filter-icon-indicator {
+    font-size: 12px;
+    pointer-events: none; /* Let clicks pass through */
+}
+
+/* --- B. Search (The Flexible Element) --- */
+.search-field-clean {
+    flex: 1; /* Takes all available width */
+    height: 32px; /* Slightly taller for easy clicking */
+    background: var(--gray-50);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 13px;
+    color: var(--gray-900);
+    transition: all 0.2s;
+}
+.search-field-clean:focus {
+    background: var(--white);
+    border-color: var(--gray-300);
+    outline: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.search-field-clean::placeholder {
+    color: var(--gray-400);
+}
+
+/* --- C. Action Buttons (Square Icons) --- */
+.action-group {
+    display: flex;
+    gap: 4px;
+}
+
+.tool-btn {
+    width: 32px; /* Nice touch target */
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--gray-500);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.tool-btn:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+/* The "New" Button (Highlighted) */
+.tool-btn.primary {
+    background: var(--gray-900);
+    color: white;
+}
+.tool-btn.primary:hover {
+    background: black;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+/* Danger Hover for Trash */
+.tool-btn.danger-hover:hover {
+    background: #fef2f2;
+    color: var(--red);
+}
+
 
 /* 3. The Conversations List */
 .conversations-list {
@@ -101,93 +166,162 @@
     background: var(--white);
     /* Remove scrollbar visual but keep function */
     scrollbar-width: none;
+    /* 5. FIX THE LIST SCROLLING */
+    padding-top: 4px;  /* Add a tiny bit of top padding so shadow of first card shows */
 }
 .conversations-list::-webkit-scrollbar {
     display: none;
 }
 
-/* 4. Conversation Item (iPhone Style) */
+/* 4. Conversation Item (Warm Base) */
 .conversation-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+
+    margin: 4px 10px;
     padding: 10px 12px;
-    border-bottom: 1px solid #f3f4f6;
-    background: var(--white);
+    border-radius: 12px;
+
+    /* THE FIX: Cream background by default */
+    background: var(--corgi-cream);
+    border: 1px solid transparent;
+
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
     position: relative;
-    min-height: 60px;
+    min-height: 64px;
 }
 
+/* Hover: Darker Cream */
 .conversation-item:hover {
-    background: var(--gray-50);
+    background: var(--corgi-cream-hover);
+    transform: translateY(-1px); /* Tiny lift */
 }
 
+/* Active: White Pop + Black Border */
 .conversation-item.active {
-    background: #e8f4fd; /* Light Blue Background */
-    border-left: 3px solid #007aff; /* Apple Blue Indicator */
+    background: var(--white); /* White pops forward against the cream list */
+    border: 1px solid var(--gray-900);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    z-index: 1;
 }
 
-/* 5. Avatars & Content */
+/* 5. Avatars (Onyx Style) */
 .conversation-avatar {
     flex-shrink: 0;
 }
 
 .avatar-circle {
-    width: 40px;
-    height: 40px;
+    width: 42px;              /* Slightly larger for presence */
+    height: 42px;
     border-radius: 50%;
-    background: #0ea5e9; /* Default Blue */
+
+    /* THE LOOK: Onyx Black Style */
+    background: var(--gray-900);
     color: white;
+
+    /* Typography */
+    font-size: 14px;
+    font-weight: 700;        /* Bold text pops against black */
+    letter-spacing: 0.5px;
+
+    /* Centering */
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    font-weight: 600;
     text-transform: uppercase;
+
+    /* Depth */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    border: 2px solid var(--white); /* Adds a tiny 'cutout' effect if cards overlap */
 }
 
+/* Optional: If you want the Active Chat's avatar to change slightly */
+.conversation-item.active .avatar-circle {
+    background: var(--black); /* Pure black when active */
+    transform: scale(1.05); /* Subtle grow effect */
+}
+
+/* 6. Typography & Text Details (iPhone Style Fix) */
 .conversation-content {
     flex: 1;
-    min-width: 0; /* Required for text-overflow to work */
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 2px;
 }
 
-/* 6. Text Details */
+/* Row 1: Name ---------------- Date */
 .conversation-header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: flex-start; /* Top align ensures date sits high */
+    width: 100%;
+    margin-bottom: 1px;
 }
 
 .business-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--gray-900);
+    font-size: 14px;        /* Slightly cleaner than 15px */
+    font-weight: 700;       /* Bold */
+    color: #111827;         /* Deep Black */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 160px;
+    margin-right: 8px;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
 }
 
 .conversation-time {
-    font-size: 10px;
-    color: #8e8e93;
+    font-size: 11px;
+    color: #9ca3af;         /* Lighter Gray (Tailwind Gray-400) */
+    font-weight: 400;       /* Regular weight (Not Bold) */
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-top: 1px;        /* Tiny offset for visual alignment */
 }
 
+/* Row 2: Phone ---------------- CID */
 .conversation-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
 }
 
 .phone-number {
     font-size: 12px;
-    color: #8e8e93;
+    color: #6b7280;         /* Medium Gray */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+    font-weight: 400;
 }
+
+/* The CID Tag */
+.conversation-meta > span:last-child,
+.cid-tag {
+    font-size: 10px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-weight: 700;
+
+    background: var(--corgi-hyper);
+    color: black;
+
+    padding: 2px 6px;
+    border-radius: 6px;
+    letter-spacing: -0.3px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* === ACTIVE STATE OVERRIDES === */
+/* When clicked, keep the date GRAY. Don't let it turn black. */
+.conversation-item.active .business-name { color: #000000; }
+.conversation-item.active .conversation-time { color: #9ca3af !important; } /* Force Gray */
+.conversation-item.active .phone-number { color: #4b5563; }
 
 /* 7. Badges (States) */
 .state-badge {
@@ -233,51 +367,10 @@
     }
 }
 
-/* 9. Action Buttons (Polished & Clean) */
-.action-button {
-    padding: 6px 14px;
-    border-radius: 16px;   /* Keep the pill shape */
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-/* Primary: Dark & Prominent */
-.action-button.primary {
-    background: var(--gray-900);
-    color: white;
-    border: 1px solid var(--gray-900);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.action-button.primary:hover {
-    background: black;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* Secondary: White with Border (Reverted Style) */
-.action-button.secondary {
-    background: var(--white);
-    color: var(--gray-700);
-    border: 1px solid var(--gray-300); /* The border brings back the definition */
-}
-.action-button.secondary:hover {
-    background: var(--gray-50);
-    border-color: var(--gray-400);
-    color: var(--gray-900);
-    transform: translateY(-1px);
-}
-
-/* Danger: Red text on white (Optional, for Delete mode) */
-.action-button.danger {
-    background: var(--white);
-    color: var(--red);
-    border: 1px solid var(--gray-200);
-}
-.action-button.danger:hover {
-    background: #fef2f2; /* Very light red */
-    border-color: #fecaca;
+/* 9. Delete Mode Button Hover */
+#toggleDeleteModeBtn:hover {
+    color: var(--red) !important;
+    background: #fef2f2 !important;
 }
 
 /* 10. Checkbox Mode (For Deleting) */
@@ -289,5 +382,27 @@
     margin-right: 8px;
 }
 
+/* Make the connection status interactive */
+.connection-status {
+    cursor: help; /* Shows a '?' cursor on hover */
+    position: relative;
+}
+
+/* Add a simple tooltip on hover */
+.connection-status:hover::after {
+    content: "System: Ready • Connected";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: var(--gray-900);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+}
 
 /* ==========================================================================

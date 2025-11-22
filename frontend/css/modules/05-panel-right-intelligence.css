@@ -18,14 +18,19 @@
 
 /* 2. Navigation Tabs (Sleek Segmented Control) */
 .right-panel .panel-header {
-    /* Inherits strict 64px height */
-    background: transparent;
-    border-bottom: 1px solid var(--gray-100);
+    /* MATCHING HEIGHT */
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
 
     display: flex;
-    flex-direction: column; /* Stack Title + Tabs */
+    flex-direction: column;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
+    padding: 0 16px; /* Slightly tighter side padding */
 }
 
 .right-panel .panel-header h2 {

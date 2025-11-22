@@ -17,20 +17,215 @@
     overflow: hidden;      /* Clips content that slides out */
 }
 
-/* 2. The Header (Aligned) */
+/* ==========================================================================
+   [MODULE: CLEAN HEADER - ALIGNED & SLEEK]
+   Fixed height to match sidebar. High-impact typography.
+   ========================================================================== */
+
 .center-panel .panel-header {
-    /* Inherits strict 64px height from Layout */
-    background: transparent;
-    border-bottom: 1px solid var(--gray-100);
-    z-index: 10;
+    /* MATCHING HEIGHT */
+    height: 70px;
+    min-height: 70px;
+
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
 
     display: flex;
-    flex-direction: row; /* Side by side */
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    padding: 0 20px;
+    position: relative;
+    z-index: 10;
 }
 
-/* Add a wrapper for Title + Subtitle so they stack neatly */
+/* The Container */
+.identity-text-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 2px;
+}
+
+/* 1. Merchant Name (The "Hero" Text) */
+.header-merchant-name {
+    font-size: 20px;        /* Much bigger (was 16px) */
+    font-weight: 800;       /* Extra Bold */
+    color: #111827;         /* Deepest Black */
+    line-height: 1;         /* Tight line height */
+    letter-spacing: -0.6px; /* Tight tracking looks expensive */
+    margin: 0;
+}
+
+/* 2. Business Name (The "Technical" Detail) */
+.header-business-name {
+    font-size: 12px;
+    font-weight: 600;       /* Semi-bold */
+    color: #6b7280;         /* Medium Gray */
+
+    /* The "Financial Data" Look: */
+    text-transform: uppercase;
+    letter-spacing: 0.8px;  /* Wide tracking */
+    margin-top: 4px;        /* Push it down slightly */
+}
+
+/* Back Button Alignment */
+#backHomeBtn {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px; height: 36px;
+    border-radius: 10px;      /* Squircle matches the pro vibe */
+    background: transparent;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+}
+#backHomeBtn:hover { background: var(--gray-100); color: var(--gray-900); }
+
+/* ==========================================================================
+   [DASHBOARD MODE]
+   Hides header and centers content when no chat is active
+   ========================================================================== */
+
+/* 1. Hide the header (and its border) completely */
+.center-panel.dashboard-mode .panel-header {
+    display: none !important;
+}
+
+/* 2. Stretch the container to the top and center everything */
+.center-panel.dashboard-mode #messagesContainer {
+    top: 0;                  /* Fill the empty space left by header */
+    height: 100%;
+    padding-bottom: 0;       /* Remove space reserved for chat input */
+
+    /* Flexbox Centering */
+    display: flex;
+    align-items: center;     /* Vertical Center */
+    justify-content: center; /* Horizontal Center */
+}
+
+/* Ensure the dashboard card itself doesn't have weird margins affecting centering */
+.center-panel.dashboard-mode .dashboard-container {
+    margin: 0;               /* Let flexbox handle the margins */
+    max-height: 100%;        /* Ensure it fits */
+    overflow-y: auto;        /* Allow scroll if screen is too short */
+}
+
+/* Legacy support - Centered layout for dashboard */
+.conversation-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex: 1;
+}
+
+.conversation-info h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.conversation-info p {
+    font-size: 13px;
+    color: var(--gray-500);
+    margin: 0;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   [MODULE: RICH CHAT HEADER]
+   Replaces the simple text with a proper contact card layout
+   ========================================================================== */
+
+.chat-header-rich {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+/* 1. The Large Avatar */
+.chat-avatar-large {
+    width: 40px;
+    height: 40px;
+    background: var(--gray-900);
+    color: white;
+    border-radius: 12px; /* Soft square looks more "business" than circle */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 2. The Text Stack */
+.chat-details-stack {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    flex: 1;
+}
+
+/* 3. Top Row: Business Name + Status */
+.chat-row-primary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chat-business-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-900);
+    letter-spacing: -0.3px;
+    margin: 0;
+}
+
+/* Status Pills (Mini) */
+.status-pill {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+.status-pill.status-negotiating { background: #fef3c7; color: #92400e; } /* Amber */
+.status-pill.status-qualified { background: #dcfce7; color: #166534; }   /* Green */
+
+/* 4. Bottom Row: Contact Info */
+.chat-row-secondary {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.chat-row-secondary .divider {
+    margin: 0 6px;
+    color: var(--gray-300);
+    font-size: 8px; /* Tiny dot */
+}
+
+.chat-contact-phone {
+    font-family: 'Monaco', monospace; /* Monospace numbers look pro */
+    letter-spacing: -0.5px;
+}
+
+/* Legacy support - Keep for backward compatibility */
 .conversation-info {
     display: flex;
     flex-direction: column;
@@ -57,15 +252,20 @@
     bottom: 0;             /* Stretches to the bottom */
     left: 0;
     right: 0;
-    
+
     /* Scroll Behavior */
     overflow-y: auto;
     overflow-x: hidden;
-    
-    /* Spacing */
-    padding: 16px;
-    padding-bottom: 100px; /* CRITICAL: Space for the floating input at bottom */
-    
+
+    /* Spacing - Updated for text messaging style */
+    padding: 20px;
+    padding-bottom: 140px; /* Keep space for the input deck */
+
+    /* Layout for message bubbles */
+    display: flex;
+    flex-direction: column;
+    gap: 2px; /* Tight grouping like iMessage */
+
     background: var(--white);
     z-index: 1;
 }
@@ -75,34 +275,67 @@
     display: none;
 }
 
-/* 4. The Floating Input Bar (Polished) */
-/* Matches HTML ID: id="messageInputContainer" */
+/* ==========================================================================
+   [COCKPIT INPUT BAR]
+   Professional input with quick action buttons
+   ========================================================================== */
+
 #messageInputContainer {
     position: absolute;
-    bottom: 20px;          /* Lift it up */
-    left: 20px;            /* Space on left */
-    right: 20px;           /* Space on right */
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
 
-    /* The "Glass" Effect */
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);  /* Blurs the text behind it */
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    /* Softer "Floating Keyboard" Look */
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 24px; /* Rounder container matches bubbles */
 
-    /* Shape & Depth */
-    border-radius: 24px;
-    box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.05),
-        0 10px 15px -3px rgba(0, 0, 0, 0.05); /* Soft shadow */
+    /* Soft, diffused shadow */
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
 
-    padding: 12px 16px;
-    z-index: 20;
-
-    display: flex; /* Note: HTML has style="display: none" initially, JS toggles this */
+    padding: 16px 20px; /* More breathing room inside */
+    display: flex;
+    flex-direction: column;
     gap: 10px;
-    align-items: flex-end;
+    z-index: 20;
 }
 
-/* 5. Input Field & Buttons */
+/* Toolbar Line removal for cleaner look */
+.input-toolbar {
+    border-top: none; /* Remove the divider line for a cleaner look */
+    padding-top: 0;
+}
+
+/* Action Buttons Row */
+.input-actions {
+    display: flex;
+    gap: 8px;
+    margin-right: 8px;
+    align-items: center;
+}
+
+.icon-btn-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.icon-btn-small:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+/* Input Field & Buttons */
 .input-row {
     display: flex;
     width: 100%;
@@ -112,8 +345,8 @@
 
 #messageInput {
     flex: 1;
-    background: var(--gray-100);
-    border: 1px solid var(--gray-300);
+    background: var(--gray-50);
+    border: 1px solid transparent;
     border-radius: 20px;
     padding: 10px 16px;
     font-size: 14px;
@@ -122,12 +355,12 @@
     min-height: 40px;
     resize: none;
     outline: none;
+    transition: all 0.2s;
 }
 
 #messageInput:focus {
     background: var(--white);
-    border-color: var(--primary-green); /* Uses your var */
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+    box-shadow: inset 0 0 0 1px var(--corgi-hyper); /* Brand focus ring */
 }
 
 .attachment-icon {
@@ -139,50 +372,477 @@
     color: var(--gray-500);
 }
 
-/* 6. Message Bubbles */
+/* ==========================================================================
+   [MODULE: FINAL TEXTING UI - FIX]
+   Strict sizing to prevent bubbles from blowing up.
+   ========================================================================== */
+
+/* 1. The Message Row (Container) */
 .message {
     display: flex;
+    flex-direction: column;
     width: 100%;
-    margin-bottom: 8px;
-    animation: slideIn 0.2s ease-out;
+    margin-bottom: 4px; /* Tight stacking */
+
+    /* CRITICAL FIXES: */
+    flex: 0 0 auto !important; /* Don't grow to fill screen */
+    height: auto !important;   /* Don't allow fixed height */
 }
 
-.message.inbound { justify-content: flex-start; }
-.message.outbound { justify-content: flex-end; }
-
+/* 2. The Bubble (Content) */
 .message-content {
+    /* Sizing Logic */
     max-width: 70%;
-    padding: 8px 14px;
-    border-radius: 18px;
-    font-size: 14px;
+    width: fit-content;        /* Hug the text width */
+    height: auto !important;   /* Hug the text height */
+    min-height: 0 !important;  /* Prevent phantom height */
+
+    /* Spacing */
+    padding: 8px 14px;         /* Comfortable text padding */
+    font-size: 15px;
     line-height: 1.4;
+
+    /* Shape */
+    border-radius: 18px;
     position: relative;
     word-wrap: break-word;
+    white-space: pre-wrap;     /* Preserve line breaks naturally */
 }
 
-.message.inbound .message-content {
-    background: var(--gray-100);
-    color: var(--gray-900);
-    border-bottom-left-radius: 4px;
+/* 3. OUTBOUND (You) - Onyx Black */
+.message.outbound {
+    align-items: flex-end;
 }
 
 .message.outbound .message-content {
-    background: var(--primary-green);
-    color: var(--white);
-    border-bottom-right-radius: 4px;
+    background: var(--gray-900); /* Pure Black/Gray */
+    color: white;
+    border-bottom-right-radius: 4px; /* Subtle tail */
+
+    /* Remove any accidental shadows/borders */
+    border: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
+/* 4. INBOUND (Lead) - Standard Gray */
+.message.inbound {
+    align-items: flex-start;
+}
+
+.message.inbound .message-content {
+    background: #f3f4f6;
+    color: #111827;
+    border-bottom-left-radius: 4px; /* Subtle tail */
+    border: none;
+}
+
+/* 5. Metadata (Time & Trash) */
+.message-meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Align to right for outbound */
+    gap: 6px;
+    margin-top: 2px;
+    padding-right: 4px;
+    height: 14px;
+}
+
+/* Inbound meta aligns left */
+.message.inbound .message-meta {
+    justify-content: flex-start;
+    padding-left: 4px;
+}
+
+/* Tiny timestamp */
 .message-time {
     font-size: 10px;
     color: var(--gray-400);
-    margin-top: 2px;
-    padding: 0 4px;
 }
-.message.outbound .message-time { text-align: right; }
 
-@keyframes slideIn {
+/* Hidden Trash Can */
+.delete-message-btn {
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 12px;
+    color: var(--gray-400);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.delete-message-btn:hover {
+    color: var(--red);
+}
+
+.message:hover .delete-message-btn {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   [DATE SEPARATORS]
+   Sticky pills that create visual boundaries between days
+   ========================================================================== */
+
+.date-separator {
+    display: flex;
+    justify-content: center;
+    margin: 24px 0;
+    position: sticky; /* Keeps it visible while scrolling past that day */
+    top: 10px;
+    z-index: 5;
+}
+
+.date-pill {
+    background: rgba(243, 244, 246, 0.9); /* Gray-100 with transparency */
+    backdrop-filter: blur(4px);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-500);
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* ==========================================================================
+   [EMPTY STATE DESIGN]
+   The "Home Base" when no chat is selected
+   ========================================================================== */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+
+    /* The Look: Subtle Warm Gradient */
+    background: linear-gradient(180deg, var(--white) 0%, var(--corgi-cream) 100%);
+    color: var(--gray-500);
+    padding: 40px;
+}
+
+/* The Icon/Logo Container */
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 24px;
+
+    /* The "Watermark" Effect */
+    color: var(--corgi-hyper); /* Your brand orange */
+    opacity: 0.2;              /* Make it subtle */
+    background: var(--white);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(234, 88, 12, 0.1); /* Soft orange glow */
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: var(--gray-500);
+    max-width: 300px;
+    line-height: 1.5;
+}
+
+/* Optional: A "fake" button look to encourage action */
+.empty-state-hint {
+    margin-top: 32px;
+    padding: 8px 16px;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--gray-400);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ==========================================================================
+   [HOME DASHBOARD]
+   The "Welcome Screen" with stats and goals
+   ========================================================================== */
+
+.dashboard-container {
+    padding: 40px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    animation: fadeIn 0.4s ease-out;
+    overflow-y: auto;
+}
+
+.dashboard-header {
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.dashboard-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.dashboard-header p {
+    color: var(--gray-500);
+    font-size: 14px;
+}
+
+/* 3-Column Grid for Stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    border-color: var(--corgi-hyper-pop);
+}
+
+.stat-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--corgi-cream);
+    color: var(--corgi-hyper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--gray-900);
+    font-family: 'Inter', sans-serif; /* Ensure nice numbers */
+}
+
+.stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Goal Section */
+.goal-card {
+    background: var(--gray-900); /* Onyx background */
+    color: white;
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+/* Cool background accent for the card */
+.goal-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 150px; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05));
+    transform: skewX(-20deg);
+}
+
+.goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 12px;
+}
+
+.goal-title { font-size: 14px; opacity: 0.8; font-weight: 500; }
+.goal-numbers { font-size: 20px; font-weight: 700; }
+
+/* Progress Bar */
+.progress-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--corgi-hyper); /* Brand Orange */
+    border-radius: 4px;
+    transition: width 1s ease-out;
+}
+
+/* Animation */
+@keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 /* ==========================================================================
+   [MODULE: FINAL MESSAGING LAYOUT]
+   Replaces all previous message styles. Flexbox only. No Floats.
+   ========================================================================== */
+
+/* 1. The Container */
+#messagesContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* Tight grouping */
+    padding: 20px;
+    padding-bottom: 140px;
+}
+
+/* 2. The Row (Full Width Container) */
+.message {
+    display: flex;
+    flex-direction: column; /* Stack wrapper on top of meta */
+    width: 100%;
+    margin-bottom: 2px;
+
+    /* CRITICAL: Stop flex items from stretching */
+    flex: 0 0 auto !important;
+    min-height: 0;
+}
+
+/* 3. The Wrapper (Holds Bubble + Time) */
+.message-wrapper {
+    display: flex;
+    flex-direction: column;
+
+    /* CRITICAL: Hug the content */
+    width: fit-content !important;
+    max-width: 75%;
+}
+
+/* 3. The Bubble (Visual Box) */
+.message-content {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+
+    /* MORE BREATHING ROOM: Increased padding */
+    padding: 10px 18px;
+
+    /* PREVENT SQUISHY BUBBLES: Minimum width */
+    min-width: 48px;
+
+    font-size: 15px;
+    line-height: 1.4;
+    border-radius: 20px; /* Slightly rounder to match new padding */
+
+    /* BETTER WRAPPING LOGIC */
+    text-align: left;
+    white-space: pre-wrap;       /* Preserve Enter keys */
+    word-break: normal;          /* Don't break words like "good" */
+    overflow-wrap: break-word;   /* Only break long strings/URLs */
+}
+
+/* 5. THE PARAGRAPH KILLER (Removes extra size) */
+.message-content > * {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline !important; /* Force text behavior */
+}
+
+/* ---------------------------------------------------------
+   ALIGNMENT LOGIC (Flexbox)
+   --------------------------------------------------------- */
+
+/* OUTBOUND (You) -> Right Side */
+.message.outbound {
+    align-items: flex-end; /* Push wrapper to right wall */
+}
+
+.message.outbound .message-wrapper {
+    align-items: flex-end; /* Align internal items right */
+}
+
+.message.outbound .message-content {
+    background: #1f2937; /* Onyx Black */
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+/* INBOUND (Lead) -> Left Side */
+.message.inbound {
+    align-items: flex-start; /* Push wrapper to left wall */
+}
+
+.message.inbound .message-wrapper {
+    align-items: flex-start; /* Align internal items left */
+}
+
+.message.inbound .message-content {
+    background: #e5e7eb; /* Light Gray */
+    color: #111827;
+    border-bottom-left-radius: 4px;
+}
+
+/* ---------------------------------------------------------
+   GHOST METADATA (Sleekest Look)
+   Timestamps disappear to clean up the UI, appearing only when needed.
+   --------------------------------------------------------- */
+.message-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    padding: 0 4px;
+
+    /* LAYOUT: Keep the space reserved so it doesn't "jump" */
+    height: 14px;
+    width: 100%;
+
+    /* VISUAL: Hidden by default */
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* THE TRICK: Show only when you mouse over the SPECIFIC message wrapper */
+.message-wrapper:hover .message-meta {
+    opacity: 1;
+}
+
+.message-time {
+    font-size: 10px;
+    color: #9ca3af;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Adjust alignment */
+.message.outbound .message-meta { justify-content: flex-end; }
+.message.inbound .message-meta { justify-content: flex-start; }

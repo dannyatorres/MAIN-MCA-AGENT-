@@ -20,6 +20,108 @@ class ConversationCore {
     }
 
     init() {
+        // ---------------------------------------------------------
+        // 🔥 FINAL FIX v5: Phone Formatting + Initials + Fixes
+        // ---------------------------------------------------------
+
+        // Helper 1: Calculate "2d ago"
+        const timeSince = (dateString) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const seconds = Math.floor((new Date() - date) / 1000);
+
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + "y ago";
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + "mo ago";
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + "d ago";
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + "h ago";
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + "m ago";
+            return "Just now";
+        };
+
+        // Helper 2: Get Initials (Two Letters)
+        const getInitials = (name) => {
+            if (!name) return '?';
+            const parts = name.trim().split(/\s+/);
+            if (parts.length === 1) {
+                return parts[0].charAt(0).toUpperCase();
+            }
+            return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+        };
+
+        // Helper 3: Format Phone Number (The Fix)
+        const formatPhone = (phone) => {
+            if (!phone) return 'No Phone';
+            // Strip everything that isn't a number
+            const cleaned = ('' + phone).replace(/\D/g, '');
+
+            // Check if it's a standard 10-digit number
+            const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+            if (match) {
+                return '(' + match[1] + ') ' + match[2] + '-' + match[3];
+            }
+            // If we can't format it (e.g. international), return original
+            return phone;
+        };
+
+        this.templates.conversationItem = (conv) => {
+            const unreadCount = this.unreadMessages.get(conv.id) || 0;
+            const isSelected = this.currentConversationId === conv.id ? 'active' : '';
+
+            // 1. Business Name
+            const businessName = conv.business_name || conv.company_name || 'Unknown Business';
+
+            // 2. Phone (Formatted!)
+            const rawPhone = conv.lead_phone || conv.phone || '';
+            const phone = formatPhone(rawPhone);
+
+            // 3. Date
+            const timeAgo = timeSince(conv.last_activity);
+
+            // 4. CID
+            let displayCid = conv.display_id;
+            if (!displayCid) {
+                const rawId = (conv.id || '').toString();
+                displayCid = rawId.length > 8 ? '...' + rawId.slice(-6) : rawId;
+            }
+
+            // 5. Initials
+            const initials = getInitials(businessName);
+
+            return `
+                <div class="conversation-item ${isSelected}" data-conversation-id="${conv.id}">
+                    <div class="conversation-avatar">
+                        <div class="avatar-circle">
+                            ${initials}
+                        </div>
+                    </div>
+
+                    <div class="conversation-content">
+                        <div class="conversation-header">
+                            <div class="business-name" title="${businessName}">${businessName}</div>
+                            <div class="conversation-time">${timeAgo}</div>
+                        </div>
+
+                        <div class="conversation-meta">
+                            <span class="phone-number">${phone}</span>
+                            <span class="cid-tag">CID# ${displayCid}</span>
+                        </div>
+                    </div>
+
+                    <div class="conversation-checkbox">
+                        <input type="checkbox" class="delete-checkbox" data-conversation-id="${conv.id}">
+                    </div>
+
+                    ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                </div>
+            `;
+        };
+        // ---------------------------------------------------------
+
         this.setupEventListeners();
         this.setupWebSocketEvents();
         this.loadInitialData();
@@ -196,9 +298,10 @@ class ConversationCore {
             this.parent.currentConversationId = conversationId;
         }
 
-        // Fix gap issue permanently
+        // Fix layout modes
         const centerPanel = document.querySelector('.center-panel');
         if (centerPanel) {
+            centerPanel.classList.remove('dashboard-mode'); // Turn off dashboard mode
             centerPanel.style.gap = '0';
         }
 
@@ -234,6 +337,10 @@ class ConversationCore {
         // Update UI
         this.updateConversationSelection();
         this.showConversationDetails();
+
+        // Show the back button when viewing a conversation
+        const backBtn = document.getElementById('backHomeBtn');
+        if (backBtn) backBtn.style.display = 'block';
 
         // Load messages and intelligence IN SEQUENCE with proper context
         try {
@@ -281,20 +388,34 @@ class ConversationCore {
     }
 
     showConversationDetails() {
-        const conversationInfo = document.getElementById('conversationInfo');
-        if (!conversationInfo || !this.selectedConversation) return;
+        const panelHeader = document.querySelector('.center-panel .panel-header');
+        const centerPanel = document.querySelector('.center-panel');
 
+        if (!panelHeader || !this.selectedConversation) return;
+
+        // 1. Turn OFF Dashboard Mode
+        if (centerPanel) {
+            centerPanel.classList.remove('dashboard-mode');
+        }
+
+        // 2. Prepare Data
+        // Fallback checks to ensure we don't show "undefined"
         const ownerFirstName = this.selectedConversation.owner_first_name || this.selectedConversation.first_name || '';
         const ownerLastName = this.selectedConversation.owner_last_name || this.selectedConversation.last_name || '';
         const ownerName = `${ownerFirstName} ${ownerLastName}`.trim() || 'Unknown Owner';
-        const businessName = this.selectedConversation.business_name || this.selectedConversation.company_name || '';
-        const phoneNumber = this.selectedConversation.lead_phone || this.selectedConversation.phone || '';
 
-        conversationInfo.className = 'conversation-info text-style';
-        conversationInfo.innerHTML = `
-            <h2 class="owner-name" style="margin: 0; text-align: center;">${ownerName}</h2>
-            ${businessName ? `<p class="business-name-subtitle">${businessName}</p>` : ''}
-            ${phoneNumber ? `<p class="phone-number-subtitle">${phoneNumber}</p>` : ''}
+        const businessName = this.selectedConversation.business_name || this.selectedConversation.company_name || 'Unknown Business';
+
+        // 3. INJECT THE CLEAN HEADER HTML (No Initials, No Avatar)
+        panelHeader.innerHTML = `
+            <button id="backHomeBtn" onclick="loadDashboard()" title="Back to Dashboard">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+
+            <div class="identity-text-group">
+                <h2 class="header-merchant-name">${ownerName}</h2>
+                <span class="header-business-name">${businessName}</span>
+            </div>
         `;
     }
 
@@ -644,25 +765,79 @@ class ConversationCore {
     }
 
     clearConversationDetails() {
-        const conversationInfo = document.getElementById('conversationInfo');
-        if (conversationInfo) {
-            conversationInfo.innerHTML = `
-                <h2>Select a conversation</h2>
-                <p>Choose a conversation from the left to view messages</p>
-            `;
-        }
+        // 1. Clear the Header with Onyx Pill Structure
+        const headerContainer = document.querySelector('.center-panel .panel-header');
+        if (headerContainer) {
+            // Reset to dashboard pill
+            headerContainer.innerHTML = `
+                <button id="backHomeBtn" onclick="loadDashboard()" style="display: none;" title="Back to Dashboard">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
 
-        const messagesContainer = document.getElementById('messagesContainer');
-        if (messagesContainer) {
-            messagesContainer.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">💬</div>
-                    <h3>No conversation selected</h3>
-                    <p>Select a conversation from the left panel to view the message thread</p>
+                <div class="identity-pill">
+                    <div class="pill-avatar">MA</div>
+                    <div class="pill-info">
+                        <span class="pill-business-name">MCAagent</span>
+                        <span class="pill-merchant-name" style="color: var(--corgi-hyper);">Dashboard</span>
+                    </div>
                 </div>
             `;
         }
 
+        // 2. Inject the Dashboard into the Messages Area
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            messagesContainer.innerHTML = `
+                <div class="dashboard-container">
+                    <div class="dashboard-header">
+                        <h1>Welcome back, Agent</h1>
+                        <p>Here is what's happening with your pipeline today.</p>
+                    </div>
+
+                    <div class="goal-card">
+                        <div class="goal-header">
+                            <span class="goal-title">Monthly Funding Goal</span>
+                            <span class="goal-numbers">$145,000 <span style="opacity:0.5; font-size: 14px;">/ $250k</span></span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: 58%;"></div>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 11px; opacity: 0.6;">
+                            📅 12 days left in the month
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-sack-dollar"></i></div>
+                            <div class="stat-value">8</div>
+                            <div class="stat-label">Deals Funded</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                            <div class="stat-value">12</div>
+                            <div class="stat-label">Hot Leads</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
+                            <div class="stat-value">24</div>
+                            <div class="stat-label">Applications Out</div>
+                        </div>
+                    </div>
+
+                    <div class="empty-state" style="background: transparent; padding: 0;">
+                        <div class="empty-state-hint" style="background: var(--white); border: 1px solid var(--gray-200);">
+                            <i class="fas fa-arrow-left" style="color: var(--corgi-hyper);"></i>
+                            <span style="color: var(--gray-600);">Select a conversation to start working</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. Hide Inputs
         const messageInputContainer = document.getElementById('messageInputContainer');
         if (messageInputContainer) {
             messageInputContainer.style.display = 'none';
@@ -673,13 +848,16 @@ class ConversationCore {
             conversationActions.style.display = 'none';
         }
 
+        // 4. Clean Right Panel
         const intelligenceContent = document.getElementById('intelligenceContent');
         if (intelligenceContent) {
             intelligenceContent.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-icon">📊</div>
-                    <h3>No lead selected</h3>
-                    <p>Select a lead to view intelligence data</p>
+                    <div class="empty-icon" style="font-size: 48px; width: 80px; height: 80px;">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Lead Intelligence</h3>
+                    <p>Select a lead to view analysis, documents, and FCS data.</p>
                 </div>
             `;
         }

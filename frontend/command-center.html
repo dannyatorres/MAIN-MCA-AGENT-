@@ -27,48 +27,44 @@
 <body>
     <div class="command-center">
         <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <h1 class="title">MCAagent</h1>
-                <div class="connection-status" id="connectionStatus">
-                    <span class="status-dot disconnected"></span>
-                    <span class="status-text">Connecting...</span>
-                </div>
-            </div>
-            <div class="header-right">
-            </div>
-        </header>
-
         <div class="main-content">
             <!-- Left Panel - Conversations List -->
             <div class="left-panel">
                 <div class="panel-header">
-                    <div class="panel-actions">
-                        <button class="action-button primary" id="addLeadBtn" onclick="openRichCreateModal()">
-                            New Conversation
-                        </button>
-                        <button class="action-button secondary" id="csvImportBtn" onclick="openCsvImportModal()">
-                            Import Conversations
-                        </button>
-                        <button class="action-button secondary" id="toggleDeleteModeBtn" onclick="toggleDeleteMode()">
-                            Delete Conversations
-                        </button>
-                        <button class="action-button danger" id="deleteSelectedBtn" style="display: none;">
-                            Delete Selected
-                        </button>
+                    <div class="app-brand-row">
+                        <h1 class="brand-title">MCAagent</h1>
+                        <div class="connection-status" id="connectionStatus">
+                            <span class="status-dot disconnected"></span>
+                        </div>
                     </div>
-                    <div class="panel-controls">
-                        <select class="state-filter" id="stateFilter">
-                            <option value="">All States</option>
-                            <option value="INTERESTED">Interested</option>
-                            <option value="FCS_RUNNING">FCS Running</option>
-                            <option value="COLLECTING_INFO">Collecting Info</option>
-                            <option value="QUALIFIED">Qualified</option>
-                            <option value="OFFER_SENT">Offer Sent</option>
-                            <option value="NEGOTIATING">Negotiating</option>
-                            <option value="ACCEPTED">Accepted</option>
-                        </select>
-                        <input type="text" class="search-field" id="searchInput" placeholder="Search conversations">
+
+                    <div class="unified-toolbar">
+                        <div class="filter-wrapper">
+                            <select class="state-filter-icon" id="stateFilter" title="Filter Status">
+                                <option value="">All</option>
+                                <option value="INTERESTED">Interested</option>
+                                <option value="FCS_RUNNING">FCS</option>
+                                <option value="QUALIFIED">Qualified</option>
+                                <option value="NEGOTIATING">Negot.</option>
+                            </select>
+                            <i class="fas fa-filter filter-icon-indicator"></i>
+                        </div>
+
+                        <input type="text" class="search-field-clean" id="searchInput" placeholder="Search...">
+
+                        <div class="action-group">
+                            <button class="tool-btn primary" onclick="openRichCreateModal()" title="New Conversation">
+                                <i class="fas fa-plus"></i>
+                            </button>
+
+                            <button class="tool-btn" onclick="openCsvImportModal()" title="Import">
+                                <i class="fas fa-file-import"></i>
+                            </button>
+
+                            <button class="tool-btn danger-hover" id="toggleDeleteModeBtn" onclick="toggleDeleteMode()" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="conversations-list" id="conversationsList">
@@ -80,19 +76,77 @@
             </div>
 
             <!-- Center Panel - Conversation Thread -->
-            <div class="center-panel">
-                <div class="panel-header">
-                    <div class="conversation-info" id="conversationInfo">
-                        <h2>Select a conversation</h2>
-                        <p>Choose a conversation from the left to view messages</p>
-                    </div>
-                    <!-- Center panel is now messaging-only - action buttons moved to right panel -->
-                </div>
+            <div class="center-panel dashboard-mode">
+                <div class="panel-header"></div>
                 <div class="messages-container" id="messagesContainer">
-                    <div class="empty-state">
-                        <div class="empty-icon">💬</div>
-                        <h3>No conversation selected</h3>
-                        <p>Select a conversation from the left panel to view the message thread</p>
+                    <div class="dashboard-container">
+
+                        <div class="dashboard-header">
+                            <h1>Good Morning, Broker.</h1>
+                            <p>You have <strong>4 deals</strong> moving to the next stage today.</p>
+                        </div>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">🔥</div>
+                                <div class="stat-value">12</div>
+                                <div class="stat-label">New Leads (24h)</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon">💼</div>
+                                <div class="stat-value">8</div>
+                                <div class="stat-label">Negotiating</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: #fee2e2; color: #ef4444;">⚠️</div>
+                                <div class="stat-value">3</div>
+                                <div class="stat-label">Urgent Tasks</div>
+                            </div>
+                        </div>
+
+                        <div class="goal-card">
+                            <div class="goal-header">
+                                <span class="goal-title">MONTHLY GCI GOAL</span>
+                                <span class="goal-numbers">$18,500 / $25,000</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: 74%;"></div>
+                            </div>
+                            <div style="margin-top: 12px; font-size: 12px; opacity: 0.7; display: flex; justify-content: space-between;">
+                                <span>📅 9 Days left in month</span>
+                                <span>74% on track</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 32px;">
+                            <h4 style="margin-bottom: 16px; font-size: 14px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Priority Pipeline</h4>
+
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100);">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 14px; color: var(--gray-900);">Apex Logistics LLC</div>
+                                        <div style="font-size: 12px; color: var(--gray-500);">Offer Sent • $150k Req</div>
+                                    </div>
+                                </div>
+                                <button style="font-size: 12px; padding: 4px 12px; background: var(--gray-100); border: none; border-radius: 12px; cursor: pointer;">View</button>
+                            </div>
+
+                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100);">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 14px; color: var(--gray-900);">Summit Retail Group</div>
+                                        <div style="font-size: 12px; color: var(--gray-500);">Missing Bank Statements</div>
+                                    </div>
+                                </div>
+                                <button style="font-size: 12px; padding: 4px 12px; background: var(--gray-100); border: none; border-radius: 12px; cursor: pointer;">View</button>
+                            </div>
+
+                        </div>
+
                     </div>
                 </div>
                 <div class="message-input-container" id="messageInputContainer" style="display: none;">
@@ -1015,7 +1069,7 @@
     <script src="js/websocket.js"></script>
 
     <!-- 3. Core modules (depend on utilities) -->
-    <script src="js/conversation-core.js"></script>
+    <script src="js/conversation-core.js?v=6"></script>
     <script src="js/messaging.js"></script>
     <script src="js/documents.js"></script>
     <script src="js/intelligence-tabs.js"></script>
@@ -1032,6 +1086,134 @@
     <!-- 4. Main app LAST (depends on everything) -->
     <script src="js/command-center.js"></script>
     <script src="js/command-center-logic.js"></script>
+
+    <!-- Dashboard Navigation Functions -->
+    <script>
+        const DASHBOARD_HTML = `
+            <div class="dashboard-container">
+                <div class="dashboard-header">
+                    <h1>Good Morning, Broker.</h1>
+                    <p>You have <strong>4 deals</strong> moving to the next stage today.</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">New Leads (24h)</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">💼</div>
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">Negotiating</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #fee2e2; color: #ef4444;">⚠️</div>
+                        <div class="stat-value">3</div>
+                        <div class="stat-label">Urgent Tasks</div>
+                    </div>
+                </div>
+
+                <div class="goal-card">
+                    <div class="goal-header">
+                        <span class="goal-title">MONTHLY GCI GOAL</span>
+                        <span class="goal-numbers">$18,500 / $25,000</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: 74%;"></div>
+                    </div>
+                    <div style="margin-top: 12px; font-size: 12px; opacity: 0.7; display: flex; justify-content: space-between;">
+                        <span>📅 9 Days left in month</span>
+                        <span>74% on track</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 32px;">
+                    <h4 style="margin-bottom: 16px; font-size: 14px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Priority Pipeline</h4>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px; color: var(--gray-900);">Apex Logistics LLC</div>
+                                <div style="font-size: 12px; color: var(--gray-500);">Offer Sent • $150k Req</div>
+                            </div>
+                        </div>
+                        <button style="font-size: 12px; padding: 4px 12px; background: var(--gray-100); border: none; border-radius: 12px; cursor: pointer;">View</button>
+                    </div>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px; color: var(--gray-900);">Summit Retail Group</div>
+                                <div style="font-size: 12px; color: var(--gray-500);">Missing Bank Statements</div>
+                            </div>
+                        </div>
+                        <button style="font-size: 12px; padding: 4px 12px; background: var(--gray-100); border: none; border-radius: 12px; cursor: pointer;">View</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        function loadDashboard() {
+            // 1. Target the center panel
+            const centerPanel = document.querySelector('.center-panel');
+
+            // 2. Turn ON Dashboard Mode (Hides header, centers content)
+            if (centerPanel) centerPanel.classList.add('dashboard-mode');
+
+            // 3. Inject Dashboard HTML
+            const container = document.getElementById('messagesContainer');
+            if (container) container.innerHTML = DASHBOARD_HTML;
+
+            // 4. Hide Input Container
+            const inputContainer = document.getElementById('messageInputContainer');
+            if (inputContainer) inputContainer.style.display = 'none';
+
+            // 5. Clear selection state
+            if (window.app && window.app.conversationCore) {
+                window.app.conversationCore.currentConversationId = null;
+                window.app.conversationCore.selectedConversation = null;
+                document.querySelectorAll('.conversation-item').forEach(item => {
+                    item.classList.remove('selected', 'active');
+                });
+            }
+        }
+
+        // Make the function globally available
+        window.loadDashboard = loadDashboard;
+
+        // Make sure this is globally available
+        window.updateChatHeader = function(companyName, ownerName) {
+            // 1. Target the center panel & header
+            const centerPanel = document.querySelector('.center-panel');
+            const container = document.querySelector('.center-panel .panel-header');
+
+            // 2. Safety Checks
+            if (centerPanel) centerPanel.classList.remove('dashboard-mode');
+            if (!container) return;
+
+            // 3. Prepare Data (Safe Fallbacks)
+            const safeCompany = companyName || "Unknown Business";
+            const safeOwner = ownerName || "Unknown Contact";
+
+            // 4. INJECT THE NEW CLEAN HTML
+            // Note: We put safeOwner first (Big), safeCompany second (Small)
+            container.innerHTML = `
+                <button id="backHomeBtn" onclick="loadDashboard()" title="Back to Dashboard">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+
+                <div class="identity-text-group">
+                    <span class="header-merchant-name">${safeOwner}</span>
+                    <span class="header-business-name">${safeCompany}</span>
+                </div>
+            `;
+        }
+    </script>
 
 </body>
 </html>

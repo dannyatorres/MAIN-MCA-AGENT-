@@ -414,9 +414,7 @@ class Templates {
         return `
             <div class="message ${isInbound ? 'inbound' : 'outbound'}" data-message-id="${message.id}">
                 <div class="message-wrapper">
-                    <div class="message-content">
-                        <p>${message.content}</p>
-                    </div>
+                    <div class="message-content">${message.content}</div>
                     <div class="message-meta">
                         <span class="timestamp">${timestamp}</span>
                         <button class="delete-message-btn"
