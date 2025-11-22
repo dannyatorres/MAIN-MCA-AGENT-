@@ -1742,33 +1742,39 @@
             const container = document.getElementById('newsFeedContainer');
             if (!container) return;
 
-            // 1. Show Loading State
+            // 1. Show Loading
             container.innerHTML = `
                 <div style="text-align: center; padding: 24px; color: var(--gray-500);">
                     <div class="loading-spinner small"></div>
-                    <div style="margin-top: 8px; font-size: 12px;">Fetching Industry Wire...</div>
+                    <div style="margin-top: 8px; font-size: 12px;">Connecting to Railway...</div>
                 </div>
             `;
 
             try {
-                // 2. Attempt Fetch
-                const response = await fetch('/api/news');
-                const result = await response.json();
-                let articles = [];
+                // -----------------------------------------------------------
+                // THE FIX: Use the global apiCall instead of fetch
+                // This automatically adds your Railway URL (https://api.mcagent.io)
+                // -----------------------------------------------------------
+                if (!window.commandCenter) {
+                    throw new Error("Command Center not initialized");
+                }
 
+                const result = await window.commandCenter.apiCall('/api/news');
+
+                let articles = [];
                 if (result.success && result.data.length > 0) {
                     articles = result.data;
                 } else {
-                    throw new Error("No API data"); // Trigger fallback
+                    throw new Error("No news data returned");
                 }
 
-                // 3. Clear Loading
+                // 2. Clear Loading
                 container.innerHTML = '';
 
-                // 4. Render Articles
+                // 3. Render Articles
                 articles.forEach(item => {
-                    // Calculate "Time Ago" safely
-                    let timeDisplay = item.date; // Fallback
+                    // Calculate Time Ago
+                    let timeDisplay = item.date;
                     if (item.pubDate) {
                         const diff = Math.floor((new Date() - new Date(item.pubDate)) / 1000);
                         if (diff < 3600) timeDisplay = Math.floor(diff / 60) + "m ago";
@@ -1776,31 +1782,31 @@
                         else timeDisplay = Math.floor(diff / 86400) + "d ago";
                     }
 
-                    // Styling based on Source Type
+                    // Styling Logic
                     let icon = 'fas fa-newspaper';
-                    let bgClass = 'bg-gray-100';
-                    let iconColor = 'var(--gray-400)';
+                    let bgClass = '#f3f4f6'; // gray-100
+                    let iconColor = '#9ca3af'; // gray-400
+                    let sourceClass = '';
 
                     if (item.type === 'debanked') {
                         icon = 'fas fa-bolt';
-                        bgClass = 'bg-green-50';
-                        iconColor = '#166534';
+                        bgClass = '#dcfce7'; // green-100
+                        iconColor = '#166534'; // green-800
+                        sourceClass = 'source-highlight';
                     } else if (item.type === 'lender') {
                         icon = 'fas fa-landmark';
-                        iconColor = '#2563eb';
+                        bgClass = '#dbeafe'; // blue-100
+                        iconColor = '#2563eb'; // blue-600
                     }
-
-                    // Background color logic
-                    const bgStyle = item.type === 'debanked' ? '#dcfce7' : 'var(--gray-100)';
 
                     const html = `
                         <div class="news-card" onclick="window.open('${item.link}', '_blank')">
-                            <div class="news-image" style="background-color: ${bgStyle};">
+                            <div class="news-image" style="background-color: ${bgClass};">
                                 <i class="${icon}" style="color: ${iconColor};"></i>
                             </div>
                             <div class="news-content">
                                 <div class="news-meta">
-                                    <span class="news-source ${item.type === 'debanked' ? 'source-highlight' : ''}">${item.source}</span>
+                                    <span class="news-source ${sourceClass}">${item.source}</span>
                                     <span class="news-dot">•</span>
                                     <span class="news-time">${timeDisplay}</span>
                                 </div>
@@ -1815,9 +1821,18 @@
                 });
 
             } catch (error) {
-                console.warn("News API failed, loading fallback data:", error);
-                // FALLBACK: Mock Data so the panel isn't empty while developing
-                loadMockNews(container);
+                console.error("News Feed Error:", error);
+
+                // Fallback so UI isn't broken
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--gray-400); font-size: 13px;">
+                        <i class="fas fa-wifi" style="margin-bottom: 8px; font-size: 20px;"></i><br>
+                        Cannot connect to News Feed<br>
+                        <span style="font-size:10px; opacity:0.7">${error.message}</span>
+                        <br>
+                        <button onclick="loadMarketNews()" class="text-btn">Retry</button>
+                    </div>
+                `;
             }
         }
 
