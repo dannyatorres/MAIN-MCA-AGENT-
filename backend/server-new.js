@@ -129,7 +129,7 @@ app.post('/api/auth/logout', (req, res) => {
 
 // Auth Middleware (Protects the API)
 const requireAuth = (req, res, next) => {
-    const publicPaths = ['/api/auth/login', '/api/health', '/api/messages/webhook/receive'];
+    const publicPaths = ['/api/auth/login', '/api/health', '/api/messages/webhook/receive', '/api/news'];
 
     // 1. Always allow public paths
     if (publicPaths.includes(req.path)) return next();
@@ -172,6 +172,7 @@ app.use('/api/ai', require('./routes/ai'));
 
 // --- RSS NEWS FEED ENDPOINT ---
 app.get('/api/news', async (req, res) => {
+    console.log('📰 News Feed Request Received'); // <--- DEBUG LOG
     try {
         const FEED_URL = 'https://news.google.com/rss/search?q=Merchant+Cash+Advance+industry+OR+debanked+when:7d&hl=en-US&gl=US&ceid=US:en';
         const feed = await parser.parseURL(FEED_URL);
