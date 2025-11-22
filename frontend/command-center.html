@@ -24,61 +24,80 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        /* 1. DEFINE THE NEW COLOR: Slate-200 */
+        /* 1. DEFINE THE COLOR: Slate-200 */
         :root {
-            --sidebar-silver: #E2E8F0; /* Crisp, professional light grey */
+            --app-bg-silver: #E2E8F0;
         }
 
-        /* 2. Apply it to the Left Panel Container */
-        .left-panel {
-            background-color: var(--sidebar-silver) !important;
+        /* 2. APPLY TO ALL MAIN PANELS */
+        .left-panel,
+        .center-panel,
+        .right-panel {
+            background-color: var(--app-bg-silver) !important;
             border-right: 1px solid rgba(0,0,0,0.06) !important;
+            border-left: 1px solid rgba(0,0,0,0.06) !important; /* Add separation */
         }
 
-        /* 3. Header: Transparent + Dark Text */
+        /* 3. MAKE ALL HEADERS TRANSPARENT & DARK TEXT */
+        .panel-header,
         .left-panel .panel-header {
             background-color: transparent !important;
             border-bottom: 1px solid rgba(0,0,0,0.06) !important;
         }
 
-        /* 4. Title: Dark Grey (Back to readable dark text) */
-        .left-panel .brand-title {
+        /* Ensure text is dark grey everywhere */
+        .brand-title,
+        .header-merchant-name,
+        .panel-header h4 {
             color: #1e293b !important; /* Slate-800 */
             text-shadow: none !important;
         }
 
-        /* 5. Buttons: Dark Grey */
-        .left-panel .tool-btn {
-            color: #64748b !important; /* Slate-500 */
-        }
-        .left-panel .tool-btn:hover {
-            color: #0f172a !important; /* Slate-900 */
-            background: rgba(0,0,0,0.05) !important;
-        }
-
-        /* 6. Search Bar: White background for contrast against silver */
-        .left-panel .search-field-clean {
-            background: #ffffff !important;
-            border: 1px solid transparent !important;
-            color: #1e293b !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .left-panel .search-field-clean::placeholder {
-            color: #94a3b8 !important;
-        }
-
-        /* 7. List & Cards */
-        .conversations-list {
+        /* 4. MAKE CONTENT AREAS TRANSPARENT (So Silver Shows) */
+        .conversations-list,
+        #messagesContainer,
+        .intelligence-content,
+        .dashboard-container {
             background-color: transparent !important;
-            padding-top: 12px !important;
         }
 
-        /* Cards: Pure White creates a beautiful subtle pop against the Silver */
+        /* 5. UI ELEMENTS THAT NEED TO POP (TURN WHITE) */
+
+        /* Left Sidebar Cards */
         .conversation-item {
             background-color: #ffffff !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.5) !important;
             margin-bottom: 8px !important;
-            border: 1px solid rgba(255,255,255,0.5) !important; /* Subtle highlight */
+        }
+
+        /* Dashboard Stat Cards (Ensure they stay white) */
+        .stat-card,
+        .goal-card,
+        .news-card,
+        .empty-state {
+            background-color: #ffffff !important;
+            border: 1px solid rgba(255,255,255,0.5) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03) !important;
+        }
+
+        /* Chat Bubbles (Inbound) */
+        /* We make them White so they look like cards on the silver background */
+        .message.inbound .message-content {
+            background-color: #ffffff !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        }
+
+        /* Right Panel: Tab Container */
+        .intelligence-tabs {
+            background-color: rgba(255,255,255,0.5) !important; /* Semi-transparent white */
+            border: 1px solid rgba(0,0,0,0.05) !important;
+        }
+
+        /* Search Bars & Inputs */
+        .search-field-clean {
+            background: #ffffff !important;
+            color: #1e293b !important;
         }
     </style>
 </head>
