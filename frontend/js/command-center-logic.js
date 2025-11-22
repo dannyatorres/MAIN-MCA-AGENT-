@@ -1734,87 +1734,72 @@
         console.log('✅ openNewLeadModal defined globally');
 
         // ==========================================
-        // [MODULE: MARKET NEWS FEED]
-        // Robust version with logging and fallbacks
+        // [MODULE: MARKET NEWS FEED - FINAL FIX]
         // ==========================================
 
-        async function loadMarketNews() {
-            console.log("📰 loadMarketNews: Starting...");
+        // 1. Make function globally available immediately
+        window.loadMarketNews = async function() {
+            console.log("📰 loadMarketNews: Attempting to load...");
 
             const container = document.getElementById('newsFeedContainer');
             if (!container) {
-                console.error("❌ loadMarketNews: Container #newsFeedContainer not found!");
+                console.warn("❌ News container not found yet.");
                 return;
             }
 
-            // 1. Render Loading State Immediately
-            container.innerHTML = `
-                <div style="padding: 30px; text-align: center; color: #6b7280;">
-                    <i class="fas fa-circle-notch fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
-                    <div style="font-size: 12px;">Connecting to Industry Wire...</div>
-                </div>
-            `;
+            // 2. Show Loading UI immediately (so you know it's trying)
+            if (container.innerHTML.trim() === '') {
+                container.innerHTML = `
+                    <div style="padding: 40px 20px; text-align: center; color: #9ca3af;">
+                        <i class="fas fa-circle-notch fa-spin" style="font-size: 24px; margin-bottom: 12px;"></i>
+                        <div style="font-size: 12px; font-weight: 500;">Connecting to Wire...</div>
+                    </div>
+                `;
+            }
 
-            // 2. Wait for Command Center (Safety Check)
-            if (!window.commandCenter) {
-                console.warn("⚠️ Command Center not ready yet. Retrying in 500ms...");
-                setTimeout(loadMarketNews, 500);
+            // 3. WAIT for Command Center (The Fix)
+            if (!window.commandCenter || !window.commandCenter.apiCall) {
+                console.log("⏳ Command Center not ready. Retrying in 500ms...");
+                setTimeout(window.loadMarketNews, 500); // Retry loop
                 return;
             }
 
             try {
-                console.log("📡 Fetching news from:", window.commandCenter.apiBaseUrl + '/api/news');
+                console.log("📡 Fetching news from Railway...");
+                const response = await window.commandCenter.apiCall('/api/news');
 
-                // 3. Attempt API Call
-                // We use a shorter timeout so it doesn't hang forever
-                const response = await Promise.race([
-                    window.commandCenter.apiCall('/api/news'),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-                ]);
-
-                console.log("✅ API Response received:", response);
-
-                let articles = [];
                 if (response.success && response.data && response.data.length > 0) {
-                    articles = response.data;
+                    renderNewsItems(container, response.data);
+                    console.log("✅ News loaded successfully.");
                 } else {
-                    throw new Error("API returned empty data");
+                    throw new Error("No data returned");
                 }
 
-                // 4. Success! Render Real Data
-                renderNewsItems(container, articles);
-
             } catch (error) {
-                console.error("❌ News API Failed:", error);
-                console.log("⚠️ Loading Mock Data instead...");
-
-                // 5. Fallback: Render Mock Data
+                console.error("❌ News Load Failed:", error);
+                // Load Mocks so the UI isn't broken
                 loadMockNews(container);
             }
-        }
+        };
 
-        // Helper: Render Logic (Used by both Real and Mock)
+        // Helper: Render the cards
         function renderNewsItems(container, items) {
             container.innerHTML = ''; // Clear loading
-
             items.forEach(item => {
-                // Safe calculations for dates
-                let timeDisplay = item.date || "Today";
+                // Calculate Time
+                let timeDisplay = item.date;
                 if (item.pubDate) {
                     const diff = Math.floor((new Date() - new Date(item.pubDate)) / 1000);
                     if (diff < 3600) timeDisplay = Math.floor(diff / 60) + "m ago";
                     else if (diff < 86400) timeDisplay = Math.floor(diff / 3600) + "h ago";
                     else timeDisplay = Math.floor(diff / 86400) + "d ago";
-                } else if (item.time) {
-                    timeDisplay = item.time; // For mocks
                 }
 
-                // Styles based on source
-                let isDebanked = (item.source || '').toLowerCase().includes('debanked');
-                let icon = isDebanked ? 'fas fa-bolt' : 'fas fa-newspaper';
-                let bgStyle = isDebanked ? '#dcfce7' : '#f3f4f6';
-                let iconColor = isDebanked ? '#166534' : '#9ca3af';
-                let sourceClass = isDebanked ? 'source-highlight' : '';
+                // Style Logic
+                const isDebanked = (item.source || '').toLowerCase().includes('debanked');
+                const bgStyle = isDebanked ? '#dcfce7' : '#f3f4f6';
+                const iconColor = isDebanked ? '#166534' : '#9ca3af';
+                const icon = isDebanked ? 'fas fa-bolt' : 'fas fa-newspaper';
 
                 const html = `
                     <div class="news-card" onclick="window.open('${item.link}', '_blank')">
@@ -1823,39 +1808,33 @@
                         </div>
                         <div class="news-content">
                             <div class="news-meta">
-                                <span class="news-source ${sourceClass}">${item.source || 'Industry News'}</span>
+                                <span class="news-source ${isDebanked ? 'source-highlight' : ''}">${item.source}</span>
                                 <span class="news-dot">•</span>
                                 <span class="news-time">${timeDisplay}</span>
                             </div>
                             <h4 class="news-title">${item.title}</h4>
                         </div>
-                        <div class="news-arrow">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
+                        <div class="news-arrow"><i class="fas fa-chevron-right"></i></div>
                     </div>
                 `;
                 container.insertAdjacentHTML('beforeend', html);
             });
         }
 
-        // Helper: Mock Data Generator
         function loadMockNews(container) {
+            console.log("⚠️ Using Mock Data");
             const mocks = [
-                { title: "NY Disclosure Laws: Complete Broker Compliance Guide", source: "deBanked", time: "2h ago", link: "#" },
-                { title: "Credibly Reports Record Q3 Funding Volume", source: "DailyFunder", time: "5h ago", link: "#" },
-                { title: "Fed Rates & MCA Defaults: What to Expect in 2025", source: "Bloomberg", time: "1d ago", link: "#" }
+                { title: "NY Disclosure Laws: Compliance Guide 2025", source: "deBanked", date: "2h ago", link: "#" },
+                { title: "Lender 'Credibly' Reports Record Volume", source: "DailyFunder", date: "5h ago", link: "#" }
             ];
             renderNewsItems(container, mocks);
         }
 
-        // Make loadMarketNews globally accessible
-        window.loadMarketNews = loadMarketNews;
-
-        // 6. Initialization
+        // 4. AUTO-START TRIGGER
         document.addEventListener('DOMContentLoaded', () => {
-            // Only run if we are on the Home Dashboard
+            // Try to load immediately
             if (!window.currentConversationId) {
-                setTimeout(loadMarketNews, 1000); // Small delay to let app initialize
+                window.loadMarketNews();
             }
         });
 
