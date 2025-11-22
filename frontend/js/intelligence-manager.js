@@ -1,15 +1,17 @@
 // js/intelligence-manager.js
 import { LeadFormsTab } from './intelligence-tabs/lead-forms.js';
+import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
 
 export class IntelligenceManager {
     constructor(parent) {
         this.parent = parent; // The main CommandCenter app
         this.utils = parent.utils || window.conversationUI.utils;
 
-        // 1. Initialize the NEW Module
+        // Initialize Tab Modules
         this.formsTab = new LeadFormsTab(parent);
+        this.documentsTab = new DocumentsTab(parent);
 
-        // 2. Cache for AI Chat (Legacy Logic)
+        // Cache for AI Chat (Legacy Logic)
         this.aiChatCache = new Map();
 
         this.init();
@@ -52,16 +54,20 @@ export class IntelligenceManager {
             case 'edit':
                 this.formsTab.render(content);
                 break;
+            case 'documents':
+                // ✅ USE NEW MODULE
+                this.documentsTab.render(content);
+                break;
             case 'ai-assistant':
+                // ⚠️ LEGACY LOGIC (Keep for now)
                 this.renderAITab(content);
                 break;
-            case 'documents':
-                this.renderDocumentsTab(content);
-                break;
             case 'lenders':
+                // ⚠️ LEGACY LOGIC
                 this.renderLendersTab(content);
                 break;
             case 'fcs':
+                // ⚠️ LEGACY LOGIC
                 this.renderFCSTab(content);
                 break;
             default:
@@ -165,15 +171,6 @@ export class IntelligenceManager {
             this.parent.ai.initializeAIChat();
         } else {
             content.innerHTML = '<div class="empty-state">AI Module Loading...</div>';
-        }
-    }
-
-    renderDocumentsTab(content) {
-        if (this.parent.documents) {
-            content.innerHTML = this.parent.documents.createDocumentsTabTemplate();
-            setTimeout(() => this.parent.documents.loadDocuments(), 100);
-        } else {
-            content.innerHTML = '<div class="empty-state">Documents Module Loading...</div>';
         }
     }
 
