@@ -89,7 +89,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 20px;
-    background: transparent;
+    background: var(--white);
 }
 
 /* 4. Data Grids (CRM Info) */

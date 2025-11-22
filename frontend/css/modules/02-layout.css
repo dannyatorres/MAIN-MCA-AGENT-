@@ -35,7 +35,7 @@
 .right-panel {
     display: flex;
     flex-direction: column;
-    background: var(--bg-surface);
+    background: var(--white);
 
     /* THE FIX: Rounded Corners & Shadows instead of borders */
     border-radius: 16px;
