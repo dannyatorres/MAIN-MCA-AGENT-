@@ -388,35 +388,21 @@ class ConversationCore {
     }
 
     showConversationDetails() {
-        const panelHeader = document.querySelector('.center-panel .panel-header');
-        const centerPanel = document.querySelector('.center-panel');
+        // 1. Get the data
+        if (!this.selectedConversation) return;
 
-        if (!panelHeader || !this.selectedConversation) return;
-
-        // 1. Turn OFF Dashboard Mode
-        if (centerPanel) {
-            centerPanel.classList.remove('dashboard-mode');
-        }
-
-        // 2. Prepare Data
-        // Fallback checks to ensure we don't show "undefined"
         const ownerFirstName = this.selectedConversation.owner_first_name || this.selectedConversation.first_name || '';
         const ownerLastName = this.selectedConversation.owner_last_name || this.selectedConversation.last_name || '';
         const ownerName = `${ownerFirstName} ${ownerLastName}`.trim() || 'Unknown Owner';
-
         const businessName = this.selectedConversation.business_name || this.selectedConversation.company_name || 'Unknown Business';
 
-        // 3. INJECT THE CLEAN HEADER HTML (No Initials, No Avatar)
-        panelHeader.innerHTML = `
-            <button id="backHomeBtn" onclick="loadDashboard()" title="Back to Dashboard">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-
-            <div class="identity-text-group">
-                <h2 class="header-merchant-name">${ownerName}</h2>
-                <span class="header-business-name">${businessName}</span>
-            </div>
-        `;
+        // 2. DELEGATE TO GLOBAL FUNCTION
+        // This forces the app to use the logic in command-center.html (which handles the Right Panel switching)
+        if (window.updateChatHeader) {
+            window.updateChatHeader(businessName, ownerName);
+        } else {
+            console.error("window.updateChatHeader is missing!");
+        }
     }
 
     renderConversationsList() {

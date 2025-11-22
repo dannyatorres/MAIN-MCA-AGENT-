@@ -188,7 +188,8 @@ app.get('/api/news', async (req, res) => {
                 title: titleClean,
                 source: source,
                 link: item.link,
-                date: new Date(item.pubDate).toLocaleDateString(),
+                pubDate: item.pubDate, // <--- Raw date for calculations
+                date: new Date(item.pubDate).toLocaleDateString(), // Keep for display backup
                 type: type
             };
         });

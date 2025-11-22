@@ -166,48 +166,56 @@
 
             <!-- Right Panel - Lead Intelligence -->
             <div class="right-panel">
-                <div class="panel-header">
-                    <h2>Lead Intelligence</h2>
-                    <div class="intelligence-tabs" id="intelligenceTabs">
-                        <button class="tab-btn active" data-tab="ai-assistant">AI Agent</button>
-                        <button class="tab-btn" data-tab="documents">Documents</button>
-                        <button class="tab-btn" data-tab="edit">Edit</button>
-                        <button class="tab-btn" data-tab="fcs">FCS</button>
-                        <button class="tab-btn" data-tab="lenders">Lenders</button>
-                        <button class="tab-btn" data-tab="lender-management">Manage Lenders</button>
-                        <button class="tab-btn" data-tab="email">Email</button>
-                    </div>
-                </div>
-                <div class="intelligence-content" id="intelligenceContent">
-                    <div class="empty-state">
-                        <div class="empty-icon">📊</div>
-                        <h3>No data available</h3>
-                        <p>Select a conversation to view lead intelligence</p>
-                    </div>
 
-                    <!-- Industry News Feed -->
-                    <div class="pulse-section" style="margin-top: 20px;">
-                        <div class="pulse-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--gray-900);">📰 Industry Wire</h4>
-                            <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh" style="width: 28px; height: 28px; border: none; background: var(--gray-100); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--gray-600); transition: all 0.2s;">
-                                <i class="fas fa-sync-alt" style="font-size: 12px;"></i>
+                <div id="rightPanelHome" class="right-panel-state">
+                    <div class="panel-header">
+                        <div class="pulse-header" style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--gray-900);">📰 Industry Wire</h4>
+                                <span style="font-size: 11px; color: var(--gray-500);">Daily updates</span>
+                            </div>
+                            <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
                             </button>
                         </div>
-                        <div class="news-feed" id="newsFeedContainer"></div>
                     </div>
 
-                    <!-- Hidden containers for different tabs -->
-                    <div id="lenderForm" style="display: none;"></div>
-                    <div id="lenderResults" style="display: none;"></div>
-                    <div id="lenderLoading" style="display: none;"></div>
-                    <div id="lenderErrorMsg" style="display: none;"></div>
-                    <div id="lendersTableContainer" style="display: none;"></div>
-                    <div id="lenderTibDisplay" style="display: none;"></div>
-                    <div id="fcsDocumentSelection" style="display: none;"></div>
-                    <div id="fcsResults" style="display: none;"></div>
-                    <div id="fcsLoading" style="display: none;"></div>
-                    <div id="fcsErrorMsg" style="display: none;"></div>
+                    <div class="intelligence-content">
+                        <div class="news-feed" id="newsFeedContainer"></div>
+                    </div>
                 </div>
+
+                <div id="rightPanelIntelligence" class="right-panel-state" style="display: none;">
+                    <div class="panel-header">
+                        <div class="intelligence-tabs" id="intelligenceTabs">
+                            <button class="tab-btn active" data-tab="ai-assistant">AI Agent</button>
+                            <button class="tab-btn" data-tab="documents">Docs</button>
+                            <button class="tab-btn" data-tab="edit">Edit</button>
+                            <button class="tab-btn" data-tab="fcs">FCS</button>
+                            <button class="tab-btn" data-tab="lenders">Lenders</button>
+                            <button class="tab-btn" data-tab="email">Email</button>
+                        </div>
+                    </div>
+                    <div class="intelligence-content" id="intelligenceContent">
+                        <div class="empty-state">
+                            <div class="loading-spinner small"></div>
+                            <p>Loading lead data...</p>
+                        </div>
+
+                        <!-- Hidden containers for different tabs -->
+                        <div id="lenderForm" style="display: none;"></div>
+                        <div id="lenderResults" style="display: none;"></div>
+                        <div id="lenderLoading" style="display: none;"></div>
+                        <div id="lenderErrorMsg" style="display: none;"></div>
+                        <div id="lendersTableContainer" style="display: none;"></div>
+                        <div id="lenderTibDisplay" style="display: none;"></div>
+                        <div id="fcsDocumentSelection" style="display: none;"></div>
+                        <div id="fcsResults" style="display: none;"></div>
+                        <div id="fcsLoading" style="display: none;"></div>
+                        <div id="fcsErrorMsg" style="display: none;"></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -1170,21 +1178,29 @@
         `;
 
         function loadDashboard() {
-            // 1. Target the center panel
+            // 1. Center Panel -> Dashboard Mode
             const centerPanel = document.querySelector('.center-panel');
-
-            // 2. Turn ON Dashboard Mode (Hides header, centers content)
             if (centerPanel) centerPanel.classList.add('dashboard-mode');
 
-            // 3. Inject Dashboard HTML
-            const container = document.getElementById('messagesContainer');
-            if (container) container.innerHTML = DASHBOARD_HTML;
+            // Reset Center Content
+            const messagesContainer = document.getElementById('messagesContainer');
+            if (messagesContainer) messagesContainer.innerHTML = DASHBOARD_HTML;
 
-            // 4. Hide Input Container
             const inputContainer = document.getElementById('messageInputContainer');
             if (inputContainer) inputContainer.style.display = 'none';
 
-            // 5. Clear selection state
+            // 2. RIGHT PANEL -> SHOW HOME (News Feed)
+            // We hide the Intelligence/Tools and show the Market Pulse
+            const rightHome = document.getElementById('rightPanelHome');
+            const rightTools = document.getElementById('rightPanelIntelligence');
+
+            if (rightHome) rightHome.style.display = 'flex';
+            if (rightTools) rightTools.style.display = 'none';
+
+            // Load news if needed
+            if (typeof loadMarketNews === 'function') loadMarketNews();
+
+            // 3. Clear Selection State
             if (window.app && window.app.conversationCore) {
                 window.app.conversationCore.currentConversationId = null;
                 window.app.conversationCore.selectedConversation = null;
@@ -1199,30 +1215,37 @@
 
         // Make sure this is globally available
         window.updateChatHeader = function(companyName, ownerName) {
-            // 1. Target the center panel & header
+            // 1. Target the center panel
             const centerPanel = document.querySelector('.center-panel');
             const container = document.querySelector('.center-panel .panel-header');
 
-            // 2. Safety Checks
+            // 2. Switch Center Panel to CHAT Mode
             if (centerPanel) centerPanel.classList.remove('dashboard-mode');
-            if (!container) return;
 
-            // 3. Prepare Data (Safe Fallbacks)
-            const safeCompany = companyName || "Unknown Business";
-            const safeOwner = ownerName || "Unknown Contact";
+            // 3. RIGHT PANEL -> SHOW TOOLS (AI, Docs, FCS)
+            // We hide the News Feed and show the Intelligence Tabs
+            const rightHome = document.getElementById('rightPanelHome');
+            const rightTools = document.getElementById('rightPanelIntelligence');
 
-            // 4. INJECT THE NEW CLEAN HTML
-            // Note: We put safeOwner first (Big), safeCompany second (Small)
-            container.innerHTML = `
-                <button id="backHomeBtn" onclick="loadDashboard()" title="Back to Dashboard">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
+            if (rightHome) rightHome.style.display = 'none';
+            if (rightTools) rightTools.style.display = 'flex';
 
-                <div class="identity-text-group">
-                    <span class="header-merchant-name">${safeOwner}</span>
-                    <span class="header-business-name">${safeCompany}</span>
-                </div>
-            `;
+            // 4. Render the Clean Header Text
+            if (container) {
+                const safeCompany = companyName || "Unknown Business";
+                const safeOwner = ownerName || "Unknown Contact";
+
+                container.innerHTML = `
+                    <button id="backHomeBtn" onclick="loadDashboard()" title="Back to Dashboard">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+
+                    <div class="identity-text-group">
+                        <h2 class="header-merchant-name">${safeOwner}</h2>
+                        <span class="header-business-name">${safeCompany}</span>
+                    </div>
+                `;
+            }
         }
     </script>
 

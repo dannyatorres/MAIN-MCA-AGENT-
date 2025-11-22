@@ -16,6 +16,13 @@
     overflow: hidden;
 }
 
+.right-panel-state {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 /* 2. Navigation Tabs (Sleek Segmented Control) */
 .right-panel .panel-header {
     /* MATCHING HEIGHT */
@@ -180,6 +187,27 @@
 /* ==========================================================================
    [MODULE: NEWS TICKER]
    ========================================================================== */
+
+.icon-btn-small {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: var(--gray-100);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-600);
+    transition: all 0.2s;
+    font-size: 12px;
+}
+
+.icon-btn-small:hover {
+    background: var(--gray-200);
+    color: var(--gray-900);
+    transform: translateY(-1px);
+}
 
 .news-feed {
     display: flex;
