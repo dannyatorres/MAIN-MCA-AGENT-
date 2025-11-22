@@ -253,6 +253,55 @@ function exposeGlobals() {
     window.closeEditLeadModal = () => {
         document.getElementById('editLeadModal').style.display = 'none';
     };
+
+    // Lender Management Modal
+    window.openLenderManagementModal = function() {
+        console.log('🏛️ Opening Lender Management...');
+
+        // 1. Check for Lenders Module
+        const lendersModule = window.commandCenter?.lenders;
+        if (!lendersModule) {
+            alert('System loading... please wait.');
+            return;
+        }
+
+        // 2. Create/Get the Modal
+        let modal = document.getElementById('lenderManagementModal');
+        if (!modal) {
+            const modalHTML = `
+                <div id="lenderManagementModal" class="modal" style="display:none;">
+                    <div class="modal-content" style="max-width: 1000px; height: 85vh;">
+                        <div class="modal-header">
+                            <h3>🏛️ Manage Lender Network</h3>
+                            <button class="modal-close" onclick="document.getElementById('lenderManagementModal').style.display='none'">×</button>
+                        </div>
+                        <div class="modal-body" id="lenderManagementContent" style="overflow-y: auto; padding: 20px;">
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            modal = document.getElementById('lenderManagementModal');
+        }
+
+        // 3. Inject Content using existing logic
+        const content = document.getElementById('lenderManagementContent');
+
+        // We use the method from your existing lenders.js
+        if (lendersModule.createLenderManagementTemplate) {
+            content.innerHTML = lendersModule.createLenderManagementTemplate();
+
+            // 4. Load the Data
+            if (lendersModule.loadLendersList) {
+                lendersModule.loadLendersList();
+            }
+
+            // 5. Show Modal
+            modal.style.display = 'flex';
+        } else {
+            alert('Lender Management template not found in module.');
+        }
+    };
 }
 
 /**
