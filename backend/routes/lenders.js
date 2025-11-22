@@ -61,8 +61,7 @@ router.post('/', async (req, res) => {
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW()
             ) RETURNING *
         `, [
-            lenderId, name, e
-            mail, phone, company, min_amount, max_amount,
+            lenderId, name, email, phone, company, min_amount, max_amount,
             JSON.stringify(industries || []), JSON.stringify(states || []),
             credit_score_min, time_in_business_min, notes
         ]);

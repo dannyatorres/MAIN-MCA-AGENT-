@@ -10,6 +10,10 @@ const session = require('express-session'); // New Session Library
 const path = require('path');
 require('dotenv').config();
 
+// RSS Parser for News Feed
+const Parser = require('rss-parser');
+const parser = new Parser();
+
 // Create Express app
 const app = express();
 const server = http.createServer(app);
@@ -165,6 +169,36 @@ app.use('/api/csv-import', require('./routes/csv-import'));
 app.use('/api/lookups', require('./routes/lookups'));
 app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
+
+// --- RSS NEWS FEED ENDPOINT ---
+app.get('/api/news', async (req, res) => {
+    try {
+        const FEED_URL = 'https://news.google.com/rss/search?q=Merchant+Cash+Advance+industry+OR+debanked+when:7d&hl=en-US&gl=US&ceid=US:en';
+        const feed = await parser.parseURL(FEED_URL);
+        const articles = feed.items.slice(0, 5).map(item => {
+            const sourceMatch = item.title.match(/- ([^-]+)$/);
+            const source = sourceMatch ? sourceMatch[1] : 'Industry News';
+            const titleClean = item.title.replace(/- [^-]+$/, '').trim();
+
+            let type = 'general';
+            if (source.toLowerCase().includes('debanked')) type = 'debanked';
+            if (source.toLowerCase().includes('funder')) type = 'lender';
+
+            return {
+                title: titleClean,
+                source: source,
+                link: item.link,
+                date: new Date(item.pubDate).toLocaleDateString(),
+                type: type
+            };
+        });
+
+        res.json({ success: true, data: articles });
+    } catch (error) {
+        console.error('RSS Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch news' });
+    }
+});
 
 // --- 6. FRONTEND ROUTING ---
 // This decides which HTML page to show based on login status

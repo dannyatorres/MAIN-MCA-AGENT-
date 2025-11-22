@@ -1732,3 +1732,96 @@
         });
 
         console.log('✅ openNewLeadModal defined globally');
+
+        // ==========================================================================
+        // NEWS FEED FUNCTIONALITY
+        // ==========================================================================
+
+        // 1. Function to Load News
+        async function loadMarketNews() {
+            const container = document.getElementById('newsFeedContainer');
+            if (!container) return;
+
+            // Show Loading Spinner
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: var(--gray-500);">
+                    <div class="loading-spinner small"></div>
+                    <div style="margin-top: 8px; font-size: 12px;">Fetching Market Updates...</div>
+                </div>
+            `;
+
+            try {
+                // Call YOUR Backend
+                const response = await fetch('/api/news');
+                const result = await response.json();
+
+                if (!result.success || !result.data || result.data.length === 0) {
+                    throw new Error('No news found');
+                }
+
+                // Clear Loading
+                container.innerHTML = '';
+
+                // Render Cards
+                result.data.forEach(item => {
+                    const timeAgo = formatTimeAgo(new Date(item.date));
+                    const sourceClass = item.source.toLowerCase().includes('debanked') ? 'source-highlight' : '';
+
+                    const html = `
+                        <div class="news-card" onclick="window.open('${item.link}', '_blank')">
+                            <div class="news-content">
+                                <div class="news-meta">
+                                    <span class="news-source ${sourceClass}">${item.source}</span>
+                                    <span class="news-dot">•</span>
+                                    <span class="news-time">${timeAgo}</span>
+                                </div>
+                                <h4 class="news-title">${item.title}</h4>
+                            </div>
+                            <div class="news-arrow">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+
+            } catch (error) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--gray-400); font-size: 13px;">
+                        <i class="fas fa-newspaper" style="margin-bottom: 8px; font-size: 20px;"></i><br>
+                        News feed unavailable
+                        <br>
+                        <button onclick="loadMarketNews()" class="text-btn">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        // 2. Helper for "2h ago"
+        function formatTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            let interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + "d ago";
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + "h ago";
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + "m ago";
+            return "Just now";
+        }
+
+        // Make loadMarketNews globally accessible
+        window.loadMarketNews = loadMarketNews;
+
+        // 3. Auto-Load when Dashboard is visible
+        document.addEventListener('DOMContentLoaded', () => {
+            // If we are on the home screen (no active conversation), load news
+            const rightPanel = document.querySelector('.right-panel');
+            if (rightPanel && !window.currentConversationId) {
+                // Delay slightly to ensure container is ready
+                setTimeout(() => {
+                    loadMarketNews();
+                }, 500);
+            }
+        });
+
+        console.log('✅ News feed functions loaded');
