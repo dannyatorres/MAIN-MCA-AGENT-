@@ -31,60 +31,24 @@ export class AIAssistantTab {
             return;
         }
 
-        // 2. Render the Chat Interface Structure
-        // This creates the "Body" for the AI to inhabit
+        // CLEAN HTML - No Inline Styles
         container.innerHTML = `
-            <div class="ai-assistant-section" style="height: calc(100vh - 200px); display: flex; flex-direction: column; background: white;">
-                <div id="aiChatMessages" style="
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                ">
-                    <div style="text-align: center; color: #9ca3af; margin-top: 40px;">
-                        <div class="loading-spinner small"></div>
-                        <p style="font-size: 12px; margin-top: 8px;">Connecting to AI Agent...</p>
+            <div class="ai-assistant-section">
+                <div id="aiChatMessages">
+                    <div style="text-align: center; color: #9ca3af; margin-top: 60px;">
+                        <div class="ai-thinking" style="margin: 0 auto 10px;">
+                            <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+                        </div>
+                        <p style="font-size: 12px;">Connecting to Neural Core...</p>
                     </div>
                 </div>
 
-                <div class="ai-input-area" style="
-                    padding: 20px;
-                    border-top: 1px solid #f3f4f6;
-                    background: white;
-                ">
-                    <div style="position: relative;">
-                        <textarea id="aiChatInput" placeholder="Ask AI about this deal..." style="
-                            width: 100%;
-                            padding: 12px 40px 12px 16px;
-                            border: 1px solid #e5e7eb;
-                            border-radius: 12px;
-                            font-family: inherit;
-                            font-size: 14px;
-                            resize: none;
-                            outline: none;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                            min-height: 48px;
-                        "></textarea>
+                <div class="ai-input-area">
+                    <div class="ai-input-wrapper">
+                        <textarea id="aiChatInput" placeholder="Ask AI about ${conversation.business_name || 'this deal'}..." rows="1"></textarea>
 
-                        <button id="aiChatSend" onclick="window.conversationUI.ai.sendAIMessage()" style="
-                            position: absolute;
-                            right: 8px;
-                            bottom: 8px;
-                            width: 32px;
-                            height: 32px;
-                            background: #111827;
-                            color: white;
-                            border: none;
-                            border-radius: 8px;
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            transition: transform 0.1s;
-                        ">
-                            <i class="fas fa-paper-plane" style="font-size: 12px;"></i>
+                        <button id="aiChatSend" onclick="window.conversationUI.ai.sendAIMessage()">
+                            <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
                     <div style="font-size: 10px; color: #9ca3af; margin-top: 8px; text-align: center;">

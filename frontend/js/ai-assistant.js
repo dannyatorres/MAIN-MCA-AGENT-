@@ -141,33 +141,30 @@ class AIAssistant {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `ai-chat-message ${role}`;
-        messageDiv.style.marginBottom = '12px';
+        // Create Row
+        const messageRow = document.createElement('div');
+        messageRow.className = `ai-message-row ${role === 'user' ? 'user' : 'assistant'}`;
 
+        // Create Bubble
         const messageBubble = document.createElement('div');
-        messageBubble.className = 'message-bubble';
-        messageBubble.style.cssText = role === 'user'
-            ? 'background: #667eea; color: white; padding: 10px 14px; border-radius: 18px; max-width: 70%; margin-left: auto; text-align: right; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap;'
-            : 'background: white; color: #1f2937; padding: 10px 14px; border-radius: 18px; max-width: 70%; border: 1px solid #e5e7eb; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap;';
 
-        // Format the content (convert line breaks, etc)
-        messageBubble.innerHTML = this.formatAIResponse(content);
-
+        // USE CSS CLASSES NOT INLINE STYLES
         if (role === 'user') {
-            const wrapper = document.createElement('div');
-            wrapper.style.display = 'flex';
-            wrapper.style.justifyContent = 'flex-end';
-            wrapper.appendChild(messageBubble);
-            messageDiv.appendChild(wrapper);
+            messageBubble.className = 'ai-bubble-user';
         } else {
-            messageDiv.appendChild(messageBubble);
+            messageBubble.className = 'ai-bubble-ai';
         }
 
-        messagesContainer.appendChild(messageDiv);
+        // Format Content
+        messageBubble.innerHTML = this.formatAIResponse(content);
+
+        // Append
+        messageRow.appendChild(messageBubble);
+        messagesContainer.appendChild(messageRow);
+
+        // Scroll
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-        // Save to database if requested
         if (saveToDatabase) {
             this.saveMessageToDatabase(role, content);
         }
@@ -212,13 +209,14 @@ class AIAssistant {
 
         const typingDiv = document.createElement('div');
         typingDiv.id = 'aiTypingIndicator';
-        typingDiv.style.marginBottom = '12px';
+        typingDiv.className = 'ai-message-row assistant';
 
+        // Use new CSS classes
         typingDiv.innerHTML = `
-            <div style="display: inline-flex; gap: 4px; padding: 12px 16px; background: white; border: 1px solid #e5e7eb; border-radius: 18px;">
-                <div class="typing-dot" style="width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite;"></div>
-                <div class="typing-dot" style="width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; animation-delay: 0.2s;"></div>
-                <div class="typing-dot" style="width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite; animation-delay: 0.4s;"></div>
+            <div class="ai-thinking">
+                <div class="ai-dot"></div>
+                <div class="ai-dot"></div>
+                <div class="ai-dot"></div>
             </div>
         `;
 
