@@ -60,33 +60,38 @@
             background-color: transparent !important;
         }
 
-        /* 5. CARDS: SWITCH BACK TO CREAM */
-        /* This creates the nice warm/cool contrast */
-        .conversation-item {
-            background-color: var(--corgi-cream) !important; /* <--- THE WARMTH IS BACK */
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
-            border: 1px solid rgba(255,255,255,0.5) !important;
-            margin-bottom: 8px !important;
-        }
-
-        /* Optional: Keep Dashboard cards white for distinction? */
-        /* Or make them cream too? Let's keep them white for now to make the list special. */
+        /* 5. UNIFIED CARD STYLE (CREAM) */
+        /* This applies the Cream look to Left Sidebar AND Center Dashboard cards */
+        .conversation-item,
         .stat-card,
         .goal-card,
-        .news-card,
-        .empty-state {
-            background-color: #ffffff !important;
-            border: 1px solid rgba(255,255,255,0.5) !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03) !important;
+        .news-card {
+            background-color: var(--corgi-cream) !important; /* <--- ALL CARDS ARE CREAM */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.6) !important; /* Subtle white border helps them pop */
+            color: #1e293b !important; /* Ensure text is dark/readable */
         }
 
-        /* Chat Bubbles: Keep White for maximum readability */
+        /* 6. Fixes for specific cards */
+
+        /* Ensure Goal Card text is readable (since it was originally black) */
+        .goal-card .goal-title,
+        .goal-card .goal-numbers {
+            color: #1e293b !important;
+        }
+
+        /* Inbound Chat Bubbles: Keep White for readability/contrast against Cream/Silver */
         .message.inbound .message-content {
             background-color: #ffffff !important;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
         }
 
-        /* Search Bars */
+        /* Right Panel Tabs */
+        .intelligence-tabs {
+            background-color: rgba(255,255,255,0.5) !important;
+        }
+
+        /* Search Inputs */
         .search-field-clean {
             background: #ffffff !important;
             color: #1e293b !important;
