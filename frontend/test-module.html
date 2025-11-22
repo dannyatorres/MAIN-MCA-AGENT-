@@ -76,6 +76,7 @@
 
         <button onclick="testGet()">Test GET /api/conversations</button>
         <button onclick="testNews()" class="success">Test GET /api/news</button>
+        <button onclick="testFormatters()" style="background: #6f42c1;">Test Formatters & Validators</button>
         <button onclick="clearOutput()">Clear Output</button>
 
         <div id="output"></div>
@@ -83,9 +84,12 @@
 
     <script type="module">
         import { ApiService } from './js/services/api.js';
+        import { Formatters, Validators } from './js/utils/formatters.js';
 
-        // Make it available globally for button clicks
+        // Make them available globally for button clicks
         window.ApiService = ApiService;
+        window.Formatters = Formatters;
+        window.Validators = Validators;
 
         // Test GET request
         window.testGet = async function() {
@@ -142,8 +146,145 @@
             document.getElementById('output').innerHTML = '';
         };
 
+        // Test Formatters & Validators
+        window.testFormatters = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🧪 Testing Formatters & Validators...\n\n';
+
+            let passed = 0;
+            let failed = 0;
+
+            // Test 1: Phone Formatting
+            const rawPhone = "1234567890";
+            const formattedPhone = Formatters.phone(rawPhone);
+            output.innerHTML += `📱 Phone Formatter:\n`;
+            output.innerHTML += `   Input: "${rawPhone}"\n`;
+            output.innerHTML += `   Output: "${formattedPhone}"\n`;
+
+            if (formattedPhone === '(123) 456-7890') {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Expected: "(123) 456-7890")\n\n`;
+                failed++;
+            }
+
+            // Test 2: SSN Formatting
+            const rawSSN = "123456789";
+            const formattedSSN = Formatters.ssn(rawSSN);
+            output.innerHTML += `🔐 SSN Formatter:\n`;
+            output.innerHTML += `   Input: "${rawSSN}"\n`;
+            output.innerHTML += `   Output: "${formattedSSN}"\n`;
+
+            if (formattedSSN === '123-45-6789') {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Expected: "123-45-6789")\n\n`;
+                failed++;
+            }
+
+            // Test 3: EIN Formatting
+            const rawEIN = "123456789";
+            const formattedEIN = Formatters.ein(rawEIN);
+            output.innerHTML += `🏢 EIN Formatter:\n`;
+            output.innerHTML += `   Input: "${rawEIN}"\n`;
+            output.innerHTML += `   Output: "${formattedEIN}"\n`;
+
+            if (formattedEIN === '12-3456789') {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Expected: "12-3456789")\n\n`;
+                failed++;
+            }
+
+            // Test 4: Currency Formatting
+            const rawCurrency = 1000;
+            const formattedCurrency = Formatters.currency(rawCurrency);
+            output.innerHTML += `💰 Currency Formatter:\n`;
+            output.innerHTML += `   Input: ${rawCurrency}\n`;
+            output.innerHTML += `   Output: "${formattedCurrency}"\n`;
+
+            if (formattedCurrency === '$1,000') {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Expected: "$1,000")\n\n`;
+                failed++;
+            }
+
+            // Test 5: Strip Formatter
+            const formatted = "(123) 456-7890";
+            const stripped = Formatters.strip(formatted);
+            output.innerHTML += `🧹 Strip Formatter:\n`;
+            output.innerHTML += `   Input: "${formatted}"\n`;
+            output.innerHTML += `   Output: "${stripped}"\n`;
+
+            if (stripped === '1234567890') {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Expected: "1234567890")\n\n`;
+                failed++;
+            }
+
+            // Test 6: Email Validation
+            const badEmail = "test@";
+            const goodEmail = "test@example.com";
+            output.innerHTML += `📧 Email Validator:\n`;
+            output.innerHTML += `   Bad Email: "${badEmail}" -> ${Validators.email(badEmail)}\n`;
+            output.innerHTML += `   Good Email: "${goodEmail}" -> ${Validators.email(goodEmail)}\n`;
+
+            if (!Validators.email(badEmail) && Validators.email(goodEmail)) {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED\n\n`;
+                failed++;
+            }
+
+            // Test 7: Phone Validation
+            const badPhone = "123";
+            const goodPhone = "(123) 456-7890";
+            output.innerHTML += `📞 Phone Validator:\n`;
+            output.innerHTML += `   Bad Phone: "${badPhone}" -> ${Validators.phone(badPhone)}\n`;
+            output.innerHTML += `   Good Phone: "${goodPhone}" -> ${Validators.phone(goodPhone)}\n`;
+
+            if (!Validators.phone(badPhone) && Validators.phone(goodPhone)) {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED\n\n`;
+                failed++;
+            }
+
+            // Test 8: Required Validator
+            const empty = "";
+            const filled = "data";
+            output.innerHTML += `✅ Required Validator:\n`;
+            output.innerHTML += `   Empty: "${empty}" -> ${Validators.required(empty)}\n`;
+            output.innerHTML += `   Filled: "${filled}" -> ${Validators.required(filled)}\n`;
+
+            if (!Validators.required(empty) && Validators.required(filled)) {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED\n\n`;
+                failed++;
+            }
+
+            // Summary
+            const status = document.createElement('div');
+            status.className = failed === 0 ? 'status success' : 'status error';
+            status.innerHTML = `<strong>Test Results:</strong> ${passed} passed, ${failed} failed`;
+            output.appendChild(status);
+        };
+
         console.log('✅ API Service Test Page Loaded');
         console.log('🔧 ApiService available in window.ApiService');
+        console.log('🔧 Formatters available in window.Formatters');
+        console.log('🔧 Validators available in window.Validators');
     </script>
 </body>
 </html>
