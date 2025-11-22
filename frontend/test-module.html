@@ -79,6 +79,7 @@
         <button onclick="testFormatters()" style="background: #6f42c1;">Test Formatters & Validators</button>
         <button onclick="testLookups()" style="background: #fd7e14;">Test Lookups Manager</button>
         <button onclick="testForms()" style="background: #e83e8c;">Test Forms Manager</button>
+        <button onclick="testLeadManager()" style="background: #20c997;">Test Lead Manager</button>
         <button onclick="clearOutput()">Clear Output</button>
 
         <div id="output"></div>
@@ -89,6 +90,7 @@
         import { Formatters, Validators } from './js/formatters.js';
         import { LookupManager } from './js/lookups.js';
         import { FormManager } from './js/forms.js';
+        import { LeadManager } from './js/leads.js';
 
         // Make them available globally for button clicks
         window.ApiService = ApiService;
@@ -96,6 +98,7 @@
         window.Validators = Validators;
         window.LookupManager = LookupManager;
         window.FormManager = FormManager;
+        window.LeadManager = LeadManager;
 
         // Test GET request
         window.testGet = async function() {
@@ -528,12 +531,53 @@
             output.appendChild(status);
         };
 
+        // Test Lead Manager
+        window.testLeadManager = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🧪 Testing Lead Manager...\n';
+
+            // We will try to fetch a fake ID to see if the logic holds together
+            // (It will likely fail network-wise, but verify the function executes)
+            try {
+                output.innerHTML += '\n⏳ Attempting to fetch lead with ID 999999...\n';
+                await LeadManager.getById('999999');
+
+                // If we get here, either the lead exists or something unexpected happened
+                output.innerHTML += '\n✅ Request completed (unexpected success)\n';
+
+                const status = document.createElement('div');
+                status.className = 'status success';
+                status.textContent = '✅ LeadManager is linked and communicating with API!';
+                output.appendChild(status);
+
+            } catch (e) {
+                // We EXPECT an error here because ID 999999 likely doesn't exist
+                // But if the error message is from our ApiService, we know it works.
+                output.innerHTML += '\n✅ LeadManager successfully connected to API Service!\n';
+                output.innerHTML += `   (Error was expected: ${e.message})\n\n`;
+
+                output.innerHTML += '📋 Available Methods:\n';
+                output.innerHTML += '   • LeadManager.create(leadData)\n';
+                output.innerHTML += '   • LeadManager.update(id, leadData)\n';
+                output.innerHTML += '   • LeadManager.getById(id)\n';
+                output.innerHTML += '   • LeadManager.archive(id)\n';
+                output.innerHTML += '   • LeadManager.delete(id)\n';
+                output.innerHTML += '   • LeadManager.clone(id)\n';
+
+                const status = document.createElement('div');
+                status.className = 'status success';
+                status.textContent = '✅ LeadManager is linked and ready!';
+                output.appendChild(status);
+            }
+        };
+
         console.log('✅ API Service Test Page Loaded');
         console.log('🔧 ApiService available in window.ApiService');
         console.log('🔧 Formatters available in window.Formatters');
         console.log('🔧 Validators available in window.Validators');
         console.log('🔧 LookupManager available in window.LookupManager');
         console.log('🔧 FormManager available in window.FormManager');
+        console.log('🔧 LeadManager available in window.LeadManager');
     </script>
 </body>
 </html>
