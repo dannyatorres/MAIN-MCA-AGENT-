@@ -1,6 +1,7 @@
 // js/intelligence-manager.js
 import { LeadFormsTab } from './intelligence-tabs/lead-forms.js';
 import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
+import { AIAssistantTab } from './intelligence-tabs/ai-tab.js';
 
 export class IntelligenceManager {
     constructor(parent) {
@@ -10,8 +11,9 @@ export class IntelligenceManager {
         // Initialize Tab Modules
         this.formsTab = new LeadFormsTab(parent);
         this.documentsTab = new DocumentsTab(parent);
+        this.aiTab = new AIAssistantTab(parent);
 
-        // Cache for AI Chat (Legacy Logic)
+        // Cache for AI Chat (Keep for compatibility if AI logic uses it)
         this.aiChatCache = new Map();
 
         this.init();
@@ -55,12 +57,11 @@ export class IntelligenceManager {
                 this.formsTab.render(content);
                 break;
             case 'documents':
-                // ✅ USE NEW MODULE
                 this.documentsTab.render(content);
                 break;
             case 'ai-assistant':
-                // ⚠️ LEGACY LOGIC (Keep for now)
-                this.renderAITab(content);
+                // ✅ USE NEW MODULE
+                this.aiTab.render(content);
                 break;
             case 'lenders':
                 // ⚠️ LEGACY LOGIC
@@ -71,7 +72,8 @@ export class IntelligenceManager {
                 this.renderFCSTab(content);
                 break;
             default:
-                content.innerHTML = `<div class="empty-state">Tab ${tabName} coming soon</div>`;
+                // Default to AI if unknown tab
+                this.aiTab.render(content);
         }
     }
 
@@ -140,39 +142,6 @@ export class IntelligenceManager {
     // ============================================================
     //  LEGACY HANDLERS
     // ============================================================
-
-    renderAITab(content) {
-        const conv = this.parent.getSelectedConversation();
-        if (!conv) {
-            content.innerHTML = '<div class="empty-state">No conversation selected</div>';
-            return;
-        }
-
-        if (this.parent.ai) {
-            // Reconstruct HTML for AI Module
-            content.innerHTML = `
-                <div class="ai-assistant-section" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
-                    <div id="aiChatMessages" style="flex:1; overflow-y:auto; padding:20px;">
-                        <div style="text-align:center; color:#999; padding-top:20px;">
-                            <div class="loading-spinner small"></div>
-                            <p>Connecting to AI...</p>
-                        </div>
-                    </div>
-                    <div class="ai-input-area" style="padding:20px; border-top:1px solid #eee;">
-                        <textarea id="aiChatInput" placeholder="Ask AI..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:inherit;"></textarea>
-                        <button id="aiChatSend" onclick="window.conversationUI.ai.sendAIMessage()" style="margin-top:10px; padding:8px 16px; background:#000; color:#fff; border-radius:6px; cursor:pointer;">Send</button>
-                    </div>
-                </div>
-            `;
-
-            // Reset & Re-init AI
-            this.parent.ai.isInitialized = false;
-            this.parent.ai.currentConversationId = null;
-            this.parent.ai.initializeAIChat();
-        } else {
-            content.innerHTML = '<div class="empty-state">AI Module Loading...</div>';
-        }
-    }
 
     renderLendersTab(content) {
         const conv = this.parent.getSelectedConversation();
