@@ -77,19 +77,22 @@
         <button onclick="testGet()">Test GET /api/conversations</button>
         <button onclick="testNews()" class="success">Test GET /api/news</button>
         <button onclick="testFormatters()" style="background: #6f42c1;">Test Formatters & Validators</button>
+        <button onclick="testLookups()" style="background: #fd7e14;">Test Lookups Manager</button>
         <button onclick="clearOutput()">Clear Output</button>
 
         <div id="output"></div>
     </div>
 
     <script type="module">
-        import { ApiService } from './js/services/api.js';
-        import { Formatters, Validators } from './js/utils/formatters.js';
+        import { ApiService } from './js/api.js';
+        import { Formatters, Validators } from './js/formatters.js';
+        import { LookupManager } from './js/lookups.js';
 
         // Make them available globally for button clicks
         window.ApiService = ApiService;
         window.Formatters = Formatters;
         window.Validators = Validators;
+        window.LookupManager = LookupManager;
 
         // Test GET request
         window.testGet = async function() {
@@ -281,10 +284,81 @@
             output.appendChild(status);
         };
 
+        // Test Lookups Manager
+        window.testLookups = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🧪 Testing Lookups Manager...\n\n';
+
+            // Create test dropdown elements
+            const testSelects = [
+                { id: 'businessState', type: 'States' },
+                { id: 'entityType', type: 'Entity Types' },
+                { id: 'industryType', type: 'Industry Types' },
+                { id: 'leadSource', type: 'Lead Sources' },
+                { id: 'assignedTo', type: 'Users' }
+            ];
+
+            testSelects.forEach(({ id, type }) => {
+                let select = document.getElementById(id);
+                if (!select) {
+                    select = document.createElement('select');
+                    select.id = id;
+                    select.style.display = 'none';
+                    document.body.appendChild(select);
+                }
+            });
+
+            try {
+                output.innerHTML += '⏳ Initializing LookupManager...\n';
+                await LookupManager.init();
+                output.innerHTML += '✅ Initialization complete\n\n';
+
+                let passed = 0;
+                let failed = 0;
+
+                testSelects.forEach(({ id, type }) => {
+                    const select = document.getElementById(id);
+                    const optionCount = select ? select.options.length : 0;
+
+                    output.innerHTML += `📋 ${type} (${id}):\n`;
+                    output.innerHTML += `   Options populated: ${optionCount}\n`;
+
+                    if (optionCount > 1) {
+                        output.innerHTML += `   ✅ PASSED\n\n`;
+                        passed++;
+                    } else {
+                        output.innerHTML += `   ❌ FAILED (Expected > 1 option)\n\n`;
+                        failed++;
+                    }
+                });
+
+                // Show sample data
+                output.innerHTML += '\n📊 Sample Data:\n';
+                output.innerHTML += `   States: ${LookupManager.data.states.length} items\n`;
+                output.innerHTML += `   Entity Types: ${LookupManager.data.entityTypes.length} items\n`;
+                output.innerHTML += `   Industry Types: ${LookupManager.data.industryTypes.length} items\n`;
+                output.innerHTML += `   Lead Sources: ${LookupManager.data.leadSources.length} items\n`;
+                output.innerHTML += `   Users: ${LookupManager.data.users.length} items\n\n`;
+
+                const status = document.createElement('div');
+                status.className = failed === 0 ? 'status success' : 'status error';
+                status.innerHTML = `<strong>Test Results:</strong> ${passed} passed, ${failed} failed`;
+                output.appendChild(status);
+
+            } catch (error) {
+                output.innerHTML += `\n❌ Test Failed: ${error.message}\n`;
+                const status = document.createElement('div');
+                status.className = 'status error';
+                status.textContent = `❌ Lookups test failed: ${error.message}`;
+                output.appendChild(status);
+            }
+        };
+
         console.log('✅ API Service Test Page Loaded');
         console.log('🔧 ApiService available in window.ApiService');
         console.log('🔧 Formatters available in window.Formatters');
         console.log('🔧 Validators available in window.Validators');
+        console.log('🔧 LookupManager available in window.LookupManager');
     </script>
 </body>
 </html>
