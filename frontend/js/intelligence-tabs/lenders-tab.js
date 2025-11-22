@@ -12,15 +12,15 @@ export class LendersTab {
     }
 
     render(container) {
-        console.log('🏦 Rendering Lenders Tab');
+        console.log('🏦 Rendering Submission Tab');
 
         const conversation = this.parent.getSelectedConversation();
         if (!conversation) {
             container.innerHTML = `
                 <div class="empty-state" style="text-align: center; padding: 60px 20px;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">🏛️</div>
+                    <div style="font-size: 48px; margin-bottom: 16px;">📤</div>
                     <h3 style="color: #6b7280; margin-bottom: 8px;">No Conversation Selected</h3>
-                    <p style="color: #9ca3af;">Select a lead to match with lenders.</p>
+                    <p style="color: #9ca3af;">Select a lead to submit deals.</p>
                 </div>
             `;
             return;
@@ -28,48 +28,33 @@ export class LendersTab {
 
         // Check if logic module is loaded
         if (!this.lendersLogic) {
-            console.warn('⚠️ Lenders module not found in parent - retrying in 1 second...');
+            console.warn('⚠️ Lenders module not found - retrying...');
             container.innerHTML = `
                 <div class="error-state" style="text-align: center; padding: 40px;">
                     <div class="loading-spinner"></div>
-                    <p style="color: #6b7280; margin-top: 10px;">Lenders Module Loading...</p>
-                    <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">Waiting for module initialization...</p>
+                    <p style="color: #6b7280; margin-top: 10px;">Loading Submission Tools...</p>
                 </div>
             `;
-
-            // Retry once after delay (fixes race conditions during app startup)
             setTimeout(() => {
-                if (this.lendersLogic) {
-                    console.log('✅ Lenders module now available - re-rendering');
-                    this.render(container);
-                } else {
-                    console.error('❌ Lenders module still not available after retry');
-                    container.innerHTML = `
-                        <div class="error-state" style="text-align: center; padding: 40px;">
-                            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-                            <h4 style="color: #dc2626; margin-bottom: 8px;">Lenders Module Not Loaded</h4>
-                            <p style="color: #6b7280;">Please refresh the page and try again.</p>
-                        </div>
-                    `;
-                }
+                if (this.lendersLogic) this.render(container);
             }, 1000);
             return;
         }
 
-        // Render the Landing Page (The Button)
+        // Render Background (Landing Page)
         container.innerHTML = `
             <div style="padding: 60px 40px; text-align: center;">
                 <div style="font-size: 64px; margin-bottom: 24px;">🤝</div>
-                <h3 style="margin-bottom: 16px; color: #1e40af;">Lender Qualification</h3>
+                <h3 style="margin-bottom: 16px; color: #1e40af;">Lender Submission</h3>
                 <p style="margin-bottom: 32px; color: #6b7280; max-width: 400px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-                    Qualify <strong>${conversation.business_name || 'this lead'}</strong> against your lender matrix and submit deals directly.
+                    Qualify <strong>${conversation.business_name || 'this lead'}</strong> and submit to lenders.
                 </p>
                 <button id="openLendersModalBtn" class="btn btn-primary" style="
                     padding: 14px 32px;
                     font-size: 16px;
                     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
                 ">
-                    Open Lender Tools
+                    Re-Open Submission
                 </button>
             </div>
         `;
@@ -77,6 +62,11 @@ export class LendersTab {
         document.getElementById('openLendersModalBtn').addEventListener('click', () => {
             this.openModal(conversation);
         });
+
+        // AUTO-TRIGGER: Open modal immediately
+        setTimeout(() => {
+            this.openModal(conversation);
+        }, 50);
     }
 
     openModal(conversation) {
