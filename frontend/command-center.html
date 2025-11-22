@@ -1323,5 +1323,34 @@
         }
     </script>
 
+<script>
+    (async function testConnection() {
+        console.log('📡 DEBUG: Testing /api/news connection...');
+        try {
+            const response = await fetch('/api/news');
+            console.log('📡 DEBUG: Server responded with status:', response.status);
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ DEBUG: Success! News data received:', data);
+
+                // Optional: Force render it immediately to verify visuals
+                const container = document.getElementById('newsFeedContainer');
+                if (container && data.success) {
+                    container.innerHTML = data.data.map(item =>
+                        `<div style="padding:10px; border-bottom:1px solid #eee;">
+                            <b>${item.title}</b><br>
+                            <span style="font-size:10px">${item.source}</span>
+                        </div>`
+                    ).join('');
+                }
+            } else {
+                console.error('❌ DEBUG: Server Error:', response.statusText);
+            }
+        } catch (err) {
+            console.error('❌ DEBUG: Network Error:', err);
+        }
+    })();
+</script>
 </body>
 </html>
