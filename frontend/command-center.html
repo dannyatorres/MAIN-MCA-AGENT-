@@ -24,61 +24,61 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        /* 1. DEFINE THE NEW MEDIUM GREY */
+        /* 1. DEFINE THE NEW COLOR: Slate-200 */
         :root {
-            /* A balanced "Steel Grey" - not too dark, not too light */
-            --sidebar-medium: #6E6E76;
+            --sidebar-silver: #E2E8F0; /* Crisp, professional light grey */
         }
 
         /* 2. Apply it to the Left Panel Container */
         .left-panel {
-            background-color: var(--sidebar-medium) !important;
-            border-right: 1px solid rgba(255,255,255,0.1) !important; /* Subtle divider */
+            background-color: var(--sidebar-silver) !important;
+            border-right: 1px solid rgba(0,0,0,0.06) !important;
         }
 
-        /* 3. Make the Header Transparent */
+        /* 3. Header: Transparent + Dark Text */
         .left-panel .panel-header {
             background-color: transparent !important;
-            border-bottom: 1px solid rgba(255,255,255,0.15) !important;
+            border-bottom: 1px solid rgba(0,0,0,0.06) !important;
         }
 
-        /* 4. Keep Title White (Best contrast on medium grey) */
+        /* 4. Title: Dark Grey (Back to readable dark text) */
         .left-panel .brand-title {
-            color: #ffffff !important;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            color: #1e293b !important; /* Slate-800 */
+            text-shadow: none !important;
         }
 
-        /* 5. Buttons: Make them White/Light Grey */
+        /* 5. Buttons: Dark Grey */
         .left-panel .tool-btn {
-            color: rgba(255,255,255,0.85) !important;
+            color: #64748b !important; /* Slate-500 */
         }
         .left-panel .tool-btn:hover {
-            color: #ffffff !important;
-            background: rgba(255,255,255,0.15) !important;
+            color: #0f172a !important; /* Slate-900 */
+            background: rgba(0,0,0,0.05) !important;
         }
 
-        /* 6. Search Bar: Make it semi-transparent white */
+        /* 6. Search Bar: White background for contrast against silver */
         .left-panel .search-field-clean {
-            background: rgba(255,255,255,0.15) !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            color: white !important;
+            background: #ffffff !important;
+            border: 1px solid transparent !important;
+            color: #1e293b !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .left-panel .search-field-clean::placeholder {
-            color: rgba(255,255,255,0.5) !important;
+            color: #94a3b8 !important;
         }
 
-        /* 7. The List & Cards */
+        /* 7. List & Cards */
         .conversations-list {
             background-color: transparent !important;
             padding-top: 12px !important;
         }
 
-        /* Cards stay Cream/White for pop */
+        /* Cards: Pure White creates a beautiful subtle pop against the Silver */
         .conversation-item {
-            background-color: var(--corgi-cream) !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
             margin-bottom: 8px !important;
-            border: none !important;
+            border: 1px solid rgba(255,255,255,0.5) !important; /* Subtle highlight */
         }
     </style>
 </head>
