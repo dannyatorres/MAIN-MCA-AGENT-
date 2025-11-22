@@ -3,8 +3,12 @@
 export class LendersTab {
     constructor(parent) {
         this.parent = parent; // Reference to CommandCenter
-        // Access the Lenders Module logic
-        this.lendersLogic = parent.lenders;
+        // No direct assignment here - we use a getter instead to avoid race conditions
+    }
+
+    // Dynamic getter - accesses module when needed, not at construction time
+    get lendersLogic() {
+        return this.parent.lenders;
     }
 
     render(container) {
@@ -24,12 +28,31 @@ export class LendersTab {
 
         // Check if logic module is loaded
         if (!this.lendersLogic) {
+            console.warn('⚠️ Lenders module not found in parent - retrying in 1 second...');
             container.innerHTML = `
                 <div class="error-state" style="text-align: center; padding: 40px;">
                     <div class="loading-spinner"></div>
                     <p style="color: #6b7280; margin-top: 10px;">Lenders Module Loading...</p>
+                    <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">Waiting for module initialization...</p>
                 </div>
             `;
+
+            // Retry once after delay (fixes race conditions during app startup)
+            setTimeout(() => {
+                if (this.lendersLogic) {
+                    console.log('✅ Lenders module now available - re-rendering');
+                    this.render(container);
+                } else {
+                    console.error('❌ Lenders module still not available after retry');
+                    container.innerHTML = `
+                        <div class="error-state" style="text-align: center; padding: 40px;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                            <h4 style="color: #dc2626; margin-bottom: 8px;">Lenders Module Not Loaded</h4>
+                            <p style="color: #6b7280;">Please refresh the page and try again.</p>
+                        </div>
+                    `;
+                }
+            }, 1000);
             return;
         }
 
