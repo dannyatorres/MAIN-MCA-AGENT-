@@ -256,37 +256,92 @@ function exposeGlobals() {
 }
 
 /**
- * MARKET NEWS (Simplified)
+ * MARKET NEWS (Live via Your Backend)
+ * Fetches industry news from your server's /api/news endpoint.
  */
 async function loadMarketNews() {
     const container = document.getElementById('newsFeedContainer');
     if (!container) return;
 
-    try {
-        // Using our new fetch logic, but tailored for external/news
-        // Assuming an endpoint exists, or using mock data if that fails
-        const response = await fetch('/api/news');
-        const data = await response.json();
+    // 1. Show Loading State (Immediate feedback)
+    container.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #64748b;">
+            <div class="loading-spinner small" style="margin: 0 auto 10px;"></div>
+            <div style="font-size: 12px;">Scanning Industry Wire...</div>
+        </div>
+    `;
 
-        if (data.success && data.data) {
-            renderNews(container, data.data);
+    try {
+        // 2. Fetch directly from your server
+        const response = await fetch('/api/news');
+        const result = await response.json();
+
+        if (result.success && result.data && result.data.length > 0) {
+
+            // 3. Format the data for display
+            const newsItems = result.data.map(item => ({
+                title: item.title,
+                link: item.link,
+                source: item.source || 'Industry News',
+                // Choose icon based on the 'type' your server assigned
+                icon: (item.type === 'debanked' || item.source.toLowerCase().includes('debanked')) ? '⚡' : '📰',
+                // Calculate "2h ago" using the pubDate from server
+                displayDate: timeAgo(new Date(item.pubDate))
+            }));
+
+            renderNews(container, newsItems);
+
+        } else {
+            // Fallback if no news found
+            container.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:#94a3b8;">No recent updates found.</div>';
         }
+
     } catch (e) {
-        console.log('Using mock news data');
-        renderNews(container, [
-            { title: "Market Update: Rates Hold Steady", source: "Bloomberg", date: "2h ago" },
-            { title: "Small Business Lending Index Up", source: "SBA", date: "4h ago" }
-        ]);
+        console.error('News Load Error:', e);
+        // Use your mock data as a fallback if the server fails
+        loadMockNews(container);
     }
 }
 
+// Helper: Render the cards
 function renderNews(container, items) {
     container.innerHTML = items.map(item => `
-        <div class="news-card">
+        <div class="news-card" onclick="window.open('${item.link}', '_blank')">
             <div class="news-content">
-                <div class="news-meta"><span>${item.source}</span> • <span>${item.date}</span></div>
+                <div class="news-meta">
+                    <span style="font-size: 12px;">${item.icon}</span>
+                    <span class="news-source ${item.source.toLowerCase().includes('debanked') ? 'source-highlight' : ''}">${item.source}</span>
+                    <span class="news-dot">•</span>
+                    <span class="news-time">${item.displayDate}</span>
+                </div>
                 <h4 class="news-title">${item.title}</h4>
             </div>
+            <div class="news-arrow"><i class="fas fa-external-link-alt"></i></div>
         </div>
     `).join('');
+}
+
+// Helper: "Time Ago" Formatter
+function timeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + "y ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + "mo ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + "d ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + "h ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + "m ago";
+    return "Just now";
+}
+
+// Helper: Fallback Mocks (Just in case)
+function loadMockNews(container) {
+    renderNews(container, [
+        { title: "MCA Default Rates Stabilize in Q4", source: "deBanked", displayDate: "2h ago", icon: "⚡", link: "#" },
+        { title: "New Compliance Rules for NY Lenders", source: "Bloomberg", displayDate: "5h ago", icon: "📰", link: "#" }
+    ]);
 }
