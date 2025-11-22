@@ -78,6 +78,7 @@
         <button onclick="testNews()" class="success">Test GET /api/news</button>
         <button onclick="testFormatters()" style="background: #6f42c1;">Test Formatters & Validators</button>
         <button onclick="testLookups()" style="background: #fd7e14;">Test Lookups Manager</button>
+        <button onclick="testForms()" style="background: #e83e8c;">Test Forms Manager</button>
         <button onclick="clearOutput()">Clear Output</button>
 
         <div id="output"></div>
@@ -87,12 +88,14 @@
         import { ApiService } from './js/api.js';
         import { Formatters, Validators } from './js/formatters.js';
         import { LookupManager } from './js/lookups.js';
+        import { FormManager } from './js/forms.js';
 
         // Make them available globally for button clicks
         window.ApiService = ApiService;
         window.Formatters = Formatters;
         window.Validators = Validators;
         window.LookupManager = LookupManager;
+        window.FormManager = FormManager;
 
         // Test GET request
         window.testGet = async function() {
@@ -354,11 +357,183 @@
             }
         };
 
+        // Test Forms Manager
+        window.testForms = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🧪 Testing Forms Manager...\n\n';
+
+            let passed = 0;
+            let failed = 0;
+
+            // Test 1: Validation Logic
+            output.innerHTML += '📋 Test 1: Validation Logic\n';
+            const invalidData = { companyName: '', primaryPhone: '' };
+            const errors = FormManager.validateNewLead(invalidData);
+
+            output.innerHTML += `   Invalid data: ${JSON.stringify(invalidData)}\n`;
+            output.innerHTML += `   Errors caught: ${errors.length}\n`;
+            output.innerHTML += `   Error messages: ${errors.join(', ')}\n`;
+
+            if (errors.length === 2 && errors.includes('Company Name is required') && errors.includes('Primary Phone is required')) {
+                output.innerHTML += `   ✅ PASSED\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Expected 2 errors)\n\n`;
+                failed++;
+            }
+
+            // Test 2: Validation with Valid Data
+            output.innerHTML += '📋 Test 2: Valid Data Validation\n';
+            const validData = {
+                companyName: 'Test Corp',
+                primaryPhone: '1234567890',
+                businessEmail: 'test@example.com'
+            };
+            const validErrors = FormManager.validateNewLead(validData);
+
+            output.innerHTML += `   Valid data: ${JSON.stringify(validData)}\n`;
+            output.innerHTML += `   Errors caught: ${validErrors.length}\n`;
+
+            if (validErrors.length === 0) {
+                output.innerHTML += `   ✅ PASSED (No errors for valid data)\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Should have no errors)\n\n`;
+                failed++;
+            }
+
+            // Test 3: Email Validation
+            output.innerHTML += '📧 Test 3: Email Validation\n';
+            const invalidEmail = {
+                companyName: 'Test Corp',
+                primaryPhone: '1234567890',
+                businessEmail: 'invalid-email'
+            };
+            const emailErrors = FormManager.validateNewLead(invalidEmail);
+
+            output.innerHTML += `   Data with bad email: ${invalidEmail.businessEmail}\n`;
+            output.innerHTML += `   Errors: ${emailErrors.join(', ')}\n`;
+
+            if (emailErrors.includes('Invalid Business Email')) {
+                output.innerHTML += `   ✅ PASSED (Bad email detected)\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Should catch bad email)\n\n`;
+                failed++;
+            }
+
+            // Test 4: Form Population
+            output.innerHTML += '🖊️ Test 4: Form Population\n';
+
+            // Create dummy inputs
+            const dummyInputs = [
+                { id: 'editCompanyName', expected: 'Test Corporation' },
+                { id: 'editDbaName', expected: 'TestCo' },
+                { id: 'editPrimaryPhone', expected: '(123) 456-7890' }
+            ];
+
+            dummyInputs.forEach(({ id, expected }) => {
+                const input = document.createElement('input');
+                input.id = id;
+                input.style.display = 'none';
+                document.body.appendChild(input);
+            });
+
+            const mockConversation = {
+                business_name: 'Test Corporation',
+                dba_name: 'TestCo',
+                lead_phone: '1234567890'
+            };
+
+            FormManager.populateEditForm(mockConversation);
+
+            let populateSuccess = true;
+            dummyInputs.forEach(({ id, expected }) => {
+                const input = document.getElementById(id);
+                const value = input.value;
+                output.innerHTML += `   ${id}: "${value}"\n`;
+                if (value !== expected) populateSuccess = false;
+                document.body.removeChild(input); // Cleanup
+            });
+
+            if (populateSuccess) {
+                output.innerHTML += `   ✅ PASSED (All fields populated correctly)\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Fields not populated correctly)\n\n`;
+                failed++;
+            }
+
+            // Test 5: Data Scraping Simulation
+            output.innerHTML += '📊 Test 5: Data Scraping (Simulated)\n';
+
+            // Create and populate test inputs
+            const testFields = [
+                { id: 'editCompanyName', value: 'Acme Corp' },
+                { id: 'editBusinessPhone', value: '(555) 123-4567' },
+                { id: 'editRequestedAmount', value: '$100,000' }
+            ];
+
+            testFields.forEach(({ id, value }) => {
+                const input = document.createElement('input');
+                input.id = id;
+                input.value = value;
+                input.style.display = 'none';
+                document.body.appendChild(input);
+            });
+
+            // Create radio button for marketing
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'editMarketingNotification';
+            radio.value = 'BOTH';
+            radio.checked = true;
+            radio.style.display = 'none';
+            document.body.appendChild(radio);
+
+            const scrapedData = FormManager.getEditLeadData();
+
+            output.innerHTML += `   Company: ${scrapedData.business_name}\n`;
+            output.innerHTML += `   Phone (stripped): ${scrapedData.business_phone}\n`;
+            output.innerHTML += `   Amount (stripped): ${scrapedData.requested_amount}\n`;
+            output.innerHTML += `   Marketing Text: ${scrapedData.marketing_opt_text}\n`;
+            output.innerHTML += `   Marketing Email: ${scrapedData.marketing_opt_email}\n`;
+
+            const scrapingSuccess =
+                scrapedData.business_name === 'Acme Corp' &&
+                scrapedData.business_phone === '5551234567' &&
+                scrapedData.requested_amount === '100000' &&
+                scrapedData.marketing_opt_text === true &&
+                scrapedData.marketing_opt_email === true;
+
+            // Cleanup
+            testFields.forEach(({ id }) => {
+                const input = document.getElementById(id);
+                if (input) document.body.removeChild(input);
+            });
+            if (radio.parentNode) document.body.removeChild(radio);
+
+            if (scrapingSuccess) {
+                output.innerHTML += `   ✅ PASSED (Data scraped and formatted correctly)\n\n`;
+                passed++;
+            } else {
+                output.innerHTML += `   ❌ FAILED (Data not scraped correctly)\n\n`;
+                failed++;
+            }
+
+            // Summary
+            const status = document.createElement('div');
+            status.className = failed === 0 ? 'status success' : 'status error';
+            status.innerHTML = `<strong>Test Results:</strong> ${passed} passed, ${failed} failed`;
+            output.appendChild(status);
+        };
+
         console.log('✅ API Service Test Page Loaded');
         console.log('🔧 ApiService available in window.ApiService');
         console.log('🔧 Formatters available in window.Formatters');
         console.log('🔧 Validators available in window.Validators');
         console.log('🔧 LookupManager available in window.LookupManager');
+        console.log('🔧 FormManager available in window.FormManager');
     </script>
 </body>
 </html>
