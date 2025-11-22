@@ -1757,27 +1757,33 @@
                 `;
             }
 
-            // 3. WAIT for Command Center (The Fix)
-            if (!window.commandCenter || !window.commandCenter.apiCall) {
-                console.log("⏳ Command Center not ready. Retrying in 500ms...");
-                setTimeout(window.loadMarketNews, 500); // Retry loop
-                return;
-            }
-
             try {
-                console.log("📡 Fetching news from Railway...");
-                const response = await window.commandCenter.apiCall('/api/news');
+                // Use direct fetch instead of commandCenter.apiCall
+                console.log("📡 Fetching news...");
+                const response = await fetch('/api/news', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Local-Dev': 'true'  // Bypass auth for local dev
+                    },
+                    credentials: 'include'  // Include session cookies
+                });
 
-                if (response.success && response.data && response.data.length > 0) {
-                    renderNewsItems(container, response.data);
-                    console.log("✅ News loaded successfully.");
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.length > 0) {
+                    renderNewsItems(container, data.data);
+                    console.log("✅ News loaded successfully");
                 } else {
                     throw new Error("No data returned");
                 }
 
             } catch (error) {
                 console.error("❌ News Load Failed:", error);
-                // Load Mocks so the UI isn't broken
                 loadMockNews(container);
             }
         };
