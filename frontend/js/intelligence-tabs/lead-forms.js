@@ -23,6 +23,8 @@ export class LeadFormsTab {
             return;
         }
 
+        // 1. Render the Landing Page (Background View)
+        // We keep this so if you close the modal, you have a button to re-open it
         container.innerHTML = `
             <div style="max-width: 600px; margin: 60px auto; text-align: center;">
                 <div style="font-size: 64px; margin-bottom: 24px;">📝</div>
@@ -31,14 +33,20 @@ export class LeadFormsTab {
                     ${conv.business_name || 'Current Lead'}
                 </p>
                 <button id="openEditModalBtn" class="btn btn-primary" style="padding: 12px 32px; font-size: 16px;">
-                    ✏️ Open Edit Form
+                    ✏️ Re-Open Form
                 </button>
             </div>
         `;
 
+        // 2. Attach Listener
         document.getElementById('openEditModalBtn').addEventListener('click', () => {
             this.openEditModal(conv);
         });
+
+        // 3. AUTO-TRIGGER: Open the modal immediately
+        setTimeout(() => {
+            this.openEditModal(conv);
+        }, 50);
     }
 
     // ============================================================
