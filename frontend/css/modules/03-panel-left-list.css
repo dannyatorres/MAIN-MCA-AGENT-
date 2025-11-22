@@ -163,7 +163,7 @@
 .conversations-list {
     flex: 1;
     overflow-y: auto;
-    background: var(--white);
+    background: transparent;
     /* Remove scrollbar visual but keep function */
     scrollbar-width: none;
     /* 5. FIX THE LIST SCROLLING */
@@ -183,9 +183,12 @@
     padding: 10px 12px;
     border-radius: 12px;
 
-    /* THE FIX: Cream background by default */
-    background: var(--corgi-cream);
+    /* White card on grey background */
+    background: var(--white);
     border: 1px solid transparent;
+
+    /* A tiny shadow helps it pop off the grey */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 
     cursor: pointer;
     transition: all 0.2s ease;
@@ -193,10 +196,11 @@
     min-height: 64px;
 }
 
-/* Hover: Darker Cream */
+/* Hover: Stay white, lift up */
 .conversation-item:hover {
-    background: var(--corgi-cream-hover);
-    transform: translateY(-1px); /* Tiny lift */
+    background: var(--white);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 /* Active: White Pop + Black Border */
