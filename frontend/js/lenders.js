@@ -51,6 +51,61 @@ class LendersModule {
         // Initialize lender module
     }
 
+    // Add this new function to create the modal HTML
+    injectSubmissionModal() {
+        if (document.getElementById('lenderSubmissionModal')) return;
+
+        const modalHtml = `
+            <div id="lenderSubmissionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+                <div style="background: white; width: 90%; max-width: 800px; max-height: 90vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <div style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f9fafb;">
+                        <h3 style="margin: 0; font-size: 18px; color: #111827;">Send to Lenders</h3>
+                        <button id="closeLenderSubmissionModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
+                    </div>
+
+                    <div style="padding: 24px; overflow-y: auto;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h4 style="margin: 0; color: #374151;">Select Lenders</h4>
+                                    <button id="toggleAllLendersBtn" style="font-size: 12px; color: #2563eb; background: none; border: none; cursor: pointer;">Deselect All</button>
+                                </div>
+                                <div id="lenderSelectionList" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto; background: #f9fafb;">
+                                    </div>
+                            </div>
+
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h4 style="margin: 0; color: #374151;">Select Documents</h4>
+                                    <button id="toggleAllDocumentsBtn" style="font-size: 12px; color: #2563eb; background: none; border: none; cursor: pointer;">Select All</button>
+                                </div>
+                                <div id="submissionDocumentList" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto; background: #f9fafb;">
+                                    </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px;">
+                            <label style="display: block; font-weight: 500; color: #374151; margin-bottom: 8px;">Email Message</label>
+                            <textarea id="submissionMessage" style="width: 100%; height: 150px; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box;"></textarea>
+                        </div>
+                    </div>
+
+                    <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: flex-end; gap: 12px;">
+                        <button id="cancelLenderSubmission" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; border-radius: 6px; color: #374151; cursor: pointer;">Cancel</button>
+                        <button id="confirmLenderSubmission" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                            <span id="sendSubmissionsText">Send Emails</span>
+                            <span id="sendSubmissionsLoading" style="display: none;">Sending...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
     showLenderModal() {
         this.utils.showModal('lenderModal');
     }
@@ -1192,6 +1247,9 @@ class LendersModule {
     async showLenderSubmissionModal() {
         console.log('=== showLenderSubmissionModal called ===');
 
+        // 1. Ensure modal HTML exists
+        this.injectSubmissionModal();
+
         const modal = document.getElementById('lenderSubmissionModal');
 
         if (!modal) {
@@ -1220,7 +1278,7 @@ class LendersModule {
             console.error('❌ Error populating modal:', error);
         }
 
-        // ALWAYS re-attach listeners when modal opens (clean approach)
+        // ALWAYS re-attach listeners when modal opens
         this.attachModalEventListeners();
 
         // Show modal
