@@ -51,6 +51,53 @@ class LendersModule {
         // Initialize lender module
     }
 
+    setupGlobalEventListeners() {
+        // Listen for clicks anywhere in the results container
+        // This works even if the HTML inside is replaced 100 times
+        const resultsContainer = document.getElementById('lenderResults');
+
+        if (resultsContainer) {
+            resultsContainer.addEventListener('click', (e) => {
+                // check if the clicked element (or its parent) has our trigger class or ID
+                if (e.target.id === 'sendToLendersBtn' || e.target.closest('#sendToLendersBtn')) {
+                    e.preventDefault();
+                    this.showLenderSubmissionModal();
+                }
+            });
+        }
+
+        // Also restore previous results if they exist
+        this.restoreCachedResults();
+    }
+
+    restoreCachedResults() {
+        try {
+            const cached = localStorage.getItem('cached_lender_results');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+
+                // Only restore if less than 24 hours old
+                const oneDay = 24 * 60 * 60 * 1000;
+                if (Date.now() - parsed.timestamp < oneDay) {
+                    console.log('♻️ Restoring cached lender results');
+                    // We call the display function directly
+                    // Note: We pass the data, but displayLenderResults will try to save it again.
+                    // That's fine, but to be cleaner we can just set the variable:
+                    this.qualifiedLenders = parsed.data.qualified || [];
+
+                    // Now render the HTML
+                    // We reuse the display logic but skip saving to avoid loops if you want,
+                    // or just let it overwrite. For simplicity, just call it:
+                    this.displayLenderResults(parsed.data, parsed.criteria);
+                } else {
+                    localStorage.removeItem('cached_lender_results');
+                }
+            }
+        } catch (e) {
+            console.error('Error restoring cached results', e);
+        }
+    }
+
     // Add this new function to create the modal HTML
     injectSubmissionModal() {
         if (document.getElementById('lenderSubmissionModal')) return;
@@ -151,6 +198,10 @@ class LendersModule {
         const N8N_WEBHOOK_URL = 'https://dannyatorres.app.n8n.cloud/webhook/lender-qualify';
 
         this.populateLenderForm();
+
+        // Setup global event listeners (fixes glitchy button clicks)
+        setTimeout(() => this.setupGlobalEventListeners(), 500);
+
         setTimeout(() => this.initializeLenderFormCaching(), 100);
 
         // Quick Import functionality
@@ -701,65 +752,56 @@ class LendersModule {
 
     displayLenderResults(data, criteria) {
         console.log('=== displayLenderResults called ===');
-        console.log('Data received:', data);
-        console.log('Criteria:', criteria);
 
-        const { qualified, nonQualified, autoDropped } = data;
+        // 1. SAVE RESULTS TO STORAGE (Fixes "having to process again")
+        localStorage.setItem('cached_lender_results', JSON.stringify({
+            data: data,
+            criteria: criteria,
+            timestamp: Date.now()
+        }));
 
-        this.qualifiedLenders = qualified || [];
+        this.qualifiedLenders = data.qualified || [];
         this.lastLenderCriteria = criteria;
 
-        console.log('Qualified lenders stored:', this.qualifiedLenders.length);
+        let html = `<div style="padding: 10px;">`;
 
-        let html = '';
-
-        // Wrap everything in a container
-        html = `<div style="padding: 10px;">`;
-
-        // Simple Summary - just the numbers
+        // Summary Section
         html += `
             <div style="display: flex; justify-content: center; gap: 40px; margin: 20px 0; padding: 20px; background: #f9fafb; border-radius: 8px;">
                 <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: #10b981;">${qualified?.length || 0}</div>
+                    <div style="font-size: 2.5rem; font-weight: 700; color: #10b981;">${data.qualified?.length || 0}</div>
                     <div style="font-size: 0.875rem; color: #6b7280; text-transform: uppercase;">Qualified</div>
                 </div>
                 <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: #ef4444;">${nonQualified?.length || 0}</div>
+                    <div style="font-size: 2.5rem; font-weight: 700; color: #ef4444;">${data.nonQualified?.length || 0}</div>
                     <div style="font-size: 0.875rem; color: #6b7280; text-transform: uppercase;">Non-Qualified</div>
                 </div>
             </div>
         `;
 
-        // Send to Lenders button - always visible if qualified lenders exist
-        if (qualified && qualified.length > 0) {
-            console.log('Adding Send to Lenders button');
+        // Send Button - SIMPLIFIED (Fixes glitchy clicks)
+        // We added a specific class 'trigger-lender-modal' to catch it later
+        if (data.qualified && data.qualified.length > 0) {
             html += `
                 <div style="margin: 20px 0; text-align: center;">
-                    <button id="sendToLendersBtn"
+                    <button id="sendToLendersBtn" class="trigger-lender-modal"
                             style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;">
                         📧 Send to Lenders
                     </button>
                 </div>
             `;
 
-            // Qualified lenders - collapsible section
+            // Qualified Lenders Section
             html += `
                 <div style="margin-top: 20px;">
-                    <button id="toggleQualified"
-                            data-action="toggle-qualified"
-                            style="width: 100%; padding: 12px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #16a34a; font-weight: 600;">
-                            ✅ View Qualified Lenders (${qualified.length})
-                        </span>
-                        <span id="toggleQualifiedIcon" style="color: #16a34a;">▼</span>
-                    </button>
-
-                    <div id="qualifiedSection" style="display: none; margin-top: 10px; padding: 15px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px;">
-                        <div>`;
+                    <div style="padding: 12px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; margin-bottom: 10px;">
+                        <span style="color: #16a34a; font-weight: 600;">✅ Qualified Lenders</span>
+                    </div>
+                    <div id="qualifiedSection" style="display: block; padding: 10px;">`;
 
             // Group by tiers
             const tiers = {};
-            qualified.forEach(lender => {
+            data.qualified.forEach(lender => {
                 const tier = lender.Tier || 'Unknown';
                 if (!tiers[tier]) tiers[tier] = [];
                 tiers[tier].push(lender);
@@ -767,127 +809,45 @@ class LendersModule {
 
             Object.keys(tiers).sort().forEach(tier => {
                 html += `<div style="margin-bottom: 16px;">`;
-                html += `<div style="font-weight: 600; padding: 8px; background: white; border-radius: 4px;">Tier ${tier}</div>`;
+                html += `<div style="font-weight: 600; padding: 8px; background: #f8fafc; border-radius: 4px;">Tier ${tier}</div>`;
                 html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; padding: 8px;">`;
-
                 tiers[tier].forEach(lender => {
                     const star = lender.isPreferred ? '⭐' : '';
                     html += `<div style="padding: 8px; background: white; border: 1px solid #d1fae5; border-radius: 4px;">${lender['Lender Name']}${star}</div>`;
                 });
-
                 html += `</div></div>`;
             });
-
-            html += `
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            console.log('No qualified lenders - button not added');
+            html += `</div></div>`;
         }
 
-        // Non-qualified lenders - collapsible section
-        if (nonQualified && nonQualified.length > 0) {
-            html += `
-                <div style="margin-top: 30px; margin-bottom: 30px;">
-                    <button id="toggleNonQualified"
-                            data-action="toggle-non-qualified"
-                            style="width: 100%; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #dc2626; font-weight: 600;">
-                            ❌ View Non-Qualified Lenders (${nonQualified.length})
-                        </span>
-                        <span id="toggleNonQualifiedIcon" style="color: #dc2626;">▼</span>
+        // Non-Qualified Section
+        if (data.nonQualified && data.nonQualified.length > 0) {
+             html += `
+                <div style="margin-top: 30px;">
+                    <button onclick="document.getElementById('nonQualList').style.display = document.getElementById('nonQualList').style.display === 'none' ? 'block' : 'none'"
+                            style="width: 100%; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; text-align: left; color: #dc2626; font-weight: 600;">
+                        ❌ View Non-Qualified Lenders (${data.nonQualified.length}) ▼
                     </button>
-
-                    <div id="nonQualifiedSection" style="display: none; margin-top: 10px; padding: 15px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;">
-                        <div>
-                            ${nonQualified.map(item => `
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 6px; background: white; border-radius: 4px;">
-                                    <div style="font-weight: 500; color: #374151; min-width: 200px;">${item.lender}</div>
-                                    <div style="font-size: 0.875rem; color: #dc2626; text-align: right; flex: 1; margin-left: 10px;">
-                                        ${item.blockingRule}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
+                    <div id="nonQualList" style="display: none; margin-top: 10px;">
+                        ${data.nonQualified.map(item => `
+                            <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-bottom: 1px solid #eee;">
+                                <span style="font-weight: 500;">${item.lender}</span>
+                                <span style="color: #dc2626;">${item.blockingRule}</span>
+                            </div>
+                        `).join('')}
                     </div>
-                </div>
-            `;
+                </div>`;
         }
 
-        // Close the scrollable container
         html += `</div>`;
 
         const resultsEl = document.getElementById('lenderResults');
         if (resultsEl) {
             resultsEl.innerHTML = html;
             resultsEl.classList.add('active');
-            console.log('Results HTML inserted');
-
-            // Capture reference to this LendersModule instance
-            const lendersModule = this;
-
-            // Add event listener to Send to Lenders button after it's in the DOM
-            const sendButton = document.getElementById('sendToLendersBtn');
-            if (sendButton) {
-                console.log('Attaching click handler to Send to Lenders button');
-
-                sendButton.addEventListener('click', (e) => {
-                    console.log('=== Send to Lenders Button Clicked ===');
-                    console.log('Event:', e);
-                    console.log('lendersModule:', lendersModule);
-                    console.log('lendersModule.showLenderSubmissionModal:', typeof lendersModule.showLenderSubmissionModal);
-
-                    try {
-                        // Call directly on the captured module instance
-                        lendersModule.showLenderSubmissionModal();
-                    } catch (error) {
-                        console.error('Error calling showLenderSubmissionModal:', error);
-                        alert('Error opening modal: ' + error.message);
-                    }
-                });
-
-                console.log('Click handler attached successfully');
-            } else {
-                console.warn('Send to Lenders button not found after HTML insertion');
-            }
-
-            // Add event listeners for toggle buttons
-            const toggleQualifiedBtn = document.getElementById('toggleQualified');
-            if (toggleQualifiedBtn) {
-                toggleQualifiedBtn.addEventListener('click', () => {
-                    lendersModule.toggleQualifiedSection();
-                });
-            }
-
-            const toggleNonQualifiedBtn = document.getElementById('toggleNonQualified');
-            if (toggleNonQualifiedBtn) {
-                toggleNonQualifiedBtn.addEventListener('click', () => {
-                    lendersModule.toggleNonQualifiedSection();
-                });
-            }
-
-            // Ensure the results element itself is properly styled
-            resultsEl.style.paddingBottom = '20px';
-
-            console.log('All event listeners attached');
-
-            // Clear and update cache with timestamp
-            const conversationId = this.parent.getCurrentConversationId();
-            if (conversationId) {
-                this.lenderResultsCache.delete(conversationId);
-                this.lenderResultsCache.set(conversationId, {
-                    html: html,
-                    data: data,
-                    criteria: criteria,
-                    timestamp: Date.now()
-                });
-                console.log('✅ Lender results cached for conversation:', conversationId);
-            }
-        } else {
-            console.error('lenderResults element not found!');
         }
+        // Note: We REMOVED the specific button event listener attachment here.
+        // It is now handled by setupGlobalEventListeners
     }
 
     // Clear lender results cache when needed
