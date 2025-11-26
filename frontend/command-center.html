@@ -141,6 +141,11 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Delete Selected Button (shown in delete mode) -->
+                    <button id="deleteSelectedBtn" class="btn btn-danger full-width" style="display: none; margin: 10px; width: calc(100% - 20px);">
+                        Delete Selected
+                    </button>
                 </div>
                 <div class="conversations-list" id="conversationsList">
                     <div class="loading-state">
@@ -1337,6 +1342,12 @@
                     <div class="identity-text-group">
                         <h2 class="header-merchant-name">${safeOwner}</h2>
                         <span class="header-business-name">${safeCompany}</span>
+                    </div>
+
+                    <div style="margin-left: auto;">
+                        <button class="icon-btn-small" id="deleteLeadBtn" onclick="window.commandCenter.conversationUI.showDeleteConfirmation()" title="Delete Lead">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 `;
             }
