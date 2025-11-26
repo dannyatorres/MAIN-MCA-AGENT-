@@ -772,7 +772,7 @@
 
         function populateEditForm(conversation) {
             console.log('Populating edit form with conversation data:', conversation);
-            
+
             // Business Information - map database fields to form fields
             const setFieldValue = (fieldId, value) => {
                 const field = document.getElementById(fieldId);
@@ -782,39 +782,62 @@
                     console.warn(`Field ${fieldId} not found in edit form`);
                 }
             };
-            
-            // Map conversation database fields to edit form fields
+
+            // Helper to format date for input fields
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                try {
+                    return dateStr.split('T')[0];
+                } catch (e) {
+                    return '';
+                }
+            };
+
+            // === BUSINESS INFORMATION ===
             setFieldValue('editCompanyName', conversation.business_name);
             setFieldValue('editDbaName', conversation.dba_name);
             setFieldValue('editPrimaryPhone', conversation.lead_phone);
             setFieldValue('editBusinessPhone', conversation.business_phone);
             setFieldValue('editWebsite', conversation.website);
-            setFieldValue('editTaxId', conversation.tax_id);
-            setFieldValue('editEntityType', conversation.entity_type_id);
-            setFieldValue('editIndustryType', conversation.industry_type_id);
+            setFieldValue('editTaxId', conversation.tax_id || conversation.tax_id_encrypted);
+            setFieldValue('editEntityType', conversation.entity_type_id || conversation.entity_type);
+            setFieldValue('editIndustryType', conversation.industry_type_id || conversation.industry || conversation.business_type);
             setFieldValue('editTimeInBusiness', conversation.time_in_business_months);
-            setFieldValue('editRequestedAmount', conversation.requested_amount || conversation.priority);
+            setFieldValue('editRequestedAmount', conversation.requested_amount || conversation.funding_amount);
             setFieldValue('editMonthlyRevenue', conversation.monthly_revenue);
             setFieldValue('editAnnualRevenue', conversation.annual_revenue);
-            setFieldValue('editBusinessAddress', conversation.address);
-            setFieldValue('editBusinessCity', conversation.city);
-            setFieldValue('editBusinessState', conversation.state);
-            setFieldValue('editBusinessZip', conversation.zip);
+
+            // === BUSINESS ADDRESS ===
+            setFieldValue('editBusinessAddress', conversation.address || conversation.business_address);
+            setFieldValue('editBusinessCity', conversation.city || conversation.business_city);
+            setFieldValue('editBusinessState', conversation.us_state || conversation.state || conversation.address_state);
+            setFieldValue('editBusinessZip', conversation.zip || conversation.business_zip);
+
+            // === OTHER BUSINESS FIELDS ===
             setFieldValue('editLeadSource', conversation.lead_source_id);
             setFieldValue('editPriority', conversation.priority || 'medium');
             setFieldValue('editNotes', conversation.notes);
-            
-            // Lead details from API
-            setFieldValue('editOwner1SSN', conversation.ssn);
-            setFieldValue('editOwner1DOB', conversation.date_of_birth ? conversation.date_of_birth.split('T')[0] : '');
-            
-            // Add business start date field if it exists
-            const businessStartField = document.getElementById('businessStartDate');
-            if (businessStartField && conversation.business_start_date) {
-                businessStartField.value = conversation.business_start_date.split('T')[0];
-            }
 
-            // Marketing preferences
+            // === OWNER 1 INFORMATION (from CSV import) ===
+            setFieldValue('editOwner1FirstName', conversation.first_name || conversation.owner_first_name);
+            setFieldValue('editOwner1LastName', conversation.last_name || conversation.owner_last_name);
+            setFieldValue('editOwner1Email', conversation.email || conversation.owner_email);
+            setFieldValue('editOwner1Phone', conversation.owner_phone || conversation.lead_phone);
+            setFieldValue('editOwner1SSN', conversation.ssn || conversation.ssn_encrypted);
+            setFieldValue('editOwner1DOB', formatDate(conversation.date_of_birth || conversation.dob));
+            setFieldValue('editOwner1Ownership', conversation.ownership_percentage || '100');
+
+            // === OWNER 1 HOME ADDRESS ===
+            setFieldValue('editOwner1HomeAddress', conversation.owner_address || conversation.owner_home_address);
+            setFieldValue('editOwner1HomeCity', conversation.owner_city || conversation.owner_home_city);
+            setFieldValue('editOwner1HomeState', conversation.owner_state || conversation.owner_home_state);
+            setFieldValue('editOwner1HomeZip', conversation.owner_zip || conversation.owner_home_zip);
+
+            // === BUSINESS START DATE ===
+            setFieldValue('businessStartDate', formatDate(conversation.business_start_date));
+            setFieldValue('editBusinessStartDate', formatDate(conversation.business_start_date));
+
+            // === MARKETING PREFERENCES ===
             const marketingRadios = document.querySelectorAll('input[name="editMarketingNotification"]');
             marketingRadios.forEach(radio => {
                 if (conversation.marketing_opt_text && conversation.marketing_opt_email) {
@@ -828,8 +851,7 @@
                 }
             });
 
-            // Note: Owner data may need to be fetched separately since it's not in the basic conversation endpoint
-            console.log('Edit form populated successfully with basic conversation data');
+            console.log('✅ Edit form populated with all conversation data');
         }
 
         async function populateEditDropdowns() {
