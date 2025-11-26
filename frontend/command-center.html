@@ -97,6 +97,60 @@
             background: #ffffff !important;
             color: #1e293b !important;
         }
+
+        /* =========================================
+           FIXED CSS FOR LEAD FORMS.JS
+           ========================================= */
+
+        /* 1. Ensure the modal body scrolls */
+        .modal-content.comprehensive-modal .modal-body,
+        .edit-form-container,
+        .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-right: 10px;
+            padding-bottom: 20px;
+        }
+
+        /* 2. MATCH THE CLASS FROM LEAD-FORMS.JS */
+        .form-row,
+        .form-row-six {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 16px;
+            align-items: flex-end;
+        }
+
+        /* 3. Make Inputs expand to fill space */
+        .form-group {
+            flex: 1;
+            min-width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* 4. Handle Full Width rows */
+        .form-group.full-width {
+            flex: 0 0 100%;
+        }
+
+        /* 5. Style the Inputs */
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #ffffff;
+            box-sizing: border-box;
+        }
+
+        /* 6. Fix for checkboxes in lead-forms.js */
+        .form-section label input[type="checkbox"] {
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
