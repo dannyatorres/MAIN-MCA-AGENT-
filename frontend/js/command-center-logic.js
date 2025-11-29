@@ -748,7 +748,7 @@
                 // Show loading
                 showNotification('Loading lead data...', 'info');
 
-                // Get lead data using existing endpoint
+                // 1. Fetch the latest data
                 const response = await fetch(`/api/conversations/${selectedConversationId}`);
                 const result = await response.json();
 
@@ -762,10 +762,21 @@
                 console.log('📝 Edit modal - conversation data:', conversation);
 
                 currentEditingLeadId = selectedConversationId;
+
+                // 2. [CRITICAL FIX] Populate Dropdowns FIRST so the <options> exist
+                // We await this to ensure the DOM is ready before setting values
+                await populateEditDropdowns();
+
+                // 3. Now populate the form values (including the selects)
                 populateEditForm(conversation);
 
+                // 4. Show the modal
                 const modal = document.getElementById('editLeadModal');
                 modal.style.display = 'flex';
+
+                // Ensure the title is correct
+                const modalTitle = modal.querySelector('.modal-header h3');
+                if (modalTitle) modalTitle.textContent = 'Edit Lead - Comprehensive CRM';
 
                 showNotification('Lead data loaded successfully', 'success');
 
@@ -787,6 +798,22 @@
                 state: conversation.state,
                 tax_id: conversation.tax_id,
                 tax_id_encrypted: conversation.tax_id_encrypted
+            });
+
+            // [FIX] Force expand the sections so the user sees the data immediately
+            const sections = ['editBusinessInfo', 'editOwner1Info', 'editOwner2Info', 'editMarketingNotes'];
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                const toggle = el?.previousElementSibling?.querySelector('.section-toggle');
+
+                if (el) {
+                    el.style.display = 'block'; // Force show
+                    el.classList.remove('collapsed');
+                }
+                if (toggle) {
+                    toggle.textContent = '−'; // Set to minus sign
+                    toggle.classList.remove('collapsed');
+                }
             });
 
             // Business Information - map database fields to form fields
