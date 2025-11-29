@@ -776,13 +776,25 @@
         }
 
         function populateEditForm(conversation) {
-            console.log('Populating edit form with conversation data:', conversation);
+            console.log('📝 Populating edit form with conversation data:', conversation);
+
+            // Debug: Log specific fields we're looking for
+            console.log('📍 Address fields:', {
+                address: conversation.address,
+                city: conversation.city,
+                zip: conversation.zip,
+                us_state: conversation.us_state,
+                state: conversation.state,
+                tax_id: conversation.tax_id,
+                tax_id_encrypted: conversation.tax_id_encrypted
+            });
 
             // Business Information - map database fields to form fields
             const setFieldValue = (fieldId, value) => {
                 const field = document.getElementById(fieldId);
                 if (field) {
                     field.value = value || '';
+                    if (value) console.log(`✅ Set ${fieldId} = ${value}`);
                 } else {
                     console.warn(`Field ${fieldId} not found in edit form`);
                 }
