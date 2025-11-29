@@ -97,10 +97,22 @@ router.get('/:id', async (req, res) => {
 
         const conversation = result.rows[0];
 
+        // Debug: Log address fields
+        console.log('📍 Address fields from DB:', {
+            address: conversation.address,
+            city: conversation.city,
+            zip: conversation.zip,
+            us_state: conversation.us_state,
+            state: conversation.state,
+            tax_id: conversation.tax_id,
+            first_name: conversation.first_name,
+            last_name: conversation.last_name
+        });
+
         // Handle state naming conflict (conversation state vs address state)
-        if (conversation.state && conversation.state !== 'NEW') {
-            conversation.address_state = conversation.state;
-            conversation.state = 'NEW';
+        // Only modify if 'state' looks like a workflow state, not an address state
+        if (conversation.state && !['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'].includes(conversation.state)) {
+            conversation.workflow_state = conversation.state;
         }
 
         console.log('✅ Conversation details retrieved');
