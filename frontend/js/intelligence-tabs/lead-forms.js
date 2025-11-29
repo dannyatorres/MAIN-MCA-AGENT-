@@ -222,10 +222,23 @@ export class LeadFormsTab {
         const isEdit = mode === 'edit';
         const formId = isEdit ? 'editLeadForm' : 'createLeadForm';
 
-        // Safely get values
-        const val = (k) => data[k] || '';
+        // Safely get values - checks multiple possible field names
+        const val = (...keys) => {
+            for (const k of keys) {
+                if (data[k]) return data[k];
+            }
+            return '';
+        };
         // Format Date
-        const dateVal = (k) => val(k) ? new Date(val(k)).toISOString().split('T')[0] : '';
+        const dateVal = (...keys) => {
+            const v = val(...keys);
+            if (!v) return '';
+            try {
+                return new Date(v).toISOString().split('T')[0];
+            } catch (e) {
+                return '';
+            }
+        };
 
         return `
         <form id="${formId}" class="edit-lead-form">
@@ -238,13 +251,13 @@ export class LeadFormsTab {
                     <div class="form-group"><label>Email</label><input type="email" name="email" value="${val('email')}" class="form-input"></div>
                 </div>
                 <div class="form-row-six">
-                    <div class="form-group"><label>Address</label><input type="text" name="business_address" value="${val('business_address')}" class="form-input"></div>
-                    <div class="form-group"><label>City</label><input type="text" name="business_city" value="${val('business_city')}" class="form-input"></div>
-                    <div class="form-group"><label>State</label><input type="text" name="us_state" value="${val('us_state')}" class="form-input" maxlength="2"></div>
-                    <div class="form-group"><label>Zip</label><input type="text" name="business_zip" class="zip-input form-input" value="${val('business_zip')}" maxlength="5"></div>
+                    <div class="form-group"><label>Address</label><input type="text" name="business_address" value="${val('address', 'business_address')}" class="form-input"></div>
+                    <div class="form-group"><label>City</label><input type="text" name="business_city" value="${val('city', 'business_city')}" class="form-input"></div>
+                    <div class="form-group"><label>State</label><input type="text" name="us_state" value="${val('us_state', 'state', 'address_state')}" class="form-input" maxlength="2"></div>
+                    <div class="form-group"><label>Zip</label><input type="text" name="business_zip" class="zip-input form-input" value="${val('zip', 'business_zip')}" maxlength="5"></div>
                 </div>
                 <div class="form-row-six">
-                    <div class="form-group"><label>Tax ID</label><input type="text" name="federal_tax_id" class="ein-input form-input" value="${val('federal_tax_id')}"></div>
+                    <div class="form-group"><label>Tax ID</label><input type="text" name="federal_tax_id" class="ein-input form-input" value="${val('tax_id', 'federal_tax_id', 'tax_id_encrypted')}"></div>
                     <div class="form-group"><label>Start Date</label><input type="date" name="business_start_date" value="${dateVal('business_start_date')}" class="form-input"></div>
                     <div class="form-group"><label>Entity Type</label>
                         <select name="entity_type" class="form-input">
@@ -273,17 +286,17 @@ export class LeadFormsTab {
                     <input type="checkbox" id="${isEdit ? 'sameAsBusinessAddress' : 'sameAsBusinessAddressCreate'}"> Same as Business Address
                 </label>
                 <div class="form-row-six">
-                    <div class="form-group"><label>First Name</label><input type="text" name="first_name" value="${val('first_name')}" class="form-input"></div>
-                    <div class="form-group"><label>Last Name</label><input type="text" name="last_name" value="${val('last_name')}" class="form-input"></div>
-                    <div class="form-group"><label>SSN</label><input type="text" name="ssn" class="ssn-input form-input" value="${val('ssn')}"></div>
-                    <div class="form-group"><label>DOB</label><input type="date" name="date_of_birth" value="${dateVal('date_of_birth')}" class="form-input"></div>
+                    <div class="form-group"><label>First Name</label><input type="text" name="first_name" value="${val('first_name', 'owner_first_name')}" class="form-input"></div>
+                    <div class="form-group"><label>Last Name</label><input type="text" name="last_name" value="${val('last_name', 'owner_last_name')}" class="form-input"></div>
+                    <div class="form-group"><label>SSN</label><input type="text" name="ssn" class="ssn-input form-input" value="${val('ssn', 'ssn_encrypted')}"></div>
+                    <div class="form-group"><label>DOB</label><input type="date" name="date_of_birth" value="${dateVal('date_of_birth', 'dob')}" class="form-input"></div>
                     <div class="form-group"><label>Ownership %</label><input type="number" name="ownership_percentage" value="${val('ownership_percentage')}" class="form-input"></div>
                 </div>
                 <div class="form-row-six">
-                    <div class="form-group"><label>Home Address</label><input type="text" name="owner_address" value="${val('owner_address')}" class="form-input"></div>
-                    <div class="form-group"><label>City</label><input type="text" name="owner_city" value="${val('owner_city')}" class="form-input"></div>
-                    <div class="form-group"><label>State</label><input type="text" name="owner_state" value="${val('owner_state')}" class="form-input"></div>
-                    <div class="form-group"><label>Zip</label><input type="text" name="owner_zip" class="zip-input form-input" value="${val('owner_zip')}"></div>
+                    <div class="form-group"><label>Home Address</label><input type="text" name="owner_address" value="${val('owner_address', 'owner_home_address')}" class="form-input"></div>
+                    <div class="form-group"><label>City</label><input type="text" name="owner_city" value="${val('owner_city', 'owner_home_city')}" class="form-input"></div>
+                    <div class="form-group"><label>State</label><input type="text" name="owner_state" value="${val('owner_state', 'owner_home_state')}" class="form-input"></div>
+                    <div class="form-group"><label>Zip</label><input type="text" name="owner_zip" class="zip-input form-input" value="${val('owner_zip', 'owner_home_zip')}"></div>
                 </div>
             </div>
 
