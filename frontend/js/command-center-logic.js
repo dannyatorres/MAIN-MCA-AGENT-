@@ -756,9 +756,14 @@
                     throw new Error(result.error || 'Failed to load lead data');
                 }
 
+                // API returns conversation directly, not wrapped in .conversation
+                const conversation = result.conversation || result;
+
+                console.log('📝 Edit modal - conversation data:', conversation);
+
                 currentEditingLeadId = selectedConversationId;
-                populateEditForm(result.conversation);
-                
+                populateEditForm(conversation);
+
                 const modal = document.getElementById('editLeadModal');
                 modal.style.display = 'flex';
 
