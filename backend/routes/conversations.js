@@ -1390,117 +1390,18 @@ router.get('/:id/fcs', async (req, res) => {
 });
 
 // ============================================================================
-// PDF GENERATION ENDPOINTS (The Missing Piece)
+// PDF GENERATION ENDPOINTS
 // ============================================================================
+
+const documentService = require('../services/documentService');
 
 // 1. Generate HTML Template (Reads app5.html and fills it with data)
 router.post('/:id/generate-html-template', async (req, res) => {
     try {
         const { applicationData, ownerName } = req.body;
-
-        // Generate digital signature data for both owners
         const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || '127.0.0.1';
 
-        // Format date exactly like PDF (Nov-19-2025 01:26:22 PM)
-        const now = new Date();
-
-        const datePart = now.toLocaleDateString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric'
-        }).replace(/ /g, '-').replace(',', '');
-
-        const timePart = now.toLocaleTimeString('en-US', {
-            hour12: true,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-
-        const fullTimestamp = `${datePart} ${timePart}`;
-
-        // Owner 1 Signature Data
-        const owner1FullName = `${applicationData.ownerFirstName || ''} ${applicationData.ownerLastName || ''}`.trim();
-        applicationData.signature_name_1 = owner1FullName || ownerName || '';
-        applicationData.timestamp_str_1 = fullTimestamp;
-        applicationData.ip_str_1 = clientIp;
-
-        // Owner 2 Signature Data (if exists)
-        const owner2FullName = `${applicationData.owner2FirstName || ''} ${applicationData.owner2LastName || ''}`.trim();
-        applicationData.signature_name_2 = owner2FullName || '';
-        applicationData.timestamp_str_2 = owner2FullName ? fullTimestamp : '';
-        applicationData.ip_str_2 = owner2FullName ? clientIp : '';
-
-        // Point this to where your app5.html lives on the server
-        // Assuming it's in a 'templates' folder next to 'routes', or root 'templates'
-        // Adjust '../templates/app5.html' if your path is different
-        const templatePath = path.join(__dirname, '../templates/app5.html');
-
-        if (!fs.existsSync(templatePath)) {
-            console.error('❌ Template not found:', templatePath);
-            return res.status(404).json({ error: 'HTML template not found on server' });
-        }
-
-        let html = fs.readFileSync(templatePath, 'utf8');
-
-        // Helper to replace {{key}} with value
-        const replaceTag = (tag, value) => {
-            const regex = new RegExp(`{{${tag}}}`, 'g');
-            html = html.replace(regex, value || '');
-        };
-
-        // Map data to template (using camelCase field names)
-        // Business Information
-        replaceTag('legalName', applicationData.legalName);
-        replaceTag('dba', applicationData.dba);
-        replaceTag('address', applicationData.address);
-        replaceTag('city', applicationData.city);
-        replaceTag('state', applicationData.state);
-        replaceTag('zip', applicationData.zip);
-        replaceTag('telephone', applicationData.telephone);
-        replaceTag('businessEmail', applicationData.businessEmail);
-        replaceTag('federalTaxId', applicationData.federalTaxId);
-        replaceTag('dateBusinessStarted', applicationData.dateBusinessStarted);
-        replaceTag('entityType', applicationData.entityType);
-        replaceTag('typeOfBusiness', applicationData.typeOfBusiness);
-        replaceTag('useOfFunds', applicationData.useOfFunds);
-
-        // Financial Information
-        replaceTag('annualRevenue', applicationData.annualRevenue);
-        replaceTag('requestedAmount', applicationData.requestedAmount);
-
-        // Owner 1 Information
-        replaceTag('ownerFirstName', applicationData.ownerFirstName);
-        replaceTag('ownerLastName', applicationData.ownerLastName);
-        replaceTag('ownerTitle', applicationData.ownerTitle);
-        replaceTag('ownerAddress', applicationData.ownerAddress);
-        replaceTag('ownerCity', applicationData.ownerCity);
-        replaceTag('ownerState', applicationData.ownerState);
-        replaceTag('ownerZip', applicationData.ownerZip);
-        replaceTag('ownerEmail', applicationData.ownerEmail);
-        replaceTag('ownerSSN', applicationData.ownerSSN);
-        replaceTag('ownerDOB', applicationData.ownerDOB);
-        replaceTag('ownershipPercentage', applicationData.ownershipPercentage);
-        replaceTag('creditScore', applicationData.creditScore);
-
-        // Owner 2 Information
-        replaceTag('owner2FirstName', applicationData.owner2FirstName);
-        replaceTag('owner2LastName', applicationData.owner2LastName);
-        replaceTag('owner2Address', applicationData.owner2Address);
-        replaceTag('owner2Email', applicationData.owner2Email);
-        replaceTag('owner2SSN', applicationData.owner2SSN);
-        replaceTag('owner2DOB', applicationData.owner2DOB);
-        replaceTag('owner2Percentage', applicationData.owner2Percentage);
-
-        // Signature Data
-        replaceTag('signature_date', applicationData.signatureDate);
-        replaceTag('signature_name_1', applicationData.signature_name_1);
-        replaceTag('timestamp_str_1', applicationData.timestamp_str_1);
-        replaceTag('ip_str_1', applicationData.ip_str_1);
-        replaceTag('signature_name_2', applicationData.signature_name_2);
-        replaceTag('timestamp_str_2', applicationData.timestamp_str_2);
-        replaceTag('ip_str_2', applicationData.ip_str_2);
-
+        const html = documentService.generatePopulatedTemplate(applicationData, ownerName, clientIp);
         res.send(html);
 
     } catch (error) {
@@ -1552,190 +1453,24 @@ router.post('/:id/save-generated-pdf', async (req, res) => {
 });
 
 // 3. Generate PDF using Puppeteer (Server-Side Rendering)
-const puppeteer = require('puppeteer');
-
 router.post('/:id/generate-pdf-document', async (req, res) => {
-    let browser = null;
     try {
         const conversationId = req.params.id;
         const { applicationData, ownerName } = req.body;
-        const db = getDatabase();
-
-        console.log('🚀 Starting Puppeteer PDF generation...');
-
-        // 1. GENERATE DIGITAL SIGNATURE DATA FOR BOTH OWNERS
-        // Get Client IP (works with 'trust proxy' enabled)
         const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || '127.0.0.1';
 
-        // Format date exactly like PDF (Nov-19-2025 01:26:22 PM)
-        const now = new Date();
+        const result = await documentService.generateLeadPDF(
+            conversationId,
+            applicationData,
+            ownerName,
+            clientIp
+        );
 
-        // Get Month-Day-Year (Nov-19-2025)
-        const datePart = now.toLocaleDateString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric'
-        }).replace(/ /g, '-').replace(',', ''); // Removes comma, replaces space with dash
-
-        // Get Time (01:26:22 PM)
-        const timePart = now.toLocaleTimeString('en-US', {
-            hour12: true,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-
-        const fullTimestamp = `${datePart} ${timePart}`;
-
-        // Owner 1 Signature Data
-        const owner1FullName = `${applicationData.ownerFirstName || ''} ${applicationData.ownerLastName || ''}`.trim();
-        applicationData.signature_name_1 = owner1FullName || ownerName || '';
-        applicationData.timestamp_str_1 = fullTimestamp;
-        applicationData.ip_str_1 = clientIp;
-
-        // Owner 2 Signature Data (if exists)
-        const owner2FullName = `${applicationData.owner2FirstName || ''} ${applicationData.owner2LastName || ''}`.trim();
-        applicationData.signature_name_2 = owner2FullName || '';
-        applicationData.timestamp_str_2 = owner2FullName ? fullTimestamp : '';
-        applicationData.ip_str_2 = owner2FullName ? clientIp : '';
-
-        console.log('🔏 Digital signature data generated:', {
-            owner1: owner1FullName,
-            owner2: owner2FullName,
-            timestamp: fullTimestamp,
-            ip: clientIp
-        });
-
-        // 2. Read and populate HTML template
-        const templatePath = path.join(__dirname, '../templates/app5.html');
-        if (!fs.existsSync(templatePath)) {
-            return res.status(404).json({ success: false, error: 'Template not found' });
-        }
-
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
-
-        // Replace all {{placeholders}} with actual data
-        const replaceTag = (tag, value) => {
-            const regex = new RegExp(`{{${tag}}}`, 'g');
-            htmlContent = htmlContent.replace(regex, value || '');
-        };
-
-        // Map data to template (using camelCase field names)
-        // Business Information
-        replaceTag('legalName', applicationData.legalName);
-        replaceTag('dba', applicationData.dba);
-        replaceTag('address', applicationData.address);
-        replaceTag('city', applicationData.city);
-        replaceTag('state', applicationData.state);
-        replaceTag('zip', applicationData.zip);
-        replaceTag('telephone', applicationData.telephone);
-        replaceTag('businessEmail', applicationData.businessEmail);
-        replaceTag('federalTaxId', applicationData.federalTaxId);
-        replaceTag('dateBusinessStarted', applicationData.dateBusinessStarted);
-        replaceTag('entityType', applicationData.entityType);
-        replaceTag('typeOfBusiness', applicationData.typeOfBusiness);
-        replaceTag('useOfFunds', applicationData.useOfFunds);
-
-        // Financial Information
-        replaceTag('annualRevenue', applicationData.annualRevenue);
-        replaceTag('requestedAmount', applicationData.requestedAmount);
-
-        // Owner 1 Information
-        replaceTag('ownerFirstName', applicationData.ownerFirstName);
-        replaceTag('ownerLastName', applicationData.ownerLastName);
-        replaceTag('ownerTitle', applicationData.ownerTitle);
-        replaceTag('ownerAddress', applicationData.ownerAddress);
-        replaceTag('ownerCity', applicationData.ownerCity);
-        replaceTag('ownerState', applicationData.ownerState);
-        replaceTag('ownerZip', applicationData.ownerZip);
-        replaceTag('ownerEmail', applicationData.ownerEmail);
-        replaceTag('ownerSSN', applicationData.ownerSSN);
-        replaceTag('ownerDOB', applicationData.ownerDOB);
-        replaceTag('ownershipPercentage', applicationData.ownershipPercentage);
-        replaceTag('creditScore', applicationData.creditScore);
-
-        // Owner 2 Information
-        replaceTag('owner2FirstName', applicationData.owner2FirstName);
-        replaceTag('owner2LastName', applicationData.owner2LastName);
-        replaceTag('owner2Address', applicationData.owner2Address);
-        replaceTag('owner2Email', applicationData.owner2Email);
-        replaceTag('owner2SSN', applicationData.owner2SSN);
-        replaceTag('owner2DOB', applicationData.owner2DOB);
-        replaceTag('owner2Percentage', applicationData.owner2Percentage);
-
-        // Signature Data
-        replaceTag('signature_date', applicationData.signatureDate);
-        replaceTag('signature_name_1', applicationData.signature_name_1);
-        replaceTag('timestamp_str_1', applicationData.timestamp_str_1);
-        replaceTag('ip_str_1', applicationData.ip_str_1);
-        replaceTag('signature_name_2', applicationData.signature_name_2);
-        replaceTag('timestamp_str_2', applicationData.timestamp_str_2);
-        replaceTag('ip_str_2', applicationData.ip_str_2);
-
-        console.log('📝 HTML template populated');
-
-        // 2. Launch Puppeteer (Production-Ready Configuration)
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage', // Vital for Docker/Heroku memory limits
-                '--disable-gpu'
-            ]
-        });
-
-        const page = await browser.newPage();
-        console.log('🌐 Puppeteer browser launched');
-
-        // 3. Set content and wait for resources to load
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-        console.log('✅ HTML content loaded in Puppeteer');
-
-        // 4. Generate PDF
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
-        });
-
-        console.log('📄 PDF generated by Puppeteer');
-
-        // 5. Upload to S3
-        const filename = `WCA_${applicationData.legalName || 'Application'}.pdf`;
-        const s3Key = `generated/${conversationId}/${Date.now()}_${filename}`;
-
-        await s3.putObject({
-            Bucket: process.env.S3_DOCUMENTS_BUCKET,
-            Key: s3Key,
-            Body: pdfBuffer,
-            ContentType: 'application/pdf'
-        }).promise();
-
-        console.log('☁️ PDF uploaded to S3');
-
-        // 6. Save to database
-        const docId = uuidv4();
-        await db.query(`
-            INSERT INTO documents (
-                id, conversation_id, s3_key, filename, original_filename,
-                mime_type, file_size, created_at
-            )
-            VALUES ($1, $2, $3, $4, $5, 'application/pdf', $6, NOW())
-        `, [docId, conversationId, s3Key, filename, filename, pdfBuffer.length]);
-
-        console.log('💾 PDF metadata saved to database');
-
-        res.json({ success: true, message: 'PDF generated successfully' });
+        res.json({ success: true, message: 'PDF generated successfully', document: result });
 
     } catch (error) {
         console.error('❌ Puppeteer PDF Error:', error);
         res.status(500).json({ success: false, error: error.message });
-    } finally {
-        if (browser) {
-            await browser.close();
-            console.log('🔒 Puppeteer browser closed');
-        }
     }
 });
 
