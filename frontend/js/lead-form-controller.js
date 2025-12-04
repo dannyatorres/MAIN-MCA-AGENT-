@@ -519,12 +519,30 @@ export class LeadFormController {
 
     scrapeFormData(formData) {
         const data = Object.fromEntries(formData.entries());
-        ['annualRevenue', 'monthlyRevenue', 'requestedAmount'].forEach(k => {
-            if(data[k]) data[k] = data[k].replace(/[^0-9.]/g, '');
+
+        // 1. CLEAN MONEY (Remove $ and commas, handle empty strings)
+        ['annualRevenue', 'monthlyRevenue', 'requestedAmount', 'ownerOwnershipPercentage', 'owner2OwnershipPercent'].forEach(k => {
+            if (data[k]) {
+                // Remove everything except numbers and decimals
+                const val = data[k].replace(/[^0-9.]/g, '');
+                // If it's empty after cleaning (or was just "$"), send null
+                data[k] = val === '' ? null : val;
+            } else {
+                // Send null if field was untouched/empty
+                data[k] = null;
+            }
         });
+
+        // 2. CLEAN PHONES (Remove dashes/parentheses)
         ['primaryPhone', 'cellPhone', 'ownerPhone', 'owner2Phone'].forEach(k => {
-            if(data[k]) data[k] = data[k].replace(/\D/g, '');
+            if (data[k]) data[k] = data[k].replace(/\D/g, '');
         });
+
+        // 3. CLEAN IDS (Fixes the 400 Error - Removes dashes from SSN/EIN)
+        ['federalTaxId', 'ownerSSN', 'owner2SSN'].forEach(k => {
+            if (data[k]) data[k] = data[k].replace(/\D/g, '');
+        });
+
         return data;
     }
 
