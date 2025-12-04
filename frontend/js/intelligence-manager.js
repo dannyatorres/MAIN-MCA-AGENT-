@@ -60,12 +60,9 @@ export class IntelligenceManager {
 
         // --- INTERCEPT EDIT ---
         if (tabName === 'edit') {
-            console.log('✏️ Edit Tab Clicked -> Opening Pop-up Modal');
             const currentConv = this.parent.getSelectedConversation();
-
             if (this.tabs['edit']) {
                 if (currentConv) {
-                    // Call the wrapper, which calls the controller
                     this.tabs['edit'].openEditModal(currentConv);
                 } else {
                     alert("Please select a conversation to edit.");
@@ -84,12 +81,21 @@ export class IntelligenceManager {
 
         container.innerHTML = '';
 
-        const tabModule = this.tabs[tabName];
+        // 1. DYNAMIC LOOKUP FIX
+        // We look up the module now, rather than relying on the constructor
+        let tabModule = this.tabs[tabName];
 
+        // If it's the AI tab, strictly use the parent's current AI instance
+        if (tabName === 'ai-assistant') {
+            tabModule = this.parent.ai;
+        }
+
+        // 2. RENDER
         if (tabModule && typeof tabModule.render === 'function') {
             tabModule.render(container);
         } else {
-            container.innerHTML = `<div class="error-state">Tab '${tabName}' not found.</div>`;
+            console.error(`Tab module for '${tabName}' is missing or has no render() method.`);
+            container.innerHTML = `<div class="error-state">Tab '${tabName}' could not be loaded.</div>`;
         }
     }
 
