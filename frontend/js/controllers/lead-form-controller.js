@@ -482,6 +482,39 @@ export class LeadFormController {
         };
     }
 
+    // --- FORMAT HELPERS ---
+    formatEIN(ein) {
+        if (!ein) return '';
+        const digits = ein.replace(/\D/g, '');
+        if (digits.length === 9) {
+            return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+        }
+        return ein;
+    }
+
+    formatSSN(ssn) {
+        if (!ssn) return '';
+        const digits = ssn.replace(/\D/g, '');
+        if (digits.length === 9) {
+            return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+        }
+        return ssn;
+    }
+
+    formatDateUS(dateStr) {
+        if (!dateStr) return '';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
     // --- UPDATED HELPER: STRICT MAPPING FOR APP5.HTML ---
     mapDataForAppGeneration(data) {
         return {
@@ -492,39 +525,39 @@ export class LeadFormController {
             city: data.businessCity,
             state: data.businessState,
             zip: data.businessZip,
-            telephone: data.primaryPhone,   // <--- This was the missing link for Phone
+            telephone: data.primaryPhone,
             businessEmail: data.businessEmail,
-            federalTaxId: data.federalTaxId,
-            dateBusinessStarted: data.businessStartDate, // <--- Match exact HTML key
+            federalTaxId: this.formatEIN(data.federalTaxId),
+            dateBusinessStarted: this.formatDateUS(data.businessStartDate),
             entityType: data.entityType,
             typeOfBusiness: data.industryType,
 
             // 2. FINANCIALS
             annualRevenue: data.annualRevenue,
             requestedAmount: data.requestedAmount,
-            useOfFunds: data.useOfProceeds || 'Working Capital', // Default if empty
+            useOfFunds: data.useOfProceeds || 'Working Capital',
 
             // 3. OWNER 1
             ownerFirstName: data.ownerFirstName,
             ownerLastName: data.ownerLastName,
-            ownerTitle: 'Owner', // Default title
+            ownerTitle: 'Owner',
             ownerAddress: data.ownerHomeAddress,
             ownerCity: data.ownerHomeCity,
             ownerState: data.ownerHomeState,
             ownerZip: data.ownerHomeZip,
             ownerEmail: data.ownerEmail,
-            ownerSSN: data.ownerSSN,
-            ownerDOB: data.ownerDOB,
+            ownerSSN: this.formatSSN(data.ownerSSN),
+            ownerDOB: this.formatDateUS(data.ownerDOB),
             ownershipPercentage: data.ownerOwnershipPercentage,
-            creditScore: 'N/A', // Placeholder if not collected
+            creditScore: 'N/A',
 
             // 4. OWNER 2 (Partner)
             owner2FirstName: data.owner2FirstName || '',
             owner2LastName: data.owner2LastName || '',
-            owner2Address: data.owner2Address || '', // Ensure your form captures this if needed
+            owner2Address: data.owner2Address || '',
             owner2Email: data.owner2Email || '',
-            owner2SSN: data.owner2SSN || '',
-            owner2DOB: data.owner2DOB || '',
+            owner2SSN: this.formatSSN(data.owner2SSN),
+            owner2DOB: this.formatDateUS(data.owner2DOB),
             owner2Percentage: data.owner2OwnershipPercent || '',
 
             // 5. REDUNDANT KEYS (Safety net for other templates)
