@@ -350,35 +350,51 @@ export class LeadFormController {
             });
         }
 
-        // --- APP GENERATION LOGIC ---
+        // --- APP GENERATION HANDLER (FIXED) ---
         const generateBtn = form.querySelector('#generateAppBtn');
         if (generateBtn) {
             generateBtn.addEventListener('click', async () => {
-                const formData = this.scrapeFormData(new FormData(form));
-                const btnOriginalText = generateBtn.innerHTML;
+                // 1. Get raw form data
+                const rawFormData = this.scrapeFormData(new FormData(form));
 
+                // 2. MAP DATA FOR PDF (The "Missing Link" Fix)
+                // We send every possible casing variation to ensure the PDF filler finds the key.
+                const pdfData = this.mapDataForAppGeneration(rawFormData);
+
+                const btnOriginalText = generateBtn.innerHTML;
                 generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
                 generateBtn.disabled = true;
 
                 try {
+                    console.log('📄 Generating App for:', id);
                     const response = await fetch(`${this.parent.apiBaseUrl}/api/conversations/${id}/generate-pdf-document`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            applicationData: formData,
-                            ownerName: `${formData.ownerFirstName} ${formData.ownerLastName}`
+                            applicationData: pdfData, // Send the mapped data!
+                            ownerName: `${rawFormData.ownerFirstName} ${rawFormData.ownerLastName}`
                         })
                     });
 
                     const result = await response.json();
 
                     if (result.success && result.document) {
-                        // Trigger download
-                        const link = document.createElement('a');
-                        link.href = 'data:application/pdf;base64,' + result.document;
-                        link.download = `${formData.businessName || 'Application'}.pdf`;
-                        link.click();
-                        alert('✅ PDF Generated & Downloaded!');
+                        // 3. Close Modal & Switch to Documents Tab
+                        document.getElementById('leadModalWrapper').remove();
+                        this.parent.utils.showNotification('✅ Application Generated!', 'success');
+
+                        // Switch to Documents Tab
+                        if (this.parent.intelligence) {
+                            this.parent.intelligence.switchTab('documents');
+                        }
+
+                        // Refresh Document List (so the new file appears)
+                        if (this.parent.documents) {
+                            setTimeout(() => {
+                                this.parent.documents.loadDocuments();
+                            }, 1000); // Slight delay to ensure DB write is done
+                        }
+
                     } else {
                         throw new Error(result.error || 'Unknown error');
                     }
@@ -387,8 +403,12 @@ export class LeadFormController {
                     console.error('App Generation Error:', error);
                     alert('❌ Failed to generate app: ' + error.message);
                 } finally {
-                    generateBtn.innerHTML = btnOriginalText;
-                    generateBtn.disabled = false;
+                    // Restore button if modal is still open (error case)
+                    const stillOpenBtn = document.getElementById('generateAppBtn');
+                    if (stillOpenBtn) {
+                        stillOpenBtn.innerHTML = btnOriginalText;
+                        stillOpenBtn.disabled = false;
+                    }
                 }
             });
         }
@@ -414,7 +434,7 @@ export class LeadFormController {
                     if(res.success) {
                         document.getElementById('leadModalWrapper').remove();
                         if (this.parent.conversationUI) this.parent.conversationUI.loadConversations();
-                        alert('Lead created successfully!');
+                        this.parent.utils.showNotification('Lead created successfully!', 'success');
                     }
                 } else {
                     await this.parent.apiCall(`/api/conversations/${id}`, {
@@ -428,7 +448,7 @@ export class LeadFormController {
                         this.parent.conversationUI.reloadConversationDetails();
                         this.parent.conversationUI.showConversationDetails();
                     }
-                    alert('Lead updated successfully!');
+                    this.parent.utils.showNotification('Lead updated successfully!', 'success');
                 }
             } catch (err) {
                 console.error(err);
@@ -459,6 +479,74 @@ export class LeadFormController {
             us_state: data.businessState,
             business_address: data.businessAddress,
             ...data
+        };
+    }
+
+    // --- NEW HELPER: MAP DATA FOR PDF GENERATION ---
+    // This sends redundant keys so ANY backend naming convention works
+    mapDataForAppGeneration(data) {
+        return {
+            ...data,
+            // Business Info variations
+            legal_name: data.businessName,
+            corporate_name: data.businessName,
+            business_name: data.businessName,
+
+            dba: data.dbaName,
+            dba_name: data.dbaName,
+
+            physical_address: data.businessAddress,
+            street_address: data.businessAddress,
+            business_address: data.businessAddress,
+            address: data.businessAddress,
+
+            city: data.businessCity,
+            business_city: data.businessCity,
+
+            state: data.businessState,
+            us_state: data.businessState,
+            business_state: data.businessState,
+
+            zip: data.businessZip,
+            zip_code: data.businessZip,
+            business_zip: data.businessZip,
+
+            // Tax ID variations
+            federal_tax_id: data.federalTaxId,
+            tax_id: data.federalTaxId,
+            ein: data.federalTaxId,
+
+            // Entity variations
+            entity_type: data.entityType,
+            business_entity: data.entityType,
+
+            // Date variations
+            date_business_started: data.businessStartDate,
+            business_start_date: data.businessStartDate,
+            start_date: data.businessStartDate,
+
+            // Contact variations
+            business_phone: data.primaryPhone,
+            phone: data.primaryPhone,
+            email: data.businessEmail,
+            business_email: data.businessEmail,
+
+            // Owner variations
+            owner_name: `${data.ownerFirstName} ${data.ownerLastName}`,
+            first_name: data.ownerFirstName,
+            last_name: data.ownerLastName,
+            owner_address: data.ownerHomeAddress,
+            home_address: data.ownerHomeAddress,
+            owner_city: data.ownerHomeCity,
+            owner_state: data.ownerHomeState,
+            owner_zip: data.ownerHomeZip,
+            ssn: data.ownerSSN,
+            social_security_number: data.ownerSSN,
+            date_of_birth: data.ownerDOB,
+            dob: data.ownerDOB,
+            title: 'Owner', // Default title
+            ownership_percentage: data.ownerOwnershipPercentage,
+            ownership: data.ownerOwnershipPercentage
         };
     }
 }
