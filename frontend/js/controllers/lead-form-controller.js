@@ -4,7 +4,6 @@ import { Formatters } from '../utils/formatters.js';
 export class LeadFormController {
     constructor(parent) {
         this.parent = parent;
-        // Helper to get US States
         this.usStates = [
             { value: '', label: 'Select State...' },
             { value: 'AL', label: 'Alabama' }, { value: 'AK', label: 'Alaska' }, { value: 'AZ', label: 'Arizona' },
@@ -27,7 +26,31 @@ export class LeadFormController {
         ];
     }
 
-    // --- 1. THE COMPLETE HTML TEMPLATE ---
+    /**
+     * Converts Frontend CamelCase to Backend Snake_Case for CREATION only
+     * The PUT route handles this mapping automatically, but POST does not.
+     */
+    prepareForCreate(data) {
+        return {
+            business_name: data.businessName,
+            lead_phone: data.primaryPhone, // CRITICAL: Backend expects 'lead_phone'
+            email: data.businessEmail,
+            us_state: data.businessState,  // CRITICAL: Backend expects 'us_state'
+            business_address: data.businessAddress,
+            city: data.businessCity,
+            zip: data.businessZip,
+            first_name: data.ownerFirstName,
+            last_name: data.ownerLastName,
+            annual_revenue: data.annualRevenue,
+            monthly_revenue: data.monthlyRevenue,
+            requested_amount: data.requestedAmount,
+            // Pass other fields as is; the backend insert query only looks for the specific ones above
+            // but we might want to extend the backend POST route later.
+            ...data
+        };
+    }
+
+    // --- HTML GENERATOR ---
     getFormHTML(data = {}, mode = 'create') {
         const isEdit = mode === 'edit';
 
@@ -39,14 +62,12 @@ export class LeadFormController {
             return '';
         };
 
-        // Format Date for Input (YYYY-MM-DD)
         const dateVal = (...keys) => {
             const v = val(...keys);
             if (!v) return '';
             try { return new Date(v).toISOString().split('T')[0]; } catch (e) { return ''; }
         };
 
-        // State Options Generator
         const getStateOptions = (selected) => {
             return this.usStates.map(s =>
                 `<option value="${s.value}" ${s.value === selected ? 'selected' : ''}>${s.label}</option>`
@@ -62,8 +83,7 @@ export class LeadFormController {
             <form id="${mode}LeadForm" class="lead-form">
 
                 <div class="form-section">
-                    <h4 class="section-title">🏢 Business Information</h4>
-
+                    <h4 class="section-title">📊 Business Information</h4>
                     <div class="form-row-six">
                         <div class="form-group">
                             <label>Legal Name *</label>
@@ -80,25 +100,6 @@ export class LeadFormController {
                         <div class="form-group">
                             <label>Business Email</label>
                             <input type="email" name="businessEmail" value="${val('email', 'business_email', 'businessEmail')}" class="form-input">
-                        </div>
-                    </div>
-
-                    <div class="form-row-six">
-                        <div class="form-group">
-                            <label>Cell Phone</label>
-                            <input type="tel" name="cellPhone" value="${Formatters.phone(val('cell_phone', 'cellPhone'))}" class="form-input phone-format">
-                        </div>
-                        <div class="form-group">
-                            <label>Work Phone</label>
-                            <input type="tel" name="workPhone" value="${Formatters.phone(val('work_phone', 'workPhone'))}" class="form-input phone-format">
-                        </div>
-                        <div class="form-group">
-                            <label>Fax</label>
-                            <input type="tel" name="faxPhone" value="${Formatters.phone(val('fax_phone', 'faxPhone'))}" class="form-input phone-format">
-                        </div>
-                        <div class="form-group">
-                            <label>Website</label>
-                            <input type="url" name="website" value="${val('website')}" class="form-input" placeholder="https://">
                         </div>
                     </div>
 
@@ -124,34 +125,19 @@ export class LeadFormController {
                             <label>Zip Code</label>
                             <input type="text" name="businessZip" value="${val('zip', 'business_zip', 'businessZip')}" class="form-input" maxlength="10">
                         </div>
-                        <div class="form-group">
-                            <label>Country</label>
-                            <input type="text" name="businessCountry" value="${val('business_country', 'country') || 'United States'}" class="form-input">
-                        </div>
                     </div>
+                </div>
 
+                <div class="form-section">
+                    <h4 class="section-title">👤 Owner Information</h4>
                     <div class="form-row-six">
                         <div class="form-group">
-                            <label>Tax ID (EIN)</label>
-                            <input type="text" name="federalTaxId" value="${val('tax_id', 'federal_tax_id', 'tax_id_encrypted')}" class="form-input">
+                            <label>First Name</label>
+                            <input type="text" name="ownerFirstName" value="${val('first_name', 'owner_first_name', 'ownerFirstName')}" class="form-input">
                         </div>
                         <div class="form-group">
-                            <label>Entity Type</label>
-                            <select name="entityType" class="form-select">
-                                <option value="">Select...</option>
-                                <option value="LLC" ${val('entity_type', 'entityType')==='LLC'?'selected':''}>LLC</option>
-                                <option value="Corporation" ${val('entity_type', 'entityType')==='Corporation'?'selected':''}>Corporation</option>
-                                <option value="Sole Proprietorship" ${val('entity_type', 'entityType')==='Sole Proprietorship'?'selected':''}>Sole Prop</option>
-                                <option value="Partnership" ${val('entity_type', 'entityType')==='Partnership'?'selected':''}>Partnership</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Industry</label>
-                            <input type="text" name="industryType" value="${val('industry', 'industry_type', 'business_type')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Start Date</label>
-                            <input type="date" name="businessStartDate" value="${dateVal('business_start_date', 'businessStartDate')}" class="form-input">
+                            <label>Last Name</label>
+                            <input type="text" name="ownerLastName" value="${val('last_name', 'owner_last_name', 'ownerLastName')}" class="form-input">
                         </div>
                     </div>
                 </div>
@@ -171,151 +157,6 @@ export class LeadFormController {
                             <label>Requested Amount</label>
                             <input type="text" name="requestedAmount" value="${Formatters.currency(val('requested_amount', 'funding_amount', 'requestedAmount'))}" class="form-input money-format">
                         </div>
-                        <div class="form-group">
-                            <label>Use of Proceeds</label>
-                            <input type="text" name="useOfProceeds" value="${val('use_of_proceeds', 'useOfProceeds')}" class="form-input">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h4 class="section-title">👤 Owner 1</h4>
-                        <label style="font-size: 12px; display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" id="copyAddr1"> Same as Business Address
-                        </label>
-                    </div>
-
-                    <div class="form-row-six">
-                        <div class="form-group">
-                            <label>First Name</label>
-                            <input type="text" name="ownerFirstName" value="${val('first_name', 'owner_first_name', 'ownerFirstName')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Last Name</label>
-                            <input type="text" name="ownerLastName" value="${val('last_name', 'owner_last_name', 'ownerLastName')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" name="ownerEmail" value="${val('owner_email', 'ownerEmail')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Phone</label>
-                            <input type="tel" name="ownerPhone" value="${Formatters.phone(val('owner_phone', 'ownerPhone'))}" class="form-input phone-format">
-                        </div>
-                    </div>
-
-                    <div class="form-row-six">
-                        <div class="form-group">
-                            <label>SSN</label>
-                            <input type="text" name="ownerSSN" value="${val('ssn', 'ssn_encrypted', 'ownerSSN')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Date of Birth</label>
-                            <input type="date" name="ownerDOB" value="${dateVal('date_of_birth', 'owner_dob', 'ownerDOB')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Ownership %</label>
-                            <input type="number" name="ownerOwnershipPercentage" value="${val('ownership_percentage', 'ownership_percent', 'ownerOwnershipPercentage')}" class="form-input" max="100">
-                        </div>
-                    </div>
-
-                    <div class="form-row-six">
-                        <div class="form-group full-width">
-                            <label>Home Address</label>
-                            <input type="text" name="ownerHomeAddress" value="${val('owner_address', 'owner_home_address', 'ownerHomeAddress')}" class="form-input">
-                        </div>
-                    </div>
-
-                    <div class="form-row-six">
-                        <div class="form-group">
-                            <label>City</label>
-                            <input type="text" name="ownerHomeCity" value="${val('owner_city', 'owner_home_city', 'ownerHomeCity')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>State</label>
-                            <select name="ownerHomeState" class="form-select">
-                                ${getStateOptions(val('owner_state', 'owner_home_state', 'ownerHomeState'))}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Zip</label>
-                            <input type="text" name="ownerHomeZip" value="${val('owner_zip', 'owner_home_zip', 'ownerHomeZip')}" class="form-input" maxlength="10">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h4 class="section-title">👥 Partner (Optional)</h4>
-
-                    <div class="form-row-six">
-                        <div class="form-group">
-                            <label>First Name</label>
-                            <input type="text" name="owner2FirstName" value="${val('owner2_first_name', 'owner2FirstName')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Last Name</label>
-                            <input type="text" name="owner2LastName" value="${val('owner2_last_name', 'owner2LastName')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" name="owner2Email" value="${val('owner2_email', 'owner2Email')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Phone</label>
-                            <input type="tel" name="owner2Phone" value="${Formatters.phone(val('owner2_phone', 'owner2Phone'))}" class="form-input phone-format">
-                        </div>
-                    </div>
-
-                    <div class="form-row-six">
-                        <div class="form-group">
-                            <label>Ownership %</label>
-                            <input type="number" name="owner2OwnershipPercent" value="${val('owner2_ownership_percent', 'owner2OwnershipPercent')}" class="form-input" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label>SSN</label>
-                            <input type="text" name="owner2SSN" value="${val('owner2_ssn', 'owner2SSN')}" class="form-input">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h4 class="section-title">📢 Marketing & Meta</h4>
-
-                    <div class="form-row-six">
-                        <div class="form-group">
-                            <label>Lead Source</label>
-                            <input type="text" name="leadSource" value="${val('lead_source', 'leadSource')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Campaign</label>
-                            <input type="text" name="campaign" value="${val('campaign')}" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Lead Status</label>
-                            <select name="leadStatus" class="form-select">
-                                <option value="NEW" ${val('state', 'leadStatus')==='NEW'?'selected':''}>New</option>
-                                <option value="QUALIFIED" ${val('state', 'leadStatus')==='QUALIFIED'?'selected':''}>Qualified</option>
-                                <option value="SUBMITTED" ${val('state', 'leadStatus')==='SUBMITTED'?'selected':''}>Submitted</option>
-                                <option value="FUNDED" ${val('state', 'leadStatus')==='FUNDED'?'selected':''}>Funded</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group" style="flex-direction: row; gap: 15px; align-items: center; margin-top: 10px;">
-                            <label style="margin: 0; font-weight: 600;">Marketing Pref:</label>
-                            <label><input type="radio" name="marketingNotification" value="TEXT" ${val('marketing_opt_text') && !val('marketing_opt_email') ? 'checked' : ''}> Text</label>
-                            <label><input type="radio" name="marketingNotification" value="EMAIL" ${!val('marketing_opt_text') && val('marketing_opt_email') ? 'checked' : ''}> Email</label>
-                            <label><input type="radio" name="marketingNotification" value="BOTH" ${val('marketing_opt_text') !== false && val('marketing_opt_email') !== false ? 'checked' : ''}> Both</label>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group full-width">
-                            <label>Notes</label>
-                            <textarea name="notes" class="form-textarea" rows="3">${val('notes')}</textarea>
-                        </div>
                     </div>
                 </div>
 
@@ -332,7 +173,7 @@ export class LeadFormController {
         `;
     }
 
-    // --- 2. MODAL & TAB LOGIC ---
+    // --- MODAL & TAB LOGIC ---
 
     openCreateModal() {
         let existing = document.getElementById('createLeadModal');
@@ -358,7 +199,12 @@ export class LeadFormController {
     }
 
     renderEditTab(container) {
-        const conv = this.parent.getSelectedConversation();
+        // Try multiple ways to get the selected conversation
+        const conv = this.parent.getSelectedConversation?.() ||
+                     this.parent.conversationCore?.selectedConversation ||
+                     this.parent.selectedConversation ||
+                     null;
+
         if (!conv) {
             container.innerHTML = `<div class="empty-state">Select a conversation to edit details.</div>`;
             return;
@@ -369,7 +215,7 @@ export class LeadFormController {
         this.attachListeners(form, 'edit', conv.id);
     }
 
-    // --- 3. EVENT LISTENERS ---
+    // --- EVENT LISTENERS ---
 
     attachListeners(form, mode, id = null) {
         // Auto-format Phones
@@ -377,18 +223,13 @@ export class LeadFormController {
             input.addEventListener('input', (e) => e.target.value = Formatters.phone(e.target.value));
         });
 
-        // Address Copy (Business -> Owner)
-        const copyBtn = form.querySelector('#copyAddr1');
-        if(copyBtn) {
-            copyBtn.addEventListener('change', (e) => {
-                if(e.target.checked) {
-                    form.querySelector('[name="ownerHomeAddress"]').value = form.querySelector('[name="businessAddress"]').value;
-                    form.querySelector('[name="ownerHomeCity"]').value = form.querySelector('[name="businessCity"]').value;
-                    form.querySelector('[name="ownerHomeState"]').value = form.querySelector('[name="businessState"]').value;
-                    form.querySelector('[name="ownerHomeZip"]').value = form.querySelector('[name="businessZip"]').value;
-                }
+        // Auto-format Currency
+        form.querySelectorAll('.money-format').forEach(input => {
+            input.addEventListener('blur', (e) => {
+                const val = e.target.value.replace(/[^0-9.]/g, '');
+                if (val) e.target.value = Formatters.currency(val);
             });
-        }
+        });
 
         // Submit Handler
         form.addEventListener('submit', async (e) => {
@@ -398,27 +239,48 @@ export class LeadFormController {
             btn.textContent = 'Saving...';
             btn.disabled = true;
 
-            const formData = this.scrapeFormData(new FormData(form));
+            let formData = this.scrapeFormData(new FormData(form));
 
             try {
                 if (mode === 'create') {
-                    const res = await this.parent.apiCall('/api/conversations', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    // MAP DATA FOR BACKEND
+                    const apiData = this.prepareForCreate(formData);
 
-                    if(res.success) {
+                    // Try multiple API call methods
+                    let res;
+                    if (this.parent.api?.post) {
+                        res = await this.parent.api.post('/api/conversations', apiData);
+                    } else if (this.parent.apiCall) {
+                        res = await this.parent.apiCall('/api/conversations', { method: 'POST', body: apiData });
+                    } else {
+                        throw new Error('No API method available');
+                    }
+
+                    if (res.success) {
                         document.getElementById('createLeadModal').remove();
-                        this.parent.conversationUI.loadConversations();
-                        this.parent.utils.showNotification('Lead Created Successfully!', 'success');
+                        // Reload conversations list
+                        if (this.parent.conversationUI?.loadConversations) {
+                            this.parent.conversationUI.loadConversations();
+                        }
+                        if (this.parent.utils?.showNotification) {
+                            this.parent.utils.showNotification('Lead Created Successfully!', 'success');
+                        }
                     }
                 } else {
-                    await this.parent.apiCall(`/api/conversations/${id}`, {
-                        method: 'PUT',
-                        body: formData
-                    });
-                    this.parent.utils.showNotification('Lead Updated!', 'success');
-                    this.parent.conversationUI.loadConversations();
+                    // Edit mode - Backend PUT route handles mapping automatically
+                    if (this.parent.api?.put) {
+                        await this.parent.api.put(`/api/conversations/${id}`, formData);
+                    } else if (this.parent.apiCall) {
+                        await this.parent.apiCall(`/api/conversations/${id}`, { method: 'PUT', body: formData });
+                    }
+
+                    // Reload the conversation list
+                    if (this.parent.conversationUI?.loadConversations) {
+                        this.parent.conversationUI.loadConversations();
+                    }
+                    if (this.parent.utils?.showNotification) {
+                        this.parent.utils.showNotification('Lead Updated!', 'success');
+                    }
                 }
             } catch (err) {
                 console.error(err);
@@ -430,23 +292,18 @@ export class LeadFormController {
         });
     }
 
-    // --- 4. DATA PREP ---
+    // --- HELPER: SCRAPE DATA ---
     scrapeFormData(formData) {
         const data = Object.fromEntries(formData.entries());
 
-        // Clean Currencies
+        // Clean Currencies (remove $ and commas)
         ['annualRevenue', 'monthlyRevenue', 'requestedAmount'].forEach(k => {
-            if(data[k]) data[k] = Formatters.strip(data[k]);
+            if (data[k]) data[k] = data[k].replace(/[^0-9.]/g, '');
         });
 
-        // Clean Phones
+        // Clean Phones (remove non-digits)
         ['primaryPhone', 'cellPhone', 'workPhone', 'faxPhone', 'ownerPhone', 'owner2Phone'].forEach(k => {
-            if(data[k]) data[k] = Formatters.strip(data[k]);
-        });
-
-        // Clean Tax ID / SSN
-        ['federalTaxId', 'ownerSSN', 'owner2SSN'].forEach(k => {
-            if(data[k]) data[k] = data[k].replace(/\D/g, ''); // Remove dashes
+            if (data[k]) data[k] = data[k].replace(/\D/g, '');
         });
 
         return data;

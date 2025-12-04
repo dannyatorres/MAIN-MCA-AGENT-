@@ -126,90 +126,40 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new conversation (Robust Version)
+// Create new conversation
 router.post('/', async (req, res) => {
     try {
-        const data = req.body;
+        const conversationData = req.body;
         const db = getDatabase();
 
-        console.log('🚀 Creating new lead:', data.business_name);
-
-        // 1. Insert into CONVERSATIONS (Basic Info)
-        // We use COALESCE/OR logic to handle different field names (frontend might send 'address' or 'business_address')
+        // FIXED: Changed priority default from 'medium' to 1 (Integer) to fix DB error
         const result = await db.query(`
             INSERT INTO conversations (
-                business_name,
-                lead_phone,
-                email,
-                us_state,
-                address,
-                city,
-                zip,
-                first_name,
-                last_name,
-                current_step,
-                priority,
-                created_at,
-                updated_at,
-                last_activity
+                business_name, lead_phone, email, us_state,
+                address, current_step, priority
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `, [
-            data.business_name,
-            data.lead_phone,
-            data.email,
-            data.us_state || data.businessState || data.state, // Try all variations
-            data.address || data.businessAddress || data.business_address, // Handle all names
-            data.city || data.businessCity,
-            data.zip || data.businessZip,
-            data.first_name || data.ownerFirstName,
-            data.last_name || data.ownerLastName,
+            conversationData.business_name,
+            conversationData.lead_phone,
+            conversationData.email,
+            conversationData.us_state,
+            conversationData.business_address,
             'initial_contact',
-            1 // Default priority
+            // Fix: Send a number (1) instead of a string ("medium")
+            conversationData.priority ? parseInt(conversationData.priority) : 1
         ]);
 
-        const newConv = result.rows[0];
-        const conversationId = newConv.id;
-
-        // 2. Insert into LEAD_DETAILS (Financials & Sensitive Data)
-        // This is where Revenue, Tax ID, SSN, etc. live
-        await db.query(`
-            INSERT INTO lead_details (
-                conversation_id,
-                annual_revenue,
-                monthly_revenue,
-                funding_amount,
-                business_type,
-                tax_id_encrypted,
-                ssn_encrypted,
-                date_of_birth,
-                business_start_date,
-                created_at,
-                updated_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        `, [
-            conversationId,
-            parseFloat(data.annual_revenue || 0),
-            parseFloat(data.monthly_revenue || 0),
-            parseFloat(data.requested_amount || 0),
-            data.industry_type || data.industry,
-            data.federal_tax_id || data.tax_id,
-            data.ssn,
-            data.date_of_birth,
-            data.business_start_date
-        ]);
-
-        console.log(`✅ New conversation created completely: ${conversationId}`);
+        console.log(`✅ New conversation created: ${result.rows[0].id}`);
 
         res.json({
             success: true,
-            conversation: newConv
+            conversation: result.rows[0]
         });
 
     } catch (error) {
-        console.error('❌ Error creating conversation:', error);
+        console.error('Error creating conversation:', error);
         res.status(500).json({
             success: false,
             error: error.message
