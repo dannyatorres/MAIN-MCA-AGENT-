@@ -337,6 +337,25 @@ export class LeadFormController {
             input.addEventListener('input', (e) => e.target.value = this.formatSSN(e.target.value));
         });
 
+        // ZIP Code Auto-fill (City & State)
+        const businessZip = form.querySelector('[name="businessZip"]');
+        const businessCity = form.querySelector('[name="businessCity"]');
+        const businessState = form.querySelector('[name="businessState"]');
+        if (businessZip) {
+            businessZip.addEventListener('blur', () => {
+                this.lookupZip(businessZip.value, businessCity, businessState);
+            });
+        }
+
+        const ownerZip = form.querySelector('[name="ownerHomeZip"]');
+        const ownerCity = form.querySelector('[name="ownerHomeCity"]');
+        const ownerState = form.querySelector('[name="ownerHomeState"]');
+        if (ownerZip) {
+            ownerZip.addEventListener('blur', () => {
+                this.lookupZip(ownerZip.value, ownerCity, ownerState);
+            });
+        }
+
         // Partner Toggle
         const partnerCheck = form.querySelector('#hasPartner');
         const partnerSection = form.querySelector('#partnerSection');
@@ -574,5 +593,36 @@ export class LeadFormController {
             legal_name: data.businessName,
             phone: data.primaryPhone
         };
+    }
+
+    // --- ZIP CODE LOOKUP ---
+    async lookupZip(zip, cityField, stateField) {
+        // Only lookup for 5-digit ZIP codes
+        const cleanZip = zip.replace(/\D/g, '');
+        if (cleanZip.length !== 5) return;
+
+        try {
+            const response = await fetch(`https://api.zippopotam.us/us/${cleanZip}`);
+            if (!response.ok) return;
+
+            const data = await response.json();
+            if (data.places && data.places.length > 0) {
+                const place = data.places[0];
+
+                // Auto-fill city
+                if (cityField) {
+                    cityField.value = place['place name'];
+                }
+
+                // Auto-fill state
+                if (stateField) {
+                    stateField.value = place['state abbreviation'];
+                }
+
+                console.log(`📍 ZIP ${cleanZip}: ${place['place name']}, ${place['state abbreviation']}`);
+            }
+        } catch (error) {
+            console.log('ZIP lookup failed:', error.message);
+        }
     }
 }
