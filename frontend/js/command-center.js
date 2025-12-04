@@ -1,4 +1,8 @@
 // MCA Command Center Main Application
+
+// 1. IMPORT THE CONTROLLER (ES Module)
+import { LeadFormController } from './controllers/lead-form-controller.js';
+
 class CommandCenter {
     constructor() {
         // Use dynamic URLs based on current domain
@@ -41,6 +45,7 @@ class CommandCenter {
         this.emailTab = null;
         this.stats = null;
         this.stateManager = null;
+        this.leadFormController = null;
 
         // Core properties
         this.currentConversationId = null;
@@ -171,6 +176,10 @@ class CommandCenter {
                 console.warn('StateManager class not found (optional)');
             }
 
+            // 11. NEW: Initialize Lead Form Controller
+            console.log('11. Initializing Lead Form Controller...');
+            this.leadFormController = new LeadFormController(this);
+
             // Setup global keyboard shortcuts
             this.setupKeyboardShortcuts();
 
@@ -191,7 +200,8 @@ class CommandCenter {
                 lenders: !!this.lenders,
                 ai: !!this.ai,
                 emailTab: !!this.emailTab,
-                stats: !!this.stats
+                stats: !!this.stats,
+                leadFormController: !!this.leadFormController
             });
 
             // Make modules globally accessible for compatibility
@@ -215,7 +225,32 @@ class CommandCenter {
             console.log('✅ window.fcsModule exposed');
         }
 
-        console.log('Global references exposed for compatibility');
+        // ⚠️ CRITICAL FIX: Wire the "New Lead" button globally
+        window.openRichCreateModal = () => {
+            console.log('🚀 Opening New Lead Form (via CommandCenter)...');
+            if (this.leadFormController) {
+                this.leadFormController.openCreateModal();
+            } else {
+                console.error('❌ LeadFormController not initialized');
+            }
+        };
+
+        // Wire the "Edit Lead" button globally
+        window.openEditLeadModal = () => {
+            console.log('✏️ Opening Edit Lead Form...');
+            const rightPanel = document.getElementById('intelligenceContent');
+            if (rightPanel && this.leadFormController) {
+                // Switch to "Edit" tab visually
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                const editBtn = document.querySelector('[data-tab="edit"]');
+                if (editBtn) editBtn.classList.add('active');
+
+                // Render form
+                this.leadFormController.renderEditTab(rightPanel);
+            }
+        };
+
+        console.log('✅ Global references and Modal functions exposed');
     }
 
     setupKeyboardShortcuts() {
