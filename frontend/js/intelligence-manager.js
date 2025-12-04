@@ -1,85 +1,76 @@
-// js/intelligence-manager.js
-
-// Import all tab modules
-import { LeadFormsTab } from './intelligence-tabs/lead-forms.js';
+// frontend/js/intelligence-manager.js
+import { LeadFormController } from './controllers/lead-form-controller.js';
+// Keep existing imports for other tabs
 import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
 import { AIAssistantTab } from './intelligence-tabs/ai-tab.js';
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
 import { FCSTab } from './intelligence-tabs/fcs-tab.js';
+import { EmailTab } from './intelligence-tabs/email-tab.js';
 
 export class IntelligenceManager {
     constructor(parent) {
         this.parent = parent;
-        this.utils = parent.utils || window.conversationUI.utils;
 
-        // Initialize Tab Modules
-        this.formsTab = new LeadFormsTab(parent);
-        this.documentsTab = new DocumentsTab(parent);
-        this.aiTab = new AIAssistantTab(parent);
-        this.lendersTab = new LendersTab(parent);
-        this.fcsTab = new FCSTab(parent);
+        // Initialize Tab Controllers
+        this.tabs = {
+            'edit': new LeadFormController(parent), // <--- WIRED NEW CONTROLLER
+            'documents': new DocumentsTab(parent),
+            'ai-assistant': new AIAssistantTab(parent),
+            'lenders': new LendersTab(parent),
+            'fcs': new FCSTab(parent),
+            'email': new EmailTab(parent)
+        };
 
         this.init();
     }
 
     init() {
         console.log('🔧 IntelligenceManager: Initialized & Modularized');
-        this.setupTabListeners();
-    }
-
-    setupTabListeners() {
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        if (tabButtons.length === 0) return;
-
-        tabButtons.forEach(btn => {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const tab = e.target.dataset.tab;
-                this.switchTab(tab);
+                const tabName = e.target.dataset.tab;
+                this.switchTab(tabName);
             });
         });
     }
 
-    async switchTab(tabName) {
+    switchTab(tabName) {
         console.log(`🔄 Switching to tab: ${tabName}`);
 
-        // 1. Visual Update
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
 
-        const content = document.getElementById('intelligenceContent');
-        if (!content) return;
+        const container = document.getElementById('intelligenceContent');
+        if (!container) return;
 
-        // 2. Route to Module
-        switch (tabName) {
-            case 'edit':
-                this.formsTab.render(content);
-                break;
-            case 'ai-assistant':
-                this.aiTab.render(content);
-                break;
-            case 'documents':
-                this.documentsTab.render(content);
-                break;
-            case 'lenders':
-                this.lendersTab.render(content);
-                break;
-            case 'fcs':
-                this.fcsTab.render(content);
-                break;
-            default:
-                content.innerHTML = `<div class="empty-state">Tab ${tabName} coming soon</div>`;
+        container.innerHTML = '';
+
+        const tabModule = this.tabs[tabName];
+
+        // Special case for Edit tab using the new Controller
+        if (tabName === 'edit') {
+            tabModule.renderEditTab(container);
+        }
+        // Standard render for other tabs
+        else if (tabModule && typeof tabModule.render === 'function') {
+            tabModule.render(container);
+        }
+        else {
+            container.innerHTML = `<div class="error-state">Tab '${tabName}' not found.</div>`;
         }
     }
 
-    // --- Proxy Methods (Called by Main.js or other legacy scripts) ---
-
+    // Public method for legacy "Add Lead" button
     showCreateLeadModal() {
-        this.formsTab.openCreateModal();
+        this.tabs['edit'].openCreateModal();
     }
 
+    // Proxy for lenders modal
     openLendersModal() {
-        this.lendersTab.openModal();
+        if (this.tabs['lenders'] && typeof this.tabs['lenders'].openModal === 'function') {
+            this.tabs['lenders'].openModal();
+        }
     }
 
     // --- Data Loading (Essential for App State) ---
