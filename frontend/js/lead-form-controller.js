@@ -387,6 +387,36 @@ export class LeadFormController {
             });
         }
 
+        // ZIP Code Auto-fill for Business
+        const businessZip = form.querySelector('[name="businessZip"]');
+        const businessCity = form.querySelector('[name="businessCity"]');
+        const businessState = form.querySelector('[name="businessState"]');
+        if (businessZip) {
+            businessZip.addEventListener('blur', () => {
+                this.lookupZip(businessZip.value, businessCity, businessState);
+            });
+        }
+
+        // ZIP Code Auto-fill for Owner 1
+        const ownerZip = form.querySelector('[name="ownerHomeZip"]');
+        const ownerCity = form.querySelector('[name="ownerHomeCity"]');
+        const ownerState = form.querySelector('[name="ownerHomeState"]');
+        if (ownerZip) {
+            ownerZip.addEventListener('blur', () => {
+                this.lookupZip(ownerZip.value, ownerCity, ownerState);
+            });
+        }
+
+        // ZIP Code Auto-fill for Partner (Owner 2)
+        const owner2Zip = form.querySelector('[name="owner2HomeZip"]');
+        const owner2City = form.querySelector('[name="owner2HomeCity"]');
+        const owner2State = form.querySelector('[name="owner2HomeState"]');
+        if (owner2Zip) {
+            owner2Zip.addEventListener('blur', () => {
+                this.lookupZip(owner2Zip.value, owner2City, owner2State);
+            });
+        }
+
         // --- APP GENERATION HANDLER (FIXED) ---
         const generateBtn = form.querySelector('#generateAppBtn');
         if (generateBtn) {
@@ -549,6 +579,27 @@ export class LeadFormController {
             return `${month}/${day}/${year}`;
         } catch (e) {
             return dateStr;
+        }
+    }
+
+    // --- ZIP CODE LOOKUP (Auto-fill City/State) ---
+    async lookupZip(zipCode, cityInput, stateSelect) {
+        if (!zipCode || zipCode.length < 5) return;
+        const zip = zipCode.replace(/\D/g, '').slice(0, 5);
+        if (zip.length !== 5) return;
+
+        try {
+            const response = await fetch(`https://api.zippopotam.us/us/${zip}`);
+            if (!response.ok) return;
+
+            const data = await response.json();
+            if (data.places && data.places.length > 0) {
+                const place = data.places[0];
+                if (cityInput) cityInput.value = place['place name'];
+                if (stateSelect) stateSelect.value = place['state abbreviation'];
+            }
+        } catch (err) {
+            console.log('ZIP lookup failed:', err.message);
         }
     }
 
