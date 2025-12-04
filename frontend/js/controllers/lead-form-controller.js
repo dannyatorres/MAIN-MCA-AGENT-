@@ -106,7 +106,7 @@ export class LeadFormController {
                         <div class="form-row-six">
                             <div class="form-group">
                                 <label>Tax ID (EIN)</label>
-                                <input type="text" name="federalTaxId" value="${val('tax_id', 'federal_tax_id', 'tax_id_encrypted')}" class="form-input">
+                                <input type="text" name="federalTaxId" value="${this.formatEIN(val('tax_id', 'federal_tax_id', 'tax_id_encrypted'))}" class="form-input ein-format" maxlength="10" placeholder="XX-XXXXXXX">
                             </div>
                             <div class="form-group">
                                 <label>Entity Type</label>
@@ -179,7 +179,7 @@ export class LeadFormController {
                         <div class="form-row-six">
                             <div class="form-group">
                                 <label>SSN</label>
-                                <input type="text" name="ownerSSN" value="${val('ssn', 'ssn_encrypted', 'ownerSSN')}" class="form-input">
+                                <input type="text" name="ownerSSN" value="${this.formatSSN(val('ssn', 'ssn_encrypted', 'ownerSSN'))}" class="form-input ssn-format" maxlength="11" placeholder="XXX-XX-XXXX">
                             </div>
                             <div class="form-group">
                                 <label>Date of Birth</label>
@@ -244,7 +244,7 @@ export class LeadFormController {
                         <div class="form-row-six">
                             <div class="form-group">
                                 <label>SSN</label>
-                                <input type="text" name="owner2SSN" value="${val('owner2_ssn', 'owner2SSN')}" class="form-input">
+                                <input type="text" name="owner2SSN" value="${this.formatSSN(val('owner2_ssn', 'owner2SSN'))}" class="form-input ssn-format" maxlength="11" placeholder="XXX-XX-XXXX">
                             </div>
                             <div class="form-group">
                                 <label>Ownership %</label>
@@ -320,12 +320,21 @@ export class LeadFormController {
     }
 
     attachListeners(form, mode, id = null) {
-        // Formatters
+        // Formatters - Phone
         form.querySelectorAll('.phone-format').forEach(input => {
             input.addEventListener('input', (e) => e.target.value = Formatters.phone(e.target.value));
         });
+        // Formatters - Money
         form.querySelectorAll('.money-format').forEach(input => {
             input.addEventListener('input', (e) => e.target.value = Formatters.currency(e.target.value));
+        });
+        // Formatters - EIN (XX-XXXXXXX)
+        form.querySelectorAll('.ein-format').forEach(input => {
+            input.addEventListener('input', (e) => e.target.value = this.formatEIN(e.target.value));
+        });
+        // Formatters - SSN (XXX-XX-XXXX)
+        form.querySelectorAll('.ssn-format').forEach(input => {
+            input.addEventListener('input', (e) => e.target.value = this.formatSSN(e.target.value));
         });
 
         // Partner Toggle
