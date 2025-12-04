@@ -1,7 +1,7 @@
-// MCA Command Center Main Application
+// MCA Command Center Main Application (App Core - Source of Truth)
 
-// 1. IMPORT THE CONTROLLER (ES Module)
-import { LeadFormController } from './controllers/lead-form-controller.js';
+// ⚠️ NO IMPORTS HERE - This is a standard script, not a module
+// LeadFormController will be injected by main.js
 
 class CommandCenter {
     constructor() {
@@ -45,7 +45,7 @@ class CommandCenter {
         this.emailTab = null;
         this.stats = null;
         this.stateManager = null;
-        this.leadFormController = null;
+        this.leadFormController = null; // Placeholder: main.js will inject this
 
         // Core properties
         this.currentConversationId = null;
@@ -69,6 +69,11 @@ class CommandCenter {
                 ...(options.headers || {})
             }
         };
+
+        // Handle body serialization
+        if (options.body && typeof options.body === 'object') {
+            config.body = JSON.stringify(options.body);
+        }
 
         const response = await fetch(`${this.apiBaseUrl}${endpoint}`, config);
 
@@ -176,9 +181,8 @@ class CommandCenter {
                 console.warn('StateManager class not found (optional)');
             }
 
-            // 11. NEW: Initialize Lead Form Controller
-            console.log('11. Initializing Lead Form Controller...');
-            this.leadFormController = new LeadFormController(this);
+            // ⚠️ NOTE: LeadFormController is injected by main.js AFTER this init completes
+            // We don't initialize it here to avoid module/import issues
 
             // Setup global keyboard shortcuts
             this.setupKeyboardShortcuts();
@@ -201,7 +205,7 @@ class CommandCenter {
                 ai: !!this.ai,
                 emailTab: !!this.emailTab,
                 stats: !!this.stats,
-                leadFormController: !!this.leadFormController
+                leadFormController: '(pending injection from main.js)'
             });
 
             // Make modules globally accessible for compatibility
@@ -225,13 +229,14 @@ class CommandCenter {
             console.log('✅ window.fcsModule exposed');
         }
 
-        // ⚠️ CRITICAL FIX: Wire the "New Lead" button globally
+        // ⚠️ SAFE GLOBAL MODAL BUTTONS
+        // These check if the controller exists before running (it will be injected by main.js)
         window.openRichCreateModal = () => {
             console.log('🚀 Opening New Lead Form (via CommandCenter)...');
             if (this.leadFormController) {
                 this.leadFormController.openCreateModal();
             } else {
-                console.error('❌ LeadFormController not initialized');
+                console.warn('⚠️ LeadFormController not ready yet. Waiting for main.js injection...');
             }
         };
 
@@ -247,6 +252,8 @@ class CommandCenter {
 
                 // Render form
                 this.leadFormController.renderEditTab(rightPanel);
+            } else if (!this.leadFormController) {
+                console.warn('⚠️ LeadFormController not ready yet.');
             }
         };
 
