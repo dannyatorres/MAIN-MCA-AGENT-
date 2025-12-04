@@ -241,14 +241,42 @@ export class LeadFormController {
                                 <input type="tel" name="owner2Phone" value="${Formatters.phone(val('owner2_phone', 'owner2Phone'))}" class="form-input phone-format">
                             </div>
                         </div>
+
                         <div class="form-row-six">
                             <div class="form-group">
                                 <label>SSN</label>
                                 <input type="text" name="owner2SSN" value="${this.formatSSN(val('owner2_ssn', 'owner2SSN'))}" class="form-input ssn-format" maxlength="11" placeholder="XXX-XX-XXXX">
                             </div>
                             <div class="form-group">
+                                <label>Date of Birth</label>
+                                <input type="date" name="owner2DOB" value="${dateVal('owner2_dob', 'owner2DOB')}" class="form-input">
+                            </div>
+                            <div class="form-group">
                                 <label>Ownership %</label>
                                 <input type="number" name="owner2OwnershipPercent" value="${val('owner2_ownership_percent', 'owner2OwnershipPercent')}" class="form-input" max="100">
+                            </div>
+                        </div>
+
+                        <div class="form-row-six">
+                            <div class="form-group full-width">
+                                <label>Home Address</label>
+                                <input type="text" name="owner2HomeAddress" value="${val('owner2_address', 'owner2HomeAddress')}" class="form-input">
+                            </div>
+                        </div>
+                        <div class="form-row-six">
+                            <div class="form-group">
+                                <label>City</label>
+                                <input type="text" name="owner2HomeCity" value="${val('owner2_city', 'owner2HomeCity')}" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>State</label>
+                                <select name="owner2HomeState" class="form-select">
+                                    ${getStateOptions(val('owner2_state', 'owner2HomeState'))}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Zip</label>
+                                <input type="text" name="owner2HomeZip" value="${val('owner2_zip', 'owner2HomeZip')}" class="form-input" maxlength="10">
                             </div>
                         </div>
                     </div>
