@@ -26,12 +26,20 @@ export class IntelligenceManager {
 
     init() {
         console.log('🔧 IntelligenceManager: Initialized & Modularized');
+
+        // 1. Tab Switching Logic
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const tabName = e.target.dataset.tab;
                 this.switchTab(tabName);
             });
         });
+
+        // 2. CRITICAL FIX: Bind the legacy HTML button to this new logic
+        window.openRichCreateModal = () => {
+            console.log('🚀 Opening Create Modal via IntelligenceManager');
+            this.showCreateLeadModal();
+        };
     }
 
     switchTab(tabName) {

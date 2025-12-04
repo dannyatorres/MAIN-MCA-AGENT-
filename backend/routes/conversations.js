@@ -159,8 +159,8 @@ router.post('/', async (req, res) => {
             data.business_name,
             data.lead_phone,
             data.email,
-            data.us_state || data.businessState,
-            data.address || data.business_address, // Handle both names
+            data.us_state || data.businessState || data.state, // Try all variations
+            data.address || data.businessAddress || data.business_address, // Handle all names
             data.city || data.businessCity,
             data.zip || data.businessZip,
             data.first_name || data.ownerFirstName,
