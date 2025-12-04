@@ -36,8 +36,8 @@
     display: flex;
     flex-direction: column;
 
-    /* CHANGE: The whole box is now Grey */
-    background: var(--gray-100);
+    /* CHANGE: Use the new silver variable for background */
+    background-color: var(--app-bg-silver) !important;
 
     /* THE FIX: Rounded Corners & Shadows instead of borders */
     border-radius: 16px;
