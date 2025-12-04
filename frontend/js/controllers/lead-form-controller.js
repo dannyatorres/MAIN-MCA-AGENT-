@@ -30,7 +30,6 @@ export class LeadFormController {
     getFormHTML(data = {}, mode = 'create') {
         const isEdit = mode === 'edit';
 
-        // Safely retrieve data checking multiple key formats (camelCase vs snake_case)
         const val = (...keys) => {
             for (const k of keys) {
                 if (data[k] !== undefined && data[k] !== null) return data[k];
@@ -38,7 +37,6 @@ export class LeadFormController {
             return '';
         };
 
-        // Format Date for Input (YYYY-MM-DD)
         const dateVal = (...keys) => {
             const v = val(...keys);
             if (!v) return '';
@@ -117,7 +115,6 @@ export class LeadFormController {
                                     <option value="LLC" ${val('entity_type', 'entityType')==='LLC'?'selected':''}>LLC</option>
                                     <option value="Corporation" ${val('entity_type', 'entityType')==='Corporation'?'selected':''}>Corporation</option>
                                     <option value="Sole Proprietorship" ${val('entity_type', 'entityType')==='Sole Proprietorship'?'selected':''}>Sole Prop</option>
-                                    <option value="Partnership" ${val('entity_type', 'entityType')==='Partnership'?'selected':''}>Partnership</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -256,37 +253,13 @@ export class LeadFormController {
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <div class="section-header">📝 Status & Notes</div>
-                    <div class="section-content">
-                        <div class="form-row-six">
-                            <div class="form-group">
-                                <label>Lead Status</label>
-                                <select name="leadStatus" class="form-select">
-                                    <option value="NEW" ${val('state', 'leadStatus')==='NEW'?'selected':''}>New</option>
-                                    <option value="INTERESTED" ${val('state', 'leadStatus')==='INTERESTED'?'selected':''}>Interested</option>
-                                    <option value="FCS_RUNNING" ${val('state', 'leadStatus')==='FCS_RUNNING'?'selected':''}>FCS Running</option>
-                                    <option value="QUALIFIED" ${val('state', 'leadStatus')==='QUALIFIED'?'selected':''}>Qualified</option>
-                                    <option value="SUBMITTED" ${val('state', 'leadStatus')==='SUBMITTED'?'selected':''}>Submitted</option>
-                                    <option value="FUNDED" ${val('state', 'leadStatus')==='FUNDED'?'selected':''}>Funded</option>
-                                    <option value="ARCHIVED" ${val('state', 'leadStatus')==='ARCHIVED'?'selected':''}>Archived</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Lead Source</label>
-                                <input type="text" name="leadSource" value="${val('lead_source', 'leadSource')}" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Internal Notes</label>
-                                <textarea name="notes" class="form-textarea" rows="3">${val('notes')}</textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="form-actions" style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    ${isEdit ? `
+                        <button type="button" id="generateAppBtn" class="btn" style="background: #6366f1; color: white; margin-right: auto;">
+                            <i class="fas fa-file-pdf"></i> Generate App
+                        </button>
+                    ` : ''}
+
                     <button type="button" class="btn btn-secondary" onclick="document.getElementById('leadModalWrapper').remove()">Cancel</button>
                     <button type="submit" class="btn btn-primary" style="min-width: 150px;">
                         ${isEdit ? 'Save Changes' : 'Create Lead'}
@@ -376,6 +349,53 @@ export class LeadFormController {
             });
         }
 
+        // --- NEW: APP GENERATION HANDLER ---
+        const generateBtn = form.querySelector('#generateAppBtn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', async () => {
+                // 1. Scrape current data from form
+                const formData = this.scrapeFormData(new FormData(form));
+                const btnOriginalText = generateBtn.innerHTML;
+
+                generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                generateBtn.disabled = true;
+
+                try {
+                    // 2. Send to Backend
+                    console.log('📄 Generating App for:', id);
+                    const response = await fetch(`${this.parent.apiBaseUrl}/api/conversations/${id}/generate-pdf-document`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            applicationData: formData, // Match backend expectation
+                            ownerName: `${formData.ownerFirstName} ${formData.ownerLastName}`
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success && result.document) {
+                        // 3. Trigger Download (Backend returns base64 or URL)
+                        // If result.document is a base64 string:
+                        const link = document.createElement('a');
+                        link.href = 'data:application/pdf;base64,' + result.document;
+                        link.download = `${formData.businessName || 'Application'}.pdf`;
+                        link.click();
+                        alert('✅ PDF Generated & Downloaded!');
+                    } else {
+                        throw new Error(result.error || 'Unknown error');
+                    }
+
+                } catch (error) {
+                    console.error('App Generation Error:', error);
+                    alert('❌ Failed to generate app: ' + error.message);
+                } finally {
+                    generateBtn.innerHTML = btnOriginalText;
+                    generateBtn.disabled = false;
+                }
+            });
+        }
+
         // Submit Handler
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -425,7 +445,6 @@ export class LeadFormController {
 
     scrapeFormData(formData) {
         const data = Object.fromEntries(formData.entries());
-        // Clean Currencies & Phones
         ['annualRevenue', 'monthlyRevenue', 'requestedAmount'].forEach(k => {
             if(data[k]) data[k] = data[k].replace(/[^0-9.]/g, '');
         });
