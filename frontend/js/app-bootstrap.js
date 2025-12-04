@@ -1,4 +1,4 @@
-// js/main.js
+// js/app-bootstrap.js
 import { LeadFormController } from './controllers/lead-form-controller.js';
 import { LookupManager } from './lookups.js';
 
@@ -118,6 +118,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     // Fallback if module method missing
                     alert("Lender Management Module loading...");
+                }
+            };
+
+            // 4. DELETE MODE TOGGLE (Restores the Trash Can)
+            window.toggleDeleteMode = () => {
+                const list = document.getElementById('conversationsList');
+                const btn = document.getElementById('toggleDeleteModeBtn');
+
+                if (!list) return;
+
+                // Toggle the CSS class that reveals checkboxes
+                const isDeleteMode = list.classList.toggle('delete-mode');
+
+                // Visual feedback on the button (Red when active)
+                if (btn) {
+                    if (isDeleteMode) {
+                        btn.classList.add('active-danger');
+                        btn.style.color = 'var(--red)';
+                        btn.style.background = '#fef2f2';
+                        // Show the big "Delete Selected" button
+                        const confirmBtn = document.getElementById('deleteSelectedBtn');
+                        if (confirmBtn) confirmBtn.style.display = 'block';
+                    } else {
+                        btn.classList.remove('active-danger');
+                        btn.style.color = '';
+                        btn.style.background = '';
+
+                        // Clear selections if canceling
+                        const checkboxes = document.querySelectorAll('.delete-checkbox');
+                        checkboxes.forEach(cb => cb.checked = false);
+
+                        // Hide the "Delete Selected" big button
+                        const confirmBtn = document.getElementById('deleteSelectedBtn');
+                        if (confirmBtn) confirmBtn.style.display = 'none';
+
+                        // Clear Core selection set
+                        if (window.commandCenter.conversationUI) {
+                            window.commandCenter.conversationUI.selectedForDeletion.clear();
+                        }
+                    }
                 }
             };
 
