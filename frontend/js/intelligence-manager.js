@@ -1,9 +1,8 @@
 // frontend/js/intelligence-manager.js
 
-// 1. CLEAN IMPORTS: No more direct Controller access
-import { EditTab } from './intelligence-tabs/edit-tab.js'; // <--- NEW WRAPPER
+import { EditTab } from './intelligence-tabs/edit-tab.js';
 import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
-import { AIAssistantTab } from './intelligence-tabs/ai-tab.js';
+// AI Tab Import REMOVED - We use the global AIAssistant now
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
 import { FCSTab } from './intelligence-tabs/fcs-tab.js';
 import { EmailTab } from './intelligence-tabs/email-tab.js';
@@ -12,12 +11,10 @@ export class IntelligenceManager {
     constructor(parent) {
         this.parent = parent;
 
-        // 2. UNIFORM INITIALIZATION
-        // All these keys now map to files in the same folder!
         this.tabs = {
             'edit': new EditTab(parent),
             'documents': new DocumentsTab(parent),
-            'ai-assistant': new AIAssistantTab(parent),
+            // 'ai-assistant': REMOVED (Handled dynamically)
             'lenders': new LendersTab(parent),
             'fcs': new FCSTab(parent),
             'email': new EmailTab(parent)
@@ -55,17 +52,15 @@ export class IntelligenceManager {
         }
     }
 
+
     switchTab(tabName) {
         console.log(`🔄 Switching to tab: ${tabName}`);
 
         // --- INTERCEPT EDIT ---
         if (tabName === 'edit') {
-            console.log('✏️ Edit Tab Clicked -> Opening Pop-up Modal');
             const currentConv = this.parent.getSelectedConversation();
-
             if (this.tabs['edit']) {
                 if (currentConv) {
-                    // Call the wrapper, which calls the controller
                     this.tabs['edit'].openEditModal(currentConv);
                 } else {
                     alert("Please select a conversation to edit.");
@@ -84,8 +79,23 @@ export class IntelligenceManager {
 
         container.innerHTML = '';
 
-        const tabModule = this.tabs[tabName];
+        // --- ROUTING LOGIC ---
+        let tabModule;
 
+        if (tabName === 'ai-assistant') {
+            // LAZY LOAD: Access the parent's AI module now (it wasn't ready during constructor)
+            if (this.parent.ai) {
+                tabModule = this.parent.ai;
+            } else {
+                container.innerHTML = `<div class="error-state">AI Module not loaded.</div>`;
+                return;
+            }
+        } else {
+            // LOOKUP OTHER TABS
+            tabModule = this.tabs[tabName];
+        }
+
+        // RENDER
         if (tabModule && typeof tabModule.render === 'function') {
             tabModule.render(container);
         } else {
@@ -94,7 +104,6 @@ export class IntelligenceManager {
     }
 
     showCreateLeadModal() {
-        // Wrapper call
         this.tabs['edit'].openCreateModal();
     }
 
