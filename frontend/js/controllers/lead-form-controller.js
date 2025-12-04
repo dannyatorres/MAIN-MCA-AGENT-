@@ -482,71 +482,55 @@ export class LeadFormController {
         };
     }
 
-    // --- NEW HELPER: MAP DATA FOR PDF GENERATION ---
-    // This sends redundant keys so ANY backend naming convention works
+    // --- UPDATED HELPER: STRICT MAPPING FOR APP5.HTML ---
     mapDataForAppGeneration(data) {
         return {
-            ...data,
-            // Business Info variations
-            legal_name: data.businessName,
-            corporate_name: data.businessName,
-            business_name: data.businessName,
-
+            // 1. BUSINESS INFO (Matches {{placeholder}} in app5.html)
+            legalName: data.businessName,
             dba: data.dbaName,
-            dba_name: data.dbaName,
-
-            physical_address: data.businessAddress,
-            street_address: data.businessAddress,
-            business_address: data.businessAddress,
             address: data.businessAddress,
-
             city: data.businessCity,
-            business_city: data.businessCity,
-
             state: data.businessState,
-            us_state: data.businessState,
-            business_state: data.businessState,
-
             zip: data.businessZip,
-            zip_code: data.businessZip,
-            business_zip: data.businessZip,
+            telephone: data.primaryPhone,   // <--- This was the missing link for Phone
+            businessEmail: data.businessEmail,
+            federalTaxId: data.federalTaxId,
+            dateBusinessStarted: data.businessStartDate, // <--- Match exact HTML key
+            entityType: data.entityType,
+            typeOfBusiness: data.industryType,
 
-            // Tax ID variations
-            federal_tax_id: data.federalTaxId,
-            tax_id: data.federalTaxId,
-            ein: data.federalTaxId,
+            // 2. FINANCIALS
+            annualRevenue: data.annualRevenue,
+            requestedAmount: data.requestedAmount,
+            useOfFunds: data.useOfProceeds || 'Working Capital', // Default if empty
 
-            // Entity variations
-            entity_type: data.entityType,
-            business_entity: data.entityType,
+            // 3. OWNER 1
+            ownerFirstName: data.ownerFirstName,
+            ownerLastName: data.ownerLastName,
+            ownerTitle: 'Owner', // Default title
+            ownerAddress: data.ownerHomeAddress,
+            ownerCity: data.ownerHomeCity,
+            ownerState: data.ownerHomeState,
+            ownerZip: data.ownerHomeZip,
+            ownerEmail: data.ownerEmail,
+            ownerSSN: data.ownerSSN,
+            ownerDOB: data.ownerDOB,
+            ownershipPercentage: data.ownerOwnershipPercentage,
+            creditScore: 'N/A', // Placeholder if not collected
 
-            // Date variations
-            date_business_started: data.businessStartDate,
-            business_start_date: data.businessStartDate,
-            start_date: data.businessStartDate,
+            // 4. OWNER 2 (Partner)
+            owner2FirstName: data.owner2FirstName || '',
+            owner2LastName: data.owner2LastName || '',
+            owner2Address: data.owner2Address || '', // Ensure your form captures this if needed
+            owner2Email: data.owner2Email || '',
+            owner2SSN: data.owner2SSN || '',
+            owner2DOB: data.owner2DOB || '',
+            owner2Percentage: data.owner2OwnershipPercent || '',
 
-            // Contact variations
-            business_phone: data.primaryPhone,
-            phone: data.primaryPhone,
-            email: data.businessEmail,
-            business_email: data.businessEmail,
-
-            // Owner variations
-            owner_name: `${data.ownerFirstName} ${data.ownerLastName}`,
-            first_name: data.ownerFirstName,
-            last_name: data.ownerLastName,
-            owner_address: data.ownerHomeAddress,
-            home_address: data.ownerHomeAddress,
-            owner_city: data.ownerHomeCity,
-            owner_state: data.ownerHomeState,
-            owner_zip: data.ownerHomeZip,
-            ssn: data.ownerSSN,
-            social_security_number: data.ownerSSN,
-            date_of_birth: data.ownerDOB,
-            dob: data.ownerDOB,
-            title: 'Owner', // Default title
-            ownership_percentage: data.ownerOwnershipPercentage,
-            ownership: data.ownerOwnershipPercentage
+            // 5. REDUNDANT KEYS (Safety net for other templates)
+            business_name: data.businessName,
+            legal_name: data.businessName,
+            phone: data.primaryPhone
         };
     }
 }

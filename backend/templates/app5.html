@@ -7,9 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
         /* PAGE SETUP */
-        @page {
-            margin: 0.5in;
-        }
+        @page { margin: 0.4in; } /* Slightly more space */
 
         body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -20,20 +18,12 @@
             line-height: 1.2;
         }
 
-        /* HEADER - Compacted */
+        /* HEADER */
         .header {
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             border-bottom: 2px solid #2c3e50;
-            padding-bottom: 10px;
-        }
-        .logo {
-            max-width: 160px;
-            height: auto;
-            margin-bottom: 5px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
+            padding-bottom: 8px;
         }
         h1 {
             color: #2c3e50;
@@ -41,12 +31,11 @@
             font-weight: 800;
             margin: 0;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        /* SECTIONS - Tighter Vertical Gaps */
+        /* SECTIONS */
         .section {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 3px;
             background-color: #fff;
@@ -54,11 +43,10 @@
         .section-header {
             background-color: #2c3e50;
             color: white;
-            padding: 4px 10px;
+            padding: 3px 8px;
             font-weight: 700;
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         /* GRID SYSTEM */
@@ -68,13 +56,13 @@
             gap: 0;
         }
         .form-group {
-            padding: 4px 8px;
+            padding: 3px 6px;
             border-right: 1px solid #eee;
             border-bottom: 1px solid #eee;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            min-height: 28px;
+            min-height: 26px;
         }
         .col-12 { grid-column: span 12; }
         .col-6 { grid-column: span 6; }
@@ -82,132 +70,63 @@
         .col-3 { grid-column: span 3; }
 
         /* INPUTS */
-        label {
-            font-size: 8px;
-            color: #666;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 1px;
-        }
+        label { font-size: 7px; color: #666; font-weight: 700; text-transform: uppercase; }
         input[type="text"] {
-            width: 100%;
-            border: none;
-            background: transparent;
-            font-size: 11px;
-            font-weight: 600;
-            color: #000;
-            padding: 0;
-            margin: 0;
+            width: 100%; border: none; background: transparent;
+            font-size: 10px; font-weight: 600; color: #000; padding: 0; margin: 0;
         }
 
-        /* SIGNATURES - FIXED */
+        /* LEGAL BLOCK (NEW) */
+        .legal-section {
+            font-size: 6px; /* Fine print */
+            color: #444;
+            text-align: justify;
+            margin: 10px 0;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            line-height: 1.3;
+        }
+        .legal-section strong { font-weight: 700; color: #000; }
+
+        /* SIGNATURES */
         .signatures-container {
-            margin-top: 20px;
+            margin-top: 10px;
             display: flex;
             flex-direction: column;
-            gap: 25px; /* Slightly increased for better separation */
+            gap: 15px;
             page-break-inside: avoid;
         }
+        .sig-row { display: flex; align-items: flex-end; gap: 20px; width: 100%; }
+        .sig-block-left { flex: 1; position: relative; min-height: 50px; }
+        .sig-block-right { width: 100px; position: relative; min-height: 50px; }
 
-        .sig-row {
-            display: flex;
-            align-items: flex-end;
-            gap: 30px;
-            width: 100%;
-        }
+        .sig-label { font-size: 7px; font-weight: 700; color: #666; text-transform: uppercase; display: block; margin-bottom: 2px; }
+        .sig-line { border-bottom: 1px solid #000; position: relative; height: 20px; }
 
-        .sig-block-left {
-            flex: 1;
-            position: relative;
-            min-height: 70px; /* Added fixed height for consistent positioning */
-        }
-
-        .sig-block-right {
-            width: 130px;
-            position: relative;
-            min-height: 70px; /* Added fixed height for consistency */
-        }
-
-        .sig-label {
-            font-size: 8px;
-            font-weight: 700;
-            color: #666;
-            text-transform: uppercase;
-            margin-bottom: 3px; /* Reduced - signature will sit above line */
-            display: block;
-        }
-
-        .sig-line {
-            border-bottom: 1px solid #000;
-            margin-bottom: 8px; /* Increased for metadata spacing */
-            position: relative;
-            height: 28px; /* Added height to contain signature */
-        }
-
-        /* GHOST SIGNATURE - FIXED POSITIONING */
         .cursive-sig {
             font-family: 'Great Vibes', cursive;
-            font-size: 16px; /* Slightly larger */
+            font-size: 14px;
             color: #000;
             position: absolute;
-            bottom: 2px; /* Sits just above the line */
+            bottom: 2px;
             left: 5px;
-            transform: rotate(-2deg);
-            white-space: nowrap;
-            z-index: 10;
-            text-shadow: 0 0 1px rgba(0,0,0,0.1);
-            line-height: 1;
+            transform: rotate(-1deg);
         }
 
-        /* Metadata */
-        .meta-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .printed-name {
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            font-size: 10px;
-            font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
-            flex-shrink: 0;
-        }
-
-        .digital-stamp {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 7px;
-            color: #555;
-            text-align: right;
-            line-height: 1.3;
-            flex-shrink: 0;
-        }
-
-        .date-val {
-            font-size: 12px;
-            font-weight: 700;
-            position: absolute;
-            bottom: 0px; /* Aligned to sit just above line */
-            left: 5px;
-            line-height: 1;
-        }
+        .meta-row { display: flex; justify-content: space-between; margin-top: 2px; }
+        .digital-stamp { font-family: 'Courier New', monospace; font-size: 6px; color: #555; }
+        .date-val { font-size: 10px; font-weight: 700; position: absolute; bottom: 2px; left: 5px; }
 
         .footer {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 8px;
-            color: #aaa;
-            border-top: 1px solid #eee;
-            padding-top: 5px;
+            margin-top: 15px; text-align: center; font-size: 7px; color: #aaa;
+            border-top: 1px solid #eee; padding-top: 5px;
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <img src="YOUR_LOGO_URL_HERE" alt="Company Logo" class="logo">
         <h1>Merchant Cash Advance Application</h1>
     </div>
 
@@ -266,8 +185,13 @@
         </div>
     </div>
 
-    <div class="signatures-container">
+    <div class="legal-section">
+        <strong>AUTHORIZATIONS:</strong> By signing below, each of the above listed business and principal/owner/officer (individually and collectively, "Applicant") certifies that all information and documents submitted in connection with this Application is true, correct and complete. Applicant authorizes MCA Agent and its partners, lenders, or assignees (collectively, "Recipients") to obtain consumer and/or personal, business and investigative reports and other information about Applicant, including credit card processor statements and bank statements, from one or more consumer reporting agencies, such as TransUnion, Experian and Equifax, and from other credit bureaus, banks, creditors and other third parties.
+        <br><br>
+        <strong>TCPA CONSENT:</strong> Applicant authorizes Recipients to contact Applicant at the telephone numbers and email addresses provided, including via SMS/text messages, automated dialing systems, and prerecorded voice messages, for purposes related to this Application and for marketing purposes.
+    </div>
 
+    <div class="signatures-container">
         <div class="sig-row">
             <div class="sig-block-left">
                 <label class="sig-label">Owner 1 Signature</label>
@@ -275,19 +199,14 @@
                     <div class="cursive-sig">{{signature_name_1}}</div>
                 </div>
                 <div class="meta-row">
-                    <div class="printed-name">{{signature_name_1}}</div>
                     <div class="digital-stamp">
-                        <div>TimeStamp: {{timestamp_str_1}}</div>
-                        <div>Customer IP: {{ip_str_1}}</div>
+                        IP: {{ip_str_1}} | {{timestamp_str_1}}
                     </div>
                 </div>
             </div>
-
             <div class="sig-block-right">
                 <label class="sig-label">Date</label>
-                <div class="sig-line">
-                    <div class="date-val">{{signature_date}}</div>
-                </div>
+                <div class="sig-line"><div class="date-val">{{signature_date}}</div></div>
             </div>
         </div>
 
@@ -298,22 +217,16 @@
                     <div class="cursive-sig">{{signature_name_2}}</div>
                 </div>
                 <div class="meta-row">
-                    <div class="printed-name">{{signature_name_2}}</div>
                     <div class="digital-stamp">
-                        <div>TimeStamp: {{timestamp_str_2}}</div>
-                        <div>Customer IP: {{ip_str_2}}</div>
+                        IP: {{ip_str_2}} | {{timestamp_str_2}}
                     </div>
                 </div>
             </div>
-
             <div class="sig-block-right">
                 <label class="sig-label">Date</label>
-                <div class="sig-line">
-                    <div class="date-val">{{signature_date}}</div>
-                </div>
+                <div class="sig-line"><div class="date-val">{{signature_date}}</div></div>
             </div>
         </div>
-
     </div>
 
     <div class="footer">
