@@ -1,14 +1,10 @@
 // js/app-bootstrap.js
 import { LeadFormController } from './controllers/lead-form-controller.js';
-import { LookupManager } from './lookups.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Main Module: Waiting for CommandCenter...');
 
-    // 1. Init Dropdowns
-    await LookupManager.init();
-
-    // 2. Wait for Core to Init
+    // Wait for Core to Init
     setTimeout(() => {
         if (window.commandCenter) {
             console.log('✅ Main Module: Attaching Logic to CommandCenter');
