@@ -9,7 +9,6 @@
     <title>MCAagent</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- Modular CSS Architecture -->
     <link rel="stylesheet" href="css/modules/01-theme.css">
     <link rel="stylesheet" href="css/modules/02-layout.css">
     <link rel="stylesheet" href="css/modules/03-panel-left-list.css">
@@ -20,144 +19,12 @@
     <link rel="stylesheet" href="css/modules/07-utilities.css">
     <link rel="stylesheet" href="css/modules/09-ai-agent.css">
 
-    <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-    <style>
-        /* 1. DEFINE THE BACKGROUND: Slate-200 (Cool Silver) */
-        :root {
-            --app-bg-silver: #E2E8F0;
-        }
-
-        /* 2. APPLY TO ALL MAIN PANELS */
-        .left-panel,
-        .center-panel,
-        .right-panel {
-            background-color: var(--app-bg-silver) !important;
-            border-right: 1px solid rgba(0,0,0,0.06) !important;
-            border-left: 1px solid rgba(0,0,0,0.06) !important;
-        }
-
-        /* 3. MAKE HEADERS TRANSPARENT & DARK TEXT */
-        .panel-header,
-        .left-panel .panel-header {
-            background-color: transparent !important;
-            border-bottom: 1px solid rgba(0,0,0,0.06) !important;
-        }
-
-        .brand-title,
-        .header-merchant-name,
-        .panel-header h4 {
-            color: #1e293b !important; /* Slate-800 */
-            text-shadow: none !important;
-        }
-
-        /* 4. MAKE CONTENT AREAS TRANSPARENT */
-        .conversations-list,
-        #messagesContainer,
-        .intelligence-content,
-        .dashboard-container {
-            background-color: transparent !important;
-        }
-
-        /* 5. UNIFIED CARD STYLE (CREAM) */
-        /* This applies the Cream look to Left Sidebar AND Center Dashboard cards */
-        .conversation-item,
-        .stat-card,
-        .goal-card,
-        .news-card {
-            background-color: var(--corgi-cream) !important; /* <--- ALL CARDS ARE CREAM */
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-            border: 1px solid rgba(255,255,255,0.6) !important; /* Subtle white border helps them pop */
-            color: #1e293b !important; /* Ensure text is dark/readable */
-        }
-
-        /* 6. Fixes for specific cards */
-
-        /* Ensure Goal Card text is readable (since it was originally black) */
-        .goal-card .goal-title,
-        .goal-card .goal-numbers {
-            color: #1e293b !important;
-        }
-
-        /* Inbound Chat Bubbles: Keep White for readability/contrast against Cream/Silver */
-        .message.inbound .message-content {
-            background-color: #ffffff !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
-        }
-
-        /* Right Panel Tabs */
-        .intelligence-tabs {
-            background-color: rgba(255,255,255,0.5) !important;
-        }
-
-        /* Search Inputs */
-        .search-field-clean {
-            background: #ffffff !important;
-            color: #1e293b !important;
-        }
-
-        /* =========================================
-           FIXED CSS FOR LEAD FORMS.JS
-           ========================================= */
-
-        /* 1. Ensure the modal body scrolls */
-        .modal-content.comprehensive-modal .modal-body,
-        .edit-form-container,
-        .modal-body {
-            max-height: 70vh;
-            overflow-y: auto;
-            padding-right: 10px;
-            padding-bottom: 20px;
-        }
-
-        /* 2. MATCH THE CLASS FROM LEAD-FORMS.JS */
-        .form-row,
-        .form-row-six {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 16px;
-            align-items: flex-end;
-        }
-
-        /* 3. Make Inputs expand to fill space */
-        .form-group {
-            flex: 1;
-            min-width: 150px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        /* 4. Handle Full Width rows */
-        .form-group.full-width {
-            flex: 0 0 100%;
-        }
-
-        /* 5. Style the Inputs */
-        .form-input, .form-select, .form-textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 14px;
-            background: #ffffff;
-            box-sizing: border-box;
-        }
-
-        /* 6. Fix for checkboxes in lead-forms.js */
-        .form-section label input[type="checkbox"] {
-            margin-right: 8px;
-        }
-    </style>
 </head>
 <body>
     <div class="command-center">
-        <!-- Header -->
         <div class="main-content">
-            <!-- Left Panel - Conversations List -->
             <div class="left-panel">
                 <div class="panel-header">
                     <div class="app-brand-row">
@@ -196,7 +63,6 @@
                         </div>
                     </div>
 
-                    <!-- Delete Selected Button (shown in delete mode) -->
                     <button id="deleteSelectedBtn" class="btn btn-danger full-width" style="display: none; margin: 10px; width: calc(100% - 20px);">
                         Delete Selected
                     </button>
@@ -209,80 +75,11 @@
                 </div>
             </div>
 
-            <!-- Center Panel - Conversation Thread -->
             <div class="center-panel dashboard-mode">
-                <div class="panel-header"></div>
-                <div class="messages-container" id="messagesContainer">
-                    <div class="dashboard-container">
-
-                        <div class="dashboard-header">
-                            <h1>Good Morning, Broker.</h1>
-                            <p>You have <strong>4 deals</strong> moving to the next stage today.</p>
-                        </div>
-
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-icon">🔥</div>
-                                <div class="stat-value">12</div>
-                                <div class="stat-label">New Leads (24h)</div>
-                            </div>
-
-                            <div class="stat-card">
-                                <div class="stat-icon">💼</div>
-                                <div class="stat-value">8</div>
-                                <div class="stat-label">Negotiating</div>
-                            </div>
-
-                            <div class="stat-card">
-                                <div class="stat-icon" style="background: #fee2e2; color: #ef4444;">⚠️</div>
-                                <div class="stat-value">3</div>
-                                <div class="stat-label">Urgent Tasks</div>
-                            </div>
-                        </div>
-
-                        <div class="goal-card">
-                            <div class="goal-header">
-                                <span class="goal-title">MONTHLY GCI GOAL</span>
-                                <span class="goal-numbers">$18,500 / $25,000</span>
-                            </div>
-                            <div class="progress-track">
-                                <div class="progress-fill" style="width: 74%;"></div>
-                            </div>
-                            <div style="margin-top: 12px; font-size: 12px; opacity: 0.7; display: flex; justify-content: space-between;">
-                                <span>📅 9 Days left in month</span>
-                                <span>74% on track</span>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 32px;">
-                            <h4 style="margin-bottom: 16px; font-size: 14px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Priority Pipeline</h4>
-
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100);">
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></div>
-                                    <div>
-                                        <div style="font-weight: 600; font-size: 14px; color: var(--gray-900);">Apex Logistics LLC</div>
-                                        <div style="font-size: 12px; color: var(--gray-500);">Offer Sent • $150k Req</div>
-                                    </div>
-                                </div>
-                                <button style="font-size: 12px; padding: 4px 12px; background: var(--gray-100); border: none; border-radius: 12px; cursor: pointer;">View</button>
-                            </div>
-
-                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100);">
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></div>
-                                    <div>
-                                        <div style="font-weight: 600; font-size: 14px; color: var(--gray-900);">Summit Retail Group</div>
-                                        <div style="font-size: 12px; color: var(--gray-500);">Missing Bank Statements</div>
-                                    </div>
-                                </div>
-                                <button style="font-size: 12px; padding: 4px 12px; background: var(--gray-100); border: none; border-radius: 12px; cursor: pointer;">View</button>
-                            </div>
-
-                        </div>
-
+                <div class="panel-header">
                     </div>
-                </div>
+                <div class="messages-container" id="messagesContainer">
+                    </div>
                 <div class="message-input-container" id="messageInputContainer" style="display: none;">
                     <div class="ai-suggestions" id="aiSuggestions" style="display: none;">
                         <div class="suggestions-header">
@@ -298,7 +95,6 @@
                 </div>
             </div>
 
-            <!-- Right Panel - Lead Intelligence -->
             <div class="right-panel">
 
                 <div id="rightPanelHome" class="right-panel-state">
@@ -336,7 +132,6 @@
                             <p>Loading lead data...</p>
                         </div>
 
-                        <!-- Hidden containers for different tabs -->
                         <div id="lenderForm" style="display: none;"></div>
                         <div id="lenderResults" style="display: none;"></div>
                         <div id="lenderLoading" style="display: none;"></div>
@@ -353,7 +148,6 @@
             </div>
         </div>
 
-        <!-- Status Bar -->
         <div class="status-bar">
             <div class="status-left">
                 <span id="lastUpdated">Last updated: Never</span>
@@ -370,9 +164,6 @@
         </div>
     </div>
 
-    <!-- Modals -->
-
-    <!-- CSV Import Modal -->
     <div class="modal" id="csvImportModal" style="display: none;">
         <div class="modal-content" style="max-width: 900px; width: 90%; max-height: 90vh;">
             <div class="modal-header">
@@ -380,27 +171,6 @@
                 <button class="modal-close" id="closeCsvImportModal">×</button>
             </div>
             <div class="modal-body" style="max-height: calc(90vh - 130px); overflow-y: auto;">
-                <!-- Progress Steps -->
-                <div style="display: flex; justify-content: space-between; margin-bottom: 24px; gap: 8px;">
-                    <div style="flex: 1; text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; border: 2px solid transparent;" id="csvStep1" class="csv-step csv-step-active">
-                        <div style="display: inline-block; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 50%; line-height: 24px; margin-bottom: 6px; font-size: 12px; font-weight: 600;">1</div>
-                        <div style="font-size: 13px; font-weight: 600; color: #374151;">Upload CSV</div>
-                    </div>
-                    <div style="flex: 1; text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; border: 2px solid transparent;" id="csvStep2" class="csv-step">
-                        <div style="display: inline-block; width: 24px; height: 24px; background: #9ca3af; color: white; border-radius: 50%; line-height: 24px; margin-bottom: 6px; font-size: 12px; font-weight: 600;">2</div>
-                        <div style="font-size: 13px; font-weight: 600; color: #6b7280;">Map Columns</div>
-                    </div>
-                    <div style="flex: 1; text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; border: 2px solid transparent;" id="csvStep3" class="csv-step">
-                        <div style="display: inline-block; width: 24px; height: 24px; background: #9ca3af; color: white; border-radius: 50%; line-height: 24px; margin-bottom: 6px; font-size: 12px; font-weight: 600;">3</div>
-                        <div style="font-size: 13px; font-weight: 600; color: #6b7280;">Validate</div>
-                    </div>
-                    <div style="flex: 1; text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px; border: 2px solid transparent;" id="csvStep4" class="csv-step">
-                        <div style="display: inline-block; width: 24px; height: 24px; background: #9ca3af; color: white; border-radius: 50%; line-height: 24px; margin-bottom: 6px; font-size: 12px; font-weight: 600;">4</div>
-                        <div style="font-size: 13px; font-weight: 600; color: #6b7280;">Import</div>
-                    </div>
-                </div>
-
-                <!-- Step 1: Upload -->
                 <div id="csvUploadSection" class="csv-section">
                     <div style="border: 2px dashed #d1d5db; border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.3s;" id="csvUploadArea">
                         <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
@@ -414,728 +184,27 @@
                         <div id="csvFileDetails"></div>
                     </div>
                 </div>
-
-                <!-- Step 2: Column Mapping -->
                 <div id="csvMappingSection" class="csv-section" style="display: none;">
-                    <h4 style="margin: 0 0 12px 0; color: #111827;">Map CSV Columns to Database Fields</h4>
-                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px;">Review the auto-detected column mappings and adjust as needed:</p>
-
-                    <div style="overflow-x: auto; margin-bottom: 16px;">
-                        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; border: 1px solid #e5e7eb;" id="csvPreviewTable">
-                            <thead id="csvPreviewHeader"></thead>
-                            <tbody id="csvPreviewBody"></tbody>
-                        </table>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 16px 0;" id="csvMappingControls">
-                        <!-- Column mapping controls will be populated here -->
-                    </div>
-
+                    <div id="csvMappingControls"></div>
                     <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-                        <button class="btn btn-secondary" id="csvBackToUploadBtn">← Back to Upload</button>
-                        <button class="btn btn-primary" id="csvValidateMappingBtn">Validate Mapping ✓</button>
+                         <button class="btn btn-secondary" id="csvBackToUploadBtn">Back</button>
+                         <button class="btn btn-primary" id="csvValidateMappingBtn">Validate</button>
                     </div>
                 </div>
-
-                <!-- Step 3: Validation -->
-                <div id="csvValidationSection" class="csv-section" style="display: none;">
-                    <h4 style="margin: 0 0 12px 0; color: #111827;">Data Validation</h4>
-                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px;">Review validation results and fix any issues:</p>
-
+                 <div id="csvValidationSection" class="csv-section" style="display: none;">
                     <div id="csvValidationResults"></div>
-
                     <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-                        <button class="btn btn-secondary" id="csvBackToMappingBtn">← Back to Mapping</button>
-                        <button class="btn btn-primary" id="csvProceedToImportBtn">Proceed to Import →</button>
+                        <button class="btn btn-secondary" id="csvBackToMappingBtn">Back</button>
+                        <button class="btn btn-primary" id="csvProceedToImportBtn">Import</button>
                     </div>
                 </div>
-
-                <!-- Step 4: Import -->
                 <div id="csvImportSection" class="csv-section" style="display: none;">
-                    <h4 style="margin: 0 0 12px 0; color: #111827;">Import Data</h4>
-                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px;">Importing your CSV data into the system...</p>
-
-                    <div style="width: 100%; height: 20px; background: #e5e7eb; border-radius: 10px; overflow: hidden; margin: 16px 0;">
-                        <div style="height: 100%; background: #3b82f6; transition: width 0.3s ease; border-radius: 10px; width: 0%;" id="csvProgressFill"></div>
-                    </div>
-
-                    <div id="csvImportStatus">
-                        <div style="text-align: center; padding: 20px;">
-                            <div class="spinner"></div>
-                            <p style="margin: 16px 0 0 0; color: #6b7280;">Starting import process...</p>
-                        </div>
-                    </div>
-
-                    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                        <button class="btn btn-primary" style="display: none;" id="csvViewResultsBtn">📊 View Results</button>
-                    </div>
-                </div>
-
-                <!-- Status Messages -->
-                <div id="csvStatusMessages" style="margin-top: 16px;"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="lenderModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Qualify Lenders</h3>
-                <button class="modal-close" id="closeLenderModal">×</button>
-            </div>
-            <div class="modal-body">
-                <p>This will run lender qualification based on the current conversation data and FCS results (if available).</p>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="useExistingData" checked>
-                        Use existing conversation and FCS data
-                    </label>
-                </div>
-                <div class="form-group" id="manualDataGroup" style="display: none;">
-                    <label>Business Name</label>
-                    <input type="text" id="lenderBusinessName" class="form-input">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelLender">Cancel</button>
-                <button class="btn btn-primary" id="confirmLender">Qualify Lenders</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Lead Modal -->
-    <div class="modal" id="addLeadModal" style="display: none;">
-        <div class="modal-content comprehensive-modal">
-            <div class="modal-header">
-                <h3>Add New Lead</h3>
-                <button class="modal-close" id="closeAddLeadModal">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="edit-form-container">
-                    <!-- Business Information Section -->
-                    <div class="form-section">
-                    <div class="section-header" onclick="toggleSection('businessInfo')">
-                        <h4>📊 Business Information</h4>
-                        <span class="section-toggle">−</span>
-                    </div>
-                    <div class="section-content" id="businessInfo">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Company Name <span class="required">*</span></label>
-                                <input type="text" id="companyName" class="form-input" placeholder="ABC Corporation">
-                            </div>
-                            <div class="form-group">
-                                <label>Doing Business As (DBA)</label>
-                                <input type="text" id="dbaName" class="form-input" placeholder="ABC Corp">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Primary Phone <span class="required">*</span></label>
-                                <input type="tel" id="primaryPhone" class="form-input" placeholder="(555) 123-4567">
-                            </div>
-                            <div class="form-group">
-                                <label>Business Phone</label>
-                                <input type="tel" id="businessPhone" class="form-input" placeholder="(555) 987-6543">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Website</label>
-                                <input type="url" id="website" class="form-input" placeholder="https://www.example.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Tax ID (Encrypted)</label>
-                                <input type="text" id="federalTaxId" class="form-input" placeholder="12-3456789">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Entity Type</label>
-                                <select id="entityType" class="form-select">
-                                    <option value="">Select Entity Type...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Industry Type</label>
-                                <select id="industryType" class="form-select">
-                                    <option value="">Select Industry...</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Time in Business (Months)</label>
-                                <input type="number" id="timeInBusiness" class="form-input" placeholder="24" min="1" max="999">
-                            </div>
-                            <div class="form-group">
-                                <label>Requested Amount</label>
-                                <input type="number" id="requestedAmount" class="form-input" placeholder="50000" min="1000" max="10000000" step="1000">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Monthly Revenue</label>
-                                <input type="number" id="monthlyRevenue" class="form-input" placeholder="25000" min="0" max="50000000" step="1000">
-                            </div>
-                            <div class="form-group">
-                                <label>Annual Revenue</label>
-                                <input type="number" id="annualRevenue" class="form-input" placeholder="300000" min="0" max="500000000" step="10000">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Business Address</label>
-                                <input type="text" id="businessAddress" class="form-input" placeholder="123 Main Street">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>City</label>
-                                <input type="text" id="businessCity" class="form-input" placeholder="Los Angeles">
-                            </div>
-                            <div class="form-group">
-                                <label>State</label>
-                                <select id="businessState" class="form-select">
-                                    <option value="">Select State...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>ZIP Code</label>
-                                <input type="text" id="businessZip" class="form-input" placeholder="90210">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Lead Source</label>
-                                <select id="leadSource" class="form-select">
-                                    <option value="">Select Source...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Priority</label>
-                                <select id="priority" class="form-select">
-                                    <option value="low">Low</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="urgent">Urgent</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Owner Information Section -->
-                <div class="form-section">
-                    <div class="section-header" onclick="toggleSection('owner1Info')">
-                        <h4>👤 Owner Information</h4>
-                        <span class="section-toggle">−</span>
-                    </div>
-                    <div class="section-content" id="owner1Info">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner First Name</label>
-                                <input type="text" id="owner1FirstName" class="form-input" placeholder="John">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner Last Name</label>
-                                <input type="text" id="owner1LastName" class="form-input" placeholder="Smith">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner Email</label>
-                                <input type="email" id="owner1Email" class="form-input" placeholder="john@example.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner Phone</label>
-                                <input type="tel" id="owner1Phone" class="form-input" placeholder="(555) 123-4567">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner Ownership %</label>
-                                <input type="number" id="owner1OwnershipPercentage" class="form-input" placeholder="50" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner Date of Birth</label>
-                                <input type="date" id="owner1DateOfBirth" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Owner Home Address</label>
-                                <input type="text" id="owner1HomeAddress" class="form-input" placeholder="456 Oak Street">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner City</label>
-                                <input type="text" id="owner1HomeCity" class="form-input" placeholder="Los Angeles">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner State</label>
-                                <select id="owner1HomeState" class="form-select">
-                                    <option value="">Select State...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Owner ZIP Code</label>
-                                <input type="text" id="owner1HomeZip" class="form-input" placeholder="90210">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner SSN (Encrypted)</label>
-                                <input type="text" id="owner1SSN" class="form-input" placeholder="123-45-6789" maxlength="11">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Partner Information Section -->
-                <div class="form-section">
-                    <div class="section-header" onclick="toggleSection('owner2Info')">
-                        <h4>👤 Partner Information (Optional)</h4>
-                        <span class="section-toggle">+</span>
-                    </div>
-                    <div class="section-content collapsed" id="owner2Info" style="display: none;">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner First Name</label>
-                                <input type="text" id="owner2FirstName" class="form-input" placeholder="Jane">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner Last Name</label>
-                                <input type="text" id="owner2LastName" class="form-input" placeholder="Smith">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner Email</label>
-                                <input type="email" id="owner2Email" class="form-input" placeholder="jane@example.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner Phone</label>
-                                <input type="tel" id="owner2Phone" class="form-input" placeholder="(555) 987-6543">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner Ownership %</label>
-                                <input type="number" id="owner2OwnershipPercentage" class="form-input" placeholder="50" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner Date of Birth</label>
-                                <input type="date" id="owner2DateOfBirth" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Partner Home Address</label>
-                                <input type="text" id="owner2HomeAddress" class="form-input" placeholder="789 Pine Street">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner City</label>
-                                <input type="text" id="owner2HomeCity" class="form-input" placeholder="Los Angeles">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner State</label>
-                                <select id="owner2HomeState" class="form-select">
-                                    <option value="">Select State...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Partner ZIP Code</label>
-                                <input type="text" id="owner2HomeZip" class="form-input" placeholder="90210">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner SSN (Encrypted)</label>
-                                <input type="text" id="owner2SSN" class="form-input" placeholder="123-45-6789" maxlength="11">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Marketing and Notes Section -->
-                <div class="form-section">
-                    <div class="section-header" onclick="toggleSection('marketingNotes')">
-                        <h4>📧 Marketing & Notes</h4>
-                        <span class="section-toggle">+</span>
-                    </div>
-                    <div class="section-content collapsed" id="marketingNotes" style="display: none;">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Marketing Notifications</label>
-                                <div class="radio-group">
-                                    <label class="radio-label">
-                                        <input type="radio" name="marketingNotification" value="TEXT">
-                                        <span class="radio-indicator"></span>
-                                        Text Only
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="marketingNotification" value="EMAIL">
-                                        <span class="radio-indicator"></span>
-                                        Email Only
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="marketingNotification" value="BOTH" checked>
-                                        <span class="radio-indicator"></span>
-                                        Both Text & Email
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Notes</label>
-                                <textarea id="notes" class="form-textarea" rows="4" placeholder="Additional notes about this lead..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                </div>
+                    <div id="csvImportStatus">Importing...</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Edit Lead Modal -->
-    <div class="modal" id="editLeadModal" style="display: none;">
-        <div class="modal-content comprehensive-modal">
-            <div class="modal-header">
-                <h3>Edit Lead - Comprehensive CRM</h3>
-                <button class="modal-close" id="closeEditLeadModal">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="edit-form-container">
-                    <!-- Business Information Section -->
-                    <div class="form-section">
-                    <div class="section-header" onclick="toggleSection('editBusinessInfo')">
-                        <h4>📊 Business Information</h4>
-                        <span class="section-toggle">−</span>
-                    </div>
-                    <div class="section-content" id="editBusinessInfo">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Company Name <span class="required">*</span></label>
-                                <input type="text" id="editCompanyName" class="form-input" placeholder="ABC Corporation">
-                            </div>
-                            <div class="form-group">
-                                <label>Doing Business As (DBA)</label>
-                                <input type="text" id="editDbaName" class="form-input" placeholder="ABC Corp">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Primary Phone <span class="required">*</span></label>
-                                <input type="tel" id="editPrimaryPhone" class="form-input" placeholder="(555) 123-4567">
-                            </div>
-                            <div class="form-group">
-                                <label>Business Phone</label>
-                                <input type="tel" id="editBusinessPhone" class="form-input" placeholder="(555) 987-6543">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Website</label>
-                                <input type="url" id="editWebsite" class="form-input" placeholder="https://www.example.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Tax ID (Encrypted)</label>
-                                <input type="text" id="editTaxId" class="form-input" placeholder="12-3456789">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Entity Type</label>
-                                <select id="editEntityType" class="form-select">
-                                    <option value="">Select Entity Type...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Industry Type</label>
-                                <select id="editIndustryType" class="form-select">
-                                    <option value="">Select Industry...</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Time in Business (Months)</label>
-                                <input type="number" id="editTimeInBusiness" class="form-input" placeholder="24" min="1" max="999">
-                            </div>
-                            <div class="form-group">
-                                <label>Requested Amount</label>
-                                <input type="number" id="editRequestedAmount" class="form-input" placeholder="50000" min="1000" max="10000000" step="1000">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Monthly Revenue</label>
-                                <input type="number" id="editMonthlyRevenue" class="form-input" placeholder="25000" min="0" max="50000000" step="1000">
-                            </div>
-                            <div class="form-group">
-                                <label>Annual Revenue</label>
-                                <input type="number" id="editAnnualRevenue" class="form-input" placeholder="300000" min="0" max="500000000" step="10000">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Business Address</label>
-                                <input type="text" id="editBusinessAddress" class="form-input" placeholder="123 Main Street">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>City</label>
-                                <input type="text" id="editBusinessCity" class="form-input" placeholder="Los Angeles">
-                            </div>
-                            <div class="form-group">
-                                <label>State</label>
-                                <select id="editBusinessState" class="form-select">
-                                    <option value="">Select State...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>ZIP Code</label>
-                                <input type="text" id="editBusinessZip" class="form-input" placeholder="90210">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Lead Source</label>
-                                <select id="editLeadSource" class="form-select">
-                                    <option value="">Select Source...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Priority</label>
-                                <select id="editPriority" class="form-select">
-                                    <option value="low">Low</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="urgent">Urgent</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Owner Information Section -->
-                <div class="form-section">
-                    <div class="section-header" onclick="toggleSection('editOwner1Info')">
-                        <h4>👤 Owner Information</h4>
-                        <span class="section-toggle">−</span>
-                    </div>
-                    <div class="section-content" id="editOwner1Info">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner First Name</label>
-                                <input type="text" id="editOwner1FirstName" class="form-input" placeholder="John">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner Last Name</label>
-                                <input type="text" id="editOwner1LastName" class="form-input" placeholder="Smith">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner Email</label>
-                                <input type="email" id="editOwner1Email" class="form-input" placeholder="john@example.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner Phone</label>
-                                <input type="tel" id="editOwner1Phone" class="form-input" placeholder="(555) 123-4567">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner Ownership %</label>
-                                <input type="number" id="editOwner1Ownership" class="form-input" placeholder="50" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner Date of Birth</label>
-                                <input type="date" id="editOwner1DOB" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Owner Home Address</label>
-                                <input type="text" id="editOwner1HomeAddress" class="form-input" placeholder="456 Oak Street">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner City</label>
-                                <input type="text" id="editOwner1HomeCity" class="form-input" placeholder="Los Angeles">
-                            </div>
-                            <div class="form-group">
-                                <label>Owner State</label>
-                                <select id="editOwner1HomeState" class="form-select">
-                                    <option value="">Select State...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Owner ZIP Code</label>
-                                <input type="text" id="editOwner1HomeZip" class="form-input" placeholder="90210">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Owner SSN (Encrypted)</label>
-                                <input type="text" id="editOwner1SSN" class="form-input" placeholder="123-45-6789" maxlength="11">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Partner Information Section -->
-                <div class="form-section">
-                    <div class="section-header" onclick="toggleSection('editOwner2Info')">
-                        <h4>👤 Partner Information (Optional)</h4>
-                        <span class="section-toggle">+</span>
-                    </div>
-                    <div class="section-content collapsed" id="editOwner2Info" style="display: none;">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner First Name</label>
-                                <input type="text" id="editOwner2FirstName" class="form-input" placeholder="Jane">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner Last Name</label>
-                                <input type="text" id="editOwner2LastName" class="form-input" placeholder="Smith">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner Email</label>
-                                <input type="email" id="editOwner2Email" class="form-input" placeholder="jane@example.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner Phone</label>
-                                <input type="tel" id="editOwner2Phone" class="form-input" placeholder="(555) 987-6543">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner Ownership %</label>
-                                <input type="number" id="editOwner2Ownership" class="form-input" placeholder="50" min="0" max="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner Date of Birth</label>
-                                <input type="date" id="editOwner2DOB" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Partner Home Address</label>
-                                <input type="text" id="editOwner2HomeAddress" class="form-input" placeholder="789 Pine Street">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner City</label>
-                                <input type="text" id="editOwner2HomeCity" class="form-input" placeholder="Los Angeles">
-                            </div>
-                            <div class="form-group">
-                                <label>Partner State</label>
-                                <select id="editOwner2HomeState" class="form-select">
-                                    <option value="">Select State...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Partner ZIP Code</label>
-                                <input type="text" id="editOwner2HomeZip" class="form-input" placeholder="90210">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Partner SSN (Encrypted)</label>
-                                <input type="text" id="editOwner2SSN" class="form-input" placeholder="123-45-6789" maxlength="11">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Marketing and Notes Section -->
-                <div class="form-section">
-                    <div class="section-header" onclick="toggleSection('editMarketingNotes')">
-                        <h4>📧 Marketing & Notes</h4>
-                        <span class="section-toggle">+</span>
-                    </div>
-                    <div class="section-content collapsed" id="editMarketingNotes" style="display: none;">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Marketing Notifications</label>
-                                <div class="radio-group">
-                                    <label class="radio-label">
-                                        <input type="radio" name="editMarketingNotification" value="TEXT">
-                                        <span class="radio-indicator"></span>
-                                        Text Only
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="editMarketingNotification" value="EMAIL">
-                                        <span class="radio-indicator"></span>
-                                        Email Only
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="editMarketingNotification" value="BOTH" checked>
-                                        <span class="radio-indicator"></span>
-                                        Both Text & Email
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Notes</label>
-                                <textarea id="editNotes" class="form-textarea" rows="4" placeholder="Additional notes about this lead..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelEditLead">Cancel</button>
-                <button class="btn btn-primary" id="saveEditLead">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Lead Inline Modal -->
-    <div class="modal" id="editLeadInlineModal" style="display: none;">
-        <div class="modal-content" style="max-width: 1200px; width: 90%; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header">
-                <h3>Edit Lead Information</h3>
-                <button class="modal-close" id="closeEditLeadInlineModal">&times;</button>
-            </div>
-            <div class="modal-body" id="editLeadInlineContent">
-                <!-- Form content will be injected here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Lenders Inline Modal -->
-    <div class="modal" id="lendersInlineModal" style="display: none;">
-        <div class="modal-content" style="max-width: 1400px; width: 95%; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header">
-                <h3>Lender Qualification & Submission</h3>
-                <button class="modal-close" id="closeLendersInlineModal">&times;</button>
-            </div>
-            <div class="modal-body" id="lendersInlineContent">
-                <!-- Lender form content will be injected here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Confirmation Dialogs -->
     <div class="modal" id="deleteConfirmModal" style="display: none;">
         <div class="modal-content small-modal">
             <div class="modal-header">
@@ -1144,7 +213,6 @@
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to <strong>permanently delete</strong> this lead?</p>
-                <p class="warning-text">This action cannot be undone. All messages, FCS results, and lead data will be permanently removed.</p>
                 <div class="lead-info" id="deleteLeadInfo">
                     <strong>Lead:</strong> <span id="deleteLeadName">Loading...</span><br>
                     <strong>Phone:</strong> <span id="deleteLeadPhone">Loading...</span>
@@ -1165,11 +233,6 @@
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to <strong>archive</strong> this lead?</p>
-                <p class="info-text">Archived leads can be restored later but won't appear in active conversations.</p>
-                <div class="lead-info" id="archiveLeadInfo">
-                    <strong>Lead:</strong> <span id="archiveLeadName">Loading...</span><br>
-                    <strong>Phone:</strong> <span id="archiveLeadPhone">Loading...</span>
-                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="cancelArchive">Cancel</button>
@@ -1178,7 +241,6 @@
         </div>
     </div>
 
-    <!-- Signature Modal -->
     <div class="modal" id="signatureModal" style="display: none;">
         <div class="modal-content signature-modal">
             <div class="modal-header">
@@ -1186,53 +248,39 @@
                 <button class="modal-close" id="closeSignatureModal">×</button>
             </div>
             <div class="modal-body">
-                <p>Please sign below to authorize this Working Capital Application:</p>
-                <div class="signature-container">
-                    <canvas id="signatureCanvas" width="400" height="200"></canvas>
-                </div>
+                <canvas id="signatureCanvas" width="400" height="200"></canvas>
                 <div class="signature-controls">
                     <button class="btn btn-secondary" id="clearSignature">Clear</button>
-                    <button class="btn btn-secondary" id="useTypedSignature">Use Typed Name</button>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="cancelSignature">Cancel</button>
-                <button class="btn btn-primary" id="confirmSignature">Generate Application</button>
+                <button class="btn btn-primary" id="confirmSignature">Generate</button>
             </div>
         </div>
     </div>
 
-    <!-- Notification Container -->
     <div class="notifications" id="notifications"></div>
 
-    <!-- Scripts -->
-    <!-- Load Socket.io library (required by js/websocket.js) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
-
-    <!-- 🛑 REMOVED: Duplicate window.globalSocket initialization -->
-    <!-- WebSocket connection is now properly managed by WebSocketManager class in js/websocket.js -->
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
-    <!-- 0. New Modular Services -->
+
     <script type="module" src="js/services/api.js"></script>
     <script type="module" src="js/utils/formatters.js"></script>
 
-    <!-- 1. Utilities FIRST (no dependencies) -->
     <script src="js/templates-utilities.js"></script>
 
-    <!-- 2. WebSocket (depends on Socket.io library loaded above) -->
     <script src="js/websocket.js"></script>
 
-    <!-- 3. Core modules (depend on utilities) -->
     <script src="js/conversation-core.js?v=6"></script>
     <script src="js/messaging.js"></script>
     <script src="js/documents.js"></script>
-    <!-- NEW: Lead Form Controller -->
+
     <script type="module" src="js/controllers/lead-form-controller.js"></script>
-    <!-- NEW: Intelligence Manager (ES6 Module) -->
     <script type="module" src="js/intelligence-manager.js"></script>
+
     <script src="js/fcs-module.js"></script>
     <script src="js/lenders.js"></script>
     <script src="js/ai-assistant.js"></script>
@@ -1240,205 +288,8 @@
     <script src="js/stats.js"></script>
     <script src="js/csv-import-modal.js"></script>
 
-    <!-- 4. Main app LAST (depends on everything) -->
     <script src="js/app-core.js"></script>
     <script type="module" src="js/main.js"></script>
 
-    <!-- Dashboard Navigation Functions -->
-    <script>
-        const DASHBOARD_HTML = `
-            <div class="dashboard-container">
-                <div class="dashboard-header">
-                    <h1>Good Morning, Broker.</h1>
-                    <p>You have <strong>4 deals</strong> moving to the next stage today.</p>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">🔥</div>
-                        <div class="stat-value">12</div>
-                        <div class="stat-label">New Leads (24h)</div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon">💼</div>
-                        <div class="stat-value">8</div>
-                        <div class="stat-label">Negotiating</div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #fee2e2; color: #ef4444;">⚠️</div>
-                        <div class="stat-value">3</div>
-                        <div class="stat-label">Urgent Tasks</div>
-                    </div>
-                </div>
-
-                <div class="goal-card">
-                    <div class="goal-header">
-                        <span class="goal-title">MONTHLY GCI GOAL</span>
-                        <span class="goal-numbers">$18,500 / $25,000</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: 74%;"></div>
-                    </div>
-                    <div style="margin-top: 12px; font-size: 12px; opacity: 0.7; display: flex; justify-content: space-between;">
-                        <span>📅 9 Days left in month</span>
-                        <span>74% on track</span>
-                    </div>
-                </div>
-
-                <div style="margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div class="stat-card" onclick="openLenderManagementModal()" style="cursor: pointer; align-items: center; flex-direction: row; padding: 16px;">
-                        <div class="stat-icon" style="background: #e0e7ff; color: #4338ca; margin-bottom:0;">🏛️</div>
-                        <div style="display: flex; flex-direction: column; gap: 2px;">
-                            <span style="font-weight: 700; color: #1e293b; font-size: 14px;">Manage Lenders</span>
-                            <span style="font-size: 11px; color: #64748b;">Add banks & adjust criteria</span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card" style="opacity: 0.6; cursor: not-allowed; align-items: center; flex-direction: row; padding: 16px;">
-                        <div class="stat-icon" style="background: #f3f4f6; color: #9ca3af; margin-bottom:0;">⚙️</div>
-                        <div style="display: flex; flex-direction: column; gap: 2px;">
-                            <span style="font-weight: 700; color: #9ca3af; font-size: 14px;">Settings</span>
-                            <span style="font-size: 11px; color: #9ca3af;">System configuration</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 32px;">
-                    <h4 style="margin-bottom: 16px; font-size: 14px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Priority Pipeline</h4>
-
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100);">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></div>
-                            <div>
-                                <div style="font-weight: 600; font-size: 14px; color: var(--gray-900);">Apex Logistics LLC</div>
-                                <div style="font-size: 12px; color: var(--gray-500);">Offer Sent • $150k Req</div>
-                            </div>
-                        </div>
-                        <button style="font-size: 12px; padding: 4px 12px; background: var(--gray-100); border: none; border-radius: 12px; cursor: pointer;">View</button>
-                    </div>
-
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100);">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></div>
-                            <div>
-                                <div style="font-weight: 600; font-size: 14px; color: var(--gray-900);">Summit Retail Group</div>
-                                <div style="font-size: 12px; color: var(--gray-500);">Missing Bank Statements</div>
-                            </div>
-                        </div>
-                        <button style="font-size: 12px; padding: 4px 12px; background: var(--gray-100); border: none; border-radius: 12px; cursor: pointer;">View</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        function loadDashboard() {
-            // 1. Center Panel -> Dashboard Mode
-            const centerPanel = document.querySelector('.center-panel');
-            if (centerPanel) centerPanel.classList.add('dashboard-mode');
-
-            // Reset Center Content
-            const messagesContainer = document.getElementById('messagesContainer');
-            if (messagesContainer) messagesContainer.innerHTML = DASHBOARD_HTML;
-
-            const inputContainer = document.getElementById('messageInputContainer');
-            if (inputContainer) inputContainer.style.display = 'none';
-
-            // 2. RIGHT PANEL -> SHOW HOME (News Feed)
-            // We hide the Intelligence/Tools and show the Market Pulse
-            const rightHome = document.getElementById('rightPanelHome');
-            const rightTools = document.getElementById('rightPanelIntelligence');
-
-            if (rightHome) rightHome.style.display = 'flex';
-            if (rightTools) rightTools.style.display = 'none';
-
-            // Load news if needed
-            if (typeof loadMarketNews === 'function') loadMarketNews();
-
-            // 3. Clear Selection State
-            if (window.app && window.app.conversationCore) {
-                window.app.conversationCore.currentConversationId = null;
-                window.app.conversationCore.selectedConversation = null;
-                document.querySelectorAll('.conversation-item').forEach(item => {
-                    item.classList.remove('selected', 'active');
-                });
-            }
-        }
-
-        // Make the function globally available
-        window.loadDashboard = loadDashboard;
-
-        // Make sure this is globally available
-        window.updateChatHeader = function(companyName, ownerName) {
-            // 1. Target the center panel
-            const centerPanel = document.querySelector('.center-panel');
-            const container = document.querySelector('.center-panel .panel-header');
-
-            // 2. Switch Center Panel to CHAT Mode
-            if (centerPanel) centerPanel.classList.remove('dashboard-mode');
-
-            // 3. RIGHT PANEL -> SHOW TOOLS (AI, Docs, FCS)
-            // We hide the News Feed and show the Intelligence Tabs
-            const rightHome = document.getElementById('rightPanelHome');
-            const rightTools = document.getElementById('rightPanelIntelligence');
-
-            if (rightHome) rightHome.style.display = 'none';
-            if (rightTools) rightTools.style.display = 'flex';
-
-            // 4. Render the Clean Header Text
-            if (container) {
-                const safeCompany = companyName || "Unknown Business";
-                const safeOwner = ownerName || "Unknown Contact";
-
-                container.innerHTML = `
-                    <button id="backHomeBtn" onclick="loadDashboard()" title="Back to Dashboard">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-
-                    <div class="identity-text-group">
-                        <h2 class="header-merchant-name">${safeOwner}</h2>
-                        <span class="header-business-name">${safeCompany}</span>
-                    </div>
-
-                    <div style="margin-left: auto;">
-                        <button class="icon-btn-small" id="deleteLeadBtn" onclick="window.commandCenter.conversationUI.showDeleteConfirmation()" title="Delete Lead">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-            }
-        }
-    </script>
-
-<script>
-    (async function testConnection() {
-        console.log('📡 DEBUG: Testing /api/news connection...');
-        try {
-            const response = await fetch('/api/news');
-            console.log('📡 DEBUG: Server responded with status:', response.status);
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log('✅ DEBUG: Success! News data received:', data);
-
-                // Optional: Force render it immediately to verify visuals
-                const container = document.getElementById('newsFeedContainer');
-                if (container && data.success) {
-                    container.innerHTML = data.data.map(item =>
-                        `<div style="padding:10px; border-bottom:1px solid #eee;">
-                            <b>${item.title}</b><br>
-                            <span style="font-size:10px">${item.source}</span>
-                        </div>`
-                    ).join('');
-                }
-            } else {
-                console.error('❌ DEBUG: Server Error:', response.statusText);
-            }
-        } catch (err) {
-            console.error('❌ DEBUG: Network Error:', err);
-        }
-    })();
-</script>
 </body>
 </html>
