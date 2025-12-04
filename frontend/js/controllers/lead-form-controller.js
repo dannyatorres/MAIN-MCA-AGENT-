@@ -115,6 +115,7 @@ export class LeadFormController {
                                     <option value="LLC" ${val('entity_type', 'entityType')==='LLC'?'selected':''}>LLC</option>
                                     <option value="Corporation" ${val('entity_type', 'entityType')==='Corporation'?'selected':''}>Corporation</option>
                                     <option value="Sole Proprietorship" ${val('entity_type', 'entityType')==='Sole Proprietorship'?'selected':''}>Sole Prop</option>
+                                    <option value="Partnership" ${val('entity_type', 'entityType')==='Partnership'?'selected':''}>Partnership</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -349,11 +350,10 @@ export class LeadFormController {
             });
         }
 
-        // --- NEW: APP GENERATION HANDLER ---
+        // --- APP GENERATION LOGIC ---
         const generateBtn = form.querySelector('#generateAppBtn');
         if (generateBtn) {
             generateBtn.addEventListener('click', async () => {
-                // 1. Scrape current data from form
                 const formData = this.scrapeFormData(new FormData(form));
                 const btnOriginalText = generateBtn.innerHTML;
 
@@ -361,13 +361,11 @@ export class LeadFormController {
                 generateBtn.disabled = true;
 
                 try {
-                    // 2. Send to Backend
-                    console.log('📄 Generating App for:', id);
                     const response = await fetch(`${this.parent.apiBaseUrl}/api/conversations/${id}/generate-pdf-document`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            applicationData: formData, // Match backend expectation
+                            applicationData: formData,
                             ownerName: `${formData.ownerFirstName} ${formData.ownerLastName}`
                         })
                     });
@@ -375,8 +373,7 @@ export class LeadFormController {
                     const result = await response.json();
 
                     if (result.success && result.document) {
-                        // 3. Trigger Download (Backend returns base64 or URL)
-                        // If result.document is a base64 string:
+                        // Trigger download
                         const link = document.createElement('a');
                         link.href = 'data:application/pdf;base64,' + result.document;
                         link.download = `${formData.businessName || 'Application'}.pdf`;
