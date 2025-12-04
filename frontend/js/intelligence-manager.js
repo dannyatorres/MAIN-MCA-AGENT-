@@ -1,23 +1,23 @@
 // frontend/js/intelligence-manager.js
 
-// 1. CLEAN IMPORTS
-import { EditTab } from './intelligence-tabs/edit-tab.js';
+// 1. CLEAN IMPORTS: No more direct Controller access
+import { EditTab } from './intelligence-tabs/edit-tab.js'; // <--- NEW WRAPPER
 import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
+import { AIAssistantTab } from './intelligence-tabs/ai-tab.js';
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
 import { FCSTab } from './intelligence-tabs/fcs-tab.js';
 import { EmailTab } from './intelligence-tabs/email-tab.js';
-// NOTE: AI Assistant is now initialized in app-core.js as this.parent.ai
 
 export class IntelligenceManager {
     constructor(parent) {
         this.parent = parent;
 
         // 2. UNIFORM INITIALIZATION
-        // AI tab uses parent.ai (consolidated AIAssistant class)
+        // All these keys now map to files in the same folder!
         this.tabs = {
             'edit': new EditTab(parent),
             'documents': new DocumentsTab(parent),
-            'ai-assistant': parent.ai, // Use consolidated AIAssistant
+            'ai-assistant': new AIAssistantTab(parent),
             'lenders': new LendersTab(parent),
             'fcs': new FCSTab(parent),
             'email': new EmailTab(parent)
@@ -60,9 +60,12 @@ export class IntelligenceManager {
 
         // --- INTERCEPT EDIT ---
         if (tabName === 'edit') {
+            console.log('✏️ Edit Tab Clicked -> Opening Pop-up Modal');
             const currentConv = this.parent.getSelectedConversation();
+
             if (this.tabs['edit']) {
                 if (currentConv) {
+                    // Call the wrapper, which calls the controller
                     this.tabs['edit'].openEditModal(currentConv);
                 } else {
                     alert("Please select a conversation to edit.");
@@ -81,21 +84,12 @@ export class IntelligenceManager {
 
         container.innerHTML = '';
 
-        // 1. DYNAMIC LOOKUP FIX
-        // We look up the module now, rather than relying on the constructor
-        let tabModule = this.tabs[tabName];
+        const tabModule = this.tabs[tabName];
 
-        // If it's the AI tab, strictly use the parent's current AI instance
-        if (tabName === 'ai-assistant') {
-            tabModule = this.parent.ai;
-        }
-
-        // 2. RENDER
         if (tabModule && typeof tabModule.render === 'function') {
             tabModule.render(container);
         } else {
-            console.error(`Tab module for '${tabName}' is missing or has no render() method.`);
-            container.innerHTML = `<div class="error-state">Tab '${tabName}' could not be loaded.</div>`;
+            container.innerHTML = `<div class="error-state">Tab '${tabName}' not found.</div>`;
         }
     }
 
