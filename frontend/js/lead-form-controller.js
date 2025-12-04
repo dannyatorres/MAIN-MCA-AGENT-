@@ -26,32 +26,6 @@ export class LeadFormController {
         ];
     }
 
-    // --- STATE CODE HELPER ---
-    getStateCode(input) {
-        if (!input) return '';
-        const cleanInput = input.trim();
-
-        // If it's already 2 characters, return uppercase
-        if (cleanInput.length === 2) return cleanInput.toUpperCase();
-
-        // Map of names to codes
-        const stateMap = {
-            'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA',
-            'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'florida': 'FL', 'georgia': 'GA',
-            'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA',
-            'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
-            'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO',
-            'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
-            'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH',
-            'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
-            'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT',
-            'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY',
-            'district of columbia': 'DC'
-        };
-
-        return stateMap[cleanInput.toLowerCase()] || '';
-    }
-
     // --- SHARED FORM GENERATOR ---
     getFormHTML(data = {}, mode = 'create') {
         const isEdit = mode === 'edit';
@@ -69,10 +43,7 @@ export class LeadFormController {
             try { return new Date(v).toISOString().split('T')[0]; } catch (e) { return ''; }
         };
 
-        const getStateOptions = (selectedRaw) => {
-            // FIX: Normalize the incoming value to a 2-letter code
-            const selected = this.getStateCode(selectedRaw);
-
+        const getStateOptions = (selected) => {
             return this.usStates.map(s =>
                 `<option value="${s.value}" ${s.value === selected ? 'selected' : ''}>${s.label}</option>`
             ).join('');
@@ -366,25 +337,6 @@ export class LeadFormController {
             input.addEventListener('input', (e) => e.target.value = this.formatSSN(e.target.value));
         });
 
-        // ZIP Code Auto-fill (City & State)
-        const businessZip = form.querySelector('[name="businessZip"]');
-        const businessCity = form.querySelector('[name="businessCity"]');
-        const businessState = form.querySelector('[name="businessState"]');
-        if (businessZip) {
-            businessZip.addEventListener('blur', () => {
-                this.lookupZip(businessZip.value, businessCity, businessState);
-            });
-        }
-
-        const ownerZip = form.querySelector('[name="ownerHomeZip"]');
-        const ownerCity = form.querySelector('[name="ownerHomeCity"]');
-        const ownerState = form.querySelector('[name="ownerHomeState"]');
-        if (ownerZip) {
-            ownerZip.addEventListener('blur', () => {
-                this.lookupZip(ownerZip.value, ownerCity, ownerState);
-            });
-        }
-
         // Partner Toggle
         const partnerCheck = form.querySelector('#hasPartner');
         const partnerSection = form.querySelector('#partnerSection');
@@ -519,30 +471,12 @@ export class LeadFormController {
 
     scrapeFormData(formData) {
         const data = Object.fromEntries(formData.entries());
-
-        // 1. CLEAN MONEY (Remove $ and commas, handle empty strings)
-        ['annualRevenue', 'monthlyRevenue', 'requestedAmount', 'ownerOwnershipPercentage', 'owner2OwnershipPercent'].forEach(k => {
-            if (data[k]) {
-                // Remove everything except numbers and decimals
-                const val = data[k].replace(/[^0-9.]/g, '');
-                // If it's empty after cleaning (or was just "$"), send null
-                data[k] = val === '' ? null : val;
-            } else {
-                // Send null if field was untouched/empty
-                data[k] = null;
-            }
+        ['annualRevenue', 'monthlyRevenue', 'requestedAmount'].forEach(k => {
+            if(data[k]) data[k] = data[k].replace(/[^0-9.]/g, '');
         });
-
-        // 2. CLEAN PHONES (Remove dashes/parentheses)
         ['primaryPhone', 'cellPhone', 'ownerPhone', 'owner2Phone'].forEach(k => {
-            if (data[k]) data[k] = data[k].replace(/\D/g, '');
+            if(data[k]) data[k] = data[k].replace(/\D/g, '');
         });
-
-        // 3. CLEAN IDS (Fixes the 400 Error - Removes dashes from SSN/EIN)
-        ['federalTaxId', 'ownerSSN', 'owner2SSN'].forEach(k => {
-            if (data[k]) data[k] = data[k].replace(/\D/g, '');
-        });
-
         return data;
     }
 
@@ -551,12 +485,9 @@ export class LeadFormController {
             business_name: data.businessName,
             lead_phone: data.primaryPhone,
             email: data.businessEmail,
-            // FIX: Enforce 2-letter state code on save
-            us_state: this.getStateCode(data.businessState),
+            us_state: data.businessState,
             business_address: data.businessAddress,
-            ...data,
-            // Also fix owner state if it exists
-            owner_state: data.ownerHomeState ? this.getStateCode(data.ownerHomeState) : ''
+            ...data
         };
     }
 
@@ -643,36 +574,5 @@ export class LeadFormController {
             legal_name: data.businessName,
             phone: data.primaryPhone
         };
-    }
-
-    // --- ZIP CODE LOOKUP ---
-    async lookupZip(zip, cityField, stateField) {
-        // Only lookup for 5-digit ZIP codes
-        const cleanZip = zip.replace(/\D/g, '');
-        if (cleanZip.length !== 5) return;
-
-        try {
-            const response = await fetch(`https://api.zippopotam.us/us/${cleanZip}`);
-            if (!response.ok) return;
-
-            const data = await response.json();
-            if (data.places && data.places.length > 0) {
-                const place = data.places[0];
-
-                // Auto-fill city
-                if (cityField) {
-                    cityField.value = place['place name'];
-                }
-
-                // Auto-fill state
-                if (stateField) {
-                    stateField.value = place['state abbreviation'];
-                }
-
-                console.log(`📍 ZIP ${cleanZip}: ${place['place name']}, ${place['state abbreviation']}`);
-            }
-        } catch (error) {
-            console.log('ZIP lookup failed:', error.message);
-        }
     }
 }
