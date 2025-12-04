@@ -1,5 +1,7 @@
 // frontend/js/intelligence-manager.js
-import { LeadFormController } from './controllers/lead-form-controller.js';
+
+// 1. CLEAN IMPORTS: No more direct Controller access
+import { EditTab } from './intelligence-tabs/edit-tab.js'; // <--- NEW WRAPPER
 import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
 import { AIAssistantTab } from './intelligence-tabs/ai-tab.js';
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
@@ -10,8 +12,10 @@ export class IntelligenceManager {
     constructor(parent) {
         this.parent = parent;
 
+        // 2. UNIFORM INITIALIZATION
+        // All these keys now map to files in the same folder!
         this.tabs = {
-            'edit': new LeadFormController(parent), // This is your unified Modal Controller
+            'edit': new EditTab(parent),
             'documents': new DocumentsTab(parent),
             'ai-assistant': new AIAssistantTab(parent),
             'lenders': new LendersTab(parent),
@@ -25,7 +29,6 @@ export class IntelligenceManager {
     init() {
         console.log('🔧 IntelligenceManager: Initialized');
 
-        // 1. Tab Switching Logic
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const tabName = e.target.dataset.tab;
@@ -33,15 +36,12 @@ export class IntelligenceManager {
             });
         });
 
-        // 2. Global Modal Hook (For the + button)
+        // Global Modal Hook
         window.openRichCreateModal = () => {
             this.showCreateLeadModal();
         };
     }
 
-    /**
-     * Helper to flip between "News Feed" and "Tab Content"
-     */
     toggleView(showIntelligence) {
         const homePanel = document.getElementById('rightPanelHome');
         const intelPanel = document.getElementById('rightPanelIntelligence');
@@ -58,30 +58,23 @@ export class IntelligenceManager {
     switchTab(tabName) {
         console.log(`🔄 Switching to tab: ${tabName}`);
 
-        // -----------------------------------------------------------
-        // 🛑 INTERCEPT EDIT: OPEN MODAL INSTEAD OF PANEL
-        // -----------------------------------------------------------
+        // --- INTERCEPT EDIT ---
         if (tabName === 'edit') {
             console.log('✏️ Edit Tab Clicked -> Opening Pop-up Modal');
-
-            // Check if a conversation is selected
             const currentConv = this.parent.getSelectedConversation();
 
             if (this.tabs['edit']) {
                 if (currentConv) {
-                    // Open the modal pre-filled with data
+                    // Call the wrapper, which calls the controller
                     this.tabs['edit'].openEditModal(currentConv);
                 } else {
                     alert("Please select a conversation to edit.");
                 }
             }
-
-            // CRITICAL: Return here so we DO NOT render the sidebar content
             return;
         }
-        // -----------------------------------------------------------
 
-        // Normal Tab Logic (AI, Docs, Lenders)
+        // --- STANDARD TABS ---
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
@@ -89,7 +82,6 @@ export class IntelligenceManager {
         const container = document.getElementById('intelligenceContent');
         if (!container) return;
 
-        // Clear previous content
         container.innerHTML = '';
 
         const tabModule = this.tabs[tabName];
@@ -102,7 +94,7 @@ export class IntelligenceManager {
     }
 
     showCreateLeadModal() {
-        // Opens the empty "New Lead" modal
+        // Wrapper call
         this.tabs['edit'].openCreateModal();
     }
 
@@ -110,14 +102,12 @@ export class IntelligenceManager {
         const convId = conversationId || this.parent.getCurrentConversationId();
         if (!convId) return;
 
-        // Switch view to Tabs immediately
         this.toggleView(true);
 
         try {
             const data = await this.parent.apiCall(`/api/conversations/${convId}`);
             const conversationData = data.conversation || data;
 
-            // Sync State
             this.parent.selectedConversation = conversationData;
             this.parent.currentConversationId = convId;
 
@@ -140,10 +130,8 @@ export class IntelligenceManager {
 
         this.toggleView(true);
 
-        // Default to AI tab if no specific tab is active
         const currentTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'ai-assistant';
 
-        // If the current tab was "edit", switch to AI, because "Edit" is now a modal
         if (currentTab === 'edit') {
             this.switchTab('ai-assistant');
         } else {
