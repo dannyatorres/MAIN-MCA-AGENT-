@@ -174,14 +174,44 @@ router.put('/:id', async (req, res) => {
         const data = req.body;
         const db = getDatabase();
 
+        // --- SANITIZATION BLOCK ---
+
+        // 1. Convert Empty Strings to NULL (Fixes: invalid input syntax for type numeric)
+        Object.keys(data).forEach(key => {
+            if (data[key] === '') data[key] = null;
+        });
+
+        // 2. Strip dashes/symbols from IDs and Phones (Fixes: 400 Bad Request / invalid format)
+        const keysToClean = [
+            'federalTaxId', 'federal_tax_id', 'tax_id',
+            'ownerSSN', 'owner_ssn', 'ssn',
+            'owner2SSN', 'owner2_ssn',
+            'primaryPhone', 'lead_phone',
+            'cellPhone', 'cell_phone',
+            'ownerPhone', 'owner_phone',
+            'owner2Phone', 'owner2_phone'
+        ];
+
+        keysToClean.forEach(key => {
+            if (data[key] && typeof data[key] === 'string') {
+                data[key] = data[key].replace(/\D/g, ''); // Removes everything except numbers
+            }
+        });
+
+        // 3. Clean Currency Fields (Remove $ and commas)
+        const currencyKeys = ['annualRevenue', 'monthlyRevenue', 'requestedAmount', 'funding_amount'];
+        currencyKeys.forEach(key => {
+            if (data[key] && typeof data[key] === 'string') {
+                const clean = data[key].replace(/[^0-9.]/g, '');
+                data[key] = clean === '' ? null : clean;
+            }
+        });
+
+        // --- END SANITIZATION BLOCK ---
+
         console.log('=== UPDATE REQUEST DEBUG ===');
         console.log('📝 Conversation ID:', conversationId);
         console.log('📥 Received fields:', Object.keys(data));
-
-        // Remove any fields with empty string values for states
-        if (data.businessState === '') delete data.businessState;
-        if (data.ownerHomeState === '') delete data.ownerHomeState;
-        if (data.leadStatus === '') delete data.leadStatus;
 
         // Map frontend field names to database tables and columns
         const conversationsFields = {
