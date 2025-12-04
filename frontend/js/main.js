@@ -30,6 +30,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 100);
 });
 
+// Global Dashboard Reset Function
+// Called when user clicks "Back to Dashboard" button
+window.loadDashboard = () => {
+    // 1. Clear the Center Panel (Chat)
+    if (window.commandCenter.conversationUI) {
+        window.commandCenter.conversationUI.clearConversationDetails();
+    }
+
+    // 2. Reset the Right Panel (Intelligence)
+    // This calls the helper we just added!
+    if (window.commandCenter.intelligence) {
+        window.commandCenter.intelligence.toggleView(false); // false = Show Home/News
+    }
+};
+
 // News Logic
 async function loadMarketNews() {
     const container = document.getElementById('newsFeedContainer');

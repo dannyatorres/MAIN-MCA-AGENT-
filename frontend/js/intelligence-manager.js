@@ -1,6 +1,5 @@
 // frontend/js/intelligence-manager.js
 import { LeadFormController } from './controllers/lead-form-controller.js';
-// Keep existing imports for other tabs
 import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
 import { AIAssistantTab } from './intelligence-tabs/ai-tab.js';
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
@@ -11,9 +10,8 @@ export class IntelligenceManager {
     constructor(parent) {
         this.parent = parent;
 
-        // Initialize Tab Controllers
         this.tabs = {
-            'edit': new LeadFormController(parent), // <--- WIRED NEW CONTROLLER
+            'edit': new LeadFormController(parent),
             'documents': new DocumentsTab(parent),
             'ai-assistant': new AIAssistantTab(parent),
             'lenders': new LendersTab(parent),
@@ -25,7 +23,7 @@ export class IntelligenceManager {
     }
 
     init() {
-        console.log('🔧 IntelligenceManager: Initialized & Modularized');
+        console.log('🔧 IntelligenceManager: Initialized');
 
         // 1. Tab Switching Logic
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -35,11 +33,27 @@ export class IntelligenceManager {
             });
         });
 
-        // 2. CRITICAL FIX: Bind the legacy HTML button to this new logic
+        // 2. Global Modal Hook
         window.openRichCreateModal = () => {
-            console.log('🚀 Opening Create Modal via IntelligenceManager');
             this.showCreateLeadModal();
         };
+    }
+
+    /**
+     * HELPER TO FLIP THE PANELS
+     * This hides the "News Feed" and shows the "Tabs"
+     */
+    toggleView(showIntelligence) {
+        const homePanel = document.getElementById('rightPanelHome');
+        const intelPanel = document.getElementById('rightPanelIntelligence');
+
+        if (showIntelligence) {
+            if (homePanel) homePanel.style.display = 'none';
+            if (intelPanel) intelPanel.style.display = 'flex'; // Use flex to maintain layout
+        } else {
+            if (homePanel) homePanel.style.display = 'flex';
+            if (intelPanel) intelPanel.style.display = 'none';
+        }
     }
 
     switchTab(tabName) {
@@ -56,41 +70,36 @@ export class IntelligenceManager {
 
         const tabModule = this.tabs[tabName];
 
-        // Special case for Edit tab using the new Controller
         if (tabName === 'edit') {
             tabModule.renderEditTab(container);
-        }
-        // Standard render for other tabs
-        else if (tabModule && typeof tabModule.render === 'function') {
+        } else if (tabModule && typeof tabModule.render === 'function') {
             tabModule.render(container);
-        }
-        else {
+        } else {
             container.innerHTML = `<div class="error-state">Tab '${tabName}' not found.</div>`;
         }
     }
 
-    // Public method for legacy "Add Lead" button
     showCreateLeadModal() {
         this.tabs['edit'].openCreateModal();
     }
 
-    // Proxy for lenders modal
     openLendersModal() {
-        if (this.tabs['lenders'] && typeof this.tabs['lenders'].openModal === 'function') {
-            this.tabs['lenders'].openModal();
-        }
+        if (this.tabs['lenders']) this.tabs['lenders'].openModal();
     }
 
-    // --- Data Loading (Essential for App State) ---
     async loadConversationIntelligence(conversationId = null) {
         const convId = conversationId || this.parent.getCurrentConversationId();
         if (!convId) return;
+
+        // IMMEDIATELY SHOW THE INTELLIGENCE PANEL
+        // Before we even fetch data, switch the view so the user sees something happening
+        this.toggleView(true);
 
         try {
             const data = await this.parent.apiCall(`/api/conversations/${convId}`);
             const conversationData = data.conversation || data;
 
-            // Update Parent State
+            // Sync State
             this.parent.selectedConversation = conversationData;
             this.parent.currentConversationId = convId;
 
@@ -99,6 +108,7 @@ export class IntelligenceManager {
                 this.parent.conversationUI.currentConversationId = convId;
                 this.parent.conversationUI.conversations.set(convId, conversationData);
             }
+
             this.renderIntelligenceData(data);
         } catch (error) {
             console.error('❌ Failed to load details:', error);
@@ -109,11 +119,13 @@ export class IntelligenceManager {
         if (this.parent.conversationUI?.showConversationDetails) {
             this.parent.conversationUI.showConversationDetails();
         }
-        // Refresh current active tab
+
+        // ENSURE PANEL IS VISIBLE
+        this.toggleView(true);
+
         const currentTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'ai-assistant';
         this.switchTab(currentTab);
     }
 }
 
-// Expose globally for non-module scripts
 window.IntelligenceManager = IntelligenceManager;
