@@ -26,6 +26,32 @@ export class LeadFormController {
         ];
     }
 
+    // --- STATE CODE HELPER ---
+    getStateCode(input) {
+        if (!input) return '';
+        const cleanInput = input.trim();
+
+        // If it's already 2 characters, return uppercase
+        if (cleanInput.length === 2) return cleanInput.toUpperCase();
+
+        // Map of names to codes
+        const stateMap = {
+            'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA',
+            'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'florida': 'FL', 'georgia': 'GA',
+            'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA',
+            'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+            'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO',
+            'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+            'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH',
+            'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+            'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT',
+            'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY',
+            'district of columbia': 'DC'
+        };
+
+        return stateMap[cleanInput.toLowerCase()] || '';
+    }
+
     // --- SHARED FORM GENERATOR ---
     getFormHTML(data = {}, mode = 'create') {
         const isEdit = mode === 'edit';
@@ -43,7 +69,10 @@ export class LeadFormController {
             try { return new Date(v).toISOString().split('T')[0]; } catch (e) { return ''; }
         };
 
-        const getStateOptions = (selected) => {
+        const getStateOptions = (selectedRaw) => {
+            // FIX: Normalize the incoming value to a 2-letter code
+            const selected = this.getStateCode(selectedRaw);
+
             return this.usStates.map(s =>
                 `<option value="${s.value}" ${s.value === selected ? 'selected' : ''}>${s.label}</option>`
             ).join('');
@@ -504,9 +533,12 @@ export class LeadFormController {
             business_name: data.businessName,
             lead_phone: data.primaryPhone,
             email: data.businessEmail,
-            us_state: data.businessState,
+            // FIX: Enforce 2-letter state code on save
+            us_state: this.getStateCode(data.businessState),
             business_address: data.businessAddress,
-            ...data
+            ...data,
+            // Also fix owner state if it exists
+            owner_state: data.ownerHomeState ? this.getStateCode(data.ownerHomeState) : ''
         };
     }
 
