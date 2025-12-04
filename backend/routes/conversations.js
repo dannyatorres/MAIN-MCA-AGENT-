@@ -257,6 +257,13 @@ router.put('/:id', async (req, res) => {
             ownerEmail: 'owner_email',
             owner_email: 'owner_email',
 
+            // Owner 1 Phone & Ownership
+            ownerPhone: 'owner_phone',
+            owner_phone: 'owner_phone',
+            ownerOwnershipPercentage: 'owner_ownership_percent',
+            owner_ownership_percentage: 'owner_ownership_percent',
+            owner_ownership_percent: 'owner_ownership_percent',
+
             // --- PARTNER / OWNER 2 INFO ---
             owner2FirstName: 'owner2_first_name',
             owner2_first_name: 'owner2_first_name',
