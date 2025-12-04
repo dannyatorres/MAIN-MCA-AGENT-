@@ -1966,9 +1966,46 @@ Negative Days: 3"
         `;
     }
 
+    // --- Entry Point for Lender Management Modal ---
+    openManagementModal() {
+        console.log('🏛️ Opening Lender Management Dashboard...');
+
+        // 1. Create or Get the Modal Container
+        let modal = document.getElementById('lenderManagementModal');
+
+        // If it doesn't exist, create the skeleton HTML
+        if (!modal) {
+            const modalHTML = `
+                <div id="lenderManagementModal" class="modal" style="display:none; z-index: 2000;">
+                    <div class="modal-content" style="max-width: 1100px; height: 85vh; display: flex; flex-direction: column;">
+                        <div class="modal-header">
+                            <h3>🏛️ Manage Lender Network</h3>
+                            <button class="modal-close" onclick="document.getElementById('lenderManagementModal').style.display='none'">×</button>
+                        </div>
+                        <div class="modal-body" id="lenderManagementContent" style="padding: 0; flex: 1; overflow: hidden;"></div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            modal = document.getElementById('lenderManagementModal');
+        }
+
+        // 2. Inject Your Template (Connects your existing logic)
+        const contentArea = document.getElementById('lenderManagementContent');
+        if (contentArea) {
+            contentArea.innerHTML = this.createLenderManagementTemplate();
+        }
+
+        // 3. Show the Modal
+        modal.style.display = 'flex';
+
+        // 4. Load the Data (Uses your existing API connection)
+        this.loadLendersList();
+    }
+
     createLenderManagementTemplate() {
         return `
-            <div class="lender-management-system" style="height: calc(100vh - 200px); display: flex; flex-direction: column;">
+            <div class="lender-management-system" style="height: 100%; display: flex; flex-direction: column;">
                 <div class="lender-mgmt-content" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
                     <div class="mgmt-actions" style="
                         flex-shrink: 0;
