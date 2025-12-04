@@ -1,23 +1,23 @@
 // frontend/js/intelligence-manager.js
 
-// 1. CLEAN IMPORTS: No more direct Controller access
-import { EditTab } from './intelligence-tabs/edit-tab.js'; // <--- NEW WRAPPER
+// 1. CLEAN IMPORTS
+import { EditTab } from './intelligence-tabs/edit-tab.js';
 import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
-import { AIAssistantTab } from './intelligence-tabs/ai-tab.js';
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
 import { FCSTab } from './intelligence-tabs/fcs-tab.js';
 import { EmailTab } from './intelligence-tabs/email-tab.js';
+// NOTE: AI Assistant is now initialized in app-core.js as this.parent.ai
 
 export class IntelligenceManager {
     constructor(parent) {
         this.parent = parent;
 
         // 2. UNIFORM INITIALIZATION
-        // All these keys now map to files in the same folder!
+        // AI tab uses parent.ai (consolidated AIAssistant class)
         this.tabs = {
             'edit': new EditTab(parent),
             'documents': new DocumentsTab(parent),
-            'ai-assistant': new AIAssistantTab(parent),
+            'ai-assistant': parent.ai, // Use consolidated AIAssistant
             'lenders': new LendersTab(parent),
             'fcs': new FCSTab(parent),
             'email': new EmailTab(parent)

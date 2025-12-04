@@ -1,16 +1,11 @@
-// ai-assistant.js - AI assistant chat functionality
-//
-// IMPORTANT: This module is WEBSOCKET-INDEPENDENT
-// - Uses HTTP fetch() for all AI communication
-// - Does NOT require WebSocket connection
-// - Will work even if WebSocket is disconnected
-// - Only saves messages to database via HTTP POST
+// js/ai-assistant.js
+// COMPLETE REFACTOR: Merged View (Tab) and Logic (Controller)
+// This class now handles rendering its own UI and managing the chat logic.
 
-class AIAssistant {
+export class AIAssistant {
     constructor(parent) {
         this.parent = parent;
         this.apiBaseUrl = parent.apiBaseUrl || window.location.origin;
-        console.log('🔧 AI Assistant API Base URL:', this.apiBaseUrl);
         this.utils = parent.utils;
 
         // AI state
@@ -18,42 +13,131 @@ class AIAssistant {
         this.isTyping = false;
         this.currentConversationId = null;
         this.isInitialized = false;
+        this.memoryMessages = new Map();
 
-        this.init();
+        console.log('🔧 AI Assistant Module Loaded');
     }
 
-    init() {
-        console.log('AI Assistant initialized');
-    }
+    // ============================================================
+    // 1. VIEW / RENDER LOGIC (Formerly in ai-tab.js)
+    // ============================================================
 
-    initializeAIChat() {
-        console.log('Initializing AI chat interface');
+    /**
+     * Called by IntelligenceManager when the AI tab is clicked
+     * @param {HTMLElement} container - The DOM element to render into
+     */
+    render(container) {
+        console.log('🤖 Rendering AI Assistant Interface');
+        const conversation = this.parent.getSelectedConversation();
 
-        const conversationId = this.parent.getCurrentConversationId();
-
-        // Reset initialization for new conversations
-        if (this.currentConversationId !== conversationId) {
-            this.isInitialized = false;
-            this.currentConversationId = conversationId;
-        }
-
-        // Prevent multiple initializations for same conversation
-        if (this.isInitialized) {
-            console.log('AI chat already initialized for this conversation, skipping...');
+        if (!conversation) {
+            this.renderEmptyState(container);
             return;
         }
 
-        this.isInitialized = true;
+        // Render the Main UI
+        container.innerHTML = `
+            <div class="ai-assistant-section">
+                <div id="aiChatMessages" class="ai-chat-messages">
+                    <div style="text-align: center; color: #9ca3af; margin-top: 60px;">
+                        <div class="ai-thinking" style="margin: 0 auto 10px;">
+                            <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+                        </div>
+                        <p style="font-size: 12px;">Connecting to Neural Core...</p>
+                    </div>
+                </div>
 
-        // Loading dots are already in the initial HTML template, just proceed to load history
+                <div class="ai-input-area">
+                    <div class="ai-input-wrapper">
+                        <textarea id="aiChatInput" placeholder="Ask AI about ${conversation.business_name || 'this deal'}..." rows="1"></textarea>
+                        <button id="aiChatSend" type="button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div style="font-size: 10px; color: #9ca3af; margin-top: 8px; text-align: center;">
+                        AI can make mistakes. Verify important financial details.
+                    </div>
+                </div>
+            </div>
+        `;
 
-        // Setup event handlers
+        // Initialize Logic immediately (No setTimeout needed anymore)
+        this.initializeAIChat();
+    }
+
+    renderEmptyState(container) {
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 60px 20px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                <h3 style="color: #6b7280; margin-bottom: 8px;">No Conversation Selected</h3>
+                <p style="color: #9ca3af;">Select a lead to start the AI assistant.</p>
+            </div>
+        `;
+    }
+
+    // ============================================================
+    // 2. CONTROLLER LOGIC
+    // ============================================================
+
+    initializeAIChat() {
+        const conversationId = this.parent.getCurrentConversationId();
+
+        // Check if we need to reset state for a new conversation
+        if (this.currentConversationId !== conversationId) {
+            this.isInitialized = false;
+            this.currentConversationId = conversationId;
+            // Clear UI if it exists from a previous render
+            const msgs = document.getElementById('aiChatMessages');
+            if (msgs) msgs.innerHTML = '';
+        }
+
+        console.log('⚡ Initializing AI Logic for ID:', conversationId);
+
+        // 1. Bind Events to the elements we just rendered
         this.setupEventHandlers();
+
+        // 2. Load Context (FCS Data, System Prompts)
         this.loadAIContext();
 
-        // Load history first, THEN show welcome only if no history
+        // 3. Load Chat History
         this.loadChatHistory();
+
+        this.isInitialized = true;
     }
+
+    setupEventHandlers() {
+        const chatInput = document.getElementById('aiChatInput');
+        const sendButton = document.getElementById('aiChatSend');
+
+        if (!chatInput || !sendButton) {
+            console.error('❌ AI UI Elements not found during binding');
+            return;
+        }
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', (e) => {
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
+        });
+
+        // Handle Enter key
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendAIMessage();
+            }
+        });
+
+        // Add click handler
+        sendButton.onclick = (e) => {
+            e.preventDefault();
+            this.sendAIMessage();
+        };
+    }
+
+    // ============================================================
+    // 3. MESSAGING LOGIC
+    // ============================================================
 
     askQuestion(question) {
         console.log('Quick question:', question);
@@ -65,75 +149,42 @@ class AIAssistant {
     }
 
     async sendAIMessage() {
-        console.log('🤖 [FRONTEND] sendAIMessage Triggered');
-
         const input = document.getElementById('aiChatInput');
-        const messagesContainer = document.getElementById('aiChatMessages');
-
-        if (!input || !messagesContainer) {
-            console.error('❌ ABORT: Input or container not found');
-            return;
-        }
+        if (!input) return;
 
         const message = input.value.trim();
         const conversationId = this.parent.getCurrentConversationId();
 
-        if (!message) return;
-        if (!conversationId) {
-            console.error('❌ ABORT: No conversation ID selected');
-            this.parent.utils.showNotification('Please select a conversation first', 'error');
-            return;
-        }
+        if (!message || !conversationId) return;
 
-        // 1. Clear input & Reset Height
+        // UI Updates
         input.value = '';
         input.style.height = 'auto';
-
-        // 2. Add User Message to UI
-        this.addMessageToChat('user', message, false);
-
-        // 3. Show Typing Indicator
+        this.addMessageToChat('user', message, false); // Optimistic UI update
         this.showTypingIndicator();
 
         try {
-            console.log('🚀 Sending AI Request for Conversation:', conversationId);
-
-            // 4. Use Central API Call (Fixes URL, Auth, and Headers)
             const data = await this.parent.apiCall('/api/ai/chat', {
                 method: 'POST',
                 body: JSON.stringify({
                     query: message,
                     conversationId: conversationId,
-                    includeContext: true // ✅ Tells backend to load DB context
+                    includeContext: true
                 })
             });
 
-            console.log('📥 Received AI Response:', data);
-
-            // 5. Remove Typing Indicator
             this.hideTypingIndicator();
 
-            // 6. Add AI Response to UI
             if (data.success && (data.response || data.fallback)) {
-                // Prevent reloading history while adding the new message
-                window.aiChatPreventReload = true;
-
                 this.addMessageToChat('assistant', data.response || data.fallback, false);
-
-                // Re-enable history reloading after a moment
-                setTimeout(() => {
-                    window.aiChatPreventReload = false;
-                }, 2000);
             } else {
-                throw new Error(data.error || 'Unknown error from AI service');
+                throw new Error(data.error || 'Unknown error');
             }
 
         } catch (error) {
             console.error('❌ AI Chat Error:', error);
             this.hideTypingIndicator();
-
-            // Show error in chat bubble
-            this.addMessageToChat('assistant', 'I apologize, but I encountered a connection error. Please try again.', false);
+            this.addMessageToChat('assistant', 'Connection error. Please try again.', false);
         }
     }
 
@@ -141,46 +192,24 @@ class AIAssistant {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
-        // Create Row
         const messageRow = document.createElement('div');
         messageRow.className = `ai-message-row ${role === 'user' ? 'user' : 'assistant'}`;
 
-        // Create Bubble
         const messageBubble = document.createElement('div');
-
-        // USE CSS CLASSES NOT INLINE STYLES
-        if (role === 'user') {
-            messageBubble.className = 'ai-bubble-user';
-        } else {
-            messageBubble.className = 'ai-bubble-ai';
-        }
-
-        // Format Content
+        messageBubble.className = role === 'user' ? 'ai-bubble-user' : 'ai-bubble-ai';
         messageBubble.innerHTML = this.formatAIResponse(content);
 
-        // Append
         messageRow.appendChild(messageBubble);
         messagesContainer.appendChild(messageRow);
-
-        // Scroll
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         if (saveToDatabase) {
             this.saveMessageToDatabase(role, content);
         }
-
-        // DISABLED: Cache update was causing reload during message display
-        // Only save cache when user manually switches tabs, not after every message
-        /*
-        if (this.parent.intelligence && this.parent.intelligence.saveAIChatState) {
-            requestAnimationFrame(() => {
-                this.parent.intelligence.saveAIChatState();
-            });
-        }
-        */
     }
 
     formatAIResponse(content) {
+        if (!content) return '';
         let formatted = content;
 
         // Fix encoding issues
@@ -202,100 +231,63 @@ class AIAssistant {
     }
 
     showTypingIndicator() {
-        const messagesContainer = document.getElementById('aiChatMessages');
-        if (!messagesContainer) return;
-
-        this.hideTypingIndicator();
+        this.hideTypingIndicator(); // Clear existing
+        const container = document.getElementById('aiChatMessages');
+        if (!container) return;
 
         const typingDiv = document.createElement('div');
         typingDiv.id = 'aiTypingIndicator';
         typingDiv.className = 'ai-message-row assistant';
-
-        // Use new CSS classes
         typingDiv.innerHTML = `
             <div class="ai-thinking">
-                <div class="ai-dot"></div>
-                <div class="ai-dot"></div>
-                <div class="ai-dot"></div>
-            </div>
-        `;
+                <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+            </div>`;
 
-        messagesContainer.appendChild(typingDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        container.appendChild(typingDiv);
+        container.scrollTop = container.scrollHeight;
     }
 
     hideTypingIndicator() {
         const indicator = document.getElementById('aiTypingIndicator');
-        if (indicator) {
-            indicator.remove();
-        }
+        if (indicator) indicator.remove();
     }
 
+    // ============================================================
+    // 4. DATA LOADING
+    // ============================================================
+
     async loadChatHistory() {
-        // Prevent reload during message display
-        if (window.aiChatPreventReload) {
-            console.log('⚠️ Prevented chat history reload during message display');
-            return;
-        }
-
         const conversationId = this.parent.getCurrentConversationId();
-        if (!conversationId) return;
-
-        console.log('📚 Loading chat history for conversation:', conversationId);
-
         const messagesContainer = document.getElementById('aiChatMessages');
-        if (!messagesContainer) return;
+        if (!messagesContainer || !conversationId) return;
 
-        // Keep loading state while we check all sources
         let hasHistory = false;
 
         try {
-            // Try to load from database first
             const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
             if (data.messages && data.messages.length > 0) {
-                console.log('✅ Loaded chat history from database:', data.messages.length, 'messages');
-                messagesContainer.innerHTML = '';  // Clear loading state
-                this.renderChatHistory(data.messages);
+                messagesContainer.innerHTML = ''; // Clear "Connecting..." message
+                data.messages.forEach(msg => this.addMessageToChat(msg.role, msg.content, false));
                 hasHistory = true;
             }
         } catch (error) {
-            console.log('🔍 Failed to load history from database:', error.message);
+            console.log('Error loading history:', error);
         }
 
-        // Only check memory if database didn't have messages
-        if (!hasHistory && this.memoryMessages && this.memoryMessages.has(conversationId)) {
+        // Check memory if database didn't have messages
+        if (!hasHistory && this.memoryMessages.has(conversationId)) {
             const memoryHistory = this.memoryMessages.get(conversationId);
             if (memoryHistory && memoryHistory.length > 0) {
-                console.log('💭 Loaded chat history from memory:', memoryHistory.length, 'messages');
-                messagesContainer.innerHTML = '';  // Clear loading state
-                this.renderChatHistory(memoryHistory);
+                messagesContainer.innerHTML = '';
+                memoryHistory.forEach(msg => this.addMessageToChat(msg.role, msg.content, false));
                 hasHistory = true;
             }
         }
 
-        // Only show welcome message if no history found anywhere
         if (!hasHistory) {
-            console.log('🆕 No chat history found, showing welcome message');
-            messagesContainer.innerHTML = '';  // Clear loading state
+            messagesContainer.innerHTML = '';
             this.showWelcomeMessage();
         }
-    }
-
-    renderChatHistory(messages) {
-        const messagesContainer = document.getElementById('aiChatMessages');
-        if (!messagesContainer) return;
-
-        messagesContainer.innerHTML = '';
-
-        // Ensure messages is an array
-        if (!Array.isArray(messages)) {
-            console.warn('Expected messages to be an array, got:', typeof messages, messages);
-            return;
-        }
-
-        messages.forEach(message => {
-            this.addMessageToChat(message.role, message.content, false);
-        });
     }
 
     showWelcomeMessage() {
@@ -308,44 +300,21 @@ class AIAssistant {
 
     async saveMessageToDatabase(role, content) {
         const conversationId = this.parent.getCurrentConversationId();
-        if (!conversationId) {
-            console.log('❌ No conversation ID for saving AI message');
-            return;
-        }
-
-        console.log('💾 Attempting to save AI message to database:', {
-            conversationId,
-            role,
-            content: content.substring(0, 50) + '...',
-            endpoint: `${this.apiBaseUrl}/api/ai/chat/${conversationId}/messages`
-        });
+        if (!conversationId) return;
 
         try {
-            const result = await this.parent.apiCall(`/api/ai/chat/${conversationId}/messages`, {
+            await this.parent.apiCall(`/api/ai/chat/${conversationId}/messages`, {
                 method: 'POST',
-                body: JSON.stringify({
-                    role: role,
-                    content: content
-                })
+                body: JSON.stringify({ role, content })
             });
-
-            if (result.success) {
-                console.log('✅ AI message saved to database successfully');
-            } else {
-                console.error('❌ Failed to save AI message to database:', result.error);
-            }
         } catch (error) {
-            console.error('❌ Error saving AI message to database:', error);
-            // For now, store in memory as fallback
+            console.warn('Failed to save message to database:', error);
+            // Store in memory as fallback
             this.storeMessageInMemory(conversationId, role, content);
         }
     }
 
     storeMessageInMemory(conversationId, role, content) {
-        if (!this.memoryMessages) {
-            this.memoryMessages = new Map();
-        }
-
         if (!this.memoryMessages.has(conversationId)) {
             this.memoryMessages.set(conversationId, []);
         }
@@ -355,51 +324,6 @@ class AIAssistant {
             content,
             created_at: new Date().toISOString()
         });
-
-        console.log('💭 Stored AI message in memory as fallback');
-    }
-
-    setupEventHandlers() {
-        const chatInput = document.getElementById('aiChatInput');
-        const sendButton = document.getElementById('aiChatSend');
-
-        console.log('Setting up event handlers:', { input: !!chatInput, button: !!sendButton });
-
-        if (chatInput) {
-            // Remove existing listeners by cloning the element
-            const newInput = chatInput.cloneNode(true);
-            chatInput.parentNode.replaceChild(newInput, chatInput);
-
-            // Auto-resize textarea
-            newInput.addEventListener('input', (e) => {
-                e.target.style.height = 'auto';
-                e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
-            });
-
-            // Handle Enter key
-            newInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    console.log('Enter key pressed, sending message');
-                    this.sendAIMessage();
-                }
-            });
-        }
-
-        if (sendButton) {
-            // Remove existing listeners by cloning the element
-            const newButton = sendButton.cloneNode(true);
-            sendButton.parentNode.replaceChild(newButton, sendButton);
-
-            // Add click handler
-            newButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Send button clicked');
-                this.sendAIMessage();
-            });
-        } else {
-            console.error('Send button not found!');
-        }
     }
 
     async loadAIContext() {
@@ -419,38 +343,33 @@ class AIAssistant {
             const conversationId = this.parent.getCurrentConversationId();
             const fcsData = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs-report`);
 
-                if (fcsData.success && fcsData.report) {
-                    console.log('✅ FCS data loaded for AI context');
+            if (fcsData.success && fcsData.report) {
+                console.log('✅ FCS data loaded for AI context');
 
-                    // Check if we have AWS file URL for additional data
-                    let fcsDetails = fcsData.report.report_content;
+                let fcsDetails = fcsData.report.report_content;
 
-                    // If there's an AWS file URL, try to fetch additional FCS details
-                    const rawAnalysis = fcsData.report.raw_analysis;
-                    if (rawAnalysis) {
-                        try {
-                            const parsedAnalysis = JSON.parse(rawAnalysis);
-                            if (parsedAnalysis.aws_file_url) {
-                                console.log('📁 Found AWS FCS file URL:', parsedAnalysis.aws_file_url);
-
-                                // Fetch detailed FCS data from AWS
-                                const awsResponse = await fetch(parsedAnalysis.aws_file_url);
-                                if (awsResponse.ok) {
-                                    const awsFcsData = await awsResponse.text();
-                                    fcsDetails = awsFcsData;
-                                    console.log('✅ Enhanced FCS data loaded from AWS');
-                                }
+                // If there's an AWS file URL, try to fetch additional FCS details
+                const rawAnalysis = fcsData.report.raw_analysis;
+                if (rawAnalysis) {
+                    try {
+                        const parsedAnalysis = JSON.parse(rawAnalysis);
+                        if (parsedAnalysis.aws_file_url) {
+                            const awsResponse = await fetch(parsedAnalysis.aws_file_url);
+                            if (awsResponse.ok) {
+                                fcsDetails = await awsResponse.text();
+                                console.log('✅ Enhanced FCS data loaded from AWS');
                             }
-                        } catch (parseError) {
-                            console.log('📄 Using database FCS summary (AWS data unavailable)');
                         }
+                    } catch (parseError) {
+                        console.log('📄 Using database FCS summary');
                     }
+                }
 
-                    // Enhanced AI context with FCS data
-                    this.aiContext = [
-                        {
-                            role: 'system',
-                            content: `AI Assistant for ${fcsData.report.business_name || conversation.business_name || 'Unknown Business'}
+                // Enhanced AI context with FCS data
+                this.aiContext = [
+                    {
+                        role: 'system',
+                        content: `AI Assistant for ${fcsData.report.business_name || conversation.business_name || 'Unknown Business'}
 
 CONVERSATION CONTEXT:
 - Business Name: ${conversation.business_name || 'Unknown'}
@@ -472,16 +391,18 @@ You are an expert MCA (Merchant Cash Advance) advisor with access to this busine
 - Follow-up strategies
 
 Always reference specific financial metrics from the FCS when making recommendations. Be professional, helpful, and focus on actionable business insights.`
-                        }
-                    ];
-                } else {
-                    console.log('📄 No FCS report available - using basic context');
-                }
+                    }
+                ];
+            } else {
+                console.log('📄 No FCS report available - using basic context');
+            }
         } catch (error) {
             console.log('⚠️ Failed to load FCS context:', error.message);
-            console.log('📄 Continuing with basic AI context');
         }
 
         console.log('🧠 AI context loaded with', this.aiContext.length, 'system messages');
     }
 }
+
+// Expose globally for non-module scripts
+window.AIAssistant = AIAssistant;
