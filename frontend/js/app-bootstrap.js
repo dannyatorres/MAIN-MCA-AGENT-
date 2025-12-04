@@ -1,5 +1,5 @@
 // js/app-bootstrap.js
-import { LeadFormController } from './controllers/lead-form-controller.js';
+import { LeadFormController } from './lead-form-controller.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Main Module: Waiting for CommandCenter...');

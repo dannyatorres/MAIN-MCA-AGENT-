@@ -1,5 +1,5 @@
 // frontend/js/intelligence-tabs/edit-tab.js
-import { LeadFormController } from '../controllers/lead-form-controller.js';
+import { LeadFormController } from '../lead-form-controller.js';
 
 export class EditTab {
     constructor(parent) {

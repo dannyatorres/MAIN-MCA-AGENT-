@@ -1,5 +1,5 @@
-// frontend/js/controllers/lead-form-controller.js
-import { Formatters } from '../utils/formatters.js';
+// frontend/js/lead-form-controller.js
+import { Formatters } from './formatters.js';
 
 export class LeadFormController {
     constructor(parent) {

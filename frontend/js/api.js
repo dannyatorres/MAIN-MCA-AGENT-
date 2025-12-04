@@ -1,4 +1,4 @@
-// js/services/api.js
+// js/api.js
 
 export const ApiService = {
     config: {

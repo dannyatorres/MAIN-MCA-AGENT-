@@ -1,4 +1,4 @@
-// js/utils/formatters.js
+// js/formatters.js
 
 export const Formatters = {
     // Phone: (123) 456-7890
