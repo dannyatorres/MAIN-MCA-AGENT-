@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // --- B. DEFINE GLOBAL FUNCTIONS ---
 
             // 1. HEADER RENDERER
-            window.updateChatHeader = (businessName, ownerName) => {
+            window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
 
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                         <div class="chat-header-actions">
-                            <button id="callBtn" class="header-action-btn" title="Call">
+                            <button id="callBtn" class="header-action-btn" title="Call ${phoneNumber || 'No phone'}">
                                 <i class="fas fa-phone"></i>
                             </button>
                         </div>
@@ -60,37 +60,56 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
 
-                // Setup call button click handler (demo/test mode for now)
+                // Setup call button click handler with Twilio integration
                 const callBtn = document.getElementById('callBtn');
-                const callBar = document.getElementById('callBar');
                 const endCallBtn = document.getElementById('endCallBtn');
                 const muteBtn = document.getElementById('muteBtn');
 
-                if (callBtn && callBar) {
-                    callBtn.addEventListener('click', () => {
-                        callBar.classList.toggle('hidden');
-                        callBtn.classList.toggle('active');
-                        console.log('📞 Call button clicked - toggle call bar');
+                if (callBtn) {
+                    callBtn.addEventListener('click', async () => {
+                        if (!phoneNumber) {
+                            alert('No phone number available for this lead.');
+                            return;
+                        }
+
+                        // Use CallManager if available (Twilio)
+                        if (window.callManager) {
+                            console.log('📞 Starting call to:', phoneNumber);
+                            await window.callManager.startCall(phoneNumber, conversationId);
+                        } else {
+                            // Fallback: just show UI (demo mode)
+                            console.log('📞 CallManager not available - demo mode');
+                            document.getElementById('callBar')?.classList.remove('hidden');
+                            callBtn.classList.add('active');
+                        }
                     });
                 }
 
-                if (endCallBtn && callBar) {
+                if (endCallBtn) {
                     endCallBtn.addEventListener('click', () => {
-                        callBar.classList.add('hidden');
-                        if (callBtn) callBtn.classList.remove('active');
-                        console.log('📞 Call ended');
+                        if (window.callManager) {
+                            window.callManager.endCall();
+                        } else {
+                            // Fallback: just hide UI
+                            document.getElementById('callBar')?.classList.add('hidden');
+                            document.getElementById('callBtn')?.classList.remove('active');
+                        }
                     });
                 }
 
                 if (muteBtn) {
                     muteBtn.addEventListener('click', () => {
-                        muteBtn.classList.toggle('muted');
-                        const icon = muteBtn.querySelector('i');
-                        if (icon) {
-                            icon.classList.toggle('fa-microphone');
-                            icon.classList.toggle('fa-microphone-slash');
+                        if (window.callManager) {
+                            window.callManager.toggleMute();
+                        } else {
+                            // Fallback: just toggle visuals
+                            muteBtn.classList.toggle('muted');
+                            const icon = muteBtn.querySelector('i');
+                            if (icon) {
+                                icon.classList.toggle('fa-microphone');
+                                icon.classList.toggle('fa-microphone-slash');
+                            }
                         }
-                        console.log('📞 Mute toggled');
                     });
                 }
             };

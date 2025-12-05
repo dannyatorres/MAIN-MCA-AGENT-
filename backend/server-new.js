@@ -129,7 +129,15 @@ app.post('/api/auth/logout', (req, res) => {
 
 // Auth Middleware (Protects the API)
 const requireAuth = (req, res, next) => {
-    const publicPaths = ['/api/auth/login', '/api/health', '/api/messages/webhook/receive', '/api/news'];
+    const publicPaths = [
+        '/api/auth/login',
+        '/api/health',
+        '/api/messages/webhook/receive',
+        '/api/news',
+        '/api/calling/voice',
+        '/api/calling/status',
+        '/api/calling/recording-status'
+    ];
 
     // 1. Always allow public paths
     if (publicPaths.includes(req.path)) return next();
@@ -169,6 +177,7 @@ app.use('/api/csv-import', require('./routes/csv-import'));
 app.use('/api/lookups', require('./routes/lookups'));
 app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/calling', require('./routes/calling'));
 
 // --- RSS NEWS FEED ENDPOINT ---
 app.get('/api/news', async (req, res) => {

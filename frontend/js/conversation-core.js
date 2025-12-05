@@ -390,11 +390,13 @@ class ConversationCore {
         const ownerLastName = this.selectedConversation.owner_last_name || this.selectedConversation.last_name || '';
         const ownerName = `${ownerFirstName} ${ownerLastName}`.trim() || 'Unknown Owner';
         const businessName = this.selectedConversation.business_name || this.selectedConversation.company_name || 'Unknown Business';
+        const phoneNumber = this.selectedConversation.lead_phone || this.selectedConversation.phone || '';
+        const conversationId = this.selectedConversation.id;
 
         // 2. DELEGATE TO GLOBAL FUNCTION
         // This forces the app to use the logic in command-center.html (which handles the Right Panel switching)
         if (window.updateChatHeader) {
-            window.updateChatHeader(businessName, ownerName);
+            window.updateChatHeader(businessName, ownerName, phoneNumber, conversationId);
         } else {
             console.error("window.updateChatHeader is missing!");
         }
