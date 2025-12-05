@@ -242,36 +242,45 @@ class AIAssistant {
         try {
             const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
 
-            // 1. Hide container to prevent visual jumping
-            messagesContainer.style.opacity = '0';
+            // 1. Use visibility hidden instead of opacity (prevents layout flashing)
+            messagesContainer.style.visibility = 'hidden';
+
+            // 2. CRITICAL: Force 'auto' scroll behavior to prevent the "scrolling" animation
+            messagesContainer.style.scrollBehavior = 'auto';
 
             // Clear "Connecting..." message
             messagesContainer.innerHTML = '';
 
             if (data.messages && data.messages.length > 0) {
-                // 2. Add messages WITHOUT scrolling (pass false as 4th arg)
+                // Add messages WITHOUT scrolling (pass false as 4th arg)
                 data.messages.forEach(msg => {
                     this.addMessageToChat(msg.role, msg.content, false, false);
                 });
 
-                // 3. Force scroll to bottom ONCE
+                // 3. Snap to bottom instantly
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
             } else {
                 this.showWelcomeMessage();
             }
 
-            // 4. Reveal container smoothly
-            // We use requestAnimationFrame to ensure the scroll has rendered before we show it
-            requestAnimationFrame(() => {
-                messagesContainer.style.transition = 'opacity 0.2s ease';
-                messagesContainer.style.opacity = '1';
-            });
+            // 4. Force a "Reflow". Accessing offsetHeight forces the browser to
+            // calculate the layout (and the scroll position) BEFORE it paints the screen.
+            const forceLayout = messagesContainer.offsetHeight;
+
+            // 5. Make visible again
+            messagesContainer.style.visibility = 'visible';
+
+            // 6. Re-enable smooth scrolling for future messages (UX polish)
+            // We use a slight timeout to ensure the initial load is completely done
+            setTimeout(() => {
+                messagesContainer.style.scrollBehavior = 'smooth';
+            }, 100);
 
         } catch (error) {
             console.log('Error loading history:', error);
             messagesContainer.innerHTML = '';
-            messagesContainer.style.opacity = '1'; // Ensure it's visible on error
+            messagesContainer.style.visibility = 'visible'; // Ensure visible on error
             this.showWelcomeMessage();
         }
     }
