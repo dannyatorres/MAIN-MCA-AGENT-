@@ -726,7 +726,8 @@
 
 /* Goal Section */
 .goal-card {
-    background: var(--gray-900); /* Onyx background */
+    background: #161b22;
+    border: 1px solid #30363d;
     color: white;
     border-radius: 16px;
     padding: 24px;
