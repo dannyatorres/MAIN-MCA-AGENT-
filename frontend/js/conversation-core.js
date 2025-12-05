@@ -53,18 +53,17 @@ class ConversationCore {
             return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
         };
 
-        // Helper 3: Format Phone Number (The Fix)
+        // Helper 3: Format Phone Number (Fixed for 1 + 10 digits)
         const formatPhone = (phone) => {
             if (!phone) return 'No Phone';
-            // Strip everything that isn't a number
             const cleaned = ('' + phone).replace(/\D/g, '');
 
-            // Check if it's a standard 10-digit number
-            const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+            // Check for 10 digits OR 11 digits starting with 1
+            const match = cleaned.match(/^(?:1)?(\d{3})(\d{3})(\d{4})$/);
+
             if (match) {
                 return '(' + match[1] + ') ' + match[2] + '-' + match[3];
             }
-            // If we can't format it (e.g. international), return original
             return phone;
         };
 
@@ -161,38 +160,25 @@ class ConversationCore {
     }
 
     setupSearchListeners(searchInput) {
+        // 'input' covers typing, pasting, cutting, and clearing via 'x'
         searchInput.addEventListener('input', (e) => {
-            if (e.target.value === '' || e.target.value.length === 0) {
-                this.renderConversationsList();
-            } else {
-                this.filterConversations();
-            }
-        });
+            // Small debounce to prevent UI stutter on fast typing
+            if (this.searchTimeout) clearTimeout(this.searchTimeout);
 
-        searchInput.addEventListener('search', (e) => {
-            if (e.target.value === '') {
-                this.renderConversationsList();
-            }
-        });
-
-        searchInput.addEventListener('keyup', (e) => {
-            if (e.target.value === '') {
-                this.renderConversationsList();
-            }
-        });
-
-        searchInput.addEventListener('paste', () => {
-            setTimeout(() => this.filterConversations(), 10);
-        });
-
-        searchInput.addEventListener('cut', () => {
-            setTimeout(() => {
-                if (searchInput.value === '') {
+            this.searchTimeout = setTimeout(() => {
+                if (e.target.value.trim() === '') {
                     this.renderConversationsList();
                 } else {
                     this.filterConversations();
                 }
-            }, 10);
+            }, 300); // 300ms debounce
+        });
+
+        // Keep 'search' for immediate clearing if the browser supports standard search inputs
+        searchInput.addEventListener('search', (e) => {
+            if (e.target.value === '') {
+                this.renderConversationsList();
+            }
         });
     }
 
@@ -566,9 +552,9 @@ class ConversationCore {
                 container.prepend(item);
             }
         } else if (conversation && container) {
-            // If item doesn't exist in DOM (e.g. under the render limit), re-render list
-            // This ensures new active conversations appear even if they were hidden
-            this.renderConversationsList();
+            // BUG FIX: Was calling renderConversationsList(), which ignored current search filters
+            // Now calls filterConversations() to respect any active search/state filters
+            this.filterConversations();
         }
     }
 
