@@ -38,8 +38,61 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <span>${ownerName || 'No Owner'}</span>
                             </div>
                         </div>
+                        <div class="chat-header-actions">
+                            <button id="callBtn" class="header-action-btn" title="Call">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="callBar" class="call-bar hidden">
+                        <div class="call-bar-info">
+                            <span class="call-status">Calling...</span>
+                            <span class="call-timer" id="callTimer">00:00</span>
+                        </div>
+                        <div class="call-bar-actions">
+                            <button class="call-control-btn" id="muteBtn" title="Mute">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button class="call-control-btn end-call" id="endCallBtn" title="End Call">
+                                <i class="fas fa-phone-slash"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
+
+                // Setup call button click handler (demo/test mode for now)
+                const callBtn = document.getElementById('callBtn');
+                const callBar = document.getElementById('callBar');
+                const endCallBtn = document.getElementById('endCallBtn');
+                const muteBtn = document.getElementById('muteBtn');
+
+                if (callBtn && callBar) {
+                    callBtn.addEventListener('click', () => {
+                        callBar.classList.toggle('hidden');
+                        callBtn.classList.toggle('active');
+                        console.log('📞 Call button clicked - toggle call bar');
+                    });
+                }
+
+                if (endCallBtn && callBar) {
+                    endCallBtn.addEventListener('click', () => {
+                        callBar.classList.add('hidden');
+                        if (callBtn) callBtn.classList.remove('active');
+                        console.log('📞 Call ended');
+                    });
+                }
+
+                if (muteBtn) {
+                    muteBtn.addEventListener('click', () => {
+                        muteBtn.classList.toggle('muted');
+                        const icon = muteBtn.querySelector('i');
+                        if (icon) {
+                            icon.classList.toggle('fa-microphone');
+                            icon.classList.toggle('fa-microphone-slash');
+                        }
+                        console.log('📞 Mute toggled');
+                    });
+                }
             };
 
             // 2. DASHBOARD LOADER

@@ -285,6 +285,114 @@
     letter-spacing: -0.5px;
 }
 
+/* ==========================================================================
+   [CALL BUTTON & CALL BAR]
+   Phone call UI in the chat header
+   ========================================================================== */
+
+/* Actions container - pushes to right side of header */
+.chat-header-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+}
+
+/* Call button - ghost style like back button */
+.header-action-btn {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.header-action-btn:hover {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.header-action-btn.active {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+/* Call Bar - appears below header when call is active */
+.call-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+    padding: 10px 16px;
+    border-radius: 0 0 12px 12px;
+    margin: -8px 12px 8px 12px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.call-bar.hidden {
+    display: none;
+}
+
+.call-bar-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.call-status {
+    color: #d1fae5;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.call-timer {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Monaco', monospace;
+}
+
+.call-bar-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.call-control-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: #ffffff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.call-control-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.call-control-btn.muted {
+    background: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.call-control-btn.end-call {
+    background: #dc2626;
+}
+
+.call-control-btn.end-call:hover {
+    background: #ef4444;
+}
+
 /* Legacy support - Keep for backward compatibility */
 .conversation-info {
     display: flex;
