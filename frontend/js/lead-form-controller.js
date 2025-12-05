@@ -187,7 +187,7 @@ export class LeadFormController {
                             </div>
                             <div class="form-group">
                                 <label>Ownership %</label>
-                                <input type="number" name="ownerOwnershipPercentage" value="${val('ownership_percentage', 'ownership_percent', 'ownerOwnershipPercentage')}" class="form-input" max="100">
+                                <input type="number" name="ownershipPercent" value="${val('ownership_percentage', 'ownership_percent', 'ownerOwnershipPercentage')}" class="form-input" max="100">
                             </div>
                         </div>
                         <div class="form-row-six">
@@ -662,7 +662,7 @@ export class LeadFormController {
             ownerEmail: data.ownerEmail,
             ownerSSN: this.formatSSN(data.ownerSSN),
             ownerDOB: this.formatDateUS(data.ownerDOB),
-            ownershipPercentage: data.ownerOwnershipPercentage,
+            ownershipPercentage: data.ownershipPercent,
             creditScore: 'N/A',
 
             // 4. OWNER 2 (Partner)
