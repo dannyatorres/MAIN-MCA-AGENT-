@@ -12,9 +12,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // --- A. INJECT CONTROLLER ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
-            // --- B. DEFINE UI RENDERERS (The Fix) ---
+            // --- B. DEFINE UI RENDERERS ---
 
-            // 1. RENDER HEADER (Restores Name & Back Button)
+            // 1. RENDER HEADER (Cleaned - Uses CSS Classes)
             window.updateChatHeader = (businessName, ownerName) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
@@ -28,25 +28,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const displayTitle = businessName || 'Unknown Business';
                 const initials = displayTitle.substring(0, 2).toUpperCase();
 
+                // CLEANED: Replaced inline styles with 'chat-header-rich' classes
                 header.innerHTML = `
-                    <div class="chat-header-rich" style="display: flex; align-items: center; width: 100%; gap: 15px;">
-                        <button id="backHomeBtn" onclick="loadDashboard()" class="icon-btn-small" title="Back to Dashboard" style="width: 36px; height: 36px;">
+                    <div class="chat-header-rich">
+                        <button id="backHomeBtn" onclick="loadDashboard()" class="icon-btn-small" title="Back to Dashboard">
                             <i class="fas fa-arrow-left"></i>
                         </button>
 
-                        <div class="chat-avatar-large" style="width: 40px; height: 40px; background: #111827; color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        <div class="chat-avatar-large">
                             ${initials}
                         </div>
 
-                        <div class="chat-details-stack" style="display: flex; flex-direction: column;">
-                            <h2 class="chat-business-title" style="margin: 0; font-size: 16px; color: #111827;">${displayTitle}</h2>
-                            <span style="font-size: 12px; color: #6b7280;">${ownerName || 'No Owner'}</span>
+                        <div class="chat-details-stack">
+                            <h2 class="chat-business-title">${displayTitle}</h2>
+                            <div class="chat-row-secondary">
+                                <span>${ownerName || 'No Owner'}</span>
+                            </div>
                         </div>
                     </div>
                 `;
             };
 
-            // 2. RENDER DASHBOARD (Restores Home Page & Lenders Button)
+            // 2. RENDER DASHBOARD (Refactored to Match Onyx Theme)
             window.loadDashboard = () => {
                 console.log("🏠 Loading Dashboard...");
 
@@ -60,44 +63,84 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const centerPanel = document.querySelector('.center-panel');
                 const header = centerPanel.querySelector('.panel-header');
                 const messages = document.getElementById('messagesContainer');
+
+                // CRITICAL: Ensure inputs are hidden
                 const inputs = document.getElementById('messageInputContainer');
+                const actions = document.getElementById('conversationActions');
 
                 centerPanel.classList.add('dashboard-mode');
                 header.innerHTML = ''; // Hide header
-                inputs.style.display = 'none'; // Hide chat inputs
 
-                // Render Home Content
+                if (inputs) inputs.style.display = 'none';
+                if (actions) actions.style.display = 'none';
+
+                // Render Home Content (ONYX THEME MATCH)
                 messages.innerHTML = `
-                    <div class="dashboard-container" style="padding: 40px; text-align: center;">
-                        <div class="dashboard-header" style="margin-bottom: 40px;">
-                            <h1 style="font-size: 28px; color: #111827; margin-bottom: 10px;">Welcome to MCAagent</h1>
-                            <p style="color: #6b7280;">Select a conversation to start working or manage your network.</p>
-
-                            <button class="btn btn-secondary" onclick="openLenderManagementModal()" style="margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                                <i class="fas fa-university"></i>&nbsp; Manage Lenders
-                            </button>
+                    <div class="dashboard-container">
+                        <div class="dashboard-header">
+                            <h1>Welcome back, Agent</h1>
+                            <p>Here is what's happening with your pipeline today.</p>
                         </div>
 
-                        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 600px; margin: 0 auto;">
-                            <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
-                                <div style="font-size: 24px; font-weight: bold; color: #111827;" id="activeCount">-</div>
-                                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Active Leads</div>
+                        <div class="goal-card">
+                            <div class="goal-header">
+                                <span class="goal-title">Monthly Funding Goal</span>
+                                <span class="goal-numbers">$145,000 <span class="goal-subtext">/ $250k</span></span>
                             </div>
-                            <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
-                                <div style="font-size: 24px; font-weight: bold; color: #d97706;" id="processingCount">-</div>
-                                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Processing</div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: 58%;"></div>
                             </div>
-                            <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
-                                <div style="font-size: 24px; font-weight: bold; color: #166534;" id="todayCount">-</div>
-                                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase;">New Today</div>
+                            <div class="goal-footer">
+                                12 days left in the month
+                            </div>
+                        </div>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                                <div class="stat-value" id="activeCount">-</div>
+                                <div class="stat-label">Active Leads</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-spinner"></i></div>
+                                <div class="stat-value" id="processingCount">-</div>
+                                <div class="stat-label">Processing</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                                <div class="stat-value" id="todayCount">-</div>
+                                <div class="stat-label">New Today</div>
+                            </div>
+                        </div>
+
+                        <div class="empty-state dashboard-style">
+                            <button class="btn btn-secondary" onclick="openLenderManagementModal()">
+                                <i class="fas fa-university"></i>&nbsp; Manage Lenders
+                            </button>
+
+                            <div class="empty-state-hint white-theme" style="margin-top: 15px;">
+                                <i class="fas fa-arrow-left icon-brand"></i>
+                                <span class="text-gray-600">Select a conversation to start working</span>
                             </div>
                         </div>
                     </div>
                 `;
 
-                // Reset Right Panel (Back to News)
-                if (window.commandCenter.intelligence) {
-                    window.commandCenter.intelligence.toggleView(false);
+                // Reset Right Panel (Match "Empty State" from conversation-core.js)
+                const intelligenceContent = document.getElementById('intelligenceContent');
+                if (intelligenceContent) {
+                    // Using the new .large-icon class
+                    intelligenceContent.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon large-icon">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                            <h3>Lead Intelligence</h3>
+                            <p>Select a lead to view analysis, documents, and FCS data.</p>
+                        </div>
+                    `;
                 }
 
                 // Trigger a stats refresh
@@ -106,50 +149,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // 3. LENDER MODAL LOGIC (Ensures it opens)
+            // 3. LENDER MODAL LOGIC
             window.openLenderManagementModal = () => {
-                // Check if Lenders Module is ready
                 if (window.commandCenter.lenders && window.commandCenter.lenders.openManagementModal) {
                      window.commandCenter.lenders.openManagementModal();
                 } else {
-                    // Fallback if module method missing
                     alert("Lender Management Module loading...");
                 }
             };
 
-            // 4. DELETE MODE TOGGLE (Restores the Trash Can)
+            // 4. DELETE MODE TOGGLE
             window.toggleDeleteMode = () => {
                 const list = document.getElementById('conversationsList');
                 const btn = document.getElementById('toggleDeleteModeBtn');
 
                 if (!list) return;
-
-                // Toggle the CSS class that reveals checkboxes
                 const isDeleteMode = list.classList.toggle('delete-mode');
 
-                // Visual feedback on the button (Red when active)
                 if (btn) {
                     if (isDeleteMode) {
-                        btn.classList.add('active-danger');
-                        btn.style.color = 'var(--red)';
-                        btn.style.background = '#fef2f2';
+                        btn.classList.add('active-danger'); // Uses CSS class instead of inline styles
                         // Show the big "Delete Selected" button
                         const confirmBtn = document.getElementById('deleteSelectedBtn');
                         if (confirmBtn) confirmBtn.style.display = 'block';
                     } else {
                         btn.classList.remove('active-danger');
-                        btn.style.color = '';
-                        btn.style.background = '';
-
-                        // Clear selections if canceling
+                        // Clear selections
                         const checkboxes = document.querySelectorAll('.delete-checkbox');
                         checkboxes.forEach(cb => cb.checked = false);
-
-                        // Hide the "Delete Selected" big button
                         const confirmBtn = document.getElementById('deleteSelectedBtn');
                         if (confirmBtn) confirmBtn.style.display = 'none';
 
-                        // Clear Core selection set
                         if (window.commandCenter.conversationUI) {
                             window.commandCenter.conversationUI.selectedForDeletion.clear();
                         }
@@ -162,16 +192,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.loadDashboard();
             }
 
-            // Load News
-            loadMarketNews();
-
         } else {
             console.error('❌ CommandCenter Global Object not found!');
         }
     }, 100);
 });
 
-// News Feed Logic
+// News Feed Logic (Refactored to remove inline styles)
 async function loadMarketNews() {
     const container = document.getElementById('newsFeedContainer');
     if (!container) return;
@@ -179,16 +206,24 @@ async function loadMarketNews() {
         const response = await fetch('/api/news');
         const result = await response.json();
         if (result.success && result.data?.length > 0) {
+            // CLEANED: Uses .news-card class from CSS
             container.innerHTML = result.data.map(item => `
-                <div class="news-card" onclick="window.open('${item.link}', '_blank')" style="padding: 15px; border-bottom: 1px solid #f3f4f6; cursor: pointer;">
-                    <div class="news-meta" style="font-size: 11px; color: #9ca3af; margin-bottom: 5px;">
-                        <span>${item.source || 'Industry News'}</span> • <span>Today</span>
+                <div class="news-card" onclick="window.open('${item.link}', '_blank')">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-source">${item.source || 'Industry News'}</span>
+                            <span class="news-dot">•</span>
+                            <span class="news-time">Today</span>
+                        </div>
+                        <h4 class="news-title">${item.title}</h4>
                     </div>
-                    <h4 class="news-title" style="font-size: 13px; margin: 0; color: #1f2937;">${item.title}</h4>
+                    <div class="news-arrow">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
                 </div>
             `).join('');
         } else {
-            container.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:#94a3b8;">No recent updates.</div>';
+            container.innerHTML = '<div class="empty-state-hint">No recent updates.</div>';
         }
     } catch (e) {
         console.log(e);
