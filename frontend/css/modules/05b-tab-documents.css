@@ -54,7 +54,7 @@
     border: 1px solid #30363d;
     border-radius: 8px;
     background: #0d1117;
-    overflow: hidden;
+    overflow: visible; /* CHANGED FROM hidden TO visible - allows dropdown to extend outside */
     margin: 20px;
 }
 

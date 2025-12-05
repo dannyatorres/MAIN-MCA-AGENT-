@@ -177,7 +177,7 @@ class DocumentsModule {
             return;
         }
 
-        // New Sleek List Structure
+        // Sleek Grid Layout
         const htmlContent = `
             <div class="documents-grid-header">
                 <div class="col-name">NAME</div>
@@ -198,9 +198,9 @@ class DocumentsModule {
                                 <i class="${iconClass}"></i>
                             </div>
                             <div class="file-info">
-                                <div class="file-name"
+                                <div class="file-name doc-name-clickable"
                                      title="${doc.originalFilename}"
-                                     onclick="window.conversationUI.documents.previewDocument('${doc.id}')">
+                                     ondblclick="window.conversationUI.documents.enableInlineEdit('${doc.id}')">
                                     ${doc.originalFilename}
                                 </div>
                                 <div class="file-meta-mobile">${docTypeLabel} • ${this.utils.formatFileSize(doc.fileSize)}</div>
@@ -218,16 +218,18 @@ class DocumentsModule {
                                 <button class="btn-icon-action document-preview-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Preview">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="btn-icon-action document-download-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Download">
-                                    <i class="fas fa-download"></i>
+
+                                <button class="btn-icon-action document-edit-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Rename">
+                                    <i class="fas fa-pen"></i>
                                 </button>
+
                                 <div class="dropdown-trigger">
-                                    <button class="btn-icon-action more-actions-btn" title="More">
+                                    <button class="btn-icon-action more-actions-btn" title="More Options">
                                         <i class="fas fa-ellipsis-v"></i>
                                     </button>
                                     <div class="dropdown-menu">
-                                        <button class="dropdown-item document-edit-btn" data-doc-id="${doc.id}" data-conv-id="${convId}">
-                                            <i class="fas fa-pen"></i> Rename
+                                        <button class="dropdown-item document-download-btn" data-doc-id="${doc.id}" data-conv-id="${convId}">
+                                            <i class="fas fa-download"></i> Download
                                         </button>
                                         <div class="dropdown-divider"></div>
                                         <button class="dropdown-item text-danger document-delete-btn" data-doc-id="${doc.id}" data-conv-id="${convId}">
@@ -243,24 +245,9 @@ class DocumentsModule {
         `;
 
         documentsList.innerHTML = htmlContent;
+
+        // Setup listeners immediately after rendering
         this.setupDocumentActionListeners();
-
-        // Initialize dropdown toggles
-        documentsList.querySelectorAll('.more-actions-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                // Close all others
-                document.querySelectorAll('.dropdown-menu.show').forEach(el => {
-                    if (el !== btn.nextElementSibling) el.classList.remove('show');
-                });
-                btn.nextElementSibling.classList.toggle('show');
-            });
-        });
-
-        // Click outside closes dropdowns
-        document.addEventListener('click', () => {
-             document.querySelectorAll('.dropdown-menu.show').forEach(el => el.classList.remove('show'));
-        }, { once: true });
 
         const loading = document.getElementById('documentsLoading');
         if (loading) loading.classList.add('hidden');
@@ -292,29 +279,65 @@ class DocumentsModule {
         const documentsList = document.getElementById('documentsList');
         if (!documentsList) return;
 
-        // Remove existing listeners to prevent duplicates
-        documentsList.replaceWith(documentsList.cloneNode(true));
-        const newDocumentsList = document.getElementById('documentsList');
+        // 1. Clear old listeners by cloning the node
+        // This is crucial to prevent double-firing events
+        const newDocumentsList = documentsList.cloneNode(true);
+        documentsList.parentNode.replaceChild(newDocumentsList, documentsList);
 
-        // Add click event delegation
+        // 2. Attach Global Closer (Run only once)
+        if (!window.dropdownCloserAttached) {
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.dropdown-trigger')) {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(el => el.classList.remove('show'));
+                }
+            });
+            window.dropdownCloserAttached = true;
+        }
+
+        // 3. Main Event Delegation
         newDocumentsList.addEventListener('click', (event) => {
-            const target = event.target.closest('button');
-            if (!target) return;
+            const target = event.target;
 
-            const docId = target.dataset.docId;
-            const convId = target.dataset.convId;
+            // Handle Dropdown Toggle (The Three Dots)
+            const dropdownBtn = target.closest('.more-actions-btn');
+            if (dropdownBtn) {
+                event.stopPropagation();
+                const menu = dropdownBtn.nextElementSibling;
+
+                // Close other open menus
+                document.querySelectorAll('.dropdown-menu.show').forEach(el => {
+                    if (el !== menu) el.classList.remove('show');
+                });
+
+                // Toggle this menu
+                if (menu) menu.classList.toggle('show');
+                return;
+            }
+
+            // Handle Action Buttons (Preview, Edit, Download, Delete)
+            // Works for both visible buttons AND buttons inside the dropdown
+            const btn = target.closest('button');
+            if (!btn) return;
+
+            const docId = btn.dataset.docId;
+            const convId = btn.dataset.convId;
+
+            if (!docId) return;
+
+            // Close any open dropdowns when an action is clicked
+            document.querySelectorAll('.dropdown-menu.show').forEach(el => el.classList.remove('show'));
 
             if (convId && !this.parent.getCurrentConversationId()) {
                 this.parent.currentConversationId = convId;
             }
 
-            if (target.classList.contains('document-edit-btn')) {
+            if (btn.classList.contains('document-edit-btn')) {
                 this.editDocument(docId);
-            } else if (target.classList.contains('document-preview-btn')) {
+            } else if (btn.classList.contains('document-preview-btn')) {
                 this.previewDocument(docId);
-            } else if (target.classList.contains('document-download-btn')) {
+            } else if (btn.classList.contains('document-download-btn')) {
                 this.downloadDocument(docId);
-            } else if (target.classList.contains('document-delete-btn')) {
+            } else if (btn.classList.contains('document-delete-btn')) {
                 this.deleteDocument(docId);
             }
         });
