@@ -155,36 +155,39 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 
-        // 1. Remove empty state if it exists
+        // 1. Remove empty state
         const emptyState = container.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
 
-        // 2. Duplicate Check
-        if (document.querySelector(`.message[data-message-id="${message.id}"]`)) {
-            console.log('Skipping duplicate message render:', message.id);
+        // 2. Strong Duplicate Check
+        // Convert to string to ensure '123' matches 123 (fixes race condition)
+        const msgId = String(message.id);
+        const exists = container.querySelector(`.message[data-message-id="${msgId}"]`);
+
+        if (exists) {
+            console.log('🛑 Skipping duplicate message render:', msgId);
             return;
         }
 
-        // 3. Generate HTML
+        // 3. Render
         const html = this.parent.templates.messageItem(message);
 
-        // 4. TARGET THE CORRECT WRAPPER (The Fix)
-        // We must append to .messages-list, otherwise CSS alignment won't work.
+        // 4. Append Safe Logic
         let list = container.querySelector('.messages-list');
-
         if (list) {
-            // Wrapper exists, append to it
             list.insertAdjacentHTML('beforeend', html);
         } else {
-            // Wrapper doesn't exist (first message), create it
-            container.innerHTML = `
-                <div class="messages-list">
-                    ${html}
-                </div>
-            `;
+            // Create the wrapper if this is the very first message
+            container.innerHTML = `<div class="messages-list">${html}</div>`;
         }
 
-        // 5. Scroll to bottom
+        // 5. Scroll and animate
+        // Add the 'new-message' class to the newly added element for animation
+        const newMsgElement = container.querySelector(`.message[data-message-id="${msgId}"]`);
+        if (newMsgElement) {
+            newMsgElement.classList.add('new-message');
+        }
+
         this.scrollToBottom();
     }
 
@@ -317,89 +320,45 @@ class MessagingModule {
         this.hideAISuggestions();
     }
 
-    // IMPROVED: Real-time incoming message handler with verbose logging
+    // Real-time incoming message handler (Fixed: uses addMessage for consistency)
     handleIncomingMessage(data) {
         console.log('📨 Handling incoming message:', data);
-        console.log('📨 Message data structure:', JSON.stringify(data, null, 2));
 
         const conversationId = this.parent.getCurrentConversationId();
-        const messageConversationId = data.conversation_id;
+        // Handle nested objects from different socket structures
+        const message = data.message || data;
+        const messageConversationId = data.conversation_id || message.conversation_id;
 
-        // If it's for the current conversation, add it to the UI immediately
-        if (messageConversationId === conversationId) {
+        // 1. If it's for the current conversation, add it to the UI
+        if (String(messageConversationId) === String(conversationId)) {
             console.log('✅ Message is for current conversation, adding to UI');
 
-            const message = data.message || data;
-            const messagesContainer = document.getElementById('messagesContainer');
-            const messagesList = messagesContainer?.querySelector('.messages-list');
-
-            if (!messagesList) {
-                console.warn('⚠️ No messages list found, reloading all messages');
-                this.loadConversationMessages(conversationId);
-                return;
-            }
-
-            // Check for duplicates
-            const existingMessage = messagesList.querySelector(`[data-message-id="${message.id}"]`);
-            if (existingMessage) {
-                console.log('⚠️ Message already exists in UI, skipping:', message.id);
-                return;
-            }
-
-            // Create and add message
-            const messageHTML = this.templates.messageItem(message);
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = messageHTML;
-            const messageElement = tempDiv.firstElementChild;
-
-            // Add animation class
-            messageElement.classList.add('new-message');
-
-            messagesList.appendChild(messageElement);
-            console.log('✅ Message element added to DOM');
-
-            // Smooth scroll with slight delay for animation
-            setTimeout(() => {
-                messagesContainer.scrollTo({
-                    top: messagesContainer.scrollHeight,
-                    behavior: 'smooth'
-                });
-            }, 100);
+            // USE THE EXISTING addMessage FUNCTION instead of manual DOM creation
+            // This ensures the HTML structure matches perfectly with historical messages
+            this.addMessage(message);
 
         } else {
-            console.log('📋 Message is for different conversation, updating badge');
-
-            // Add visual badge to conversation item
+            console.log('📋 Message is for different conversation');
             this.addConversationBadge(messageConversationId);
 
-            // Add to unread count
+            // Add to unread count tracker
             const unreadMessages = this.parent.unreadMessages || new Map();
             const currentCount = unreadMessages.get(messageConversationId) || 0;
             unreadMessages.set(messageConversationId, currentCount + 1);
 
-            // Play notification sound
             this.playNotificationSound();
-
-            // Show browser notification if allowed
             this.showBrowserNotification(data);
         }
 
-        // ✅ INSTANT UPDATE: Update just the single conversation preview instead of reloading entire list
+        // 2. Update the sidebar preview
         if (this.parent.conversationUI && this.parent.conversationUI.updateConversationPreview) {
-            const lastMsg = data.message ? data.message : data;
-
             this.parent.conversationUI.updateConversationPreview(
                 messageConversationId,
                 {
-                    content: lastMsg.content || 'New Message',
+                    content: message.content || 'New Message',
                     created_at: new Date().toISOString()
                 }
             );
-        }
-
-        // Show in-app notification for non-current conversations
-        if (messageConversationId !== conversationId) {
-            this.utils.showNotification('New message received!', 'info');
         }
     }
 

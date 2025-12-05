@@ -53,10 +53,13 @@ class ConversationCore {
             return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
         };
 
-        // Helper 3: Format Phone Number (Fixed for 1 + 10 digits)
+        // Helper 3: Format Phone Number (Fixed for null/undefined and 1 + 10 digits)
         const formatPhone = (phone) => {
-            if (!phone) return 'No Phone';
-            const cleaned = ('' + phone).replace(/\D/g, '');
+            // FIX: strict null/undefined check to prevent "undefined" or "null" in UI
+            if (!phone || phone === 'null' || phone === 'undefined') return 'No Phone';
+
+            // Force string to avoid .replace errors on numbers
+            const cleaned = String(phone).replace(/\D/g, '');
 
             // Check for 10 digits OR 11 digits starting with 1
             const match = cleaned.match(/^(?:1)?(\d{3})(\d{3})(\d{4})$/);
