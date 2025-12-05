@@ -12,15 +12,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // --- A. INJECT CONTROLLER ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
-            // --- B. DEFINE UI RENDERERS ---
+            // --- B. DEFINE GLOBAL FUNCTIONS ---
 
-            // 1. RENDER HEADER (Standard Rich Header)
+            // 1. HEADER RENDERER
             window.updateChatHeader = (businessName, ownerName) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
 
                 if (!header) return;
-
                 if (centerPanel) centerPanel.classList.remove('dashboard-mode');
 
                 const displayTitle = businessName || 'Unknown Business';
@@ -44,28 +43,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             };
 
-            // 2. RENDER DASHBOARD (The Home Screen)
+            // 2. DASHBOARD LOADER (The Fix)
             window.loadDashboard = () => {
                 console.log("🏠 Loading Dashboard...");
 
+                // Reset Core Selection
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
                     window.commandCenter.conversationUI.selectedConversation = null;
                 }
 
+                // --- CENTER PANEL RESET ---
                 const centerPanel = document.querySelector('.center-panel');
-                const header = centerPanel.querySelector('.panel-header');
+                const centerHeader = centerPanel.querySelector('.panel-header');
                 const messages = document.getElementById('messagesContainer');
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
                 centerPanel.classList.add('dashboard-mode');
-                header.innerHTML = '';
-
+                centerHeader.innerHTML = '';
                 if (inputs) inputs.style.display = 'none';
                 if (actions) actions.style.display = 'none';
 
-                // CENTER PANEL: Welcome + Button + Stats
+                // Inject Dashboard Content
                 messages.innerHTML = `
                     <div class="dashboard-container">
                         <div class="dashboard-header">
@@ -96,13 +96,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <div class="stat-value" id="activeCount">-</div>
                                 <div class="stat-label">Active Leads</div>
                             </div>
-
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-spinner"></i></div>
                                 <div class="stat-value" id="processingCount">-</div>
                                 <div class="stat-label">Processing</div>
                             </div>
-
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
                                 <div class="stat-value" id="todayCount">-</div>
@@ -112,39 +110,99 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
 
-                // RIGHT PANEL: RESTORED NEWS FEED
-                const intelligenceContent = document.getElementById('intelligenceContent');
-                if (intelligenceContent) {
-                    // Inject the Header and Empty Container
-                    intelligenceContent.innerHTML = `
-                        <div class="panel-header" style="height: 64px; min-height: 64px; border-bottom: 1px solid var(--gray-200); padding: 0 16px; display: flex; align-items: center; justify-content: space-between;">
-                             <div class="panel-title">
-                                <div class="title-text">
-                                    <h2 style="font-size: 16px; font-weight: 600;">Industry Wire</h2>
-                                    <span style="font-size: 11px; color: var(--gray-500); font-weight: normal;">Daily updates</span>
-                                </div>
+                // --- RIGHT PANEL RESET (Fixing the Tabs Issue) ---
+                const rightPanel = document.querySelector('.right-panel');
+                const rightHeader = rightPanel ? rightPanel.querySelector('.panel-header') : null;
+                const rightContent = document.getElementById('intelligenceContent');
+
+                // A. Wipe the Tabs from the Header
+                if (rightHeader) {
+                    // Force row layout (Tabs force column, we need row for title)
+                    rightHeader.style.cssText = 'height: 64px !important; min-height: 64px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; padding: 0 16px !important;';
+
+                    rightHeader.innerHTML = `
+                        <div class="panel-title" style="display: flex; align-items: center; gap: 12px;">
+                            <div class="title-text">
+                                <h2 style="font-size: 16px; font-weight: 600; margin:0;">Industry Wire</h2>
+                                <span style="font-size: 11px; color: var(--gray-500); font-weight: normal;">Daily updates</span>
                             </div>
-                            <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh News">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
                         </div>
+                        <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh News">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    `;
+                }
+
+                // B. Reset the Content Area
+                if (rightContent) {
+                    rightContent.innerHTML = `
                         <div id="newsFeedContainer" class="intelligence-content" style="padding: 0;">
                             <div style="padding: 20px; text-align: center; color: var(--gray-400);">
                                 <i class="fas fa-spinner fa-spin"></i> Loading news...
                             </div>
                         </div>
                     `;
-
-                    // Immediately fetch news
-                    loadMarketNews();
+                    // Load news immediately
+                    window.loadMarketNews();
                 }
 
+                // Refresh Stats
                 if (window.commandCenter.stats && window.commandCenter.stats.loadStats) {
                     window.commandCenter.stats.loadStats();
                 }
             };
 
-            // 3. LENDER MODAL
+            // 3. NEWS LOADER (Attached to Window for global access)
+            window.loadMarketNews = async () => {
+                const container = document.getElementById('newsFeedContainer');
+                if (!container) return;
+
+                // Show loading state if refreshing
+                container.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: var(--gray-400);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading news...
+                    </div>
+                `;
+
+                try {
+                    const response = await fetch('/api/news');
+                    const result = await response.json();
+
+                    if (result.success && result.data?.length > 0) {
+                        container.innerHTML = result.data.map(item => `
+                            <div class="news-card" onclick="window.open('${item.link}', '_blank')">
+                                <div class="news-content">
+                                    <div class="news-meta">
+                                        <span class="news-source ${item.source === 'deBanked' ? 'source-highlight' : ''}">${item.source || 'Industry News'}</span>
+                                        <span class="news-dot">•</span>
+                                        <span class="news-time">Today</span>
+                                    </div>
+                                    <h4 class="news-title">${item.title}</h4>
+                                </div>
+                                <div class="news-arrow">
+                                    <i class="fas fa-chevron-right"></i>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <div style="font-size: 24px; color: var(--gray-300); margin-bottom: 10px;">
+                                    <i class="far fa-newspaper"></i>
+                                </div>
+                                <p>No recent updates found.</p>
+                            </div>`;
+                    }
+                } catch (e) {
+                    console.error(e);
+                    container.innerHTML = `
+                        <div style="padding: 20px; text-align: center; color: var(--gray-400); font-size: 12px;">
+                            Unable to load news feed.
+                        </div>`;
+                }
+            };
+
+            // 4. LENDER MODAL
             window.openLenderManagementModal = () => {
                 if (window.commandCenter.lenders && window.commandCenter.lenders.openManagementModal) {
                      window.commandCenter.lenders.openManagementModal();
@@ -153,12 +211,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // 4. DELETE MODE
+            // 5. DELETE MODE
             window.toggleDeleteMode = () => {
                 const list = document.getElementById('conversationsList');
                 const btn = document.getElementById('toggleDeleteModeBtn');
                 if (!list) return;
+
                 const isDeleteMode = list.classList.toggle('delete-mode');
+
                 if (btn) {
                     if (isDeleteMode) {
                         btn.classList.add('active-danger');
@@ -187,45 +247,3 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 100);
 });
-
-// NEWS FEED LOGIC
-async function loadMarketNews() {
-    const container = document.getElementById('newsFeedContainer');
-    if (!container) return;
-    try {
-        const response = await fetch('/api/news');
-        const result = await response.json();
-
-        if (result.success && result.data?.length > 0) {
-            container.innerHTML = result.data.map(item => `
-                <div class="news-card" onclick="window.open('${item.link}', '_blank')">
-                    <div class="news-content">
-                        <div class="news-meta">
-                            <span class="news-source ${item.source === 'deBanked' ? 'source-highlight' : ''}">${item.source || 'Industry News'}</span>
-                            <span class="news-dot">•</span>
-                            <span class="news-time">Today</span>
-                        </div>
-                        <h4 class="news-title">${item.title}</h4>
-                    </div>
-                    <div class="news-arrow">
-                        <i class="fas fa-chevron-right"></i>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div style="font-size: 24px; color: var(--gray-300); margin-bottom: 10px;">
-                        <i class="far fa-newspaper"></i>
-                    </div>
-                    <p>No recent updates found.</p>
-                </div>`;
-        }
-    } catch (e) {
-        console.log(e);
-        container.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: var(--gray-400); font-size: 12px;">
-                Unable to load news feed.
-            </div>`;
-    }
-}
