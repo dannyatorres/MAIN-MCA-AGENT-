@@ -251,35 +251,43 @@
 }
 
 /* ==========================================================================
-   Legacy AI Chat Interface (from templates-utilities.js)
+   Legacy AI Chat Interface (Modernized Overrides)
    ========================================================================== */
 
+/* 1. Main Container - Dark Background */
 .ai-chat-interface {
     height: 500px;
     display: flex;
     flex-direction: column;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    background: #0d1117; /* Changed from white to Dark */
+    border: 1px solid #30363d;
+    border-radius: 16px; /* Increased from 12px for softer corners */
     overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
+/* 2. Header - Darker with Teal accent to match top styles */
 .ai-chat-header {
-    background: #667eea;
-    color: white;
+    background: #161b22; /* Dark header */
+    border-bottom: 1px solid #30363d;
+    color: #e6edf3;
     padding: 16px;
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
+/* 3. Chat Area Background */
 .ai-chat-messages {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
-    background: #f9fafb;
+    background: #0d1117; /* Dark background */
+    scrollbar-width: thin;
+    scrollbar-color: #30363d #0d1117;
 }
 
+/* 4. Message Rows */
 .ai-chat-message {
     margin-bottom: 16px;
     display: flex;
@@ -290,29 +298,39 @@
     flex-direction: row-reverse;
 }
 
+/* 5. Bubbles - Softer and Rounder */
 .message-bubble {
-    max-width: 70%;
-    padding: 12px 16px;
-    border-radius: 18px;
+    max-width: 75%;
+    padding: 12px 20px;
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.5;
+    /* Soften the sharpness with asymmetric corners */
+    border-radius: 20px;
 }
 
+/* User Bubble - Teal Gradient & Organic Shape */
 .ai-chat-message.user .message-bubble {
-    background: #667eea;
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); /* Teal Gradient */
     color: white;
+    /* Round everywhere except bottom-right */
+    border-radius: 20px 20px 4px 20px;
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
 }
 
+/* Assistant Bubble - Dark Gray & Organic Shape */
 .ai-chat-message.assistant .message-bubble {
-    background: white;
-    color: #1f2937;
-    border: 1px solid #e2e8f0;
+    background: #161b22;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    /* Round everywhere except bottom-left */
+    border-radius: 20px 20px 20px 4px;
 }
 
+/* 6. Input Area - Dark Mode */
 .ai-chat-input-area {
     padding: 16px;
-    background: white;
-    border-top: 1px solid #e2e8f0;
+    background: #161b22;
+    border-top: 1px solid #30363d;
 }
 
 .ai-chat-input-wrapper {
@@ -324,54 +342,46 @@
 .ai-chat-input {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid #d1d5db;
-    border-radius: 24px;
+    background: #0d1117; /* Dark Input */
+    border: 1px solid #30363d;
+    color: #e6edf3; /* Light Text */
+    border-radius: 24px; /* Fully Rounded pill shape */
     resize: none;
     font-size: 14px;
     min-height: 24px;
     max-height: 100px;
     font-family: inherit;
+    outline: none;
 }
 
+.ai-chat-input:focus {
+    border-color: #2dd4bf; /* Teal focus ring */
+}
+
+/* 7. Send Button */
 .ai-chat-send {
-    background: #667eea;
-    color: white;
+    background: #2dd4bf; /* Teal */
+    color: #0f1115;
     border: none;
-    padding: 12px 20px;
+    padding: 10px 20px;
     border-radius: 24px;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
+    transition: transform 0.1s;
 }
 
+.ai-chat-send:hover {
+    background: #5eead4;
+    transform: scale(1.05);
+}
+
+/* 8. Text Styles */
 .ai-chat-header-title {
     font-weight: 600;
+    color: #e6edf3;
 }
 
 .ai-chat-header-subtitle {
     font-size: 12px;
-    opacity: 0.8;
-}
-
-/* Typing Animation */
-.typing-indicator {
-    display: flex;
-    gap: 4px;
-    padding: 12px 16px;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    width: fit-content;
-}
-
-.typing-dot {
-    width: 8px;
-    height: 8px;
-    background: #9ca3af;
-    border-radius: 50%;
-    animation: typing 1.4s infinite;
-}
-
-@keyframes typing {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-10px); }
+    color: #8b949e;
 }
