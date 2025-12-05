@@ -33,15 +33,14 @@ class AIAssistant {
             return;
         }
 
-        // Render the Main UI
         container.innerHTML = `
             <div class="ai-assistant-section">
                 <div id="aiChatMessages" class="ai-chat-messages">
-                    <div style="text-align: center; color: #9ca3af; margin-top: 60px;">
-                        <div class="ai-thinking" style="margin: 0 auto 10px;">
+                    <div class="ai-loading-container">
+                        <div class="ai-thinking ai-loading-spinner-center">
                             <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
                         </div>
-                        <p style="font-size: 12px;">Connecting to Neural Core...</p>
+                        <p class="ai-loading-text">Connecting to Neural Core...</p>
                     </div>
                 </div>
 
@@ -52,25 +51,23 @@ class AIAssistant {
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
-                    <div style="font-size: 10px; color: #9ca3af; margin-top: 8px; text-align: center;">
+                    <div class="ai-disclaimer">
                         AI can make mistakes. Verify important financial details.
                     </div>
                 </div>
             </div>
         `;
 
-        // Initialize Logic immediately
-        // We reset the ID to force a refresh of the context/history
         this.currentConversationId = null;
         this.initializeAIChat();
     }
 
     renderEmptyState(container) {
         container.innerHTML = `
-            <div class="empty-state" style="text-align: center; padding: 60px 20px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
-                <h3 style="color: #6b7280; margin-bottom: 8px;">No Conversation Selected</h3>
-                <p style="color: #9ca3af;">Select a lead to start the AI assistant.</p>
+            <div class="ai-empty-state">
+                <div class="ai-empty-icon">💬</div>
+                <h3 class="ai-empty-title">No Conversation Selected</h3>
+                <p class="ai-empty-text">Select a lead to start the AI assistant.</p>
             </div>
         `;
     }
@@ -204,7 +201,7 @@ class AIAssistant {
         let formatted = content
             .replace(/\n/g, '<br>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/^• /gm, '<span style="color: #667eea;">•</span> ');
+            .replace(/^• /gm, '<span class="ai-bullet-point">•</span> ');
         return formatted;
     }
 

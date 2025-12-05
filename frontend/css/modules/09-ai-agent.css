@@ -171,3 +171,60 @@
     0%, 80%, 100% { transform: scale(0); }
     40% { transform: scale(1); }
 }
+
+/* =========================================
+   8. States & Utilities (Refactored)
+   ========================================= */
+
+/* Loading State inside Chat */
+.ai-loading-container {
+    text-align: center;
+    color: #9ca3af; /* Gray-400 */
+    margin-top: 60px;
+}
+
+.ai-loading-spinner-center {
+    margin: 0 auto 10px;
+}
+
+.ai-loading-text {
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Disclaimer text below input */
+.ai-disclaimer {
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* Empty State (No Conversation Selected) */
+.ai-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.ai-empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.ai-empty-title {
+    color: #6b7280; /* Gray-500 */
+    margin-bottom: 8px;
+    font-weight: 600;
+    margin-top: 0;
+}
+
+.ai-empty-text {
+    color: #9ca3af; /* Gray-400 */
+    margin: 0;
+}
+
+/* Markdown Formatting */
+.ai-bullet-point {
+    color: #667eea; /* Indigo-500 */
+    font-weight: bold;
+}
