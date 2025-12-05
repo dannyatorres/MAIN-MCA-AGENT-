@@ -243,17 +243,15 @@ class CommandCenter {
         // Wire the "Edit Lead" button globally
         window.openEditLeadModal = () => {
             console.log('✏️ Opening Edit Lead Form...');
-            const rightPanel = document.getElementById('intelligenceContent');
-            if (rightPanel && this.leadFormController) {
-                // Switch to "Edit" tab visually
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                const editBtn = document.querySelector('[data-tab="edit"]');
-                if (editBtn) editBtn.classList.add('active');
 
-                // Render form
-                this.leadFormController.renderEditTab(rightPanel);
-            } else if (!this.leadFormController) {
-                console.warn('⚠️ LeadFormController not ready yet.');
+            // 1. Ensure the Right Panel is visible using the manager (handles the classes correctly)
+            if (this.intelligence) {
+                this.intelligence.toggleView(true);
+
+                // 2. Switch to the 'edit' tab using the manager (handles tab button active states too)
+                this.intelligence.switchTab('edit');
+            } else {
+                console.warn('⚠️ IntelligenceManager not ready yet.');
             }
         };
 
@@ -270,7 +268,7 @@ class CommandCenter {
             // Tab switching shortcuts (1-6 keys)
             if (event.key >= '1' && event.key <= '6') {
                 const tabIndex = parseInt(event.key) - 1;
-                const tabs = document.querySelectorAll('.tab-button');
+                const tabs = document.querySelectorAll('.tab-btn');
                 if (tabs[tabIndex]) {
                     tabs[tabIndex].click();
                     event.preventDefault();
