@@ -1,5 +1,12 @@
 /* css/modules/09-ai-agent.css */
 
+/* 0. Parent Container Fix (ensures height: 100% works) */
+#intelligenceContent {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 /* 1. Main Container */
 .ai-assistant-section {
     display: flex;
@@ -113,6 +120,7 @@
 }
 
 #aiChatInput {
+    box-sizing: border-box; /* Ensures padding is included in width */
     width: 100%;
     padding: 14px 50px 14px 16px; /* Right padding for button */
     border: none;
@@ -227,4 +235,5 @@
 .ai-bullet-point {
     color: #667eea; /* Indigo-500 */
     font-weight: bold;
+    margin-right: 8px; /* Add space between dot and text */
 }
