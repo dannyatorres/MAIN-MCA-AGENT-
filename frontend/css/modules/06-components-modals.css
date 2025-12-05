@@ -216,3 +216,52 @@
         max-height: 100vh;
     }
 }
+
+/* ==========================================================================
+   [ADDITIONS] Refactored from lead-form-controller.js
+   ========================================================================== */
+
+/* The checkbox/label inside section headers (Owner 1, Partner) */
+.section-header-actions {
+    font-size: 11px;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+}
+
+/* The footer buttons container */
+.form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+}
+
+/* The "Generate App" button (Indigo) */
+.btn-generate {
+    background-color: #6366f1;
+    color: var(--white);
+    margin-right: auto;
+    border: none;
+}
+
+.btn-generate:hover {
+    background-color: #4f46e5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* Wide submit button */
+.btn-wide {
+    min-width: 150px;
+}
+
+/* Helper for the Partner Section toggle */
+.hidden-section {
+    display: none;
+}

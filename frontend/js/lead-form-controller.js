@@ -54,7 +54,7 @@ export class LeadFormController {
             <form id="${mode}LeadForm" class="lead-form">
 
                 <div class="form-section">
-                    <div class="section-header">📊 Business Information</div>
+                    <div class="section-header">Business Information</div>
                     <div class="section-content">
                         <div class="form-row-six">
                             <div class="form-group">
@@ -131,7 +131,7 @@ export class LeadFormController {
                 </div>
 
                 <div class="form-section">
-                    <div class="section-header">💰 Financials</div>
+                    <div class="section-header">Financials</div>
                     <div class="section-content">
                         <div class="form-row-six">
                             <div class="form-group">
@@ -152,8 +152,8 @@ export class LeadFormController {
 
                 <div class="form-section">
                     <div class="section-header">
-                        👤 Owner 1
-                        <label style="font-size: 11px; margin-left: auto; display: flex; align-items: center; gap: 5px;">
+                        Owner 1
+                        <label class="section-header-actions">
                             <input type="checkbox" id="copyAddr1"> Same as Business Address
                         </label>
                     </div>
@@ -217,12 +217,12 @@ export class LeadFormController {
 
                 <div class="form-section">
                     <div class="section-header">
-                        👥 Partner (Optional)
-                        <label style="font-size: 11px; margin-left: auto; display: flex; align-items: center; gap: 5px;">
+                        Partner (Optional)
+                        <label class="section-header-actions">
                             <input type="checkbox" id="hasPartner" ${val('owner2_first_name', 'owner2FirstName') ? 'checked' : ''}> Add Partner
                         </label>
                     </div>
-                    <div class="section-content" id="partnerSection" style="display: ${val('owner2_first_name', 'owner2FirstName') ? 'block' : 'none'};">
+                    <div class="section-content ${val('owner2_first_name', 'owner2FirstName') ? '' : 'hidden-section'}" id="partnerSection">
                         <div class="form-row-six">
                             <div class="form-group">
                                 <label>First Name</label>
@@ -282,15 +282,16 @@ export class LeadFormController {
                     </div>
                 </div>
 
-                <div class="form-actions" style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <div class="form-actions">
                     ${isEdit ? `
-                        <button type="button" id="generateAppBtn" class="btn" style="background: #6366f1; color: white; margin-right: auto;">
+                        <button type="button" id="generateAppBtn" class="btn btn-generate">
                             <i class="fas fa-file-pdf"></i> Generate App
                         </button>
                     ` : ''}
 
                     <button type="button" class="btn btn-secondary" onclick="document.getElementById('leadModalWrapper').remove()">Cancel</button>
-                    <button type="submit" class="btn btn-primary" style="min-width: 150px;">
+
+                    <button type="submit" class="btn btn-primary btn-wide">
                         ${isEdit ? 'Save Changes' : 'Create Lead'}
                     </button>
                 </div>
@@ -318,11 +319,11 @@ export class LeadFormController {
         const title = mode === 'edit' ? 'Edit Lead Details' : 'New Lead Application';
 
         const modalHTML = `
-            <div id="leadModalWrapper" class="modal" style="display:flex;">
+            <div id="leadModalWrapper" class="modal">
                 <div class="modal-content comprehensive-modal">
                     <div class="modal-header">
                         <h3>${title}</h3>
-                        <button class="modal-close" onclick="document.getElementById('leadModalWrapper').remove()">×</button>
+                        <button class="modal-close" onclick="document.getElementById('leadModalWrapper').remove()">&times;</button>
                     </div>
                     <div class="modal-body">
                         ${this.getFormHTML(data, mode)}
@@ -370,7 +371,7 @@ export class LeadFormController {
         const partnerSection = form.querySelector('#partnerSection');
         if (partnerCheck && partnerSection) {
             partnerCheck.addEventListener('change', (e) => {
-                partnerSection.style.display = e.target.checked ? 'block' : 'none';
+                partnerSection.classList.toggle('hidden-section', !e.target.checked);
             });
         }
 
@@ -417,28 +418,22 @@ export class LeadFormController {
             });
         }
 
-        // --- APP GENERATION HANDLER (FIXED) ---
+        // --- APP GENERATION HANDLER ---
         const generateBtn = form.querySelector('#generateAppBtn');
         if (generateBtn) {
             generateBtn.addEventListener('click', async () => {
-                // 1. Get raw form data
                 const rawFormData = this.scrapeFormData(new FormData(form));
-
-                // 2. MAP DATA FOR PDF (The "Missing Link" Fix)
-                // We send every possible casing variation to ensure the PDF filler finds the key.
                 const pdfData = this.mapDataForAppGeneration(rawFormData);
-
                 const btnOriginalText = generateBtn.innerHTML;
                 generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
                 generateBtn.disabled = true;
 
                 try {
-                    console.log('📄 Generating App for:', id);
                     const response = await fetch(`${this.parent.apiBaseUrl}/api/conversations/${id}/generate-pdf-document`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            applicationData: pdfData, // Send the mapped data!
+                            applicationData: pdfData,
                             ownerName: `${rawFormData.ownerFirstName} ${rawFormData.ownerLastName}`
                         })
                     });
@@ -446,31 +441,19 @@ export class LeadFormController {
                     const result = await response.json();
 
                     if (result.success && result.document) {
-                        // 3. Close Modal & Switch to Documents Tab
                         document.getElementById('leadModalWrapper').remove();
-                        this.parent.utils.showNotification('✅ Application Generated!', 'success');
-
-                        // Switch to Documents Tab
-                        if (this.parent.intelligence) {
-                            this.parent.intelligence.switchTab('documents');
-                        }
-
-                        // Refresh Document List (so the new file appears)
+                        this.parent.utils.showNotification('Application Generated!', 'success');
+                        if (this.parent.intelligence) this.parent.intelligence.switchTab('documents');
                         if (this.parent.documents) {
-                            setTimeout(() => {
-                                this.parent.documents.loadDocuments();
-                            }, 1000); // Slight delay to ensure DB write is done
+                            setTimeout(() => { this.parent.documents.loadDocuments(); }, 1000);
                         }
-
                     } else {
                         throw new Error(result.error || 'Unknown error');
                     }
-
                 } catch (error) {
                     console.error('App Generation Error:', error);
-                    alert('❌ Failed to generate app: ' + error.message);
+                    alert('Failed to generate app: ' + error.message);
                 } finally {
-                    // Restore button if modal is still open (error case)
                     const stillOpenBtn = document.getElementById('generateAppBtn');
                     if (stillOpenBtn) {
                         stillOpenBtn.innerHTML = btnOriginalText;
@@ -489,13 +472,6 @@ export class LeadFormController {
             btn.disabled = true;
 
             const formData = this.scrapeFormData(new FormData(form));
-
-            // DEBUG: Log partner state data
-            console.log("🚀 SAVING FORM DATA:", {
-                owner2HomeState: formData.owner2HomeState,
-                owner2HomeZip: formData.owner2HomeZip,
-                owner2HomeCity: formData.owner2HomeCity
-            });
 
             try {
                 if (mode === 'create') {
@@ -609,11 +585,7 @@ export class LeadFormController {
                 // Set State (Robust Match)
                 if (stateSelect) {
                     const apiState = place['state abbreviation'].toUpperCase();
-
-                    // Try to set the value directly
                     stateSelect.value = apiState;
-
-                    // Fallback: If exact match failed, loop options to find it
                     if (stateSelect.value !== apiState) {
                         for (let i = 0; i < stateSelect.options.length; i++) {
                             if (stateSelect.options[i].value.toUpperCase() === apiState) {
@@ -629,10 +601,10 @@ export class LeadFormController {
         }
     }
 
-    // --- UPDATED HELPER: STRICT MAPPING FOR APP5.HTML ---
+    // --- PDF DATA MAPPING ---
     mapDataForAppGeneration(data) {
         return {
-            // 1. BUSINESS INFO (Matches {{placeholder}} in app5.html)
+            // Business Info
             legalName: data.businessName,
             dba: data.dbaName,
             address: data.businessAddress,
@@ -646,12 +618,12 @@ export class LeadFormController {
             entityType: data.entityType,
             typeOfBusiness: data.industryType,
 
-            // 2. FINANCIALS
+            // Financials
             annualRevenue: data.annualRevenue,
             requestedAmount: data.requestedAmount,
             useOfFunds: data.useOfProceeds || 'Working Capital',
 
-            // 3. OWNER 1
+            // Owner 1
             ownerFirstName: data.ownerFirstName,
             ownerLastName: data.ownerLastName,
             ownerTitle: 'Owner',
@@ -665,7 +637,7 @@ export class LeadFormController {
             ownershipPercentage: data.ownershipPercent,
             creditScore: 'N/A',
 
-            // 4. OWNER 2 (Partner)
+            // Owner 2 (Partner)
             owner2FirstName: data.owner2FirstName || '',
             owner2LastName: data.owner2LastName || '',
             owner2Address: data.owner2HomeAddress || '',
@@ -677,7 +649,7 @@ export class LeadFormController {
             owner2DOB: this.formatDateUS(data.owner2DOB),
             owner2Percentage: data.owner2OwnershipPercent || '',
 
-            // 5. REDUNDANT KEYS (Safety net for other templates)
+            // Redundant keys for compatibility
             business_name: data.businessName,
             legal_name: data.businessName,
             phone: data.primaryPhone
