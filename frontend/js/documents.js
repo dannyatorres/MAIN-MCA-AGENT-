@@ -161,54 +161,81 @@ class DocumentsModule {
         }
 
         if (docs.length === 0) {
-            // UPDATED: Used CSS class .doc-state-container
             documentsList.innerHTML = `
-                <div class="doc-state-container">
-                    <div class="doc-state-icon">📄</div>
-                    <h4 class="doc-state-title">No documents uploaded</h4>
-                    <p class="doc-state-text">Upload bank statements, tax returns, and other documents for this lead</p>
+                <div class="doc-empty-state">
+                    <div class="empty-icon-stack">
+                        <i class="fas fa-file-invoice"></i>
+                        <i class="fas fa-file-contract"></i>
+                    </div>
+                    <h4>No Documents Yet</h4>
+                    <p>Upload bank statements, applications, or tax returns to get started.</p>
+                    <button class="btn btn-primary btn-sm mt-3" onclick="document.getElementById('documentUpload').click()">
+                        <i class="fas fa-cloud-upload-alt"></i> Upload Files
+                    </button>
                 </div>
             `;
             return;
         }
 
-        // UPDATED: Removed inline styles, added classes to match CSS Grid
+        // New Sleek List Structure
         const htmlContent = `
-            <div class="documents-table">
-                <div class="documents-table-header">
-                    <div class="doc-col-name">Name</div>
-                    <div class="doc-col-size">Size</div>
-                    <div class="doc-col-actions">Actions</div>
-                </div>
+            <div class="documents-grid-header">
+                <div class="col-name">NAME</div>
+                <div class="col-type">TYPE</div>
+                <div class="col-size">SIZE</div>
+                <div class="col-actions"></div>
+            </div>
+            <div class="documents-grid-body">
                 ${docs.map(doc => {
                     const convId = conversationId || doc.conversation_id || '';
+                    const iconClass = this.getFileIconClass(doc.mimeType, doc.documentType);
+                    const docTypeLabel = doc.documentType || 'Document';
+
                     return `
-                    <div class="document-row" data-document-id="${doc.id}" data-conversation-id="${convId}" data-type="${doc.documentType}">
-                        <div class="doc-col-name">
-                            <div class="doc-icon">${this.getDocumentIconCompact(doc.mimeType, doc.documentType)}</div>
-                            <div class="doc-name-clickable"
-                                 contenteditable="false"
-                                 data-original="${doc.originalFilename}"
-                                 data-document-id="${doc.id}"
-                                 ondblclick="window.conversationUI.documents.enableInlineEdit('${doc.id}')"
-                                 title="Double-click to edit name">
-                                ${doc.originalFilename}
+                    <div class="doc-card-row" data-document-id="${doc.id}">
+                        <div class="doc-col-main">
+                            <div class="file-icon ${this.getFileIconColor(doc.mimeType)}">
+                                <i class="${iconClass}"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name"
+                                     title="${doc.originalFilename}"
+                                     onclick="window.conversationUI.documents.previewDocument('${doc.id}')">
+                                    ${doc.originalFilename}
+                                </div>
+                                <div class="file-meta-mobile">${docTypeLabel} • ${this.utils.formatFileSize(doc.fileSize)}</div>
                             </div>
                         </div>
+
+                        <div class="doc-col-type">
+                            <span class="badge-type">${docTypeLabel}</span>
+                        </div>
+
                         <div class="doc-col-size">${this.utils.formatFileSize(doc.fileSize)}</div>
+
                         <div class="doc-col-actions">
-                            <button class="btn-doc-action document-edit-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-doc-action document-preview-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Preview">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn-doc-action document-download-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Download">
-                                <i class="fas fa-download"></i>
-                            </button>
-                            <button class="btn-doc-action delete document-delete-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <div class="action-group">
+                                <button class="btn-icon-action document-preview-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Preview">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn-icon-action document-download-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <div class="dropdown-trigger">
+                                    <button class="btn-icon-action more-actions-btn" title="More">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        <button class="dropdown-item document-edit-btn" data-doc-id="${doc.id}" data-conv-id="${convId}">
+                                            <i class="fas fa-pen"></i> Rename
+                                        </button>
+                                        <div class="dropdown-divider"></div>
+                                        <button class="dropdown-item text-danger document-delete-btn" data-doc-id="${doc.id}" data-conv-id="${convId}">
+                                            <i class="fas fa-trash-alt"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>`;
                 }).join('')}
@@ -218,8 +245,47 @@ class DocumentsModule {
         documentsList.innerHTML = htmlContent;
         this.setupDocumentActionListeners();
 
+        // Initialize dropdown toggles
+        documentsList.querySelectorAll('.more-actions-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Close all others
+                document.querySelectorAll('.dropdown-menu.show').forEach(el => {
+                    if (el !== btn.nextElementSibling) el.classList.remove('show');
+                });
+                btn.nextElementSibling.classList.toggle('show');
+            });
+        });
+
+        // Click outside closes dropdowns
+        document.addEventListener('click', () => {
+             document.querySelectorAll('.dropdown-menu.show').forEach(el => el.classList.remove('show'));
+        }, { once: true });
+
         const loading = document.getElementById('documentsLoading');
         if (loading) loading.classList.add('hidden');
+    }
+
+    // Helper for Icons
+    getFileIconClass(mimeType, docType) {
+        if (docType === 'Bank Statement' || docType === '4 Months Bank Statement') return 'fas fa-university';
+        if (docType === 'Tax Return') return 'fas fa-file-invoice-dollar';
+        if (docType === 'Signed Application') return 'fas fa-file-signature';
+        if (docType === "Driver's License") return 'fas fa-id-card';
+        if (docType === 'Voided Check') return 'fas fa-money-check';
+        if (mimeType?.includes('pdf')) return 'fas fa-file-pdf';
+        if (mimeType?.includes('image')) return 'fas fa-file-image';
+        if (mimeType?.includes('sheet') || mimeType?.includes('csv')) return 'fas fa-file-excel';
+        if (mimeType?.includes('word')) return 'fas fa-file-word';
+        return 'fas fa-file-alt';
+    }
+
+    getFileIconColor(mimeType) {
+        if (mimeType?.includes('pdf')) return 'color-red';
+        if (mimeType?.includes('image')) return 'color-purple';
+        if (mimeType?.includes('sheet') || mimeType?.includes('csv')) return 'color-green';
+        if (mimeType?.includes('word')) return 'color-blue';
+        return 'color-gray';
     }
 
     setupDocumentActionListeners() {
