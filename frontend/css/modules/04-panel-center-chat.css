@@ -70,29 +70,25 @@
     margin-top: 4px;        /* Push it down slightly */
 }
 
-/* Back Button - Frosted Glass Style */
+/* Back Button - Fixed for Light Mode */
 #backHomeBtn {
     position: absolute;
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
 
-    /* 1. Glassy Background */
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(5px);
+    /* 1. VISIBILITY FIX: Light gray box on white header */
+    background: #ffffff;
+    border: 1px solid #e2e8f0; /* Visible border */
+    color: #64748b;            /* Slate gray icon */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Subtle shadow */
 
-    /* 2. Crisp Border (The "Cut Glass" look) */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-
-    /* 3. Text/Icon Color */
-    color: #8b949e;
-
-    /* 4. Shape */
+    /* 2. Shape */
     border-radius: 10px;
     width: 38px;
     height: 38px;
 
-    /* 5. Layout */
+    /* 3. Layout */
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -101,10 +97,19 @@
 }
 
 #backHomeBtn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #e6edf3;
-    color: #ffffff;
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+    background: #f8fafc;    /* Slightly darker on hover */
+    border-color: #94a3b8;  /* Darker border */
+    color: #0f172a;         /* Black icon */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* SAFEGUARD: If your HTML is empty <div id="backHomeBtn"></div>, this adds an arrow */
+#backHomeBtn:empty::before {
+    content: "←";
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 2px;
 }
 
 /* ==========================================================================
