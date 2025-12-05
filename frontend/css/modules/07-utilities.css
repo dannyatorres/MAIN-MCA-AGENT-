@@ -149,22 +149,35 @@
     opacity: 0.6;
 }
 
-/* Industry Wire Header */
-.industry-wire-title {
+/* --- Modal Actions Row --- */
+.modal-actions-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+/* --- Modal Body Scroll --- */
+.modal-body-scroll {
+    max-height: calc(90vh - 130px);
+    overflow-y: auto;
+}
+
+/* --- News Header Typography --- */
+.news-header-title {
     margin: 0;
     font-size: 14px;
     font-weight: 700;
     color: var(--gray-900);
 }
 
-.industry-wire-subtitle {
+.news-header-subtitle {
     font-size: 11px;
     color: var(--gray-500);
 }
 
-/* CSV Upload Area */
-.csv-upload-area {
-    border: 2px dashed var(--gray-300);
+/* --- Upload Drop Zone (CSV Modal) --- */
+.upload-drop-zone {
+    border: 2px dashed #d1d5db;
     border-radius: 8px;
     padding: 32px;
     text-align: center;
@@ -172,37 +185,38 @@
     transition: all 0.3s;
 }
 
-.csv-upload-area:hover {
-    border-color: var(--primary-green);
-    background: rgba(45, 212, 191, 0.05);
+.upload-drop-zone:hover {
+    border-color: #2dd4bf;
+    background-color: #f9fafb;
 }
 
-.csv-upload-icon {
+.upload-icon {
     font-size: 48px;
     margin-bottom: 16px;
 }
 
-.csv-upload-title {
+.upload-title {
     margin: 0 0 8px 0;
-    color: var(--gray-900);
+    color: #111827;
 }
 
-.csv-upload-subtitle {
+.upload-subtitle {
     margin: 0 0 12px 0;
-    color: var(--gray-500);
+    color: #6b7280;
     font-size: 14px;
 }
 
+/* --- CSV File Info Box --- */
 .csv-file-info {
-    background: var(--gray-50);
+    background: #f9fafb;
     padding: 16px;
     border-radius: 6px;
     margin-top: 16px;
 }
 
-.csv-file-info-title {
+.info-header {
     margin: 0 0 12px 0;
-    color: var(--gray-900);
+    color: #111827;
     font-size: 14px;
     font-weight: 600;
 }

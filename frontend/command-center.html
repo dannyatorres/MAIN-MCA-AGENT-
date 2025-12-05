@@ -101,8 +101,8 @@
                     <div class="panel-header">
                         <div class="pulse-header flex-between-center w-full">
                             <div>
-                                <h4 class="industry-wire-title">📰 Industry Wire</h4>
-                                <span class="industry-wire-subtitle">Daily updates</span>
+                                <h4 class="news-header-title">📰 Industry Wire</h4>
+                                <span class="news-header-subtitle">Daily updates</span>
                             </div>
                             <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh">
                                 <i class="fas fa-sync-alt"></i>
@@ -170,34 +170,37 @@
                 <h3>📊 Import Conversations from CSV</h3>
                 <button class="modal-close" id="closeCsvImportModal">×</button>
             </div>
-            <div class="modal-body scroll-y csv-modal-body">
+            <div class="modal-body modal-body-scroll">
                 <div id="csvUploadSection" class="csv-section">
-                    <div class="csv-upload-area" id="csvUploadArea">
-                        <div class="csv-upload-icon">📄</div>
-                        <h4 class="csv-upload-title">Drag and drop your CSV file here</h4>
-                        <p class="csv-upload-subtitle">Or click to select a file</p>
+                    <div class="upload-drop-zone" id="csvUploadArea">
+                        <div class="upload-icon">📄</div>
+                        <h4 class="upload-title">Drag and drop your CSV file here</h4>
+                        <p class="upload-subtitle">Or click to select a file</p>
                         <input type="file" class="hidden" id="csvFileInput" accept=".csv" />
                         <button class="btn btn-primary" id="csvSelectFileBtn">Select File</button>
                     </div>
                     <div class="csv-file-info hidden" id="csvFileInfo">
-                        <h4 class="csv-file-info-title">File Information</h4>
+                        <h4 class="info-header">File Information</h4>
                         <div id="csvFileDetails"></div>
                     </div>
                 </div>
+
                 <div id="csvMappingSection" class="csv-section hidden">
                     <div id="csvMappingControls"></div>
-                    <div class="flex-between-center mt-20">
+                    <div class="modal-actions-row">
                          <button class="btn btn-secondary" id="csvBackToUploadBtn">Back</button>
                          <button class="btn btn-primary" id="csvValidateMappingBtn">Validate</button>
                     </div>
                 </div>
+
                  <div id="csvValidationSection" class="csv-section hidden">
                     <div id="csvValidationResults"></div>
-                    <div class="flex-between-center mt-20">
+                    <div class="modal-actions-row">
                         <button class="btn btn-secondary" id="csvBackToMappingBtn">Back</button>
                         <button class="btn btn-primary" id="csvProceedToImportBtn">Import</button>
                     </div>
                 </div>
+
                 <div id="csvImportSection" class="csv-section hidden">
                     <div id="csvImportStatus">Importing...</div>
                 </div>
@@ -261,7 +264,7 @@
     </div>
 
     <div class="modal hidden" id="lendersInlineModal">
-        <div class="modal-content modal-xl scroll-y">
+        <div class="modal-content modal-xl">
             <div class="modal-header">
                 <h3>Lender Qualification & Submission</h3>
                 <button class="modal-close" id="closeLendersInlineModal">×</button>
