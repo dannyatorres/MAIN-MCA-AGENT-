@@ -175,7 +175,7 @@ class ConversationCore {
                 } else {
                     this.filterConversations();
                 }
-            }, 300); // 300ms debounce
+            }, 150); // 150ms debounce - imperceptible to humans but saves CPU
         });
 
         // Keep 'search' for immediate clearing if the browser supports standard search inputs

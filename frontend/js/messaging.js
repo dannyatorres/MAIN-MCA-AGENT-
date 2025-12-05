@@ -384,9 +384,17 @@ class MessagingModule {
             this.showBrowserNotification(data);
         }
 
-        // Always refresh conversation list to update order and show badge
-        if (this.parent.conversationUI) {
-            this.parent.conversationUI.loadConversations();
+        // ✅ INSTANT UPDATE: Update just the single conversation preview instead of reloading entire list
+        if (this.parent.conversationUI && this.parent.conversationUI.updateConversationPreview) {
+            const lastMsg = data.message ? data.message : data;
+
+            this.parent.conversationUI.updateConversationPreview(
+                messageConversationId,
+                {
+                    content: lastMsg.content || 'New Message',
+                    created_at: new Date().toISOString()
+                }
+            );
         }
 
         // Show in-app notification for non-current conversations
