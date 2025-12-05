@@ -391,3 +391,201 @@
 }
 
 /* ==========================================================================
+   [REFACTOR] Documents Module Styles
+   Replaces inline styles from documents.js
+   ========================================================================== */
+
+/* 1. Empty & Error States */
+.doc-state-container {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.doc-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.doc-state-title {
+    color: var(--gray-500);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.doc-state-text {
+    color: var(--gray-400);
+    font-size: 14px;
+}
+
+.error-state .doc-state-title {
+    color: var(--red);
+}
+
+/* 2. FCS Report Section (Dark Card Style) */
+.fcs-generation-section {
+    display: block;
+    margin-bottom: 20px;
+    padding: 20px;
+
+    /* Dark Theme Override */
+    background: #161b22;
+    border-radius: 12px;
+    border: 1px solid rgba(14, 165, 233, 0.2);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.fcs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fcs-title {
+    margin: 0;
+    color: #e6edf3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.fcs-subtitle {
+    margin: 4px 0 0 0;
+    color: #8b949e;
+    font-size: 12px;
+}
+
+/* 3. Document Modal (The Edit Popup) */
+.doc-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.doc-modal-content {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+}
+
+.doc-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.doc-modal-header h3 {
+    margin: 0;
+    color: #e6edf3;
+    font-size: 16px;
+}
+
+.doc-modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #8b949e;
+    cursor: pointer;
+}
+
+.doc-modal-close:hover {
+    color: #fff;
+}
+
+.doc-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.doc-form-group {
+    margin-bottom: 20px;
+}
+
+.doc-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #e6edf3;
+    font-size: 13px;
+}
+
+.doc-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Inputs inside modal */
+.doc-input,
+.doc-select {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #fff;
+    outline: none;
+}
+
+.doc-input:focus,
+.doc-select:focus {
+    border-color: var(--blue-accent);
+}
+
+.doc-badge {
+    color: #8b949e;
+    font-weight: 500;
+    padding: 8px 12px;
+    background: #21262d;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    font-family: monospace;
+}
+
+.doc-helper-text {
+    color: #8b949e;
+    font-size: 11px;
+    margin-top: 6px;
+    display: block;
+}
+
+.doc-modal-footer {
+    padding: 20px;
+    border-top: 1px solid #30363d;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    background: #0d1117;
+}
+
+/* 4. Inline Edit Highlight */
+.inline-editing {
+    background-color: #30363d !important;
+    color: white !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    outline: 1px solid var(--blue-accent);
+}
+
+/* ==========================================================================

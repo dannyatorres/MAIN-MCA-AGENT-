@@ -474,26 +474,30 @@ class DocumentsModule {
         const nameWithoutExtension = lastDotIndex > 0 ? originalFilename.substring(0, lastDotIndex) : originalFilename;
         const fileExtension = lastDotIndex > 0 ? originalFilename.substring(lastDotIndex) : '';
 
+        // CLEANED: All inline styles replaced with 'doc-modal-*' classes
         const modalHtml = `
-            <div id="editDocumentModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;" onclick="this.remove()">
-                <div style="background: white; border-radius: 8px; padding: 0; max-width: 500px; width: 90%; max-height: 80vh; overflow: auto;" onclick="event.stopPropagation()">
-                    <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="margin: 0; color: #333;">Edit Document</h3>
-                        <button onclick="document.getElementById('editDocumentModal').remove()" style="background: none; border: none; font-size: 24px; color: #666; cursor: pointer;">×</button>
+            <div id="editDocumentModal" class="doc-modal-overlay" onclick="this.remove()">
+                <div class="doc-modal-content" onclick="event.stopPropagation()">
+
+                    <div class="doc-modal-header">
+                        <h3>Edit Document</h3>
+                        <button onclick="document.getElementById('editDocumentModal').remove()" class="doc-modal-close">×</button>
                     </div>
-                    <div style="padding: 20px;">
-                        <div style="margin-bottom: 20px;">
-                            <label for="editDocumentName" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Document Name:</label>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <input type="text" id="editDocumentName" value="${nameWithoutExtension}" style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                                ${fileExtension ? `<span style="color: #666; font-weight: 500; padding: 8px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd;">${fileExtension}</span>` : ''}
+
+                    <div class="doc-modal-body">
+                        <div class="doc-form-group">
+                            <label for="editDocumentName" class="doc-label">Document Name:</label>
+                            <div class="doc-input-group">
+                                <input type="text" id="editDocumentName" value="${nameWithoutExtension}" class="doc-input">
+                                ${fileExtension ? `<span class="doc-badge">${fileExtension}</span>` : ''}
                             </div>
-                            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">File extension will be preserved automatically</small>
+                            <small class="doc-helper-text">File extension will be preserved automatically</small>
                             <input type="hidden" id="editDocumentExtension" value="${fileExtension}">
                         </div>
-                        <div style="margin-bottom: 20px;">
-                            <label for="editDocumentType" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Document Type:</label>
-                            <select id="editDocumentType" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+
+                        <div class="doc-form-group">
+                            <label for="editDocumentType" class="doc-label">Document Type:</label>
+                            <select id="editDocumentType" class="doc-select">
                                 <option value="Bank Statement" ${docInfo.documentType === 'Bank Statement' ? 'selected' : ''}>Bank Statement</option>
                                 <option value="Tax Return" ${docInfo.documentType === 'Tax Return' ? 'selected' : ''}>Tax Return</option>
                                 <option value="Financial Statement" ${docInfo.documentType === 'Financial Statement' ? 'selected' : ''}>Financial Statement</option>
@@ -504,9 +508,10 @@ class DocumentsModule {
                             </select>
                         </div>
                     </div>
-                    <div style="padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; justify-content: flex-end;">
-                        <button id="cancelEditModal" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">Cancel</button>
-                        <button id="saveDocumentEdit" data-document-id="${documentId}" style="padding: 8px 16px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer;">Save Changes</button>
+
+                    <div class="doc-modal-footer">
+                        <button id="cancelEditModal" class="btn btn-secondary">Cancel</button>
+                        <button id="saveDocumentEdit" data-document-id="${documentId}" class="btn btn-primary">Save Changes</button>
                     </div>
                 </div>
             </div>
@@ -649,9 +654,9 @@ class DocumentsModule {
 
         const originalName = nameElement.textContent.trim();
         nameElement.contentEditable = 'true';
-        nameElement.style.backgroundColor = '#fff3cd';
-        nameElement.style.padding = '4px';
-        nameElement.style.borderRadius = '4px';
+
+        // CLEANED: Use CSS class for the "Edit Mode" look
+        nameElement.classList.add('inline-editing');
         nameElement.focus();
 
         const range = document.createRange();
@@ -663,7 +668,9 @@ class DocumentsModule {
         const saveEdit = async () => {
             const newName = nameElement.textContent.trim();
             nameElement.contentEditable = 'false';
-            nameElement.style.backgroundColor = '';
+
+            // CLEANED: Remove class instead of inline style
+            nameElement.classList.remove('inline-editing');
 
             if (newName && newName !== originalName) {
                 // Save to backend - don't revert here
@@ -929,6 +936,7 @@ class DocumentsModule {
     }
 
     // Template for documents tab
+    // CLEANED: Inline styles moved to 05-panel-right-intelligence.css
     createDocumentsTabTemplate(documents = []) {
         const conversationId = this.parent.getCurrentConversationId() || '';
 
@@ -938,23 +946,22 @@ class DocumentsModule {
                     <h3>Documents</h3>
                     <input type="file" id="documentUpload" multiple
                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv,.xlsx"
-                           style="display: none;">
+                           class="hidden">
                 </div>
 
-                <div class="fcs-generation-section" id="fcsGenerationSection" style="display: block; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #0ea5e9;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="fcs-generation-section" id="fcsGenerationSection">
+                    <div class="fcs-header">
                         <div>
-                            <h4 style="margin: 0; color: #0369a1; display: flex; align-items: center; gap: 8px;">
+                            <h4 class="fcs-title">
                                 📊 FCS Report Generation
                             </h4>
-                            <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.85rem;">
+                            <p class="fcs-subtitle">
                                 Generate financial analysis from uploaded bank statements
                             </p>
                         </div>
                         <button id="generateFCSBtn"
-                                class="btn btn-primary"
-                                data-conversation-id="${conversationId}"
-                                style="display: flex; align-items: center; gap: 8px; padding: 10px 16px;">
+                                class="btn btn-primary btn-sm"
+                                data-conversation-id="${conversationId}">
                             📈 Generate FCS Report
                         </button>
                     </div>
@@ -969,7 +976,7 @@ class DocumentsModule {
                             Supports: PDF, JPG, PNG, DOC, DOCX, CSV, XLSX (Max 50MB each)
                         </p>
                     </div>
-                    <div class="upload-progress" id="uploadProgress" style="display: none;">
+                    <div class="upload-progress hidden" id="uploadProgress">
                         <div class="progress-bar">
                             <div class="progress-fill" id="progressFill"></div>
                         </div>
@@ -977,7 +984,7 @@ class DocumentsModule {
                     </div>
                 </div>
 
-                <div class="document-type-selection" id="documentTypeSelection" style="display: none;">
+                <div class="document-type-selection hidden" id="documentTypeSelection">
                     <h4>Categorize Documents</h4>
                     <div class="type-selection-grid" id="typeSelectionGrid"></div>
                     <div class="type-selection-actions">
@@ -993,7 +1000,7 @@ class DocumentsModule {
                     </div>
                 </div>
 
-                <div class="documents-summary" id="documentsSummary" style="display: none;"></div>
+                <div class="documents-summary hidden" id="documentsSummary"></div>
             </div>
         `;
     }

@@ -45,21 +45,23 @@ export class DocumentsTab {
     // --- Helpers ---
 
     renderEmpty(container) {
+        // CLEANED: Uses CSS classes from 05-panel-right-intelligence.css
         container.innerHTML = `
-            <div class="empty-state" style="text-align: center; padding: 60px 20px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">📂</div>
-                <h3 style="color: #6b7280; margin-bottom: 8px;">No Conversation Selected</h3>
-                <p style="color: #9ca3af;">Select a conversation to view or upload documents.</p>
+            <div class="doc-state-container">
+                <div class="doc-state-icon">📂</div>
+                <h3 class="doc-state-title">No Conversation Selected</h3>
+                <p class="doc-state-text">Select a conversation to view or upload documents.</p>
             </div>
         `;
     }
 
     renderError(container, message) {
+        // CLEANED: Uses CSS classes from 05-panel-right-intelligence.css
         container.innerHTML = `
-            <div class="error-state" style="text-align: center; padding: 40px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-                <h4 style="color: #dc2626; margin-bottom: 8px;">${message}</h4>
-                <p style="color: #6b7280;">Please refresh the page and try again.</p>
+            <div class="doc-state-container error-state">
+                <div class="doc-state-icon">⚠️</div>
+                <h4 class="doc-state-title">${message}</h4>
+                <p class="doc-state-text">Please refresh the page and try again.</p>
             </div>
         `;
     }
