@@ -751,26 +751,18 @@ class ConversationCore {
     }
 
     clearConversationDetails() {
-        // 1. Clear the Header with Onyx Pill Structure
+        console.log('🧹 Clearing conversation details & Restoring Dashboard...');
+
+        // 1. RESET CENTER PANEL HEADER (Standardize)
+        const centerPanel = document.querySelector('.center-panel');
+        if (centerPanel) centerPanel.classList.add('dashboard-mode'); // Force CSS mode
+
         const headerContainer = document.querySelector('.center-panel .panel-header');
         if (headerContainer) {
-            // Reset to dashboard pill
-            headerContainer.innerHTML = `
-                <button id="backHomeBtn" onclick="loadDashboard()" class="hidden" title="Back to Dashboard">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-
-                <div class="identity-pill">
-                    <div class="pill-avatar">MA</div>
-                    <div class="pill-info">
-                        <span class="pill-business-name">MCAagent</span>
-                        <span class="pill-merchant-name">Dashboard</span>
-                    </div>
-                </div>
-            `;
+            headerContainer.innerHTML = ''; // Hide header in dashboard mode
         }
 
-        // 2. Inject the Dashboard into the Messages Area
+        // 2. INJECT DASHBOARD INTO MESSAGES AREA
         const messagesContainer = document.getElementById('messagesContainer');
         if (messagesContainer) {
             messagesContainer.innerHTML = `
@@ -778,6 +770,10 @@ class ConversationCore {
                     <div class="dashboard-header">
                         <h1>Welcome back, Agent</h1>
                         <p>Here is what's happening with your pipeline today.</p>
+
+                        <button class="btn btn-secondary" onclick="openLenderManagementModal()" style="margin-top: 16px; width: 200px;">
+                            <i class="fas fa-university"></i>&nbsp; Manage Lenders
+                        </button>
                     </div>
 
                     <div class="goal-card">
@@ -795,57 +791,68 @@ class ConversationCore {
 
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-sack-dollar"></i></div>
-                            <div class="stat-value">8</div>
-                            <div class="stat-label">Deals Funded</div>
-                        </div>
-
-                        <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-fire"></i></div>
-                            <div class="stat-value">12</div>
-                            <div class="stat-label">Hot Leads</div>
+                            <div class="stat-value" id="activeCount">-</div>
+                            <div class="stat-label">Active Leads</div>
                         </div>
 
                         <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
-                            <div class="stat-value">24</div>
-                            <div class="stat-label">Applications Out</div>
+                            <div class="stat-icon"><i class="fas fa-spinner"></i></div>
+                            <div class="stat-value" id="processingCount">-</div>
+                            <div class="stat-label">Processing</div>
                         </div>
-                    </div>
 
-                    <div class="empty-state dashboard-style">
-                        <div class="empty-state-hint white-theme">
-                            <i class="fas fa-arrow-left icon-brand"></i>
-                            <span class="text-gray-600">Select a conversation to start working</span>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                            <div class="stat-value" id="todayCount">-</div>
+                            <div class="stat-label">New Today</div>
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        // 3. Hide Inputs
+        // 3. HIDE INPUTS & ACTIONS
         const messageInputContainer = document.getElementById('messageInputContainer');
-        if (messageInputContainer) {
-            messageInputContainer.style.display = 'none';
-        }
+        if (messageInputContainer) messageInputContainer.style.display = 'none';
 
         const conversationActions = document.getElementById('conversationActions');
-        if (conversationActions) {
-            conversationActions.style.display = 'none';
+        if (conversationActions) conversationActions.style.display = 'none';
+
+        // 4. RESET RIGHT PANEL (THE CRITICAL FIX)
+        const rightPanel = document.querySelector('.right-panel');
+        const rightHeader = rightPanel ? rightPanel.querySelector('.panel-header') : null;
+        const rightContent = document.getElementById('intelligenceContent');
+
+        // A. Force Header Reset (Removes Tabs)
+        if (rightHeader) {
+            rightHeader.style.cssText = 'height: 64px !important; min-height: 64px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; padding: 0 16px !important;';
+            rightHeader.innerHTML = `
+                <div class="panel-title" style="display: flex; align-items: center; gap: 12px;">
+                    <div class="title-text">
+                        <h2 style="font-size: 16px; font-weight: 600; margin:0;">Industry Wire</h2>
+                        <span style="font-size: 11px; color: var(--gray-500); font-weight: normal;">Daily updates</span>
+                    </div>
+                </div>
+                <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh News">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            `;
         }
 
-        // 4. Clean Right Panel
-        const intelligenceContent = document.getElementById('intelligenceContent');
-        if (intelligenceContent) {
-            intelligenceContent.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon large-icon">
-                        <i class="fas fa-chart-pie"></i>
+        // B. Reset Content Area & Load News
+        if (rightContent) {
+            rightContent.innerHTML = `
+                <div id="newsFeedContainer" class="intelligence-content" style="padding: 0;">
+                    <div style="padding: 20px; text-align: center; color: var(--gray-400);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading news...
                     </div>
-                    <h3>Lead Intelligence</h3>
-                    <p>Select a lead to view analysis, documents, and FCS data.</p>
                 </div>
             `;
+            // Trigger the news loader if available
+            if (typeof window.loadMarketNews === 'function') {
+                window.loadMarketNews();
+            }
         }
     }
 
