@@ -87,17 +87,31 @@
 /* 3. Content Area */
 .intelligence-content {
     flex: 1;
-    overflow-y: auto;
-    padding: 20px;
+
+    /* FIX 1: Remove global padding */
+    /* This allows the AI chat to touch the edges and sit at the very bottom */
+    padding: 0;
+
+    /* FIX 2: Stop this container from scrolling */
+    /* We let the inner AI module handle its own scrolling now */
+    overflow: hidden;
+
     background: var(--white);
+
+    /* FIX 3: Ensure layout stability */
+    display: flex;
+    flex-direction: column;
+    position: relative;
 }
 
 /* 4. Data Grids (CRM Info) */
 .info-grid {
+    padding: 20px; /* Add the padding back specifically for this view */
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 0;
+    overflow-y: auto; /* Allow this specific view to scroll */
 }
 
 .info-item {
@@ -122,6 +136,13 @@
 }
 
 /* 5. Document Lists (Files) */
+#fcsDocumentSelection,
+#lendersInlineContent {
+    padding: 20px; /* Restore padding for form views */
+    overflow-y: auto;
+    height: 100%;
+}
+
 .document-item {
     display: flex;
     align-items: center;
