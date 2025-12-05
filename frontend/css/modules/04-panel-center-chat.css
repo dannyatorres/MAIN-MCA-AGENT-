@@ -139,6 +139,42 @@
     overflow-y: auto;        /* Allow scroll if screen is too short */
 }
 
+/* ==========================================================================
+   [DASHBOARD TOOLBAR]
+   The flexible container for all your action buttons
+   ========================================================================== */
+
+.dashboard-toolbar {
+    display: flex;
+    gap: 12px;           /* Space between buttons */
+    margin-bottom: 24px; /* Space between toolbar and stats */
+    flex-wrap: wrap;     /* Allows buttons to drop to next line on small screens */
+
+    /* CONTROL KNOB: Change this line to move buttons! */
+    justify-content: flex-start;
+}
+
+/* Style for the individual buttons */
+.dashboard-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: #e6edf3;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dashboard-action-btn:hover {
+    background: #30363d;
+    border-color: #8b949e;
+    transform: translateY(-1px);
+}
+
 /* Legacy support - Centered layout for dashboard */
 .conversation-info {
     display: flex;

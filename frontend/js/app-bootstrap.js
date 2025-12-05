@@ -71,15 +71,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Inject Dashboard Content
                 if (messages) {
-                    // REFACTORED: Moved inline styles to utility classes (.dashboard-btn-large)
                     messages.innerHTML = `
                         <div class="dashboard-container">
                             <div class="dashboard-header">
                                 <h1>Welcome back, Agent</h1>
                                 <p>Here is what's happening with your pipeline today.</p>
+                            </div>
 
-                                <button class="btn btn-secondary dashboard-btn-large" onclick="openLenderManagementModal()">
-                                    <i class="fas fa-university"></i>&nbsp; Manage Lenders
+                            <div class="dashboard-toolbar">
+                                <button class="btn btn-secondary dashboard-action-btn" onclick="openLenderManagementModal()">
+                                    <i class="fas fa-university"></i> Manage Lenders
+                                </button>
+
+                                <button class="btn btn-secondary dashboard-action-btn">
+                                    <i class="fas fa-cog"></i> Settings
+                                </button>
+
+                                <button class="btn btn-secondary dashboard-action-btn">
+                                    <i class="fas fa-shield-alt"></i> Admin
                                 </button>
                             </div>
 
@@ -90,9 +99,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </div>
                                 <div class="progress-track">
                                     <div class="progress-fill w-58"></div>
-                                </div>
-                                <div class="goal-footer">
-                                    12 days left in the month
                                 </div>
                             </div>
 
