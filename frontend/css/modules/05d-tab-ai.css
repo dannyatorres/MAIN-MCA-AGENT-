@@ -1,46 +1,42 @@
-/* css/modules/09-ai-agent.css */
+/* ==========================================================================
+   [TAB] AI Assistant
+   ========================================================================== */
 
-/* 0. Parent Container Fix (ensures height: 100% works) */
+/* 1. Parent Container */
 #intelligenceContent {
     height: 100%;
     display: flex;
     flex-direction: column;
 }
 
-/* 1. Main Container */
+/* 2. Main Section Container */
 .ai-assistant-section {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background-color: #0d1117 !important; /* Dark background */
+    background-color: #0d1117;
     position: relative;
     overflow: hidden;
 }
 
-/* ==========================================================================
-   2. Chat Scroll Area (Updated to fit floating input)
-   ========================================================================== */
+/* 3. Chat Scroll Area */
 #aiChatMessages {
     flex: 1;
     overflow-y: auto;
-
-    /* CRITICAL: Match Center Panel Padding */
     padding: 20px;
-    padding-bottom: 140px; /* Reserves space for the floating deck */
-
+    padding-bottom: 140px; /* Reserves space for the floating input */
     display: flex;
     flex-direction: column;
     gap: 16px;
     scroll-behavior: smooth;
-
-    /* Hide Scrollbar */
     scrollbar-width: none;
 }
+
 #aiChatMessages::-webkit-scrollbar {
     display: none;
 }
 
-/* 3. Message Rows */
+/* 4. Message Rows */
 .ai-message-row {
     display: flex;
     width: 100%;
@@ -55,9 +51,9 @@
     justify-content: flex-start;
 }
 
-/* 4. The Bubbles (Dark Theme) */
+/* 5. The Bubbles (Dark Theme) */
 
-/* USER (You) - Teal accent */
+/* USER - Teal accent */
 .ai-bubble-user {
     background-color: #2dd4bf;
     color: #0f1115;
@@ -78,15 +74,13 @@
     border-radius: 12px;
     border-bottom-left-radius: 4px;
     max-width: 90%;
-
     border: 1px solid #30363d;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-
     font-size: 14px;
     line-height: 1.6;
 }
 
-/* 5. AI Typography (Dark Theme) */
+/* 6. AI Typography */
 .ai-bubble-ai strong {
     font-weight: 700;
     color: #ffffff;
@@ -102,24 +96,16 @@
     color: #c9d1d9;
 }
 
-/* ==========================================================================
-   6. The Floating Input Deck (Refactored to match Main Chat EXACTLY)
-   ========================================================================== */
-
-/* The OUTER container becomes the floating card */
+/* 7. The Floating Input Deck */
 .ai-input-area {
     position: absolute;
     bottom: 20px;
     left: 20px;
     right: 20px;
-
-    /* Dark Theme Card */
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 24px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-
-    /* Layout */
     padding: 16px 20px;
     display: flex;
     flex-direction: column;
@@ -127,18 +113,16 @@
     z-index: 20;
 }
 
-/* The INNER wrapper becomes invisible (just for layout) */
+/* The INNER wrapper */
 .ai-input-wrapper {
     display: flex;
     width: 100%;
     gap: 10px;
     align-items: flex-end;
-
-    /* CRITICAL: Remove old card styles */
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    border-radius: 0 !important;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
 }
 
 /* The Input Field (Dark Theme) */
@@ -148,12 +132,10 @@
     border: 1px solid #30363d;
     border-radius: 20px;
     padding: 10px 16px;
-
     font-size: 14px;
     font-family: inherit;
     resize: none;
     outline: none;
-
     min-height: 40px;
     max-height: 100px;
     color: #e6edf3;
@@ -182,7 +164,6 @@
     align-items: center;
     justify-content: center;
     transition: transform 0.1s;
-
     margin-bottom: 2px;
 }
 
@@ -191,7 +172,7 @@
     background: #5eead4;
 }
 
-/* 7. Typing Indicator (Dark Theme) */
+/* 8. Typing Indicator (Dark Theme) */
 .ai-thinking {
     display: flex;
     gap: 4px;
@@ -200,6 +181,7 @@
     border-radius: 12px;
     width: fit-content;
 }
+
 .ai-dot {
     width: 6px;
     height: 6px;
@@ -207,6 +189,7 @@
     border-radius: 50%;
     animation: bounce 1.4s infinite ease-in-out both;
 }
+
 .ai-dot:nth-child(1) { animation-delay: -0.32s; }
 .ai-dot:nth-child(2) { animation-delay: -0.16s; }
 
@@ -215,11 +198,7 @@
     40% { transform: scale(1); }
 }
 
-/* =========================================
-   8. States & Utilities (Refactored)
-   ========================================= */
-
-/* Loading State inside Chat (Dark Theme) */
+/* 9. Loading State */
 .ai-loading-container {
     text-align: center;
     color: #8b949e;
@@ -235,7 +214,7 @@
     margin: 0;
 }
 
-/* Disclaimer text below input */
+/* 10. Disclaimer */
 .ai-disclaimer {
     font-size: 10px;
     color: #6e7681;
@@ -243,7 +222,7 @@
     margin: 0;
 }
 
-/* Empty State (Dark Theme) */
+/* 11. Empty State */
 .ai-empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -266,7 +245,7 @@
     margin: 0;
 }
 
-/* Markdown Formatting */
+/* 12. Markdown Formatting */
 .ai-bullet-point {
     color: #2dd4bf; /* Teal accent */
     font-weight: bold;
@@ -274,7 +253,7 @@
 }
 
 /* ==========================================================================
-   AI Chat Interface (Moved from templates-utilities.js inline styles)
+   Legacy AI Chat Interface (from templates-utilities.js)
    ========================================================================== */
 
 .ai-chat-interface {
