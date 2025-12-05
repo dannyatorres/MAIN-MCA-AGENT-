@@ -106,6 +106,10 @@ class ConversationCore {
                             <div class="conversation-time">${timeAgo}</div>
                         </div>
 
+                        <div class="message-preview-row" style="font-size: 12px; color: #6b7280; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                             <span class="message-preview">${conv.last_message || 'No messages yet'}</span>
+                        </div>
+
                         <div class="conversation-meta">
                             <span class="phone-number">${phone}</span>
                             <span class="cid-tag">CID# ${displayCid}</span>
