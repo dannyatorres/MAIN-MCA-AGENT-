@@ -51,9 +51,6 @@ class AIAssistant {
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
-                    <div class="ai-disclaimer">
-                        AI can make mistakes. Verify important financial details.
-                    </div>
                 </div>
             </div>
         `;
