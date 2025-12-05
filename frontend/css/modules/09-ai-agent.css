@@ -104,24 +104,23 @@
 }
 
 /* ==========================================================================
-   6. The Floating Input Deck (Refactored to match Center Panel)
+   6. The Floating Input Deck (Refactored to match Main Chat EXACTLY)
    ========================================================================== */
 
-/* The Container - Now looks exactly like #messageInputContainer */
+/* The OUTER container becomes the floating card */
 .ai-input-area {
     position: absolute;
     bottom: 20px;
     left: 20px;
     right: 20px;
 
-    /* The "Floating Deck" Look */
+    /* The "Card" Look (Matches #messageInputContainer) */
     background: #ffffff;
-    border: 1px solid #e5e7eb; /* Gray-200 */
-    border-radius: 24px;       /* Matches Center Panel */
-
-    /* Soft, diffused shadow */
+    border: 1px solid #e5e7eb;
+    border-radius: 24px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.1);
 
+    /* Layout */
     padding: 16px 20px;
     display: flex;
     flex-direction: column;
@@ -129,67 +128,65 @@
     z-index: 20;
 }
 
-/* The Wrapper (Holds Input + Button) */
+/* The INNER wrapper becomes invisible (just for layout) */
 .ai-input-wrapper {
     display: flex;
     width: 100%;
     gap: 10px;
-    align-items: flex-end; /* Aligns button with bottom of text */
+    align-items: flex-end;
 
-    /* Remove old card styles since parent handles it now */
-    background: transparent;
-    box-shadow: none;
-    border: none;
+    /* CRITICAL: Remove old card styles */
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
 }
 
-/* The Textarea - Matches #messageInput */
+/* The Input Field (Matches #messageInput gray style) */
 #aiChatInput {
     flex: 1;
-    box-sizing: border-box;
-    background: #f9fafb; /* Gray-50 */
+    /* Match the gray from the left side */
+    background: #f9fafb;
     border: 1px solid transparent;
     border-radius: 20px;
     padding: 10px 16px;
+
     font-size: 14px;
     font-family: inherit;
     resize: none;
     outline: none;
 
-    /* Sizing */
     min-height: 40px;
     max-height: 100px;
     color: #1f2937;
-
     transition: all 0.2s;
 }
 
 #aiChatInput:focus {
     background: #ffffff;
-    box-shadow: inset 0 0 0 1px #ea580c; /* Brand Focus Ring */
+    box-shadow: inset 0 0 0 1px #ea580c; /* Orange Focus Ring */
 }
 
 /* The Send Button */
 #aiChatSend {
-    /* Reset position */
-    position: static;
-
     width: 36px;
     height: 36px;
-    background: #111827;
+    background: #111827; /* Onyx */
     color: white;
     border: none;
-    border-radius: 10px; /* Squircle */
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.1s, background 0.2s;
-    flex-shrink: 0;
+    transition: transform 0.1s;
+
+    /* Ensure it doesn't float weirdly */
+    margin-bottom: 2px;
 }
 
 #aiChatSend:hover {
-    background: #000000;
-    transform: translateY(-1px);
+    transform: scale(1.05);
 }
 
 /* 7. Typing Indicator */
@@ -241,7 +238,7 @@
     font-size: 10px;
     color: #9ca3af;
     text-align: center;
-    margin-top: 0; /* Parent gap handles spacing now */
+    margin: 0;
 }
 
 /* Empty State (No Conversation Selected) */
