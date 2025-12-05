@@ -40,7 +40,7 @@
 .ai-message-row {
     display: flex;
     width: 100%;
-    margin-bottom: 4px;
+    margin-bottom: 12px;
 }
 
 .ai-message-row.user {
@@ -51,39 +51,37 @@
     justify-content: flex-start;
 }
 
-/* 5. The Bubbles (Dark Theme) */
+/* 5. The Bubbles (Fluid Design) */
 
-/* USER - Teal accent */
+/* USER - Gradient Teal (Right Side) */
 .ai-bubble-user {
-    background-color: #2dd4bf;
-    color: #0f1115;
-    padding: 12px 18px;
-    border-radius: 18px;
-    border-bottom-right-radius: 4px;
-    max-width: 80%;
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 20px 20px 4px 20px;
+    max-width: 75%;
     font-size: 14px;
     line-height: 1.5;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+    border: none;
 }
 
-/* AI (Agent) - Dark Card Style */
+/* AI (Agent) - Clean Bubble (No Boxiness) */
 .ai-bubble-ai {
-    background-color: #21262d;
+    background-color: #161b22;
     color: #e6edf3;
-    padding: 16px 22px;
-    border-radius: 12px;
-    border-bottom-left-radius: 4px;
-    max-width: 90%;
+    padding: 12px 20px;
+    border-radius: 20px 20px 20px 4px;
+    max-width: 85%;
     border: 1px solid #30363d;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     font-size: 14px;
     line-height: 1.6;
 }
 
 /* 6. AI Typography */
 .ai-bubble-ai strong {
-    font-weight: 700;
-    color: #ffffff;
+    font-weight: 600;
+    color: #58a6ff;
 }
 
 .ai-bubble-ai ul {

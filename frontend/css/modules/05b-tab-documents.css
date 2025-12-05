@@ -12,22 +12,24 @@
     overflow-y: auto;
 }
 
-/* 2. Upload Bar (Replaces the messy text) */
+/* 2. Upload Bar (Sleek Button Style) */
 .upload-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #161b22;
+    background: linear-gradient(to right, #161b22, #0d1117);
     border: 1px dashed #30363d;
     border-radius: 12px;
-    padding: 12px 20px;
+    padding: 16px 20px;
     cursor: pointer;
     transition: all 0.2s ease;
+    margin-bottom: 10px;
 }
 
 .upload-bar:hover {
     border-color: #3b82f6;
     background: rgba(59, 130, 246, 0.05);
+    transform: translateY(-1px);
 }
 
 .upload-bar.drag-active {
@@ -38,23 +40,31 @@
 .upload-bar-content {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
 }
 
 .upload-icon-small {
+    background: rgba(59, 130, 246, 0.1);
     color: #3b82f6;
-    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
 }
 
 .upload-text {
-    font-size: 13px;
+    font-size: 14px;
     color: #e6edf3;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .upload-hint {
-    font-size: 11px;
+    font-size: 12px;
     color: #6e7681;
+    font-weight: 400;
 }
 
 /* 3. Document List Container */
