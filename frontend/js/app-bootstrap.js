@@ -14,31 +14,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- B. DEFINE UI RENDERERS ---
 
-            // 1. RENDER HEADER (Cleaned - Uses CSS Classes)
+            // 1. RENDER HEADER (Standard Rich Header)
             window.updateChatHeader = (businessName, ownerName) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
 
                 if (!header) return;
 
-                // Exit Dashboard Mode
                 if (centerPanel) centerPanel.classList.remove('dashboard-mode');
 
-                // Generate Initials
                 const displayTitle = businessName || 'Unknown Business';
                 const initials = displayTitle.substring(0, 2).toUpperCase();
 
-                // CLEANED: Replaced inline styles with 'chat-header-rich' classes
                 header.innerHTML = `
                     <div class="chat-header-rich">
                         <button id="backHomeBtn" onclick="loadDashboard()" class="icon-btn-small" title="Back to Dashboard">
                             <i class="fas fa-arrow-left"></i>
                         </button>
-
                         <div class="chat-avatar-large">
                             ${initials}
                         </div>
-
                         <div class="chat-details-stack">
                             <h2 class="chat-business-title">${displayTitle}</h2>
                             <div class="chat-row-secondary">
@@ -49,37 +44,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             };
 
-            // 2. RENDER DASHBOARD (Refactored to Match Onyx Theme)
+            // 2. RENDER DASHBOARD (The Home Screen)
             window.loadDashboard = () => {
                 console.log("🏠 Loading Dashboard...");
 
-                // Clear Core State
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
                     window.commandCenter.conversationUI.selectedConversation = null;
                 }
 
-                // UI: Enter Dashboard Mode
                 const centerPanel = document.querySelector('.center-panel');
                 const header = centerPanel.querySelector('.panel-header');
                 const messages = document.getElementById('messagesContainer');
-
-                // CRITICAL: Ensure inputs are hidden
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
                 centerPanel.classList.add('dashboard-mode');
-                header.innerHTML = ''; // Hide header
+                header.innerHTML = '';
 
                 if (inputs) inputs.style.display = 'none';
                 if (actions) actions.style.display = 'none';
 
-                // Render Home Content (ONYX THEME MATCH)
+                // CENTER PANEL: Welcome + Button + Stats
                 messages.innerHTML = `
                     <div class="dashboard-container">
                         <div class="dashboard-header">
                             <h1>Welcome back, Agent</h1>
                             <p>Here is what's happening with your pipeline today.</p>
+
+                            <button class="btn btn-secondary" onclick="openLenderManagementModal()" style="margin-top: 16px; width: 200px;">
+                                <i class="fas fa-university"></i>&nbsp; Manage Lenders
+                            </button>
                         </div>
 
                         <div class="goal-card">
@@ -114,42 +109,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <div class="stat-label">New Today</div>
                             </div>
                         </div>
-
-                        <div class="empty-state dashboard-style">
-                            <button class="btn btn-secondary" onclick="openLenderManagementModal()">
-                                <i class="fas fa-university"></i>&nbsp; Manage Lenders
-                            </button>
-
-                            <div class="empty-state-hint white-theme" style="margin-top: 15px;">
-                                <i class="fas fa-arrow-left icon-brand"></i>
-                                <span class="text-gray-600">Select a conversation to start working</span>
-                            </div>
-                        </div>
                     </div>
                 `;
 
-                // Reset Right Panel (Match "Empty State" from conversation-core.js)
+                // RIGHT PANEL: RESTORED NEWS FEED
                 const intelligenceContent = document.getElementById('intelligenceContent');
                 if (intelligenceContent) {
-                    // Using the new .large-icon class
+                    // Inject the Header and Empty Container
                     intelligenceContent.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon large-icon">
-                                <i class="fas fa-chart-pie"></i>
+                        <div class="panel-header" style="height: 64px; min-height: 64px; border-bottom: 1px solid var(--gray-200); padding: 0 16px; display: flex; align-items: center; justify-content: space-between;">
+                             <div class="panel-title">
+                                <div class="title-text">
+                                    <h2 style="font-size: 16px; font-weight: 600;">Industry Wire</h2>
+                                    <span style="font-size: 11px; color: var(--gray-500); font-weight: normal;">Daily updates</span>
+                                </div>
                             </div>
-                            <h3>Lead Intelligence</h3>
-                            <p>Select a lead to view analysis, documents, and FCS data.</p>
+                            <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh News">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div id="newsFeedContainer" class="intelligence-content" style="padding: 0;">
+                            <div style="padding: 20px; text-align: center; color: var(--gray-400);">
+                                <i class="fas fa-spinner fa-spin"></i> Loading news...
+                            </div>
                         </div>
                     `;
+
+                    // Immediately fetch news
+                    loadMarketNews();
                 }
 
-                // Trigger a stats refresh
                 if (window.commandCenter.stats && window.commandCenter.stats.loadStats) {
                     window.commandCenter.stats.loadStats();
                 }
             };
 
-            // 3. LENDER MODAL LOGIC
+            // 3. LENDER MODAL
             window.openLenderManagementModal = () => {
                 if (window.commandCenter.lenders && window.commandCenter.lenders.openManagementModal) {
                      window.commandCenter.lenders.openManagementModal();
@@ -158,28 +153,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // 4. DELETE MODE TOGGLE
+            // 4. DELETE MODE
             window.toggleDeleteMode = () => {
                 const list = document.getElementById('conversationsList');
                 const btn = document.getElementById('toggleDeleteModeBtn');
-
                 if (!list) return;
                 const isDeleteMode = list.classList.toggle('delete-mode');
-
                 if (btn) {
                     if (isDeleteMode) {
-                        btn.classList.add('active-danger'); // Uses CSS class instead of inline styles
-                        // Show the big "Delete Selected" button
+                        btn.classList.add('active-danger');
                         const confirmBtn = document.getElementById('deleteSelectedBtn');
                         if (confirmBtn) confirmBtn.style.display = 'block';
                     } else {
                         btn.classList.remove('active-danger');
-                        // Clear selections
                         const checkboxes = document.querySelectorAll('.delete-checkbox');
                         checkboxes.forEach(cb => cb.checked = false);
                         const confirmBtn = document.getElementById('deleteSelectedBtn');
                         if (confirmBtn) confirmBtn.style.display = 'none';
-
                         if (window.commandCenter.conversationUI) {
                             window.commandCenter.conversationUI.selectedForDeletion.clear();
                         }
@@ -198,20 +188,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 100);
 });
 
-// News Feed Logic (Refactored to remove inline styles)
+// NEWS FEED LOGIC
 async function loadMarketNews() {
     const container = document.getElementById('newsFeedContainer');
     if (!container) return;
     try {
         const response = await fetch('/api/news');
         const result = await response.json();
+
         if (result.success && result.data?.length > 0) {
-            // CLEANED: Uses .news-card class from CSS
             container.innerHTML = result.data.map(item => `
                 <div class="news-card" onclick="window.open('${item.link}', '_blank')">
                     <div class="news-content">
                         <div class="news-meta">
-                            <span class="news-source">${item.source || 'Industry News'}</span>
+                            <span class="news-source ${item.source === 'deBanked' ? 'source-highlight' : ''}">${item.source || 'Industry News'}</span>
                             <span class="news-dot">•</span>
                             <span class="news-time">Today</span>
                         </div>
@@ -223,9 +213,19 @@ async function loadMarketNews() {
                 </div>
             `).join('');
         } else {
-            container.innerHTML = '<div class="empty-state-hint">No recent updates.</div>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div style="font-size: 24px; color: var(--gray-300); margin-bottom: 10px;">
+                        <i class="far fa-newspaper"></i>
+                    </div>
+                    <p>No recent updates found.</p>
+                </div>`;
         }
     } catch (e) {
         console.log(e);
+        container.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: var(--gray-400); font-size: 12px;">
+                Unable to load news feed.
+            </div>`;
     }
 }
