@@ -63,7 +63,7 @@
                         </div>
                     </div>
 
-                    <button id="deleteSelectedBtn" class="btn btn-danger full-width hidden delete-selected-btn">
+                    <button id="deleteSelectedBtn" class="btn btn-danger full-width" style="display: none; margin: 10px; width: calc(100% - 20px);">
                         Delete Selected
                     </button>
                 </div>
@@ -80,8 +80,8 @@
                     </div>
                 <div class="messages-container" id="messagesContainer">
                     </div>
-                <div class="message-input-container hidden" id="messageInputContainer">
-                    <div class="ai-suggestions hidden" id="aiSuggestions">
+                <div class="message-input-container" id="messageInputContainer" style="display: none;">
+                    <div class="ai-suggestions" id="aiSuggestions" style="display: none;">
                         <div class="suggestions-header">
                             <span>AI Suggestions:</span>
                             <button class="close-suggestions" id="closeSuggestions">×</button>
@@ -115,7 +115,7 @@
                     </div>
                 </div>
 
-                <div id="rightPanelIntelligence" class="right-panel-state hidden">
+                <div id="rightPanelIntelligence" class="right-panel-state" style="display: none;">
                     <div class="panel-header">
                         <div class="intelligence-tabs" id="intelligenceTabs">
                             <button class="tab-btn active" data-tab="ai-assistant">AI Agent</button>
@@ -132,16 +132,16 @@
                             <p>Loading lead data...</p>
                         </div>
 
-                        <div id="lenderForm" class="hidden"></div>
-                        <div id="lenderResults" class="hidden"></div>
-                        <div id="lenderLoading" class="hidden"></div>
-                        <div id="lenderErrorMsg" class="hidden"></div>
-                        <div id="lendersTableContainer" class="hidden"></div>
-                        <div id="lenderTibDisplay" class="hidden"></div>
-                        <div id="fcsDocumentSelection" class="hidden"></div>
-                        <div id="fcsResults" class="hidden"></div>
-                        <div id="fcsLoading" class="hidden"></div>
-                        <div id="fcsErrorMsg" class="hidden"></div>
+                        <div id="lenderForm" style="display: none;"></div>
+                        <div id="lenderResults" style="display: none;"></div>
+                        <div id="lenderLoading" style="display: none;"></div>
+                        <div id="lenderErrorMsg" style="display: none;"></div>
+                        <div id="lendersTableContainer" style="display: none;"></div>
+                        <div id="lenderTibDisplay" style="display: none;"></div>
+                        <div id="fcsDocumentSelection" style="display: none;"></div>
+                        <div id="fcsResults" style="display: none;"></div>
+                        <div id="fcsLoading" style="display: none;"></div>
+                        <div id="fcsErrorMsg" style="display: none;"></div>
                     </div>
                 </div>
 
@@ -153,7 +153,7 @@
                 <span id="lastUpdated">Last updated: Never</span>
             </div>
             <div class="status-center">
-                <div class="processing-indicator hidden" id="processingIndicator">
+                <div class="processing-indicator" id="processingIndicator" style="display: none;">
                     <div class="loading-spinner small"></div>
                     <span id="processingText">Processing...</span>
                 </div>
