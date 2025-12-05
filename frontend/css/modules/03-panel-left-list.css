@@ -302,10 +302,11 @@
     margin-bottom: 1px;
 }
 
+/* Business Name - Soft Silver (Platinum) */
 .business-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: #ffffff !important; /* Pure White Name */
+    font-size: 14px;
+    font-weight: 600; /* Semi-bold is cleaner than bold */
+    color: #e6edf3 !important; /* Soft Silver */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -314,10 +315,16 @@
     line-height: 1.2;
 }
 
+/* Active State - Pure White with subtle glow */
+.conversation-item.active .business-name {
+    color: #ffffff !important;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
 .conversation-time {
     font-size: 11px;
-    color: #8b949e !important; /* Muted gray */
-    font-weight: 400;
+    color: #8b949e !important; /* Cool Slate Grey */
+    font-weight: 500;
     flex-shrink: 0;
     white-space: nowrap;
     margin-top: 1px;
@@ -333,12 +340,12 @@
 
 .phone-number {
     font-size: 12px;
-    color: #6e7681 !important; /* Meta text gray */
+    color: #8b949e !important; /* Cool Slate Grey */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 60%;
-    font-weight: 400;
+    font-weight: 500;
 }
 
 /* The CID Tag - Teal accent style */
@@ -358,10 +365,9 @@
 }
 
 /* === ACTIVE STATE OVERRIDES === */
-/* Dark theme active states */
-.conversation-item.active .business-name { color: #ffffff !important; }
+/* Active state text colors handled above with .business-name */
 .conversation-item.active .conversation-time { color: #8b949e !important; }
-.conversation-item.active .phone-number { color: #6e7681 !important; }
+.conversation-item.active .phone-number { color: #8b949e !important; }
 
 /* The CID Tag inside the active card - High contrast */
 .conversation-item.active .cid-tag {

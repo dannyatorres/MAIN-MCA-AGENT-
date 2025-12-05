@@ -27,7 +27,7 @@
     --gray-600: #a1a9b1;
     --gray-700: #c9d1d9;
     --gray-800: #e6edf3;
-    --gray-900: #ffffff;            /* Main text is now White */
+    --gray-900: #e6edf3;            /* Main text: Platinum (soft silver) */
     --black: #000000;
 
     /* The "Corgi" Styles -> Mapped to Dark Mode */
@@ -93,8 +93,16 @@ body {
     letter-spacing: -0.02em; /* Slightly tighter numbers look more expensive */
 }
 
+/* Global Typography Refinement */
+body, .conversation-item, .stat-card {
+    color: var(--gray-900); /* Soft platinum silver */
+}
+
+/* Headers: Slightly brighter but thin for elegance */
 h1, h2, h3, .header-merchant-name {
-    letter-spacing: -0.03em; /* Tight tracking on headers is a hallmark of modern UI */
+    color: #f0f6fc; /* Almost white, but soft */
+    font-weight: 600; /* Reduced from 700/800 for elegance */
+    letter-spacing: -0.02em; /* Tight tracking */
 }
 
 /* ==========================================================================

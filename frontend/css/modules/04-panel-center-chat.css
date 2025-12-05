@@ -820,7 +820,8 @@
 
 .message.outbound .message-content {
     background: #1d4ed8; /* Deep Professional Blue */
-    color: white;
+    color: #f0f6fc !important; /* Platinum text */
+    font-weight: 400; /* Regular weight is cleaner */
     border-radius: 12px !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
@@ -836,7 +837,7 @@
 
 .message.inbound .message-content {
     background: #21262d; /* Dark Grey */
-    color: #e6edf3;
+    color: #e6edf3 !important; /* Platinum text */
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: 12px !important;
 }
