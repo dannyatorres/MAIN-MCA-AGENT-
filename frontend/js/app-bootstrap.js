@@ -55,94 +55,80 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // --- CENTER PANEL RESET ---
                 const centerPanel = document.querySelector('.center-panel');
-                const centerHeader = centerPanel.querySelector('.panel-header');
+                const centerHeader = centerPanel ? centerPanel.querySelector('.panel-header') : null;
                 const messages = document.getElementById('messagesContainer');
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
-                centerPanel.classList.add('dashboard-mode');
-                centerHeader.innerHTML = '';
+                if (centerPanel) centerPanel.classList.add('dashboard-mode');
+                if (centerHeader) centerHeader.innerHTML = '';
                 if (inputs) inputs.style.display = 'none';
                 if (actions) actions.style.display = 'none';
 
                 // Inject Dashboard Content
-                messages.innerHTML = `
-                    <div class="dashboard-container">
-                        <div class="dashboard-header">
-                            <h1>Welcome back, Agent</h1>
-                            <p>Here is what's happening with your pipeline today.</p>
+                if (messages) {
+                    messages.innerHTML = `
+                        <div class="dashboard-container">
+                            <div class="dashboard-header">
+                                <h1>Welcome back, Agent</h1>
+                                <p>Here is what's happening with your pipeline today.</p>
 
-                            <button class="btn btn-secondary" onclick="openLenderManagementModal()" style="margin-top: 16px; width: 200px;">
-                                <i class="fas fa-university"></i>&nbsp; Manage Lenders
-                            </button>
-                        </div>
+                                <button class="btn btn-secondary" onclick="openLenderManagementModal()" style="margin-top: 16px; width: 200px;">
+                                    <i class="fas fa-university"></i>&nbsp; Manage Lenders
+                                </button>
+                            </div>
 
-                        <div class="goal-card">
-                            <div class="goal-header">
-                                <span class="goal-title">Monthly Funding Goal</span>
-                                <span class="goal-numbers">$145,000 <span class="goal-subtext">/ $250k</span></span>
+                            <div class="goal-card">
+                                <div class="goal-header">
+                                    <span class="goal-title">Monthly Funding Goal</span>
+                                    <span class="goal-numbers">$145,000 <span class="goal-subtext">/ $250k</span></span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width: 58%;"></div>
+                                </div>
+                                <div class="goal-footer">
+                                    12 days left in the month
+                                </div>
                             </div>
-                            <div class="progress-track">
-                                <div class="progress-fill" style="width: 58%;"></div>
-                            </div>
-                            <div class="goal-footer">
-                                12 days left in the month
-                            </div>
-                        </div>
 
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-fire"></i></div>
-                                <div class="stat-value" id="activeCount">-</div>
-                                <div class="stat-label">Active Leads</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-spinner"></i></div>
-                                <div class="stat-value" id="processingCount">-</div>
-                                <div class="stat-label">Processing</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
-                                <div class="stat-value" id="todayCount">-</div>
-                                <div class="stat-label">New Today</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // --- RIGHT PANEL RESET (Fixing the Tabs Issue) ---
-                const rightPanel = document.querySelector('.right-panel');
-                const rightHeader = rightPanel ? rightPanel.querySelector('.panel-header') : null;
-                const rightContent = document.getElementById('intelligenceContent');
-
-                // A. Wipe the Tabs from the Header
-                if (rightHeader) {
-                    // Force row layout (Tabs force column, we need row for title)
-                    rightHeader.style.cssText = 'height: 64px !important; min-height: 64px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; padding: 0 16px !important;';
-
-                    rightHeader.innerHTML = `
-                        <div class="panel-title" style="display: flex; align-items: center; gap: 12px;">
-                            <div class="title-text">
-                                <h2 style="font-size: 16px; font-weight: 600; margin:0;">Industry Wire</h2>
-                                <span style="font-size: 11px; color: var(--gray-500); font-weight: normal;">Daily updates</span>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                                    <div class="stat-value" id="activeCount">-</div>
+                                    <div class="stat-label">Active Leads</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon"><i class="fas fa-spinner"></i></div>
+                                    <div class="stat-value" id="processingCount">-</div>
+                                    <div class="stat-label">Processing</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                                    <div class="stat-value" id="todayCount">-</div>
+                                    <div class="stat-label">New Today</div>
+                                </div>
                             </div>
                         </div>
-                        <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh News">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
                     `;
                 }
 
-                // B. Reset the Content Area
-                if (rightContent) {
-                    rightContent.innerHTML = `
-                        <div id="newsFeedContainer" class="intelligence-content" style="padding: 0;">
-                            <div style="padding: 20px; text-align: center; color: var(--gray-400);">
-                                <i class="fas fa-spinner fa-spin"></i> Loading news...
-                            </div>
-                        </div>
-                    `;
-                    // Load news immediately
+                // --- RIGHT PANEL RESET (FIXED) ---
+                // Instead of rewriting innerHTML, we simply toggle the views defined in command-center.html
+
+                // 1. Try using the Intelligence Manager if initialized
+                if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
+                    window.commandCenter.intelligence.toggleView(false);
+                } else {
+                    // 2. Fallback: Manual CSS Toggle matches command-center.html IDs
+                    const homePanel = document.getElementById('rightPanelHome');
+                    const intelPanel = document.getElementById('rightPanelIntelligence');
+
+                    if (homePanel) homePanel.style.display = 'flex'; // Show News
+                    if (intelPanel) intelPanel.style.display = 'none'; // Hide Tabs
+                }
+
+                // 3. Ensure news is loaded
+                if (window.loadMarketNews) {
                     window.loadMarketNews();
                 }
 

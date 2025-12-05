@@ -819,40 +819,19 @@ class ConversationCore {
         const conversationActions = document.getElementById('conversationActions');
         if (conversationActions) conversationActions.style.display = 'none';
 
-        // 4. RESET RIGHT PANEL (THE CRITICAL FIX)
-        const rightPanel = document.querySelector('.right-panel');
-        const rightHeader = rightPanel ? rightPanel.querySelector('.panel-header') : null;
-        const rightContent = document.getElementById('intelligenceContent');
+        // 4. RESET RIGHT PANEL (FIXED)
+        // We use the panel toggling approach to ensure logic consistency
+        // Instead of rewriting innerHTML, toggle the views defined in command-center.html
 
-        // A. Force Header Reset (Removes Tabs)
-        if (rightHeader) {
-            rightHeader.style.cssText = 'height: 64px !important; min-height: 64px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; padding: 0 16px !important;';
-            rightHeader.innerHTML = `
-                <div class="panel-title" style="display: flex; align-items: center; gap: 12px;">
-                    <div class="title-text">
-                        <h2 style="font-size: 16px; font-weight: 600; margin:0;">Industry Wire</h2>
-                        <span style="font-size: 11px; color: var(--gray-500); font-weight: normal;">Daily updates</span>
-                    </div>
-                </div>
-                <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh News">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            `;
-        }
+        const homePanel = document.getElementById('rightPanelHome');
+        const intelPanel = document.getElementById('rightPanelIntelligence');
 
-        // B. Reset Content Area & Load News
-        if (rightContent) {
-            rightContent.innerHTML = `
-                <div id="newsFeedContainer" class="intelligence-content" style="padding: 0;">
-                    <div style="padding: 20px; text-align: center; color: var(--gray-400);">
-                        <i class="fas fa-spinner fa-spin"></i> Loading news...
-                    </div>
-                </div>
-            `;
-            // Trigger the news loader if available
-            if (typeof window.loadMarketNews === 'function') {
-                window.loadMarketNews();
-            }
+        if (homePanel) homePanel.style.display = 'flex';
+        if (intelPanel) intelPanel.style.display = 'none';
+
+        // Trigger the news loader if available
+        if (typeof window.loadMarketNews === 'function') {
+            window.loadMarketNews();
         }
     }
 
