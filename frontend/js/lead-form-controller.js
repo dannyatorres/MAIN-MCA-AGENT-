@@ -90,7 +90,7 @@ export class LeadFormController {
                             <div class="form-group">
                                 <label>State</label>
                                 <select name="businessState" class="form-select">
-                                    ${getStateOptions(val('state', 'us_state', 'business_state', 'businessState'))}
+                                    ${getStateOptions(val('us_state', 'business_state', 'businessState'))}
                                 </select>
                             </div>
                             <div class="form-group">
