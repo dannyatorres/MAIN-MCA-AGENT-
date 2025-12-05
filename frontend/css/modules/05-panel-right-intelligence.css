@@ -333,3 +333,56 @@
 }
 
 /* ==========================================================================
+   [MODULE: DASHBOARD WIDGETS - HUD STYLE]
+   ========================================================================== */
+
+/* The Dashboard Cards */
+.stat-card, .goal-card {
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+    border-radius: 12px;
+    align-items: center;
+    text-align: center;
+    padding: 24px 16px;
+}
+
+/* The Big Number */
+.stat-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff !important;
+    line-height: 1;
+    margin: 8px 0;
+}
+
+/* The Label */
+.stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6e7681 !important;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+/* The Icon - Glowing */
+.stat-icon {
+    font-size: 20px;
+    background: transparent !important;
+    color: #4ade80 !important;
+    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.4));
+}
+
+/* Progress Bars */
+.progress-track {
+    background: #30363d !important;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: #3b82f6 !important;
+    border-radius: 4px;
+}
+
+/* ==========================================================================

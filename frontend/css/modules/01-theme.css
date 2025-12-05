@@ -79,10 +79,22 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    /* Use a high-quality system font stack */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased; /* Critical for dark mode text sharpness */
     background-color: var(--app-bg-silver);
     color: var(--gray-900);
     overflow: hidden;
+}
+
+/* Force all numbers to lineup perfectly (Tabular nums) */
+.stat-value, .info-value, .cid-tag, .phone-number, .chat-contact-phone {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em; /* Slightly tighter numbers look more expensive */
+}
+
+h1, h2, h3, .header-merchant-name {
+    letter-spacing: -0.03em; /* Tight tracking on headers is a hallmark of modern UI */
 }
 
 /* ==========================================================================

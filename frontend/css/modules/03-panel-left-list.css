@@ -178,7 +178,7 @@
     display: none;
 }
 
-/* 4. Conversation Item (Dark Cards) */
+/* 4. Conversation Item (Dark Cards with Gradient) */
 .conversation-item {
     display: flex;
     align-items: center;
@@ -188,10 +188,10 @@
     padding: 10px 12px;
     border-radius: 12px;
 
-    /* Dark Theme: Dark card background */
-    background: #161b22 !important;
-    border: 1px solid #30363d !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    /* Gradient background for depth */
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 
     cursor: pointer;
     transition: all 0.2s ease;
@@ -201,16 +201,16 @@
 
 /* Hover: Slightly lighter */
 .conversation-item:hover {
-    background: #1c2128 !important;
-    border-color: #8b949e !important;
+    background: linear-gradient(180deg, #2d3748 0%, #1c2128 100%) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
     transform: translateY(-1px);
 }
 
-/* Active: Teal glow border */
+/* Active: Neon Teal Glow */
 .conversation-item.active {
-    background: #1f2937 !important;
-    border: 1px solid #2dd4bf !important; /* Teal glow for active */
-    box-shadow: 0 4px 12px rgba(45, 212, 191, 0.15);
+    background: rgba(45, 212, 191, 0.05) !important; /* Very faint Teal tint */
+    border: 1px solid rgba(45, 212, 191, 0.4) !important; /* Teal Border */
+    box-shadow: 0 0 15px rgba(45, 212, 191, 0.1) !important; /* The Glow */
     z-index: 1;
 }
 
@@ -325,6 +325,14 @@
 .conversation-item.active .business-name { color: #ffffff !important; }
 .conversation-item.active .conversation-time { color: #8b949e !important; }
 .conversation-item.active .phone-number { color: #6e7681 !important; }
+
+/* The CID Tag inside the active card - High contrast */
+.conversation-item.active .cid-tag {
+    background: #2dd4bf !important;
+    color: #000 !important;
+    font-weight: 700;
+    border-color: transparent !important;
+}
 
 /* 7. Badges (States) */
 .state-badge {
