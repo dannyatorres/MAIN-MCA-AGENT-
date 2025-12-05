@@ -3,42 +3,60 @@
 class CallManager {
     constructor() {
         this.device = null;
-        this.activeConnection = null;
+        this.activeCall = null;
         this.token = null;
         this.timerInterval = null;
         this.callStartTime = null;
         this.currentConversationId = null;
+        this.isInitialized = false;
     }
 
     async init() {
+        // Check if Twilio SDK is loaded
+        if (typeof Twilio === 'undefined') {
+            console.error('📞 Twilio SDK not loaded');
+            return false;
+        }
+
         try {
+            console.log('📞 Initializing Call Manager...');
+
             // Fetch Token from backend
             const response = await fetch('/api/calling/token');
             const data = await response.json();
+
+            if (!data.token) {
+                throw new Error('No token received from server');
+            }
             this.token = data.token;
 
-            // Initialize Twilio Device
+            // Initialize Twilio Device (SDK 2.x API)
             this.device = new Twilio.Device(this.token, {
                 codecPreferences: ['opus', 'pcmu'],
-                fakeLocalDTMF: true,
                 enableRingingState: true
             });
 
-            this.device.on('ready', () => {
-                console.log('📞 Twilio Device Ready');
+            // Register event handlers
+            this.device.on('registered', () => {
+                console.log('📞 Twilio Device Registered');
+                this.isInitialized = true;
             });
 
             this.device.on('error', (error) => {
-                console.error('📞 Twilio Error:', error);
+                console.error('📞 Twilio Device Error:', error);
                 this.handleDisconnectUI();
             });
 
-            this.device.on('disconnect', () => {
-                console.log('📞 Call disconnected');
-                this.handleDisconnectUI();
+            this.device.on('incoming', (call) => {
+                console.log('📞 Incoming call from:', call.parameters.From);
+                // For now, just reject incoming calls
+                call.reject();
             });
 
-            console.log('📞 CallManager initialized');
+            // Register the device
+            await this.device.register();
+
+            console.log('📞 CallManager initialized successfully');
             return true;
 
         } catch (err) {
@@ -48,7 +66,8 @@ class CallManager {
     }
 
     async startCall(phoneNumber, conversationId = null) {
-        if (!this.device) {
+        // Initialize if not already done
+        if (!this.device || !this.isInitialized) {
             const initialized = await this.init();
             if (!initialized) {
                 alert('Failed to initialize calling. Please check your connection.');
@@ -58,66 +77,74 @@ class CallManager {
 
         this.currentConversationId = conversationId;
 
-        const params = {
-            To: phoneNumber,
-            conversationId: conversationId || ''
-        };
+        // Show UI immediately
+        this.showCallUI();
+        this.updateCallStatus('Connecting...');
 
         try {
-            // Connect the call
-            this.activeConnection = await this.device.connect({ params });
+            // Connect the call (SDK 2.x API)
+            const params = {
+                To: phoneNumber,
+                conversationId: conversationId || ''
+            };
+
+            this.activeCall = await this.device.connect({ params });
 
             // Setup event listeners for the active call
-            this.activeConnection.on('accept', () => {
+            this.activeCall.on('accept', () => {
                 console.log('📞 Call accepted');
                 this.updateCallStatus('Connected');
                 this.startTimer();
             });
 
-            this.activeConnection.on('ringing', () => {
+            this.activeCall.on('ringing', () => {
                 console.log('📞 Ringing...');
                 this.updateCallStatus('Ringing...');
             });
 
-            this.activeConnection.on('disconnect', () => {
-                console.log('📞 Call ended');
+            this.activeCall.on('disconnect', () => {
+                console.log('📞 Call disconnected');
                 this.handleDisconnectUI();
             });
 
-            this.activeConnection.on('cancel', () => {
+            this.activeCall.on('cancel', () => {
                 console.log('📞 Call cancelled');
                 this.handleDisconnectUI();
             });
 
-            this.activeConnection.on('reject', () => {
+            this.activeCall.on('reject', () => {
                 console.log('📞 Call rejected');
-                this.handleDisconnectUI();
+                this.updateCallStatus('Rejected');
+                setTimeout(() => this.handleDisconnectUI(), 1500);
             });
 
-            // Show UI
-            this.showCallUI();
-            this.updateCallStatus('Calling...');
+            this.activeCall.on('error', (error) => {
+                console.error('📞 Call error:', error);
+                this.updateCallStatus('Error');
+                setTimeout(() => this.handleDisconnectUI(), 1500);
+            });
 
-            return this.activeConnection;
+            return this.activeCall;
 
         } catch (error) {
             console.error('📞 Failed to start call:', error);
-            alert('Failed to start call: ' + error.message);
+            this.updateCallStatus('Failed');
+            setTimeout(() => this.handleDisconnectUI(), 1500);
             return null;
         }
     }
 
     endCall() {
-        if (this.device) {
-            this.device.disconnectAll();
+        if (this.activeCall) {
+            this.activeCall.disconnect();
         }
         this.handleDisconnectUI();
     }
 
     toggleMute() {
-        if (this.activeConnection) {
-            const isMuted = this.activeConnection.isMuted();
-            this.activeConnection.mute(!isMuted);
+        if (this.activeCall) {
+            const isMuted = this.activeCall.isMuted();
+            this.activeCall.mute(!isMuted);
 
             const muteBtn = document.getElementById('muteBtn');
             const icon = muteBtn?.querySelector('i');
@@ -131,7 +158,9 @@ class CallManager {
             }
 
             console.log('📞 Mute toggled:', !isMuted);
+            return !isMuted;
         }
+        return false;
     }
 
     // UI Helpers
@@ -149,21 +178,31 @@ class CallManager {
         const muteBtn = document.getElementById('muteBtn');
         const icon = muteBtn?.querySelector('i');
 
-        if (callBar) callBar.classList.add('hidden');
-        if (callBtn) callBtn.classList.remove('active');
+        // Small delay before hiding to show "Ended" status
+        setTimeout(() => {
+            if (callBar) callBar.classList.add('hidden');
+            if (callBtn) callBtn.classList.remove('active');
 
-        // Reset mute button
-        if (muteBtn) muteBtn.classList.remove('muted');
-        if (icon) {
-            icon.classList.add('fa-microphone');
-            icon.classList.remove('fa-microphone-slash');
-        }
+            // Reset mute button
+            if (muteBtn) muteBtn.classList.remove('muted');
+            if (icon) {
+                icon.classList.add('fa-microphone');
+                icon.classList.remove('fa-microphone-slash');
+            }
 
-        // Stop timer
+            // Reset timer display
+            const timerEl = document.getElementById('callTimer');
+            if (timerEl) timerEl.textContent = '00:00';
+
+            // Reset status
+            this.updateCallStatus('Calling...');
+        }, 1500);
+
+        // Stop timer immediately
         this.stopTimer();
 
         // Reset state
-        this.activeConnection = null;
+        this.activeCall = null;
         this.currentConversationId = null;
     }
 
@@ -194,13 +233,11 @@ class CallManager {
             this.timerInterval = null;
         }
         this.callStartTime = null;
-
-        const timerEl = document.getElementById('callTimer');
-        if (timerEl) {
-            timerEl.textContent = '00:00';
-        }
     }
 }
 
 // Create global instance
 window.callManager = new CallManager();
+
+// Log when script loads
+console.log('📞 calling.js loaded, Twilio available:', typeof Twilio !== 'undefined');
