@@ -436,14 +436,21 @@ class DocumentsModule {
         const uploadBar = document.getElementById('dragDropZone');
 
         if (progressBar) {
-            // Show/hide the progress bar below upload bar
-            progressBar.style.display = show ? 'block' : 'none';
+            // Toggle the class that makes it block/visible
+            if (show) {
+                progressBar.classList.add('active');
+            } else {
+                progressBar.classList.remove('active');
+            }
         }
 
         if (uploadBar) {
-            // Disable clicking while uploading
-            uploadBar.style.pointerEvents = show ? 'none' : 'auto';
-            uploadBar.style.opacity = show ? '0.6' : '1';
+            // Toggle the class that handles opacity and clicking
+            if (show) {
+                uploadBar.classList.add('is-uploading');
+            } else {
+                uploadBar.classList.remove('is-uploading');
+            }
         }
     }
 

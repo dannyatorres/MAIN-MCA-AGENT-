@@ -208,6 +208,18 @@
     transition: width 0.3s ease;
 }
 
+/* State when progress bar is active */
+.upload-progress-bar.active {
+    display: block;
+}
+
+/* State when uploading (disabled look) */
+.upload-bar.is-uploading {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
 /* 7. FCS Section */
 .fcs-section {
     display: flex;

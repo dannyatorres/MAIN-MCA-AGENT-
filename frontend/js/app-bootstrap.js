@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <span class="goal-numbers">$145,000 <span class="goal-subtext">/ $250k</span></span>
                                 </div>
                                 <div class="progress-track">
-                                    <div class="progress-fill" style="width: 58%;"></div>
+                                    <div class="progress-fill w-58"></div>
                                 </div>
                                 <div class="goal-footer">
                                     12 days left in the month

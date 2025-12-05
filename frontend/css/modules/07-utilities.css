@@ -112,6 +112,10 @@
     width: 100%;
 }
 
+.w-58 {
+    width: 58%;
+}
+
 .flex-between-center {
     display: flex;
     justify-content: space-between;

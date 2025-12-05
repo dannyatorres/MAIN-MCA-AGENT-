@@ -121,16 +121,15 @@
     display: none !important;
 }
 
-/* 2. Stretch the container to the top and center everything */
+/* 2. Stretch the container to the top for standard top-down layout */
 .center-panel.dashboard-mode #messagesContainer {
     top: 0;                  /* Fill the empty space left by header */
     height: 100%;
     padding-bottom: 0;       /* Remove space reserved for chat input */
 
-    /* Flexbox Centering */
-    display: flex;
-    align-items: center;     /* Vertical Center */
-    justify-content: center; /* Horizontal Center */
+    /* Standard top-down scrolling layout */
+    display: block;
+    overflow-y: auto;
 }
 
 /* Ensure the dashboard card itself doesn't have weird margins affecting centering */
