@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const centerPanel = document.querySelector('.center-panel');
 
                 if (!header) return;
+                // Class-based logic (Good)
                 if (centerPanel) centerPanel.classList.remove('dashboard-mode');
 
                 const displayTitle = businessName || 'Unknown Business';
@@ -30,9 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button id="backHomeBtn" onclick="loadDashboard()" class="icon-btn-small" title="Back to Dashboard">
                             <i class="fas fa-arrow-left"></i>
                         </button>
-                        <div class="chat-avatar-large">
-                            ${initials}
-                        </div>
+                        <div class="chat-avatar-large">${initials}</div>
                         <div class="chat-details-stack">
                             <h2 class="chat-business-title">${displayTitle}</h2>
                             <div class="chat-row-secondary">
@@ -43,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             };
 
-            // 2. DASHBOARD LOADER (The Fix)
+            // 2. DASHBOARD LOADER
             window.loadDashboard = () => {
                 console.log("🏠 Loading Dashboard...");
 
@@ -62,21 +61,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (centerPanel) {
                     centerPanel.classList.add('dashboard-mode');
-                    centerPanel.style.gap = ''; // FIX: Remove the inline '0' gap so CSS takes over
+                    // REFACTORED: Removed centerPanel.style.gap = ''
                 }
                 if (centerHeader) centerHeader.innerHTML = '';
-                if (inputs) inputs.style.display = 'none';
-                if (actions) actions.style.display = 'none';
+
+                // REFACTORED: Use classes to hide
+                if (inputs) inputs.classList.add('hidden');
+                if (actions) actions.classList.add('hidden');
 
                 // Inject Dashboard Content
                 if (messages) {
+                    // REFACTORED: Moved inline styles to utility classes (.dashboard-btn-large)
                     messages.innerHTML = `
                         <div class="dashboard-container">
                             <div class="dashboard-header">
                                 <h1>Welcome back, Agent</h1>
                                 <p>Here is what's happening with your pipeline today.</p>
 
-                                <button class="btn btn-secondary" onclick="openLenderManagementModal()" style="margin-top: 16px; width: 200px;">
+                                <button class="btn btn-secondary dashboard-btn-large" onclick="openLenderManagementModal()">
                                     <i class="fas fa-university"></i>&nbsp; Manage Lenders
                                 </button>
                             </div>
@@ -115,40 +117,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                 }
 
-                // --- RIGHT PANEL RESET (FIXED) ---
-                // Instead of rewriting innerHTML, we simply toggle the views defined in command-center.html
-
-                // 1. Try using the Intelligence Manager if initialized
+                // --- RIGHT PANEL RESET - REFACTORED ---
                 if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
                     window.commandCenter.intelligence.toggleView(false);
                 } else {
-                    // 2. Fallback: Manual CSS Toggle matches command-center.html IDs
+                    // Fallback: Use classes
                     const homePanel = document.getElementById('rightPanelHome');
                     const intelPanel = document.getElementById('rightPanelIntelligence');
-
-                    if (homePanel) homePanel.style.display = 'flex'; // Show News
-                    if (intelPanel) intelPanel.style.display = 'none'; // Hide Tabs
+                    if (homePanel) homePanel.classList.remove('hidden');
+                    if (intelPanel) intelPanel.classList.add('hidden');
                 }
 
-                // 3. Ensure news is loaded
-                if (window.loadMarketNews) {
-                    window.loadMarketNews();
-                }
+                // Ensure news is loaded
+                if (window.loadMarketNews) window.loadMarketNews();
 
                 // Refresh Stats
-                if (window.commandCenter.stats && window.commandCenter.stats.loadStats) {
-                    window.commandCenter.stats.loadStats();
-                }
+                if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
             };
 
-            // 3. NEWS LOADER (Attached to Window for global access)
+            // 3. NEWS LOADER
             window.loadMarketNews = async () => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
 
-                // Show loading state if refreshing
+                // REFACTORED: Use class
                 container.innerHTML = `
-                    <div style="padding: 20px; text-align: center; color: var(--gray-400);">
+                    <div class="news-loading">
                         <i class="fas fa-spinner fa-spin"></i> Loading news...
                     </div>
                 `;
@@ -174,9 +168,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         `).join('');
                     } else {
+                        // REFACTORED: Removed inline styles
                         container.innerHTML = `
                             <div class="empty-state">
-                                <div style="font-size: 24px; color: var(--gray-300); margin-bottom: 10px;">
+                                <div class="news-empty-icon">
                                     <i class="far fa-newspaper"></i>
                                 </div>
                                 <p>No recent updates found.</p>
@@ -185,7 +180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (e) {
                     console.error(e);
                     container.innerHTML = `
-                        <div style="padding: 20px; text-align: center; color: var(--gray-400); font-size: 12px;">
+                        <div class="news-loading">
                             Unable to load news feed.
                         </div>`;
                 }
@@ -193,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 4. LENDER MODAL
             window.openLenderManagementModal = () => {
-                if (window.commandCenter.lenders && window.commandCenter.lenders.openManagementModal) {
+                if (window.commandCenter.lenders?.openManagementModal) {
                      window.commandCenter.lenders.openManagementModal();
                 } else {
                     alert("Lender Management Module loading...");
@@ -209,16 +204,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const isDeleteMode = list.classList.toggle('delete-mode');
 
                 if (btn) {
+                    const confirmBtn = document.getElementById('deleteSelectedBtn');
+
                     if (isDeleteMode) {
                         btn.classList.add('active-danger');
-                        const confirmBtn = document.getElementById('deleteSelectedBtn');
-                        if (confirmBtn) confirmBtn.style.display = 'block';
+                        // REFACTORED: Use class
+                        if (confirmBtn) confirmBtn.classList.remove('hidden');
                     } else {
                         btn.classList.remove('active-danger');
                         const checkboxes = document.querySelectorAll('.delete-checkbox');
                         checkboxes.forEach(cb => cb.checked = false);
-                        const confirmBtn = document.getElementById('deleteSelectedBtn');
-                        if (confirmBtn) confirmBtn.style.display = 'none';
+
+                        // REFACTORED: Use class
+                        if (confirmBtn) confirmBtn.classList.add('hidden');
+
                         if (window.commandCenter.conversationUI) {
                             window.commandCenter.conversationUI.selectedForDeletion.clear();
                         }

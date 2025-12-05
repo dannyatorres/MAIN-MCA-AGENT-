@@ -40,15 +40,18 @@ export class IntelligenceManager {
     }
 
     toggleView(showIntelligence) {
+        // REFACTORED: Use classes instead of inline styles
         const homePanel = document.getElementById('rightPanelHome');
         const intelPanel = document.getElementById('rightPanelIntelligence');
 
-        if (showIntelligence) {
-            if (homePanel) homePanel.style.display = 'none';
-            if (intelPanel) intelPanel.style.display = 'flex';
-        } else {
-            if (homePanel) homePanel.style.display = 'flex';
-            if (intelPanel) intelPanel.style.display = 'none';
+        if (homePanel && intelPanel) {
+            if (showIntelligence) {
+                homePanel.classList.add('hidden');
+                intelPanel.classList.remove('hidden');
+            } else {
+                homePanel.classList.remove('hidden');
+                intelPanel.classList.add('hidden');
+            }
         }
     }
 

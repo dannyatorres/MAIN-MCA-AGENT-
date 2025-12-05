@@ -109,7 +109,7 @@ class ConversationCore {
                             <div class="conversation-time">${timeAgo}</div>
                         </div>
 
-                        <div class="message-preview-row" style="font-size: 12px; color: #6b7280; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        <div class="message-preview-row">
                              <span class="message-preview">${conv.last_message || 'No messages yet'}</span>
                         </div>
 
@@ -296,7 +296,7 @@ class ConversationCore {
         const centerPanel = document.querySelector('.center-panel');
         if (centerPanel) {
             centerPanel.classList.remove('dashboard-mode'); // Turn off dashboard mode
-            centerPanel.style.gap = '0';
+            // REFACTORED: Removed inline gap style
         }
 
         // Reset to AI Assistant tab when switching conversations
@@ -335,7 +335,7 @@ class ConversationCore {
 
         // Show the back button when viewing a conversation
         const backBtn = document.getElementById('backHomeBtn');
-        if (backBtn) backBtn.style.display = 'block';
+        if (backBtn) backBtn.classList.remove('hidden');
 
         // Load messages and intelligence IN SEQUENCE with proper context
         try {
@@ -363,13 +363,13 @@ class ConversationCore {
         // Show message input
         const messageInputContainer = document.getElementById('messageInputContainer');
         if (messageInputContainer) {
-            messageInputContainer.style.display = 'block';
+            messageInputContainer.classList.remove('hidden');
         }
 
         // Show conversation actions
         const conversationActions = document.getElementById('conversationActions');
         if (conversationActions) {
-            conversationActions.style.display = 'flex';
+            conversationActions.classList.remove('hidden');
         }
 
         // Handle lender tab if active
@@ -682,10 +682,10 @@ class ConversationCore {
         if (deleteBtn) {
             const count = this.selectedForDeletion.size;
             if (count > 0) {
-                deleteBtn.style.display = 'block';
+                deleteBtn.classList.remove('hidden');
                 deleteBtn.textContent = `Delete ${count} Lead${count > 1 ? 's' : ''}`;
             } else {
-                deleteBtn.style.display = 'none';
+                deleteBtn.classList.add('hidden');
             }
         }
     }
@@ -809,10 +809,10 @@ class ConversationCore {
 
         // 3. HIDE INPUTS & ACTIONS
         const messageInputContainer = document.getElementById('messageInputContainer');
-        if (messageInputContainer) messageInputContainer.style.display = 'none';
+        if (messageInputContainer) messageInputContainer.classList.add('hidden');
 
         const conversationActions = document.getElementById('conversationActions');
-        if (conversationActions) conversationActions.style.display = 'none';
+        if (conversationActions) conversationActions.classList.add('hidden');
 
         // 4. RESET RIGHT PANEL (FIXED)
         // We use the panel toggling approach to ensure logic consistency
@@ -821,8 +821,8 @@ class ConversationCore {
         const homePanel = document.getElementById('rightPanelHome');
         const intelPanel = document.getElementById('rightPanelIntelligence');
 
-        if (homePanel) homePanel.style.display = 'flex';
-        if (intelPanel) intelPanel.style.display = 'none';
+        if (homePanel) homePanel.classList.remove('hidden');
+        if (intelPanel) intelPanel.classList.add('hidden');
 
         // Trigger the news loader if available
         if (typeof window.loadMarketNews === 'function') {

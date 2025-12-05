@@ -272,3 +272,129 @@
     font-weight: bold;
     margin-right: 8px;
 }
+
+/* ==========================================================================
+   AI Chat Interface (Moved from templates-utilities.js inline styles)
+   ========================================================================== */
+
+.ai-chat-interface {
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.ai-chat-header {
+    background: #667eea;
+    color: white;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ai-chat-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #f9fafb;
+}
+
+.ai-chat-message {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+}
+
+.ai-chat-message.user {
+    flex-direction: row-reverse;
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.ai-chat-message.user .message-bubble {
+    background: #667eea;
+    color: white;
+}
+
+.ai-chat-message.assistant .message-bubble {
+    background: white;
+    color: #1f2937;
+    border: 1px solid #e2e8f0;
+}
+
+.ai-chat-input-area {
+    padding: 16px;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+}
+
+.ai-chat-input-wrapper {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.ai-chat-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 24px;
+    resize: none;
+    font-size: 14px;
+    min-height: 24px;
+    max-height: 100px;
+    font-family: inherit;
+}
+
+.ai-chat-send {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 24px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.ai-chat-header-title {
+    font-weight: 600;
+}
+
+.ai-chat-header-subtitle {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* Typing Animation */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    width: fit-content;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    background: #9ca3af;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+
+@keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-10px); }
+}

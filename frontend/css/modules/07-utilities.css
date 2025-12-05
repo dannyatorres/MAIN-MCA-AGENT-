@@ -220,3 +220,73 @@
     font-size: 14px;
     font-weight: 600;
 }
+
+/* ==========================================================================
+   Dashboard & List Utilities (Moved from JS inline styles)
+   ========================================================================== */
+
+.dashboard-btn-large {
+    margin-top: 16px;
+    width: 200px;
+}
+
+.message-preview-row {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   Notification Styling (Moved from JS inline styles)
+   ========================================================================== */
+
+.notification-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    min-width: 250px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.notification-success { background-color: #10b981; }
+.notification-error   { background-color: #ef4444; }
+.notification-warning { background-color: #f59e0b; }
+.notification-info    { background-color: #3b82f6; }
+
+/* ==========================================================================
+   Input Feedback States
+   ========================================================================== */
+
+.input-success {
+    border-color: #10b981 !important;
+    transition: border-color 0.3s ease;
+}
+
+.input-highlight {
+    border-color: #3b82f6 !important;
+    transition: border-color 0.3s ease;
+}
+
+/* ==========================================================================
+   News Feed States
+   ========================================================================== */
+
+.news-loading {
+    padding: 20px;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.news-empty-icon {
+    font-size: 24px;
+    color: var(--gray-300);
+    margin-bottom: 10px;
+}

@@ -21,28 +21,15 @@ class Utilities {
         }
     }
 
-    // Notification system
+    // Notification system - REFACTORED: Removed inline styles, added classes
     showNotification(message, type = 'info', duration = 4000) {
         const existing = document.querySelector('.notification-active');
         if (existing) existing.remove();
 
         const notification = document.createElement('div');
-        notification.className = `notification notification-${type} notification-active`;
-        notification.style.cssText = `
-            position: fixed; top: 20px; right: 20px; padding: 12px 20px;
-            border-radius: 6px; color: white; font-weight: 500; z-index: 10000;
-            min-width: 250px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-
-        const colors = {
-            success: '#10b981',
-            error: '#ef4444',
-            warning: '#f59e0b',
-            info: '#3b82f6'
-        };
-
-        notification.style.backgroundColor = colors[type] || colors.info;
+        notification.className = `notification-toast notification-${type} notification-active`;
         notification.innerHTML = message;
+
         document.body.appendChild(notification);
 
         setTimeout(() => {
@@ -128,11 +115,11 @@ class Utilities {
         return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
     }
 
-    // Modal utilities
+    // Modal utilities - REFACTORED: Use classes
     showModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
-            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
             return modal;
         }
         return null;
@@ -141,7 +128,7 @@ class Utilities {
     hideModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
-            modal.style.display = 'none';
+            modal.classList.add('hidden');
         }
     }
 
@@ -152,7 +139,7 @@ class Utilities {
         const modal = document.createElement('div');
         modal.id = id;
         modal.className = 'modal';
-        modal.style.display = 'flex';
+        // Note: Modal class should handle default display, we just ensure it's not hidden
 
         modal.innerHTML = `
             <div class="modal-content">
@@ -207,13 +194,17 @@ class Utilities {
         }
     }
 
-    // Processing indicator
+    // Processing indicator - REFACTORED: Use classes
     updateProcessingStatus(isProcessing, text = 'Processing...') {
         const indicator = document.getElementById('processingIndicator');
         const processingText = document.getElementById('processingText');
 
         if (indicator) {
-            indicator.style.display = isProcessing ? 'flex' : 'none';
+            if (isProcessing) {
+                indicator.classList.remove('hidden');
+            } else {
+                indicator.classList.add('hidden');
+            }
         }
 
         if (processingText && isProcessing) {
@@ -277,19 +268,15 @@ class Utilities {
         ];
     }
 
-    // ZIP code lookup
+    // ZIP code lookup - REFACTORED: Use classes for highlight
     async lookupZipCode(zip, fieldPrefix = 'business') {
         zip = zip.replace(/\D/g, '');
         if (!zip || zip.length !== 5) return;
 
         try {
-            // Support both camelCase (businessZip) and underscore (business_zip) field naming
             const zipField = document.querySelector(`[name="${fieldPrefix}_zip"]`) ||
                              document.querySelector(`[name="${fieldPrefix}Zip"]`);
-            if (zipField) {
-                zipField.style.borderColor = '#3b82f6';
-                zipField.style.transition = 'border-color 0.3s ease';
-            }
+            if (zipField) zipField.classList.add('input-highlight');
 
             const response = await fetch(`https://api.zippopotam.us/us/${zip}`);
 
@@ -299,32 +286,26 @@ class Utilities {
                 if (data.places && data.places[0]) {
                     const place = data.places[0];
 
-                    // Find city field (support underscore and camelCase)
                     const cityField = document.querySelector(`[name="${fieldPrefix}_city"]`) ||
                                      document.querySelector(`[name="${fieldPrefix}City"]`);
                     if (cityField) {
                         cityField.value = place['place name'];
-                        cityField.style.borderColor = '#10b981';
-                        cityField.style.transition = 'border-color 0.3s ease';
-                        setTimeout(() => { cityField.style.borderColor = ''; }, 2000);
+                        cityField.classList.add('input-success');
+                        setTimeout(() => cityField.classList.remove('input-success'), 2000);
                     }
 
-                    // Find state field (support us_state for business, owner_state for owner)
                     const stateField = document.querySelector(`[name="${fieldPrefix}_state"]`) ||
                                       document.querySelector(`[name="us_state"]`) ||
                                       document.querySelector(`[name="${fieldPrefix}State"]`);
                     if (stateField) {
                         stateField.value = place['state abbreviation'];
-                        stateField.style.borderColor = '#10b981';
-                        stateField.style.transition = 'border-color 0.3s ease';
-                        setTimeout(() => { stateField.style.borderColor = ''; }, 2000);
+                        stateField.classList.add('input-success');
+                        setTimeout(() => stateField.classList.remove('input-success'), 2000);
                     }
                 }
             }
 
-            if (zipField) {
-                setTimeout(() => { zipField.style.borderColor = ''; }, 2000);
-            }
+            if (zipField) setTimeout(() => zipField.classList.remove('input-highlight'), 2000);
         } catch (error) {
             console.error('ZIP lookup failed:', error);
         }
@@ -345,13 +326,11 @@ class Templates {
         const unreadCount = this.parent.unreadMessages?.get(conversation.id) || 0;
         const hasUnread = unreadCount > 0 && !isSelected;
 
-        // Add display_id to dataset as well
         const displayIdData = conversation.display_id ? ` data-display-id="${conversation.display_id}"` : '';
         const displayIdText = conversation.display_id
             ? `<span class="conversation-id-badge">CID# ${conversation.display_id}</span>`
             : '';
 
-        // Get initials for avatar
         const businessName = conversation.business_name || 'Unknown Business';
         const initials = businessName
             .split(' ')
@@ -421,9 +400,7 @@ class Templates {
                                 data-message-id="${message.id}"
                                 title="Delete message"
                                 aria-label="Delete message">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
-                            </svg>
+                            <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
                 </div>
@@ -433,7 +410,7 @@ class Templates {
 
     modal(id, title, content, buttons = []) {
         return `
-            <div id="${id}" class="modal" style="display: none;">
+            <div id="${id}" class="modal hidden">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>${title}</h3>
@@ -485,132 +462,15 @@ class Templates {
         `;
     }
 
+    // REFACTORED: Removed <style> block completely - styles are now in 09-ai-agent.css
     aiChatInterface(conversation) {
         return `
             <div class="ai-chat-interface">
-                <style>
-                    .ai-chat-interface {
-                        height: 500px;
-                        display: flex;
-                        flex-direction: column;
-                        background: white;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 12px;
-                        overflow: hidden;
-                    }
-
-                    .ai-chat-header {
-                        background: #667eea;
-                        color: white;
-                        padding: 16px;
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                    }
-
-                    .ai-chat-messages {
-                        flex: 1;
-                        padding: 20px;
-                        overflow-y: auto;
-                        background: #f9fafb;
-                    }
-
-                    .ai-chat-message {
-                        margin-bottom: 16px;
-                        display: flex;
-                        gap: 12px;
-                    }
-
-                    .ai-chat-message.user {
-                        flex-direction: row-reverse;
-                    }
-
-                    .message-bubble {
-                        max-width: 70%;
-                        padding: 12px 16px;
-                        border-radius: 18px;
-                        font-size: 14px;
-                        line-height: 1.4;
-                    }
-
-                    .ai-chat-message.user .message-bubble {
-                        background: #667eea;
-                        color: white;
-                    }
-
-                    .ai-chat-message.assistant .message-bubble {
-                        background: white;
-                        color: #1f2937;
-                        border: 1px solid #e2e8f0;
-                    }
-
-                    .ai-chat-input-area {
-                        padding: 16px;
-                        background: white;
-                        border-top: 1px solid #e2e8f0;
-                    }
-
-                    .ai-chat-input-wrapper {
-                        display: flex;
-                        gap: 12px;
-                        align-items: center;
-                    }
-
-                    .ai-chat-input {
-                        flex: 1;
-                        padding: 12px 16px;
-                        border: 1px solid #d1d5db;
-                        border-radius: 24px;
-                        resize: none;
-                        font-size: 14px;
-                        min-height: 24px;
-                        max-height: 100px;
-                        font-family: inherit;
-                    }
-
-                    .ai-chat-send {
-                        background: #667eea;
-                        color: white;
-                        border: none;
-                        padding: 12px 20px;
-                        border-radius: 24px;
-                        cursor: pointer;
-                        font-weight: 500;
-                    }
-
-                    .typing-indicator {
-                        display: flex;
-                        gap: 4px;
-                        padding: 12px 16px;
-                        background: white;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 18px;
-                        width: fit-content;
-                    }
-
-                    .typing-dot {
-                        width: 8px;
-                        height: 8px;
-                        background: #9ca3af;
-                        border-radius: 50%;
-                        animation: typing 1.4s infinite;
-                    }
-
-                    @keyframes typing {
-                        0%, 60%, 100% {
-                            transform: translateY(0);
-                        }
-                        30% {
-                            transform: translateY(-10px);
-                        }
-                    }
-                </style>
-
                 <div class="ai-chat-header">
                     <span>🤖</span>
                     <div>
-                        <div style="font-weight: 600;">AI Assistant</div>
-                        <div style="font-size: 12px; opacity: 0.8;">
+                        <div class="ai-chat-header-title">AI Assistant</div>
+                        <div class="ai-chat-header-subtitle">
                             Chat about ${conversation?.business_name || 'this lead'}
                         </div>
                     </div>
@@ -620,9 +480,6 @@ class Templates {
                     <div class="ai-chat-message assistant">
                         <div class="message-bubble">
                             Hi! I'm here to help you with <strong>${conversation?.business_name || 'this lead'}</strong>.
-                            You can ask me anything about the lead, what actions to take next, or how to handle this conversation.
-                            <br><br>
-                            Try asking: "What should I do next?" or "Analyze this lead for me"
                         </div>
                     </div>
                 </div>
