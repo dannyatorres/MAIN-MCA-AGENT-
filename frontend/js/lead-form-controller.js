@@ -490,6 +490,13 @@ export class LeadFormController {
 
             const formData = this.scrapeFormData(new FormData(form));
 
+            // DEBUG: Log partner state data
+            console.log("🚀 SAVING FORM DATA:", {
+                owner2HomeState: formData.owner2HomeState,
+                owner2HomeZip: formData.owner2HomeZip,
+                owner2HomeCity: formData.owner2HomeCity
+            });
+
             try {
                 if (mode === 'create') {
                     const apiData = this.prepareForCreate(formData);
@@ -595,8 +602,27 @@ export class LeadFormController {
             const data = await response.json();
             if (data.places && data.places.length > 0) {
                 const place = data.places[0];
+
+                // Set City
                 if (cityInput) cityInput.value = place['place name'];
-                if (stateSelect) stateSelect.value = place['state abbreviation'];
+
+                // Set State (Robust Match)
+                if (stateSelect) {
+                    const apiState = place['state abbreviation'].toUpperCase();
+
+                    // Try to set the value directly
+                    stateSelect.value = apiState;
+
+                    // Fallback: If exact match failed, loop options to find it
+                    if (stateSelect.value !== apiState) {
+                        for (let i = 0; i < stateSelect.options.length; i++) {
+                            if (stateSelect.options[i].value.toUpperCase() === apiState) {
+                                stateSelect.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         } catch (err) {
             console.log('ZIP lookup failed:', err.message);
@@ -642,7 +668,10 @@ export class LeadFormController {
             // 4. OWNER 2 (Partner)
             owner2FirstName: data.owner2FirstName || '',
             owner2LastName: data.owner2LastName || '',
-            owner2Address: data.owner2Address || '',
+            owner2Address: data.owner2HomeAddress || '',
+            owner2City: data.owner2HomeCity || '',
+            owner2State: data.owner2HomeState || '',
+            owner2Zip: data.owner2HomeZip || '',
             owner2Email: data.owner2Email || '',
             owner2SSN: this.formatSSN(data.owner2SSN),
             owner2DOB: this.formatDateUS(data.owner2DOB),
