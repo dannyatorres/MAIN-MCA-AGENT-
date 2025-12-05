@@ -175,7 +175,7 @@ class AIAssistant {
         }
     }
 
-    addMessageToChat(role, content, saveToDatabase = true) {
+    addMessageToChat(role, content, saveToDatabase = true, scrollToBottom = true) {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
@@ -188,7 +188,11 @@ class AIAssistant {
 
         messageRow.appendChild(messageBubble);
         messagesContainer.appendChild(messageRow);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // FIX: Only scroll if requested. This prevents stuttering during history load.
+        if (scrollToBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
 
         if (saveToDatabase) {
             this.saveMessageToDatabase(role, content);
@@ -237,16 +241,37 @@ class AIAssistant {
 
         try {
             const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
+
+            // 1. Hide container to prevent visual jumping
+            messagesContainer.style.opacity = '0';
+
+            // Clear "Connecting..." message
             messagesContainer.innerHTML = '';
 
             if (data.messages && data.messages.length > 0) {
-                data.messages.forEach(msg => this.addMessageToChat(msg.role, msg.content, false));
+                // 2. Add messages WITHOUT scrolling (pass false as 4th arg)
+                data.messages.forEach(msg => {
+                    this.addMessageToChat(msg.role, msg.content, false, false);
+                });
+
+                // 3. Force scroll to bottom ONCE
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
             } else {
                 this.showWelcomeMessage();
             }
+
+            // 4. Reveal container smoothly
+            // We use requestAnimationFrame to ensure the scroll has rendered before we show it
+            requestAnimationFrame(() => {
+                messagesContainer.style.transition = 'opacity 0.2s ease';
+                messagesContainer.style.opacity = '1';
+            });
+
         } catch (error) {
             console.log('Error loading history:', error);
             messagesContainer.innerHTML = '';
+            messagesContainer.style.opacity = '1'; // Ensure it's visible on error
             this.showWelcomeMessage();
         }
     }
