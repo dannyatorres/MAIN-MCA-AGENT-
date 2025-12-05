@@ -12,7 +12,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: var(--white);
+    background: #0f1115 !important; /* Deep dark background */
     overflow: hidden;
 }
 
@@ -23,36 +23,36 @@
     flex-direction: column;
 }
 
-/* 2. Navigation Tabs (Sleek Segmented Control) */
+/* 2. Navigation Tabs (Dark Theme Segmented Control) */
 .right-panel .panel-header {
     /* MATCHING HEIGHT */
     height: 70px !important;
     min-height: 70px !important;
     max-height: 70px !important;
 
-    background: var(--white);
-    border-bottom: 1px solid var(--gray-200);
+    background: #161b22 !important;
+    border-bottom: 1px solid #30363d;
 
     display: flex;
     flex-direction: column;
     justify-content: center;
     gap: 4px;
-    padding: 0 16px; /* Slightly tighter side padding */
+    padding: 0 16px;
 }
 
 .right-panel .panel-header h2 {
     font-size: 14px;
     font-weight: 700;
-    color: var(--gray-900);
-    display: none; /* Hide title to save space, the tabs are self-explanatory */
+    color: #ffffff;
+    display: none;
 }
 
-/* The Grey Pill Container */
+/* The Dark Pill Container */
 .intelligence-tabs {
     display: flex;
-    background: var(--gray-100);
+    background: #0d1117;
     padding: 4px;
-    border-radius: 10px; /* Rounded container */
+    border-radius: 10px;
     width: 100%;
     gap: 2px;
 }
@@ -67,20 +67,20 @@
 
     font-size: 11px;
     font-weight: 600;
-    color: var(--gray-500);
+    color: #8b949e;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .tab-btn:hover {
-    color: var(--gray-900);
+    color: #ffffff;
 }
 
-/* The Active Tab (White Floating Card) */
+/* The Active Tab (Dark Theme) */
 .tab-btn.active {
-    background: var(--white);
-    color: var(--gray-900);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.08); /* Subtle lift */
+    background: #21262d;
+    color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     font-weight: 700;
 }
 
@@ -89,14 +89,12 @@
     flex: 1;
 
     /* FIX 1: Remove global padding */
-    /* This allows the AI chat to touch the edges and sit at the very bottom */
     padding: 0;
 
     /* FIX 2: Stop this container from scrolling */
-    /* We let the inner AI module handle its own scrolling now */
     overflow: hidden;
 
-    background: var(--white);
+    background: #161b22 !important; /* Dark card background */
 
     /* FIX 3: Ensure layout stability */
     display: flex;

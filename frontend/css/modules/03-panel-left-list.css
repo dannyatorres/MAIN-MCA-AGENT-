@@ -7,8 +7,8 @@
 .left-panel {
     flex: 3 1 280px;
     min-width: 260px;
-    background: var(--white);
-    border-right: 1px solid var(--gray-200);
+    background: #0f1115 !important; /* Deep dark background */
+    border-right: 1px solid rgba(255,255,255,0.05);
     display: flex;
     flex-direction: column;
     height: 100%; /* Ensure full height */
@@ -99,22 +99,22 @@
 .search-field-clean {
     flex: 1; /* Takes all available width */
     height: 32px; /* Slightly taller for easy clicking */
-    background: var(--gray-50);
-    border: 1px solid transparent;
+    background: #0d1117 !important; /* Very dark input */
+    border: 1px solid #30363d !important;
     border-radius: 8px;
     padding: 0 10px;
     font-size: 13px;
-    color: var(--gray-900);
+    color: #ffffff !important;
     transition: all 0.2s;
 }
 .search-field-clean:focus {
-    background: var(--white);
-    border-color: var(--gray-300);
+    background: #161b22 !important;
+    border-color: #8b949e !important;
     outline: none;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 .search-field-clean::placeholder {
-    color: var(--gray-400);
+    color: #6e7681;
 }
 
 /* --- C. Action Buttons (Square Icons) --- */
@@ -178,7 +178,7 @@
     display: none;
 }
 
-/* 4. Conversation Item (Warm Base) */
+/* 4. Conversation Item (Dark Cards) */
 .conversation-item {
     display: flex;
     align-items: center;
@@ -188,9 +188,10 @@
     padding: 10px 12px;
     border-radius: 12px;
 
-    /* THE FIX: Cream background by default */
-    background: var(--corgi-cream);
-    border: 1px solid transparent;
+    /* Dark Theme: Dark card background */
+    background: #161b22 !important;
+    border: 1px solid #30363d !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 
     cursor: pointer;
     transition: all 0.2s ease;
@@ -198,37 +199,39 @@
     min-height: 64px;
 }
 
-/* Hover: Darker Cream */
+/* Hover: Slightly lighter */
 .conversation-item:hover {
-    background: var(--corgi-cream-hover);
-    transform: translateY(-1px); /* Tiny lift */
+    background: #1c2128 !important;
+    border-color: #8b949e !important;
+    transform: translateY(-1px);
 }
 
-/* Active: White Pop + Black Border */
+/* Active: Teal glow border */
 .conversation-item.active {
-    background: var(--white); /* White pops forward against the cream list */
-    border: 1px solid var(--gray-900);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    background: #1f2937 !important;
+    border: 1px solid #2dd4bf !important; /* Teal glow for active */
+    box-shadow: 0 4px 12px rgba(45, 212, 191, 0.15);
     z-index: 1;
 }
 
-/* 5. Avatars (Onyx Style) */
+/* 5. Avatars (Dark Theme Style) */
 .conversation-avatar {
     flex-shrink: 0;
 }
 
 .avatar-circle {
-    width: 42px;              /* Slightly larger for presence */
+    width: 42px;
     height: 42px;
     border-radius: 50%;
 
-    /* THE LOOK: Onyx Black Style */
-    background: var(--gray-900);
-    color: white;
+    /* Dark Theme: Transparent with border */
+    background: transparent !important;
+    border: 1px solid #30363d;
+    color: #ffffff;
 
     /* Typography */
     font-size: 14px;
-    font-weight: 700;        /* Bold text pops against black */
+    font-weight: 400;
     letter-spacing: 0.5px;
 
     /* Centering */
@@ -236,16 +239,11 @@
     align-items: center;
     justify-content: center;
     text-transform: uppercase;
-
-    /* Depth */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    border: 2px solid var(--white); /* Adds a tiny 'cutout' effect if cards overlap */
 }
 
-/* Optional: If you want the Active Chat's avatar to change slightly */
+/* Active Chat's avatar */
 .conversation-item.active .avatar-circle {
-    background: var(--black); /* Pure black when active */
-    transform: scale(1.05); /* Subtle grow effect */
+    border-color: #2dd4bf; /* Teal border when active */
 }
 
 /* 6. Typography & Text Details (iPhone Style Fix) */
@@ -268,9 +266,9 @@
 }
 
 .business-name {
-    font-size: 14px;        /* Slightly cleaner than 15px */
-    font-weight: 700;       /* Bold */
-    color: #111827;         /* Deep Black */
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff !important; /* Pure White Name */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -281,11 +279,11 @@
 
 .conversation-time {
     font-size: 11px;
-    color: #9ca3af;         /* Lighter Gray (Tailwind Gray-400) */
-    font-weight: 400;       /* Regular weight (Not Bold) */
+    color: #8b949e !important; /* Muted gray */
+    font-weight: 400;
     flex-shrink: 0;
     white-space: nowrap;
-    margin-top: 1px;        /* Tiny offset for visual alignment */
+    margin-top: 1px;
 }
 
 /* Row 2: Phone ---------------- CID */
@@ -298,7 +296,7 @@
 
 .phone-number {
     font-size: 12px;
-    color: #6b7280;         /* Medium Gray */
+    color: #6e7681 !important; /* Meta text gray */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -306,27 +304,27 @@
     font-weight: 400;
 }
 
-/* The CID Tag */
+/* The CID Tag - Teal accent style */
 .conversation-meta > span:last-child,
 .cid-tag {
-    font-size: 10px;
-    font-family: 'Monaco', 'Consolas', monospace;
-    font-weight: 700;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
 
-    background: var(--corgi-hyper);
-    color: black;
+    background: rgba(45, 212, 191, 0.1) !important; /* Subtle Teal Background */
+    color: #2dd4bf !important; /* Teal Text */
+    border: 1px solid rgba(45, 212, 191, 0.2);
 
     padding: 2px 6px;
-    border-radius: 6px;
+    border-radius: 4px;
     letter-spacing: -0.3px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 /* === ACTIVE STATE OVERRIDES === */
-/* When clicked, keep the date GRAY. Don't let it turn black. */
-.conversation-item.active .business-name { color: #000000; }
-.conversation-item.active .conversation-time { color: #9ca3af !important; } /* Force Gray */
-.conversation-item.active .phone-number { color: #4b5563; }
+/* Dark theme active states */
+.conversation-item.active .business-name { color: #ffffff !important; }
+.conversation-item.active .conversation-time { color: #8b949e !important; }
+.conversation-item.active .phone-number { color: #6e7681 !important; }
 
 /* 7. Badges (States) */
 .state-badge {

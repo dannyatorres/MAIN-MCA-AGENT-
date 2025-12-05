@@ -13,27 +13,47 @@
 }
 
 :root {
-    /* The "Corgi" Brand Accent Colors - Use Sparingly */
+    /* --- NEW DARK THEME PALETTE (Onyx/Midnight) --- */
+
+    /* Backgrounds */
+    --app-bg-silver: #0f1115;       /* The main deep background (almost black) */
+    --white: #161b22;               /* REDEFINED: Main Card Background (Dark Grey) */
+    --gray-50: #0d1117;             /* Darker backgrounds */
+    --gray-100: #21262d;            /* Borders and separators */
+    --gray-200: #30363d;            /* Lighter borders */
+    --gray-300: #484f58;
+    --gray-400: #6e7681;            /* Meta text */
+    --gray-500: #8b949e;            /* Secondary text is Muted Gray */
+    --gray-600: #a1a9b1;
+    --gray-700: #c9d1d9;
+    --gray-800: #e6edf3;
+    --gray-900: #ffffff;            /* Main text is now White */
+    --black: #000000;
+
+    /* The "Corgi" Styles -> Mapped to Dark Mode */
+    --corgi-cream: #161b22;         /* Default List Item Background */
+    --corgi-cream-hover: #1f2937;   /* Hover State (Lighter) */
+    --corgi-hyper: #fb923c;         /* Keep orange accent */
+    --corgi-hyper-pop: #fdba74;
+
+    /* Accents from Dark Theme */
+    --teal-accent: #2dd4bf;         /* The Cyan color for numbers */
+    --green-accent: #4ade80;        /* The Green Fire Icon */
+    --blue-accent: #3b82f6;         /* The Progress Bar Blue */
+
+    /* Brand Accent Colors */
     --brand-accent: #D97B29;
-    --brand-accent-dim: #fff7ed;
+    --brand-accent-dim: #1f2937;
     --brand-accent-dark: #9a5415;
 
-    /* Corgi Palette Expansion */
-    --corgi-cream: #fff7ed;       /* The default card color */
-    --corgi-cream-hover: #ffedd5; /* Slightly darker for hover */
-    --corgi-hyper: #fb923c;       /* Adjusted orange (lighter) so black text reads better */
-    --corgi-hyper-pop: #fdba74;   /* Lighter orange for borders/glows */
+    /* Main UI Colors */
+    --primary-btn: #ffffff;
+    --primary-btn-hover: #e6edf3;
 
-    /* Main UI Colors - Professional Black/Gray */
-    --primary-btn: var(--gray-900);
-    --primary-btn-hover: #000000;
-
-    /* Legacy Orange Variables (kept for compatibility) */
+    /* Legacy Variables (remapped for dark mode) */
     --primary-orange: #D97B29;
     --dark-orange: #B86A22;
-    --light-orange: #FBEADA;
-
-    /* Re-mapping existing variables */
+    --light-orange: #1f2937;
     --primary-green: var(--primary-orange);
     --dark-green: var(--dark-orange);
     --light-green: var(--light-orange);
@@ -44,39 +64,23 @@
     --orange: #f59e0b;
     --purple: #8b5cf6;
 
-    /* Gray scale */
-    --gray-50: #f9fafb;
-    --gray-100: #f3f4f6;
-    --gray-200: #e5e7eb;
-    --gray-300: #d1d5db;
-    --gray-400: #9ca3af;
-    --gray-500: #6b7280;
-    --gray-600: #4b5563;
-    --gray-700: #374151;
-    --gray-800: #1f2937;
-    --gray-900: #111827; /* This matches the suit/text perfectly */
-    --white: #ffffff;
-    --black: #000000;
-
-    /* App Background - Silver theme */
-    --app-bg-silver: #E2E8F0;
-
+    /* Layout Variables */
     --border-radius: 8px;
     --border-radius-lg: 12px;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.3);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.3);
 
     --header-height: 60px;
     --status-bar-height: 32px;
-    --sidebar-width: 280px;  /* Left panel: ~20% */
-    --panel-width: 50vw;     /* Right panel: 50% of viewport width */
+    --sidebar-width: 280px;
+    --panel-width: 50vw;
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-    background-color: var(--gray-50);
+    background-color: var(--app-bg-silver);
     color: var(--gray-900);
     overflow: hidden;
 }
