@@ -12,14 +12,21 @@ class CallManager {
     }
 
     async init() {
-        // Check if Twilio SDK is loaded
+        // Wait for Twilio SDK to load (up to 5 seconds)
+        let attempts = 0;
+        while (typeof Twilio === 'undefined' && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+
         if (typeof Twilio === 'undefined') {
-            console.error('📞 Twilio SDK not loaded');
+            console.error('📞 Twilio SDK not loaded after waiting');
+            alert('Voice calling is not available. Please refresh the page and try again.');
             return false;
         }
 
         try {
-            console.log('📞 Initializing Call Manager...');
+            console.log('📞 Initializing Call Manager (Twilio SDK found)...');
 
             // Fetch Token from backend
             const response = await fetch('/api/calling/token');
