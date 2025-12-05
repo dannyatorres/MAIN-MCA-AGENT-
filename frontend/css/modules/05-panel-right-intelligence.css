@@ -589,3 +589,143 @@
 }
 
 /* ==========================================================================
+   [FIX] Documents Table Layout
+   Aligns columns and fixes the broken list view
+   ========================================================================== */
+
+/* 1. The Table Container */
+.documents-table {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #161b22;
+}
+
+/* 2. The Grid Layout (Applies to Header AND Rows) */
+.documents-table-header,
+.document-row {
+    display: grid;
+    /* Columns: Name (Flex), Size (Fixed), Actions (Fixed) */
+    grid-template-columns: 1fr 90px 110px;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 16px;
+}
+
+/* 3. Header Specifics */
+.documents-table-header {
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
+    font-size: 11px;
+    font-weight: 600;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* 4. Row Specifics */
+.document-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+.document-row:last-child {
+    border-bottom: none;
+}
+
+.document-row:hover {
+    background: #1c2128;
+}
+
+/* 5. Column Alignments */
+.doc-col-name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.doc-col-size {
+    text-align: right;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    color: #6e7681;
+}
+
+.doc-col-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+/* 6. Fix the "Big Text" & Icons */
+.doc-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.document-name-compact {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    color: #e6edf3;
+}
+
+/* 7. Fix the "Browse Files" Button inside Drop Zone */
+.link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #3b82f6;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    display: inline;
+}
+
+.link-btn:hover {
+    color: #60a5fa;
+    text-decoration: none;
+}
+
+/* 8. Fix the Action Buttons (Edit/Trash) */
+.btn-action {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #8b949e;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-action:hover {
+    background: #21262d;
+    color: #e6edf3;
+    border-color: #30363d;
+}
+
+/* Specific red hover for trash */
+.document-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* Ensure Icons inside buttons are small */
+.btn-action i,
+.btn-action svg {
+    font-size: 13px;
+    pointer-events: none;
+}
+
+/* ==========================================================================
