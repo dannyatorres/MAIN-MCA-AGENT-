@@ -4,7 +4,7 @@
    ========================================================================== */
 
 /* 1. Container & Scroll */
-.right-panel {
+.command-center .right-panel {
     flex: 3 0 450px; /* Fixed width base */
     min-width: 400px;
     max-width: 700px;
@@ -12,7 +12,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #0f1115 !important; /* Deep dark background */
+    background: #0f1115; /* Deep dark background */
     overflow: hidden;
 }
 
@@ -24,13 +24,14 @@
 }
 
 /* 2. Navigation Tabs (Dark Theme Segmented Control) */
-.right-panel .panel-header {
+.command-center .right-panel .panel-header {
     /* MATCHING HEIGHT */
-    height: 70px !important;
-    min-height: 70px !important;
-    max-height: 70px !important;
+    height: 70px;
+    min-height: 70px;
+    max-height: 70px;
+    flex-shrink: 0; /* Prevents shrinking if content is large */
 
-    background: #161b22 !important;
+    background: #161b22;
     border-bottom: 1px solid #30363d;
 
     display: flex;
@@ -85,7 +86,7 @@
 }
 
 /* 3. Content Area */
-.intelligence-content {
+.command-center .intelligence-content {
     flex: 1;
 
     /* FIX 1: Remove global padding */
@@ -94,7 +95,7 @@
     /* FIX 2: Stop this container from scrolling */
     overflow: hidden;
 
-    background: #161b22 !important; /* Dark card background */
+    background: #161b22; /* Dark card background */
 
     /* FIX 3: Ensure layout stability */
     display: flex;
@@ -342,10 +343,11 @@
    ========================================================================== */
 
 /* The Dashboard Cards */
-.stat-card, .goal-card {
-    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+.command-center .stat-card,
+.command-center .goal-card {
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     border-radius: 12px;
     align-items: center;
     text-align: center;
@@ -353,40 +355,40 @@
 }
 
 /* The Big Number */
-.stat-value {
+.command-center .stat-value {
     font-size: 36px;
     font-weight: 700;
-    color: #fff !important;
+    color: #fff;
     line-height: 1;
     margin: 8px 0;
 }
 
 /* The Label */
-.stat-label {
+.command-center .stat-label {
     font-size: 10px;
     font-weight: 600;
-    color: #6e7681 !important;
+    color: #6e7681;
     text-transform: uppercase;
     letter-spacing: 1.5px;
 }
 
 /* The Icon - Glowing */
-.stat-icon {
+.command-center .stat-icon {
     font-size: 20px;
-    background: transparent !important;
-    color: #4ade80 !important;
+    background: transparent;
+    color: #4ade80;
     filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.4));
 }
 
 /* Progress Bars */
-.progress-track {
-    background: #30363d !important;
+.command-center .progress-track {
+    background: #30363d;
     border-radius: 4px;
     overflow: hidden;
 }
 
-.progress-fill {
-    background: #3b82f6 !important;
+.command-center .progress-fill {
+    background: #3b82f6;
     border-radius: 4px;
 }
 

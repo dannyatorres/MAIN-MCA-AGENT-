@@ -63,7 +63,7 @@
                         </div>
                     </div>
 
-                    <button id="deleteSelectedBtn" class="btn btn-danger full-width" style="display: none; margin: 10px; width: calc(100% - 20px);">
+                    <button id="deleteSelectedBtn" class="btn btn-danger full-width hidden delete-selection-trigger">
                         Delete Selected
                     </button>
                 </div>
@@ -80,8 +80,8 @@
                     </div>
                 <div class="messages-container" id="messagesContainer">
                     </div>
-                <div class="message-input-container" id="messageInputContainer" style="display: none;">
-                    <div class="ai-suggestions" id="aiSuggestions" style="display: none;">
+                <div class="message-input-container hidden" id="messageInputContainer">
+                    <div class="ai-suggestions hidden" id="aiSuggestions">
                         <div class="suggestions-header">
                             <span>AI Suggestions:</span>
                             <button class="close-suggestions" id="closeSuggestions">×</button>
@@ -99,10 +99,10 @@
 
                 <div id="rightPanelHome" class="right-panel-state">
                     <div class="panel-header">
-                        <div class="pulse-header" style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="pulse-header flex-between-center w-full">
                             <div>
-                                <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--gray-900);">📰 Industry Wire</h4>
-                                <span style="font-size: 11px; color: var(--gray-500);">Daily updates</span>
+                                <h4 class="industry-wire-title">📰 Industry Wire</h4>
+                                <span class="industry-wire-subtitle">Daily updates</span>
                             </div>
                             <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh">
                                 <i class="fas fa-sync-alt"></i>
@@ -115,7 +115,7 @@
                     </div>
                 </div>
 
-                <div id="rightPanelIntelligence" class="right-panel-state" style="display: none;">
+                <div id="rightPanelIntelligence" class="right-panel-state hidden">
                     <div class="panel-header">
                         <div class="intelligence-tabs" id="intelligenceTabs">
                             <button class="tab-btn active" data-tab="ai-assistant">AI Agent</button>
@@ -132,16 +132,16 @@
                             <p>Loading lead data...</p>
                         </div>
 
-                        <div id="lenderForm" style="display: none;"></div>
-                        <div id="lenderResults" style="display: none;"></div>
-                        <div id="lenderLoading" style="display: none;"></div>
-                        <div id="lenderErrorMsg" style="display: none;"></div>
-                        <div id="lendersTableContainer" style="display: none;"></div>
-                        <div id="lenderTibDisplay" style="display: none;"></div>
-                        <div id="fcsDocumentSelection" style="display: none;"></div>
-                        <div id="fcsResults" style="display: none;"></div>
-                        <div id="fcsLoading" style="display: none;"></div>
-                        <div id="fcsErrorMsg" style="display: none;"></div>
+                        <div id="lenderForm" class="hidden"></div>
+                        <div id="lenderResults" class="hidden"></div>
+                        <div id="lenderLoading" class="hidden"></div>
+                        <div id="lenderErrorMsg" class="hidden"></div>
+                        <div id="lendersTableContainer" class="hidden"></div>
+                        <div id="lenderTibDisplay" class="hidden"></div>
+                        <div id="fcsDocumentSelection" class="hidden"></div>
+                        <div id="fcsResults" class="hidden"></div>
+                        <div id="fcsLoading" class="hidden"></div>
+                        <div id="fcsErrorMsg" class="hidden"></div>
                     </div>
                 </div>
 
@@ -153,7 +153,7 @@
                 <span id="lastUpdated">Last updated: Never</span>
             </div>
             <div class="status-center">
-                <div class="processing-indicator" id="processingIndicator" style="display: none;">
+                <div class="processing-indicator hidden" id="processingIndicator">
                     <div class="loading-spinner small"></div>
                     <span id="processingText">Processing...</span>
                 </div>
@@ -164,48 +164,48 @@
         </div>
     </div>
 
-    <div class="modal" id="csvImportModal" style="display: none;">
-        <div class="modal-content" style="max-width: 900px; width: 90%; max-height: 90vh;">
+    <div class="modal hidden" id="csvImportModal">
+        <div class="modal-content modal-lg">
             <div class="modal-header">
                 <h3>📊 Import Conversations from CSV</h3>
                 <button class="modal-close" id="closeCsvImportModal">×</button>
             </div>
-            <div class="modal-body" style="max-height: calc(90vh - 130px); overflow-y: auto;">
+            <div class="modal-body scroll-y csv-modal-body">
                 <div id="csvUploadSection" class="csv-section">
-                    <div style="border: 2px dashed #d1d5db; border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.3s;" id="csvUploadArea">
-                        <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
-                        <h4 style="margin: 0 0 8px 0; color: #111827;">Drag and drop your CSV file here</h4>
-                        <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">Or click to select a file</p>
-                        <input type="file" style="display: none;" id="csvFileInput" accept=".csv" />
+                    <div class="csv-upload-area" id="csvUploadArea">
+                        <div class="csv-upload-icon">📄</div>
+                        <h4 class="csv-upload-title">Drag and drop your CSV file here</h4>
+                        <p class="csv-upload-subtitle">Or click to select a file</p>
+                        <input type="file" class="hidden" id="csvFileInput" accept=".csv" />
                         <button class="btn btn-primary" id="csvSelectFileBtn">Select File</button>
                     </div>
-                    <div style="display: none; background: #f9fafb; padding: 16px; border-radius: 6px; margin-top: 16px;" id="csvFileInfo">
-                        <h4 style="margin: 0 0 12px 0; color: #111827; font-size: 14px; font-weight: 600;">File Information</h4>
+                    <div class="csv-file-info hidden" id="csvFileInfo">
+                        <h4 class="csv-file-info-title">File Information</h4>
                         <div id="csvFileDetails"></div>
                     </div>
                 </div>
-                <div id="csvMappingSection" class="csv-section" style="display: none;">
+                <div id="csvMappingSection" class="csv-section hidden">
                     <div id="csvMappingControls"></div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                    <div class="flex-between-center mt-20">
                          <button class="btn btn-secondary" id="csvBackToUploadBtn">Back</button>
                          <button class="btn btn-primary" id="csvValidateMappingBtn">Validate</button>
                     </div>
                 </div>
-                 <div id="csvValidationSection" class="csv-section" style="display: none;">
+                 <div id="csvValidationSection" class="csv-section hidden">
                     <div id="csvValidationResults"></div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                    <div class="flex-between-center mt-20">
                         <button class="btn btn-secondary" id="csvBackToMappingBtn">Back</button>
                         <button class="btn btn-primary" id="csvProceedToImportBtn">Import</button>
                     </div>
                 </div>
-                <div id="csvImportSection" class="csv-section" style="display: none;">
+                <div id="csvImportSection" class="csv-section hidden">
                     <div id="csvImportStatus">Importing...</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal" id="deleteConfirmModal" style="display: none;">
+    <div class="modal hidden" id="deleteConfirmModal">
         <div class="modal-content small-modal">
             <div class="modal-header">
                 <h3>⚠️ Delete Lead</h3>
@@ -225,7 +225,7 @@
         </div>
     </div>
 
-    <div class="modal" id="archiveConfirmModal" style="display: none;">
+    <div class="modal hidden" id="archiveConfirmModal">
         <div class="modal-content small-modal">
             <div class="modal-header">
                 <h3>📦 Archive Lead</h3>
@@ -241,7 +241,7 @@
         </div>
     </div>
 
-    <div class="modal" id="signatureModal" style="display: none;">
+    <div class="modal hidden" id="signatureModal">
         <div class="modal-content signature-modal">
             <div class="modal-header">
                 <h3>Sign Application</h3>
@@ -260,8 +260,8 @@
         </div>
     </div>
 
-    <div class="modal" id="lendersInlineModal" style="display: none;">
-        <div class="modal-content" style="max-width: 1400px; width: 95%; max-height: 90vh; overflow-y: auto;">
+    <div class="modal hidden" id="lendersInlineModal">
+        <div class="modal-content modal-xl scroll-y">
             <div class="modal-header">
                 <h3>Lender Qualification & Submission</h3>
                 <button class="modal-close" id="closeLendersInlineModal">×</button>

@@ -219,7 +219,7 @@ class DocumentsModule {
         this.setupDocumentActionListeners();
 
         const loading = document.getElementById('documentsLoading');
-        if (loading) loading.style.display = 'none';
+        if (loading) loading.classList.add('hidden');
     }
 
     setupDocumentActionListeners() {
@@ -324,7 +324,7 @@ class DocumentsModule {
             </div>
         `).join('');
 
-        typeSelectionDiv.style.display = 'block';
+        typeSelectionDiv.classList.remove('hidden');
 
         document.getElementById('confirmUploadBtn').onclick = () => this.confirmUpload();
         document.getElementById('cancelUploadBtn').onclick = () => this.cancelUpload();
@@ -396,7 +396,7 @@ class DocumentsModule {
     }
 
     cancelUpload() {
-        document.getElementById('documentTypeSelection').style.display = 'none';
+        document.getElementById('documentTypeSelection').classList.add('hidden');
         this.selectedFiles = [];
         document.getElementById('documentUpload').value = '';
     }
@@ -406,8 +406,13 @@ class DocumentsModule {
         const dragDropContent = document.querySelector('.drag-drop-content');
 
         if (progressDiv && dragDropContent) {
-            progressDiv.style.display = show ? 'block' : 'none';
-            dragDropContent.style.display = show ? 'none' : 'block';
+            if (show) {
+                progressDiv.classList.remove('hidden');
+                dragDropContent.classList.add('hidden');
+            } else {
+                progressDiv.classList.add('hidden');
+                dragDropContent.classList.remove('hidden');
+            }
         }
     }
 
@@ -593,7 +598,7 @@ class DocumentsModule {
 
     async saveDocumentRename(documentId, newName, originalName, nameElement) {
         try {
-            nameElement.style.opacity = '0.6';
+            nameElement.classList.add('loading-opacity');
             this.utils.showNotification('Renaming document...', 'info');
 
             const result = await this.parent.apiCall(`/api/documents/${documentId}`, {
@@ -610,7 +615,7 @@ class DocumentsModule {
                     this.currentDocuments[docIndex].original_filename = newName;
                 }
                 nameElement.textContent = newName;
-                nameElement.style.opacity = '1';
+                nameElement.classList.remove('loading-opacity');
                 this.utils.showNotification('Document renamed successfully', 'success');
             } else {
                 throw new Error(result.error || result.message || 'Failed to rename document');
@@ -618,7 +623,7 @@ class DocumentsModule {
         } catch (error) {
             console.error('Error renaming document:', error);
             nameElement.textContent = originalName;
-            nameElement.style.opacity = '1';
+            nameElement.classList.remove('loading-opacity');
             this.utils.showNotification(`Failed to rename: ${error.message}`, 'error');
         }
     }
@@ -746,16 +751,16 @@ class DocumentsModule {
         );
 
         if (hasDocuments || hasBankStatements) {
-            fcsSection.style.display = 'flex';
+            fcsSection.classList.remove('hidden');
         } else {
-            fcsSection.style.display = 'none';
+            fcsSection.classList.add('hidden');
         }
     }
 
     updateDocumentsSummary() {
         const summaryDiv = document.getElementById('documentsSummary');
         if (!summaryDiv) return;
-        summaryDiv.style.display = 'none';
+        summaryDiv.classList.add('hidden');
     }
 
     updateDocumentProcessingStatus(documentId, status, error) {

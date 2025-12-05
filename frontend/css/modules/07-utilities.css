@@ -105,4 +105,104 @@
 .text-center { text-align: center; }
 .mt-2 { margin-top: 8px; }
 .mb-2 { margin-bottom: 8px; }
+.mt-20 { margin-top: 20px; }
 .hidden { display: none !important; }
+
+.w-full {
+    width: 100%;
+}
+
+.flex-between-center {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Modal Specific Utilities */
+.modal-lg {
+    max-width: 900px;
+    width: 90%;
+    max-height: 90vh;
+}
+
+.modal-xl {
+    max-width: 1400px;
+    width: 95%;
+    max-height: 90vh;
+}
+
+.scroll-y {
+    overflow-y: auto;
+}
+
+/* Component-specific utilities */
+.delete-selection-trigger {
+    margin: 10px;
+    width: calc(100% - 20px);
+}
+
+.csv-modal-body {
+    max-height: calc(90vh - 130px);
+}
+
+.loading-opacity {
+    opacity: 0.6;
+}
+
+/* Industry Wire Header */
+.industry-wire-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.industry-wire-subtitle {
+    font-size: 11px;
+    color: var(--gray-500);
+}
+
+/* CSV Upload Area */
+.csv-upload-area {
+    border: 2px dashed var(--gray-300);
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.csv-upload-area:hover {
+    border-color: var(--primary-green);
+    background: rgba(45, 212, 191, 0.05);
+}
+
+.csv-upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.csv-upload-title {
+    margin: 0 0 8px 0;
+    color: var(--gray-900);
+}
+
+.csv-upload-subtitle {
+    margin: 0 0 12px 0;
+    color: var(--gray-500);
+    font-size: 14px;
+}
+
+.csv-file-info {
+    background: var(--gray-50);
+    padding: 16px;
+    border-radius: 6px;
+    margin-top: 16px;
+}
+
+.csv-file-info-title {
+    margin: 0 0 12px 0;
+    color: var(--gray-900);
+    font-size: 14px;
+    font-weight: 600;
+}
