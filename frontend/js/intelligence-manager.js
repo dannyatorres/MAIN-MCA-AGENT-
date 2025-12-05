@@ -107,14 +107,20 @@ export class IntelligenceManager {
         this.tabs['edit'].openCreateModal();
     }
 
-    async loadConversationIntelligence(conversationId = null) {
+    async loadConversationIntelligence(conversationId = null, preloadedData = null) {
         const convId = conversationId || this.parent.getCurrentConversationId();
         if (!convId) return;
 
         this.toggleView(true);
 
         try {
-            const data = await this.parent.apiCall(`/api/conversations/${convId}`);
+            // FIX: Use preloaded data if available, otherwise fetch
+            let data;
+            if (preloadedData) {
+                data = preloadedData;
+            } else {
+                data = await this.parent.apiCall(`/api/conversations/${convId}`);
+            }
             const conversationData = data.conversation || data;
 
             this.parent.selectedConversation = conversationData;

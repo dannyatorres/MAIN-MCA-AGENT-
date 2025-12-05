@@ -91,8 +91,12 @@ class ConversationCore {
             // 5. Initials
             const initials = getInitials(businessName);
 
+            // 6. FIX: Check if this ID is already selected for deletion (Ghost Selection Bug)
+            const isChecked = this.selectedForDeletion.has(conv.id) ? 'checked' : '';
+            const checkedClass = this.selectedForDeletion.has(conv.id) ? 'checked-for-deletion' : '';
+
             return `
-                <div class="conversation-item ${isSelected}" data-conversation-id="${conv.id}">
+                <div class="conversation-item ${isSelected} ${checkedClass}" data-conversation-id="${conv.id}">
                     <div class="conversation-avatar">
                         <div class="avatar-circle">
                             ${initials}
@@ -116,7 +120,7 @@ class ConversationCore {
                     </div>
 
                     <div class="conversation-checkbox">
-                        <input type="checkbox" class="delete-checkbox" data-conversation-id="${conv.id}">
+                        <input type="checkbox" class="delete-checkbox" data-conversation-id="${conv.id}" ${isChecked}>
                     </div>
 
                     ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
@@ -302,11 +306,12 @@ class ConversationCore {
         }
 
         // Fetch detailed conversation data
+        let conversationData = null;
         try {
             console.log('Fetching detailed conversation data for:', conversationId);
-            const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
+            conversationData = await this.parent.apiCall(`/api/conversations/${conversationId}`);
             // Handle both wrapped and unwrapped responses
-            this.selectedConversation = data.conversation || data;
+            this.selectedConversation = conversationData.conversation || conversationData;
             console.log('Loaded detailed conversation data:', this.selectedConversation);
 
             // Update parent reference
@@ -340,10 +345,10 @@ class ConversationCore {
                 await this.parent.messaging.loadConversationMessages(conversationId);
             }
 
-            // Then load intelligence with the updated conversation data
+            // FIX: Pass the 'data' we already have to avoid a second network request
             if (this.parent.intelligence) {
                 console.log('Loading intelligence for conversation:', conversationId);
-                await this.parent.intelligence.loadConversationIntelligence(conversationId);
+                await this.parent.intelligence.loadConversationIntelligence(conversationId, conversationData);
             }
 
             // Load documents for the conversation

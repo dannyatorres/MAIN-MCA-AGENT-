@@ -60,7 +60,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
-                if (centerPanel) centerPanel.classList.add('dashboard-mode');
+                if (centerPanel) {
+                    centerPanel.classList.add('dashboard-mode');
+                    centerPanel.style.gap = ''; // FIX: Remove the inline '0' gap so CSS takes over
+                }
                 if (centerHeader) centerHeader.innerHTML = '';
                 if (inputs) inputs.style.display = 'none';
                 if (actions) actions.style.display = 'none';
