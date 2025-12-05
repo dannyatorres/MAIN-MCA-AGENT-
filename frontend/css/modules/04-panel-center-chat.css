@@ -72,21 +72,22 @@
 
 /* Back Button - Dark Mode */
 #backHomeBtn {
+    /* Positioning */
     position: absolute;
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
 
-    /* Dark theme styling */
-    background: #21262d;
-    border: 1px solid #30363d;
+    /* Ghost style - no background until hover */
+    background: transparent;
+    border: none;
     color: #8b949e;
     box-shadow: none;
 
-    /* Shape */
-    border-radius: 10px;
+    /* Sizing & Touch Target */
     width: 38px;
     height: 38px;
+    border-radius: 8px;
 
     /* Layout */
     cursor: pointer;
@@ -96,9 +97,9 @@
     transition: all 0.2s ease;
 }
 
+/* Hover Effect: Show subtle background on interaction */
 #backHomeBtn:hover {
-    background: #30363d;
-    border-color: #484f58;
+    background: rgba(59, 130, 246, 0.1);
     color: #e6edf3;
 }
 
