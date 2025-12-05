@@ -1,181 +1,248 @@
 /* ==========================================================================
-   [TAB] Documents Management
+   [TAB] Documents - Sleek Card Design
    ========================================================================== */
 
-/* 1. Empty State */
-.doc-empty-state {
+/* 1. Main Layout */
+.documents-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 20px;
+    gap: 16px;
+    overflow-y: auto;
+}
+
+/* 2. Upload Bar (Replaces the messy text) */
+.upload-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #161b22;
+    border: 1px dashed #30363d;
+    border-radius: 12px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-bar:hover {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.upload-bar.drag-active {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.upload-bar-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.upload-icon-small {
+    color: #3b82f6;
+    font-size: 16px;
+}
+
+.upload-text {
+    font-size: 13px;
+    color: #e6edf3;
+    font-weight: 500;
+}
+
+.upload-hint {
+    font-size: 11px;
+    color: #6e7681;
+}
+
+/* 3. Document List Container */
+.documents-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Space between cards */
+}
+
+/* 4. Document Card (The "Round Card Style") */
+.doc-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px; /* Rounded corners */
+    padding: 12px 16px;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.doc-card:hover {
+    transform: translateY(-1px);
+    border-color: #58a6ff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Icon Box */
+.doc-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: #0d1117;
+    border: 1px solid #21262d;
+}
+
+/* Icon Colors */
+.doc-icon-box.pdf { color: #ef4444; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2); }
+.doc-icon-box.img { color: #a855f7; background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.2); }
+.doc-icon-box.xls { color: #10b981; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2); }
+.doc-icon-box.doc { color: #3b82f6; background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2); }
+
+/* File Info */
+.doc-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.doc-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e6edf3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.doc-name:hover { color: #58a6ff; text-decoration: underline; }
+
+.doc-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #8b949e;
+    margin-top: 2px;
+}
+
+.doc-tag {
+    background: #21262d;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #30363d;
+}
+
+/* Actions */
+.doc-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-icon-sm {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #8b949e;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-icon-sm:hover { background: #30363d; color: #e6edf3; }
+.btn-icon-sm.delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+/* 5. Empty State (Centered & Clean) */
+.empty-state-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 60px 20px;
     text-align: center;
-    background: rgba(255,255,255,0.02);
-    border-radius: 12px;
+    background: #161b22;
     border: 2px dashed #30363d;
-    margin: 20px;
+    border-radius: 16px;
+    margin-top: 20px;
 }
 
-.empty-icon-stack {
-    font-size: 32px;
+.empty-state-icon {
+    font-size: 48px;
     color: #30363d;
     margin-bottom: 16px;
-    position: relative;
-    height: 40px;
-    width: 60px;
 }
 
-.empty-icon-stack i:first-child { position: absolute; left: 10px; top: 0; transform: rotate(-10deg); color: #21262d; }
-.empty-icon-stack i:last-child { position: absolute; left: 25px; top: 5px; transform: rotate(5deg); color: #30363d; }
+.empty-state-text h4 { margin: 0 0 8px 0; color: #e6edf3; font-size: 16px; }
+.empty-state-text p { margin: 0; color: #8b949e; font-size: 13px; max-width: 260px; }
 
-.doc-empty-state h4 { margin: 0 0 8px 0; color: #e6edf3; font-size: 16px; }
-.doc-empty-state p { margin: 0; color: #8b949e; font-size: 13px; max-width: 250px; }
-.doc-empty-state .btn { margin-top: 16px; }
-
-/* Legacy empty state classes */
-.doc-state-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    text-align: center;
-}
-
-.doc-state-icon { font-size: 48px; margin-bottom: 16px; }
-.doc-state-title { color: #e6edf3; margin: 0 0 8px 0; font-size: 16px; }
-.doc-state-text { color: #8b949e; margin: 0; font-size: 13px; }
-.doc-state-container.error-state .doc-state-icon { color: #ef4444; }
-
-/* 2. Documents Grid Container */
-.documents-table {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    background: #0d1117;
-    overflow: visible; /* CHANGED FROM hidden TO visible - allows dropdown to extend outside */
-    margin: 20px;
-}
-
-/* 3. Headers */
-.documents-grid-header {
-    display: grid;
-    grid-template-columns: 1fr 120px 80px 100px;
-    padding: 10px 16px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #6e7681;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid #30363d;
-    background: #161b22;
-}
-
-/* 4. Rows */
-.documents-grid-body { display: flex; flex-direction: column; }
-
-.doc-card-row {
-    display: grid;
-    grid-template-columns: 1fr 120px 80px 100px;
-    padding: 12px 16px;
-    align-items: center;
-    border-bottom: 1px solid #21262d;
-    transition: all 0.2s ease;
-}
-
-.doc-card-row:hover { background: rgba(56, 139, 253, 0.05); }
-.doc-card-row:last-child { border-bottom: none; }
-
-/* 5. Cells & Icons */
-.doc-col-main { display: flex; align-items: center; gap: 12px; overflow: hidden; }
-
-.file-icon {
-    width: 36px; height: 36px; border-radius: 8px;
-    background: #161b22; border: 1px solid #30363d;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; flex-shrink: 0;
-}
-.file-icon.color-red { color: #ef4444; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2); }
-.file-icon.color-blue { color: #3b82f6; background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2); }
-.file-icon.color-green { color: #10b981; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2); }
-.file-icon.color-purple { color: #a855f7; background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.2); }
-.file-icon.color-gray { color: #8b949e; }
-
-.file-info {
-    display: flex;
-    flex-direction: column;
+/* 6. Upload Progress */
+.upload-progress-bar {
+    height: 4px;
+    background: #21262d;
+    border-radius: 2px;
+    margin-top: 10px;
     overflow: hidden;
+    display: none;
+}
+.upload-progress-fill {
+    height: 100%;
+    background: #3b82f6;
+    width: 0%;
+    transition: width 0.3s ease;
 }
 
-.file-name {
-    font-size: 14px; font-weight: 500; color: #e6edf3;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
-}
-.file-name:hover { color: #58a6ff; text-decoration: underline; }
-
-.file-meta-mobile { display: none; font-size: 11px; color: #6e7681; margin-top: 2px; }
-
-.badge-type {
-    background: #21262d; color: #8b949e; padding: 2px 8px;
-    border-radius: 10px; border: 1px solid #30363d; font-size: 11px;
-    white-space: nowrap;
-}
-
-.doc-col-type { font-size: 12px; }
-.doc-col-size { font-family: 'SF Mono', 'Monaco', monospace; font-size: 12px; color: #6e7681; }
-.doc-col-actions { display: flex; justify-content: flex-end; }
-
-/* 6. Actions & Menu */
-.action-group { display: flex; gap: 4px; align-items: center; }
-
-.btn-icon-action {
-    width: 32px; height: 32px; border-radius: 6px; border: none;
-    background: transparent; color: #8b949e; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s;
-}
-.btn-icon-action:hover { background: #30363d; color: #e6edf3; }
-
-.dropdown-trigger { position: relative; }
-
-.dropdown-menu {
-    position: absolute; right: 0; top: 100%; margin-top: 4px;
-    background: #161b22; border: 1px solid #30363d; border-radius: 6px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5); min-width: 140px;
-    display: none; z-index: 100; padding: 4px;
-}
-.dropdown-menu.show { display: block; }
-
-.dropdown-item {
-    display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px;
-    text-align: left; background: none; border: none; color: #c9d1d9; font-size: 13px;
-    cursor: pointer; border-radius: 4px;
-}
-.dropdown-item:hover { background: #3b82f6; color: white; }
-.dropdown-item.text-danger:hover { background: #ef4444; color: white; }
-.dropdown-divider { height: 1px; background: #30363d; margin: 4px 0; }
-
-/* 7. Upload Area */
-.upload-drop-zone {
-    border: 2px dashed #30363d;
+/* 7. FCS Section */
+.fcs-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0d1117;
+    border: 1px solid #30363d;
     border-radius: 12px;
-    padding: 30px;
-    text-align: center;
-    margin: 20px;
-    transition: all 0.2s;
-    background: rgba(255,255,255,0.02);
+    padding: 16px 20px;
 }
 
-.upload-drop-zone.drag-active {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.05);
+.fcs-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    color: #e6edf3;
 }
 
-.upload-icon { font-size: 32px; color: #30363d; margin-bottom: 12px; }
-.upload-text { color: #8b949e; font-size: 13px; margin-bottom: 12px; }
-.upload-hint { color: #6e7681; font-size: 11px; }
+.fcs-info p {
+    margin: 0;
+    font-size: 12px;
+    color: #8b949e;
+}
 
-/* 8. Type Selection */
+/* 8. Type Selection (Upload Categorization) */
+.document-type-selection {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+}
+
+.document-type-selection h4 {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    color: #e6edf3;
+}
+
+.type-selection-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
 .file-type-item-compact {
     display: flex;
     align-items: center;
@@ -184,7 +251,6 @@
     background: #0d1117;
     border: 1px solid #30363d;
     border-radius: 8px;
-    margin-bottom: 8px;
 }
 
 .file-name-compact {
@@ -220,34 +286,34 @@
     cursor: pointer;
 }
 
-/* 9. FCS Section */
-.fcs-section {
-    margin: 20px;
-    padding: 20px;
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 12px;
-}
-
-.fcs-header {
+.type-selection-actions {
     display: flex;
-    justify-content: space-between;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* 9. Loading State */
+.loading-state {
+    display: flex;
     align-items: center;
-    margin-bottom: 16px;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px;
+    color: #8b949e;
+    font-size: 13px;
 }
 
-.fcs-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #e6edf3;
+.loading-spinner.small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #30363d;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
 
-/* Responsive */
-@media (max-width: 600px) {
-    .documents-grid-header { display: none; }
-    .doc-card-row { grid-template-columns: 1fr auto; gap: 10px; }
-    .doc-col-type, .doc-col-size { display: none; }
-    .file-meta-mobile { display: block; }
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* ==========================================================================
@@ -265,7 +331,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999; /* Ensure it sits on top of everything */
+    z-index: 9999;
 }
 
 .doc-modal-card {

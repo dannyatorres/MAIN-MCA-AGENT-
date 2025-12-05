@@ -24,7 +24,6 @@ class DocumentsModule {
 
         const dragDropZone = document.getElementById('dragDropZone');
         const fileInput = document.getElementById('documentUpload');
-        const browseBtn = document.getElementById('browseFilesBtn');
 
         // Drag and drop handlers
         if (dragDropZone) {
@@ -48,15 +47,15 @@ class DocumentsModule {
                 const files = Array.from(e.dataTransfer.files);
                 this.handleFileSelection(files);
             }, false);
+
+            // Click the entire upload bar to browse files
+            dragDropZone.addEventListener('click', () => {
+                if (fileInput) fileInput.click();
+            });
         }
 
-        // File input handlers
+        // File input change handler
         if (fileInput) {
-            if (browseBtn) {
-                browseBtn.addEventListener('click', () => {
-                    fileInput.click();
-                });
-            }
             fileInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     this.handleFileSelection(Array.from(e.target.files));
@@ -160,84 +159,57 @@ class DocumentsModule {
             this.documentsNeedRefresh = true;
         }
 
+        // Empty State - Clean Card Style
         if (docs.length === 0) {
             documentsList.innerHTML = `
-                <div class="doc-empty-state">
-                    <div class="empty-icon-stack">
-                        <i class="fas fa-file-invoice"></i>
-                        <i class="fas fa-file-contract"></i>
+                <div class="empty-state-card">
+                    <div class="empty-state-icon">📁</div>
+                    <div class="empty-state-text">
+                        <h4>No Documents</h4>
+                        <p>Upload bank statements, applications, or other files to get started.</p>
                     </div>
-                    <h4>No Documents Yet</h4>
-                    <p>Upload bank statements, applications, or tax returns to get started.</p>
-                    <button class="btn btn-primary btn-sm mt-3" onclick="document.getElementById('documentUpload').click()">
-                        <i class="fas fa-cloud-upload-alt"></i> Upload Files
-                    </button>
                 </div>
             `;
             return;
         }
 
-        // Sleek Grid Layout
+        // Card-Based Document List
         const htmlContent = `
-            <div class="documents-grid-header">
-                <div class="col-name">NAME</div>
-                <div class="col-type">TYPE</div>
-                <div class="col-size">SIZE</div>
-                <div class="col-actions"></div>
-            </div>
-            <div class="documents-grid-body">
+            <div class="documents-list-container">
                 ${docs.map(doc => {
                     const convId = conversationId || doc.conversation_id || '';
-                    const iconClass = this.getFileIconClass(doc.mimeType, doc.documentType);
+                    const iconType = this.getDocIconType(doc.mimeType, doc.documentType);
                     const docTypeLabel = doc.documentType || 'Document';
 
                     return `
-                    <div class="doc-card-row" data-document-id="${doc.id}">
-                        <div class="doc-col-main">
-                            <div class="file-icon ${this.getFileIconColor(doc.mimeType)}">
-                                <i class="${iconClass}"></i>
+                    <div class="doc-card" data-document-id="${doc.id}">
+                        <div class="doc-icon-box ${iconType}">
+                            <i class="${this.getFileIconClass(doc.mimeType, doc.documentType)}"></i>
+                        </div>
+                        <div class="doc-info">
+                            <div class="doc-name"
+                                 title="${doc.originalFilename}"
+                                 ondblclick="window.conversationUI.documents.enableInlineEdit('${doc.id}')">
+                                ${doc.originalFilename}
                             </div>
-                            <div class="file-info">
-                                <div class="file-name doc-name-clickable"
-                                     title="${doc.originalFilename}"
-                                     ondblclick="window.conversationUI.documents.enableInlineEdit('${doc.id}')">
-                                    ${doc.originalFilename}
-                                </div>
-                                <div class="file-meta-mobile">${docTypeLabel} • ${this.utils.formatFileSize(doc.fileSize)}</div>
+                            <div class="doc-meta">
+                                <span class="doc-tag">${docTypeLabel}</span>
+                                <span>${this.utils.formatFileSize(doc.fileSize)}</span>
                             </div>
                         </div>
-
-                        <div class="doc-col-type">
-                            <span class="badge-type">${docTypeLabel}</span>
-                        </div>
-
-                        <div class="doc-col-size">${this.utils.formatFileSize(doc.fileSize)}</div>
-
-                        <div class="doc-col-actions">
-                            <div class="action-group">
-                                <button class="btn-icon-action document-preview-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Preview">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-
-                                <button class="btn-icon-action document-edit-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Rename">
-                                    <i class="fas fa-pen"></i>
-                                </button>
-
-                                <div class="dropdown-trigger">
-                                    <button class="btn-icon-action more-actions-btn" title="More Options">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <div class="dropdown-menu">
-                                        <button class="dropdown-item document-download-btn" data-doc-id="${doc.id}" data-conv-id="${convId}">
-                                            <i class="fas fa-download"></i> Download
-                                        </button>
-                                        <div class="dropdown-divider"></div>
-                                        <button class="dropdown-item text-danger document-delete-btn" data-doc-id="${doc.id}" data-conv-id="${convId}">
-                                            <i class="fas fa-trash-alt"></i> Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="doc-actions">
+                            <button class="btn-icon-sm document-preview-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Preview">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-icon-sm document-edit-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Edit">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button class="btn-icon-sm document-download-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Download">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn-icon-sm delete document-delete-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
                         </div>
                     </div>`;
                 }).join('')}
@@ -251,6 +223,17 @@ class DocumentsModule {
 
         const loading = document.getElementById('documentsLoading');
         if (loading) loading.classList.add('hidden');
+    }
+
+    // Helper: Determine icon color class based on file type
+    getDocIconType(mimeType, docType) {
+        if (mimeType?.includes('pdf')) return 'pdf';
+        if (mimeType?.includes('image')) return 'img';
+        if (mimeType?.includes('sheet') || mimeType?.includes('csv') || mimeType?.includes('excel')) return 'xls';
+        if (mimeType?.includes('word') || mimeType?.includes('doc')) return 'doc';
+        if (docType === 'Bank Statement' || docType === '4 Months Bank Statement') return 'xls';
+        if (docType === 'Tax Return') return 'pdf';
+        return 'doc';
     }
 
     // Helper for Icons
@@ -267,65 +250,23 @@ class DocumentsModule {
         return 'fas fa-file-alt';
     }
 
-    getFileIconColor(mimeType) {
-        if (mimeType?.includes('pdf')) return 'color-red';
-        if (mimeType?.includes('image')) return 'color-purple';
-        if (mimeType?.includes('sheet') || mimeType?.includes('csv')) return 'color-green';
-        if (mimeType?.includes('word')) return 'color-blue';
-        return 'color-gray';
-    }
-
     setupDocumentActionListeners() {
         const documentsList = document.getElementById('documentsList');
         if (!documentsList) return;
 
-        // 1. Clear old listeners by cloning the node
-        // This is crucial to prevent double-firing events
+        // Clear old listeners by cloning the node
         const newDocumentsList = documentsList.cloneNode(true);
         documentsList.parentNode.replaceChild(newDocumentsList, documentsList);
 
-        // 2. Attach Global Closer (Run only once)
-        if (!window.dropdownCloserAttached) {
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.dropdown-trigger')) {
-                    document.querySelectorAll('.dropdown-menu.show').forEach(el => el.classList.remove('show'));
-                }
-            });
-            window.dropdownCloserAttached = true;
-        }
-
-        // 3. Main Event Delegation
+        // Event delegation for action buttons
         newDocumentsList.addEventListener('click', (event) => {
-            const target = event.target;
-
-            // Handle Dropdown Toggle (The Three Dots)
-            const dropdownBtn = target.closest('.more-actions-btn');
-            if (dropdownBtn) {
-                event.stopPropagation();
-                const menu = dropdownBtn.nextElementSibling;
-
-                // Close other open menus
-                document.querySelectorAll('.dropdown-menu.show').forEach(el => {
-                    if (el !== menu) el.classList.remove('show');
-                });
-
-                // Toggle this menu
-                if (menu) menu.classList.toggle('show');
-                return;
-            }
-
-            // Handle Action Buttons (Preview, Edit, Download, Delete)
-            // Works for both visible buttons AND buttons inside the dropdown
-            const btn = target.closest('button');
+            const btn = event.target.closest('button');
             if (!btn) return;
 
             const docId = btn.dataset.docId;
             const convId = btn.dataset.convId;
 
             if (!docId) return;
-
-            // Close any open dropdowns when an action is clicked
-            document.querySelectorAll('.dropdown-menu.show').forEach(el => el.classList.remove('show'));
 
             if (convId && !this.parent.getCurrentConversationId()) {
                 this.parent.currentConversationId = convId;
@@ -491,17 +432,18 @@ class DocumentsModule {
     }
 
     showUploadProgress(show) {
-        const progressDiv = document.getElementById('uploadProgress');
-        const dragDropContent = document.querySelector('.drag-drop-content');
+        const progressBar = document.getElementById('uploadProgress');
+        const uploadBar = document.getElementById('dragDropZone');
 
-        if (progressDiv && dragDropContent) {
-            if (show) {
-                progressDiv.classList.remove('hidden');
-                dragDropContent.classList.add('hidden');
-            } else {
-                progressDiv.classList.add('hidden');
-                dragDropContent.classList.remove('hidden');
-            }
+        if (progressBar) {
+            // Show/hide the progress bar below upload bar
+            progressBar.style.display = show ? 'block' : 'none';
+        }
+
+        if (uploadBar) {
+            // Disable clicking while uploading
+            uploadBar.style.pointerEvents = show ? 'none' : 'auto';
+            uploadBar.style.opacity = show ? '0.6' : '1';
         }
     }
 
@@ -642,8 +584,8 @@ class DocumentsModule {
         const docRow = document.querySelector(`[data-document-id="${documentId}"]`);
         if (!docRow) return;
 
-        // UPDATED: Selector changed to match new class
-        const nameElement = docRow.querySelector('.doc-name-clickable');
+        // Selector matches the .doc-name element in card layout
+        const nameElement = docRow.querySelector('.doc-name');
         if (!nameElement) return;
 
         const originalName = nameElement.textContent.trim();
@@ -856,66 +798,58 @@ class DocumentsModule {
         // Status logic if needed
     }
 
-    // Template for documents tab
-    // CLEANED: Inline styles moved to CSS
+    // Template for documents tab - Clean Card Design
     createDocumentsTabTemplate(documents = []) {
         const conversationId = this.parent.getCurrentConversationId() || '';
 
         return `
             <div class="documents-section">
-                <div class="documents-header hidden">
-                    <h3>Documents</h3>
-                    <input type="file" id="documentUpload" multiple
-                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv,.xlsx"
-                           class="hidden">
-                </div>
+                <input type="file" id="documentUpload" multiple
+                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv,.xlsx"
+                       class="hidden">
 
-                <div class="fcs-section" id="fcsGenerationSection">
+                <div class="fcs-section hidden" id="fcsGenerationSection">
                     <div class="fcs-info">
-                        <h4>📊 FCS Report Generation</h4>
-                        <p>Generate financial analysis from uploaded bank statements</p>
+                        <h4>📊 FCS Report</h4>
+                        <p>Generate financial analysis from bank statements</p>
                     </div>
                     <button id="generateFCSBtn"
                             class="btn btn-primary btn-sm"
                             data-conversation-id="${conversationId}">
-                        📈 Generate FCS Report
+                        Generate
                     </button>
                 </div>
 
-                <div class="drag-drop-zone" id="dragDropZone">
-                    <div class="drag-drop-content">
-                        <div class="drag-drop-icon">📎</div>
-                        <h4>Drag & Drop Documents Here</h4>
-                        <p>Or <button type="button" class="btn-link" id="browseFilesBtn">browse files</button></p>
-                        <p class="drag-drop-hint">
-                            Supports: PDF, JPG, PNG, DOC, DOCX, CSV, XLSX (Max 50MB each)
-                        </p>
-                    </div>
-                    <div class="upload-progress hidden" id="uploadProgress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill"></div>
+                <div class="upload-bar" id="dragDropZone">
+                    <div class="upload-bar-content">
+                        <div class="upload-icon-small"><i class="fas fa-cloud-upload-alt"></i></div>
+                        <div>
+                            <div class="upload-text">Upload Documents</div>
+                            <div class="upload-hint">Drag & drop or click to browse</div>
                         </div>
-                        <div class="progress-text" id="progressText">Uploading...</div>
                     </div>
+                    <div class="upload-hint">Max 50MB</div>
+                </div>
+
+                <div class="upload-progress-bar" id="uploadProgress">
+                    <div class="upload-progress-fill" id="progressFill"></div>
                 </div>
 
                 <div class="document-type-selection hidden" id="documentTypeSelection">
                     <h4>Categorize Documents</h4>
                     <div class="type-selection-grid" id="typeSelectionGrid"></div>
                     <div class="type-selection-actions">
-                        <button class="btn btn-primary" id="confirmUploadBtn">Upload Documents</button>
-                        <button class="btn btn-secondary" id="cancelUploadBtn">Cancel</button>
+                        <button class="btn btn-primary btn-sm" id="confirmUploadBtn">Upload</button>
+                        <button class="btn btn-secondary btn-sm" id="cancelUploadBtn">Cancel</button>
                     </div>
                 </div>
 
                 <div class="documents-list" id="documentsList">
                     <div class="loading-state" id="documentsLoading">
-                        <div class="loading-spinner"></div>
-                        <p>Loading documents...</p>
+                        <div class="loading-spinner small"></div>
+                        <span>Loading documents...</span>
                     </div>
                 </div>
-
-                <div class="documents-summary hidden" id="documentsSummary"></div>
             </div>
         `;
     }
