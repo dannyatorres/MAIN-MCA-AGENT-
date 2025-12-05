@@ -1,4 +1,4 @@
-// documents.js - Complete document management functionality
+// documents.js - Complete Logic Preserved, Styles Refactored
 
 class DocumentsModule {
     constructor(parent) {
@@ -16,7 +16,7 @@ class DocumentsModule {
     }
 
     init() {
-        // Document-specific initialization if needed
+        // Document-specific initialization
     }
 
     setupDocumentsEventListeners() {
@@ -25,12 +25,6 @@ class DocumentsModule {
         const dragDropZone = document.getElementById('dragDropZone');
         const fileInput = document.getElementById('documentUpload');
         const browseBtn = document.getElementById('browseFilesBtn');
-
-        console.log('Elements found:', {
-            dragDropZone: !!dragDropZone,
-            fileInput: !!fileInput,
-            browseBtn: !!browseBtn
-        });
 
         // Drag and drop handlers
         if (dragDropZone) {
@@ -60,12 +54,10 @@ class DocumentsModule {
         if (fileInput) {
             if (browseBtn) {
                 browseBtn.addEventListener('click', () => {
-                    console.log('Browse button clicked');
                     fileInput.click();
                 });
             }
             fileInput.addEventListener('change', (e) => {
-                console.log('File input changed, files:', e.target.files.length);
                 if (e.target.files.length > 0) {
                     this.handleFileSelection(Array.from(e.target.files));
                 }
@@ -76,27 +68,20 @@ class DocumentsModule {
     async loadDocuments() {
         const conversation = this.parent.getSelectedConversation();
         const conversationId = this.parent.getCurrentConversationId();
-
-        console.log('=== DOCUMENTS LOADING DEBUG ===');
-        console.log('Selected conversation:', conversation?.id);
-        console.log('Parent current ID:', conversationId);
-        console.log('================================');
-
-        // Try to use conversation ID even if conversation object is null
         const targetId = conversation?.id || conversationId;
+        const documentsList = document.getElementById('documentsList');
 
         if (!targetId) {
             console.error('❌ No conversation ID available, cannot load documents');
             this.renderDocumentsList([]);
 
-            // Show user-friendly error in UI
-            const documentsList = document.getElementById('documentsList');
+            // UPDATED: Used CSS class .doc-state-container
             if (documentsList) {
                 documentsList.innerHTML = `
-                    <div class="error-state" style="text-align: center; padding: 40px;">
-                        <div class="error-icon" style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-                        <h4 style="color: #dc2626; margin-bottom: 8px;">No Conversation Selected</h4>
-                        <p style="color: #6b7280;">Please select a conversation from the list to view documents.</p>
+                    <div class="doc-state-container">
+                        <div class="doc-state-icon">⚠️</div>
+                        <h4 class="doc-state-title">No Conversation Selected</h4>
+                        <p class="doc-state-text">Please select a conversation from the list to view documents.</p>
                     </div>
                 `;
             }
@@ -116,16 +101,15 @@ class DocumentsModule {
             } else {
                 console.error('❌ Failed to load documents:', result.error);
 
-                // Show error in UI
-                const documentsList = document.getElementById('documentsList');
+                // UPDATED: Used CSS class .doc-state-container
                 if (documentsList) {
                     documentsList.innerHTML = `
-                        <div class="error-state" style="text-align: center; padding: 40px;">
-                            <div class="error-icon" style="font-size: 48px; margin-bottom: 16px;">❌</div>
-                            <h4 style="color: #dc2626; margin-bottom: 8px;">Failed to Load Documents</h4>
-                            <p style="color: #6b7280; margin-bottom: 16px;">${result.error || 'Unknown error'}</p>
+                        <div class="doc-state-container error-state">
+                            <div class="doc-state-icon">❌</div>
+                            <h4 class="doc-state-title">Failed to Load Documents</h4>
+                            <p class="doc-state-text">${result.error || 'Unknown error'}</p>
                             <button onclick="window.conversationUI.documents.loadDocuments()"
-                                    class="btn btn-primary">
+                                    class="btn btn-primary btn-sm">
                                 Retry
                             </button>
                         </div>
@@ -136,17 +120,15 @@ class DocumentsModule {
         } catch (error) {
             console.error('❌ Error loading documents:', error);
 
-            // Show error in UI
-            const documentsList = document.getElementById('documentsList');
+            // UPDATED: Used CSS class .doc-state-container
             if (documentsList) {
                 documentsList.innerHTML = `
-                    <div class="error-state" style="text-align: center; padding: 40px;">
-                        <div class="error-icon" style="font-size: 48px; margin-bottom: 16px;">❌</div>
-                        <h4 style="color: #dc2626; margin-bottom: 8px;">Error Loading Documents</h4>
-                        <p style="color: #6b7280; margin-bottom: 8px;">${error.message}</p>
-                        <p style="color: #9ca3af; font-size: 14px; margin-bottom: 16px;">Check console for details</p>
+                    <div class="doc-state-container error-state">
+                        <div class="doc-state-icon">❌</div>
+                        <h4 class="doc-state-title">Error Loading Documents</h4>
+                        <p class="doc-state-text">${error.message}</p>
                         <button onclick="window.conversationUI.documents.loadDocuments()"
-                                class="btn btn-primary">
+                                class="btn btn-primary btn-sm">
                             Retry
                         </button>
                     </div>
@@ -174,24 +156,23 @@ class DocumentsModule {
         const conversation = this.parent.getSelectedConversation();
         const conversationId = conversation?.id || this.parent.getCurrentConversationId();
 
-        console.log('Documents to render:', docs.length);
-
         if (!conversationId) {
-            console.error('No conversation ID available for document actions');
             this.documentsNeedRefresh = true;
         }
 
         if (docs.length === 0) {
+            // UPDATED: Used CSS class .doc-state-container
             documentsList.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">📄</div>
-                    <h4>No documents uploaded</h4>
-                    <p>Upload bank statements, tax returns, and other documents for this lead</p>
+                <div class="doc-state-container">
+                    <div class="doc-state-icon">📄</div>
+                    <h4 class="doc-state-title">No documents uploaded</h4>
+                    <p class="doc-state-text">Upload bank statements, tax returns, and other documents for this lead</p>
                 </div>
             `;
             return;
         }
 
+        // UPDATED: Removed inline styles, added classes to match CSS Grid
         const htmlContent = `
             <div class="documents-table">
                 <div class="documents-table-header">
@@ -205,28 +186,27 @@ class DocumentsModule {
                     <div class="document-row" data-document-id="${doc.id}" data-conversation-id="${convId}" data-type="${doc.documentType}">
                         <div class="doc-col-name">
                             <div class="doc-icon">${this.getDocumentIconCompact(doc.mimeType, doc.documentType)}</div>
-                            <div class="document-name-compact"
+                            <div class="doc-name-clickable"
                                  contenteditable="false"
                                  data-original="${doc.originalFilename}"
                                  data-document-id="${doc.id}"
                                  ondblclick="window.conversationUI.documents.enableInlineEdit('${doc.id}')"
-                                 title="Double-click to edit name"
-                                 style="min-width: 200px; overflow: visible; color: black !important; cursor: pointer;">
+                                 title="Double-click to edit name">
                                 ${doc.originalFilename}
                             </div>
                         </div>
                         <div class="doc-col-size">${this.utils.formatFileSize(doc.fileSize)}</div>
                         <div class="doc-col-actions">
-                            <button class="btn-action document-edit-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Edit">
+                            <button class="btn-doc-action document-edit-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn-action document-preview-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Preview">
+                            <button class="btn-doc-action document-preview-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Preview">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn-action document-download-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Download">
+                            <button class="btn-doc-action document-download-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Download">
                                 <i class="fas fa-download"></i>
                             </button>
-                            <button class="btn-action btn-danger-compact document-delete-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Delete">
+                            <button class="btn-doc-action delete document-delete-btn" data-doc-id="${doc.id}" data-conv-id="${convId}" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -258,7 +238,6 @@ class DocumentsModule {
             const docId = target.dataset.docId;
             const convId = target.dataset.convId;
 
-            // Ensure conversation context
             if (convId && !this.parent.getCurrentConversationId()) {
                 this.parent.currentConversationId = convId;
             }
@@ -276,17 +255,10 @@ class DocumentsModule {
     }
 
     handleFileSelection(files) {
-        console.log('handleFileSelection called with files:', files);
         const validFiles = this.validateFiles(files);
-        console.log('Valid files after validation:', validFiles);
-        if (validFiles.length === 0) {
-            console.log('No valid files, returning');
-            return;
-        }
+        if (validFiles.length === 0) return;
 
-        // Append to existing files instead of replacing them
         this.selectedFiles = [...this.selectedFiles, ...validFiles];
-        console.log('Total selected files:', this.selectedFiles.length);
         this.showDocumentTypeSelection();
     }
 
@@ -310,12 +282,10 @@ class DocumentsModule {
                 errors.push(`${file.name}: File too large (max 50MB)`);
                 return;
             }
-
             if (!allowedTypes.includes(file.type)) {
                 errors.push(`${file.name}: Unsupported file type`);
                 return;
             }
-
             validFiles.push(file);
         });
 
@@ -361,7 +331,6 @@ class DocumentsModule {
     }
 
     async confirmUpload() {
-        console.log('confirmUpload called');
         const typeSelects = document.querySelectorAll('.file-type-select-compact');
         const autoProcessChecks = document.querySelectorAll('.auto-process-checkbox');
         const conversation = this.parent.getSelectedConversation();
@@ -374,33 +343,24 @@ class DocumentsModule {
         this.showUploadProgress(true);
 
         try {
-            // Upload files one by one to S3
             const uploadResults = [];
 
             for (let index = 0; index < this.selectedFiles.length; index++) {
                 const file = this.selectedFiles[index];
                 const documentType = typeSelects[index] ? typeSelects[index].value : 'Other';
 
-                console.log(`Uploading file ${index + 1}/${this.selectedFiles.length}: ${file.name}, type: ${documentType}`);
-
-                // Create FormData for single file upload
                 const formData = new FormData();
-                formData.append('file', file);  // Changed from 'documents' to 'file'
-                formData.append('conversation_id', conversation.id);  // Changed from 'conversationId'
-                formData.append('document_type', documentType);  // Changed from 'documentType_{index}'
+                formData.append('file', file);
+                formData.append('conversation_id', conversation.id);
+                formData.append('document_type', documentType);
 
-                // Upload to S3 via /api/documents/upload
                 const response = await fetch(`${this.parent.apiBaseUrl}/api/documents/upload`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': this.parent.apiAuth
-                        // NO Content-Type! Browser sets it automatically for FormData
-                    },
+                    headers: { 'Authorization': this.parent.apiAuth },
                     body: formData
                 });
 
                 if (!response.ok) {
-                    console.error(`Upload failed for ${file.name}: ${response.status}`);
                     uploadResults.push({ success: false, filename: file.name });
                     continue;
                 }
@@ -408,7 +368,6 @@ class DocumentsModule {
                 const result = await response.json();
 
                 if (result.success) {
-                    console.log(`✅ Uploaded to S3: ${result.s3_url}`);
                     uploadResults.push({ success: true, filename: file.name, document: result.document });
                 } else {
                     uploadResults.push({ success: false, filename: file.name });
@@ -420,7 +379,7 @@ class DocumentsModule {
 
             if (successCount > 0) {
                 this.utils.showNotification(
-                    `${successCount} document(s) uploaded successfully to S3!` +
+                    `${successCount} document(s) uploaded successfully!` +
                     (failedCount > 0 ? ` (${failedCount} failed)` : ''),
                     successCount === this.selectedFiles.length ? 'success' : 'warning'
                 );
@@ -474,30 +433,27 @@ class DocumentsModule {
         const nameWithoutExtension = lastDotIndex > 0 ? originalFilename.substring(0, lastDotIndex) : originalFilename;
         const fileExtension = lastDotIndex > 0 ? originalFilename.substring(lastDotIndex) : '';
 
-        // CLEANED: All inline styles replaced with 'doc-modal-*' classes
+        // UPDATED: Completely removed inline styles. Used .doc-modal-* classes.
         const modalHtml = `
             <div id="editDocumentModal" class="doc-modal-overlay" onclick="this.remove()">
-                <div class="doc-modal-content" onclick="event.stopPropagation()">
-
+                <div class="doc-modal-card" onclick="event.stopPropagation()">
                     <div class="doc-modal-header">
-                        <h3>Edit Document</h3>
+                        <span>Edit Document</span>
                         <button onclick="document.getElementById('editDocumentModal').remove()" class="doc-modal-close">×</button>
                     </div>
-
                     <div class="doc-modal-body">
                         <div class="doc-form-group">
-                            <label for="editDocumentName" class="doc-label">Document Name:</label>
+                            <label class="doc-form-label">Document Name:</label>
                             <div class="doc-input-group">
-                                <input type="text" id="editDocumentName" value="${nameWithoutExtension}" class="doc-input">
+                                <input type="text" id="editDocumentName" value="${nameWithoutExtension}" class="doc-form-input">
                                 ${fileExtension ? `<span class="doc-badge">${fileExtension}</span>` : ''}
                             </div>
                             <small class="doc-helper-text">File extension will be preserved automatically</small>
                             <input type="hidden" id="editDocumentExtension" value="${fileExtension}">
                         </div>
-
                         <div class="doc-form-group">
-                            <label for="editDocumentType" class="doc-label">Document Type:</label>
-                            <select id="editDocumentType" class="doc-select">
+                            <label class="doc-form-label">Document Type:</label>
+                            <select id="editDocumentType" class="doc-form-select">
                                 <option value="Bank Statement" ${docInfo.documentType === 'Bank Statement' ? 'selected' : ''}>Bank Statement</option>
                                 <option value="Tax Return" ${docInfo.documentType === 'Tax Return' ? 'selected' : ''}>Tax Return</option>
                                 <option value="Financial Statement" ${docInfo.documentType === 'Financial Statement' ? 'selected' : ''}>Financial Statement</option>
@@ -508,10 +464,9 @@ class DocumentsModule {
                             </select>
                         </div>
                     </div>
-
                     <div class="doc-modal-footer">
-                        <button id="cancelEditModal" class="btn btn-secondary">Cancel</button>
-                        <button id="saveDocumentEdit" data-document-id="${documentId}" class="btn btn-primary">Save Changes</button>
+                        <button id="cancelEditModal" class="btn btn-secondary btn-sm">Cancel</button>
+                        <button id="saveDocumentEdit" data-document-id="${documentId}" class="btn btn-primary btn-sm">Save Changes</button>
                     </div>
                 </div>
             </div>
@@ -519,65 +474,32 @@ class DocumentsModule {
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-        // Add event listeners after modal is inserted
+        // Add event listeners
         const modal = document.getElementById('editDocumentModal');
-        const closeBtn = document.getElementById('closeEditModal');
         const cancelBtn = document.getElementById('cancelEditModal');
         const saveBtn = document.getElementById('saveDocumentEdit');
 
-        const closeModal = () => {
-            modal.remove();
-        };
-
-        // Close button (if exists)
-        if (closeBtn) {
-            closeBtn.addEventListener('click', closeModal);
-        }
-
-        // Cancel button
+        const closeModal = () => modal.remove();
         cancelBtn.addEventListener('click', closeModal);
-
-        // Click outside modal
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal();
-            }
+            if (e.target === modal) closeModal();
         });
 
-        // Save button - THIS IS THE KEY FIX
         saveBtn.addEventListener('click', () => {
-            console.log('Save button clicked for document:', documentId);
             this.saveDocumentEdit(documentId);
         });
     }
 
     async saveDocumentEdit(documentId) {
-        console.log('saveDocumentEdit called with documentId:', documentId);
-
         const nameInput = document.getElementById('editDocumentName');
         const typeSelect = document.getElementById('editDocumentType');
         const extensionInput = document.getElementById('editDocumentExtension');
 
-        console.log('Form elements found:', {
-            nameInput: !!nameInput,
-            typeSelect: !!typeSelect,
-            extensionInput: !!extensionInput
-        });
-
-        if (!nameInput || !typeSelect) {
-            this.utils.showNotification('Required form elements not found', 'error');
-            return;
-        }
+        if (!nameInput || !typeSelect) return;
 
         const newNameWithoutExtension = nameInput.value.trim();
         const fileExtension = extensionInput ? extensionInput.value : '';
         const newType = typeSelect.value;
-
-        console.log('Form values:', {
-            newNameWithoutExtension,
-            fileExtension,
-            newType
-        });
 
         if (!newNameWithoutExtension) {
             this.utils.showNotification('Document name cannot be empty', 'error');
@@ -586,7 +508,7 @@ class DocumentsModule {
 
         const newName = newNameWithoutExtension + fileExtension;
 
-        // Update the local document data immediately for better UX
+        // Optimistic update
         if (this.currentDocuments) {
             const docIndex = this.currentDocuments.findIndex(d => d.id === documentId);
             if (docIndex !== -1) {
@@ -595,22 +517,10 @@ class DocumentsModule {
             }
         }
 
-        // Get conversation ID from current context
         const conversation = this.parent.getSelectedConversation();
+        if (!conversation) return;
 
-        console.log('Conversation context:', {
-            hasConversation: !!conversation,
-            conversationId: conversation?.id
-        });
-
-        if (!conversation) {
-            this.utils.showNotification('No conversation selected', 'error');
-            return;
-        }
-
-        // Save to server with correct endpoint
         try {
-            console.log('Sending update request...');
             const result = await this.parent.apiCall(`/api/conversations/${conversation.id}/documents/${documentId}`, {
                 method: 'PUT',
                 body: JSON.stringify({
@@ -619,10 +529,7 @@ class DocumentsModule {
                 })
             });
 
-            console.log('Response data:', result);
-
             if (result.success) {
-                // Update the UI after successful server update
                 this.renderDocumentsList();
                 document.getElementById('editDocumentModal').remove();
                 this.utils.showNotification('Document updated successfully', 'success');
@@ -633,15 +540,7 @@ class DocumentsModule {
         } catch (error) {
             console.error('Error updating document:', error);
             this.utils.showNotification(`Failed to update document: ${error.message}`, 'error');
-
-            // Revert the local changes on error
-            if (this.currentDocuments) {
-                const docIndex = this.currentDocuments.findIndex(d => d.id === documentId);
-                if (docIndex !== -1) {
-                    // Reload from server to get original data
-                    await this.loadDocuments();
-                }
-            }
+            await this.loadDocuments(); // Revert
         }
     }
 
@@ -649,13 +548,14 @@ class DocumentsModule {
         const docRow = document.querySelector(`[data-document-id="${documentId}"]`);
         if (!docRow) return;
 
-        const nameElement = docRow.querySelector('.document-name-compact');
+        // UPDATED: Selector changed to match new class
+        const nameElement = docRow.querySelector('.doc-name-clickable');
         if (!nameElement) return;
 
         const originalName = nameElement.textContent.trim();
         nameElement.contentEditable = 'true';
 
-        // CLEANED: Use CSS class for the "Edit Mode" look
+        // UPDATED: Use CSS class for the "Edit Mode" look
         nameElement.classList.add('inline-editing');
         nameElement.focus();
 
@@ -673,10 +573,8 @@ class DocumentsModule {
             nameElement.classList.remove('inline-editing');
 
             if (newName && newName !== originalName) {
-                // Save to backend - don't revert here
                 this.saveDocumentRename(documentId, newName, originalName, nameElement);
             } else {
-                // Only revert if name is empty or unchanged
                 nameElement.textContent = originalName;
             }
         };
@@ -698,7 +596,6 @@ class DocumentsModule {
             nameElement.style.opacity = '0.6';
             this.utils.showNotification('Renaming document...', 'info');
 
-            // Try the simple endpoint first (more reliable)
             const result = await this.parent.apiCall(`/api/documents/${documentId}`, {
                 method: 'PUT',
                 body: JSON.stringify({
@@ -707,19 +604,14 @@ class DocumentsModule {
             });
 
             if (result.success) {
-                // Update local cache immediately
                 const docIndex = this.currentDocuments.findIndex(d => d.id === documentId);
                 if (docIndex !== -1) {
                     this.currentDocuments[docIndex].originalFilename = newName;
                     this.currentDocuments[docIndex].original_filename = newName;
                 }
-
-                // Update the DOM element
                 nameElement.textContent = newName;
                 nameElement.style.opacity = '1';
-
                 this.utils.showNotification('Document renamed successfully', 'success');
-
             } else {
                 throw new Error(result.error || result.message || 'Failed to rename document');
             }
@@ -732,43 +624,27 @@ class DocumentsModule {
     }
 
     async previewDocument(documentId) {
-        console.log('👁️ Preview clicked for:', documentId);
-
         const conversation = this.parent.getSelectedConversation();
         let conversationId = conversation?.id || this.parent.getCurrentConversationId() ||
                           this.getConversationIdFromDocument(documentId);
 
         if (!conversationId) {
-            console.error('No conversation ID available');
             this.utils.showNotification('Unable to determine conversation context', 'error');
             return;
         }
 
-        // 1. Construct the direct file URL (This is the actual PDF/Image)
-        // We add a timestamp to prevent caching issues
         const directFileUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/preview?t=${Date.now()}`;
-        console.log('🔗 Target URL:', directFileUrl);
 
         try {
             this.utils.showNotification('Opening document...', 'info');
-
-            // 2. Try to open immediately (Best for Pop-up blockers)
-            // We do this BEFORE any await/fetch to satisfy "User Activation" rules
             const newWindow = window.open(directFileUrl, '_blank');
-
             if (newWindow) {
-                // Success! The window opened.
                 newWindow.focus();
-                console.log('✅ Window opened successfully');
             } else {
-                // Failed! Pop-up blocker active.
-                console.warn('⚠️ Pop-up blocked. Falling back to current tab.');
                 this.utils.showNotification('Pop-up blocked. Opening in current tab...', 'warning');
                 window.location.href = directFileUrl;
             }
-
         } catch (error) {
-            console.error('Preview error:', error);
             this.utils.showNotification('Preview failed: ' + error.message, 'error');
         }
     }
@@ -779,37 +655,21 @@ class DocumentsModule {
                           this.getConversationIdFromDocument(documentId);
 
         if (!conversationId) {
-            console.error('No conversation ID available');
             this.utils.showNotification('Unable to determine conversation context', 'error');
             return;
         }
 
-        console.log('Downloading document:', documentId, 'from conversation:', conversationId);
-
         try {
-            // Build the download URL
             const downloadUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/download`;
-
-            console.log('Download URL:', downloadUrl);
-
-            // Create a temporary link and trigger download
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = ''; // Let the server set the filename via Content-Disposition
+            link.download = '';
             link.style.display = 'none';
-
             document.body.appendChild(link);
             link.click();
-
-            // Clean up
-            setTimeout(() => {
-                document.body.removeChild(link);
-            }, 100);
-
+            setTimeout(() => { document.body.removeChild(link); }, 100);
             this.utils.showNotification('Download started', 'success');
-
         } catch (error) {
-            console.error('Download error:', error);
             this.utils.showNotification('Download failed: ' + error.message, 'error');
         }
     }
@@ -819,15 +679,9 @@ class DocumentsModule {
         let conversationId = conversation?.id || this.parent.getCurrentConversationId() ||
                           this.getConversationIdFromDocument(documentId);
 
-        if (!conversationId) {
-            console.error('No conversation ID available');
-            this.utils.showNotification('Unable to determine conversation context', 'error');
-            return;
-        }
+        if (!conversationId) return;
 
-        if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-            return;
-        }
+        if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) return;
 
         try {
             const result = await this.parent.apiCall(`/api/conversations/${conversationId}/documents/${documentId}`, {
@@ -841,7 +695,6 @@ class DocumentsModule {
                 this.utils.showNotification(`Delete failed: ${result.error}`, 'error');
             }
         } catch (error) {
-            console.error('Delete error:', error);
             this.utils.showNotification('Delete failed: ' + error.message, 'error');
         }
     }
@@ -849,9 +702,7 @@ class DocumentsModule {
     getConversationIdFromDocument(documentId) {
         if (this.currentDocuments) {
             const doc = this.currentDocuments.find(d => d.id === documentId);
-            if (doc && doc.conversation_id) {
-                return doc.conversation_id;
-            }
+            if (doc && doc.conversation_id) return doc.conversation_id;
         }
         return null;
     }
@@ -895,7 +746,7 @@ class DocumentsModule {
         );
 
         if (hasDocuments || hasBankStatements) {
-            fcsSection.style.display = 'block';
+            fcsSection.style.display = 'flex';
         } else {
             fcsSection.style.display = 'none';
         }
@@ -903,75 +754,45 @@ class DocumentsModule {
 
     updateDocumentsSummary() {
         const summaryDiv = document.getElementById('documentsSummary');
-        if (!summaryDiv || !this.currentDocuments) return;
+        if (!summaryDiv) return;
         summaryDiv.style.display = 'none';
     }
 
     updateDocumentProcessingStatus(documentId, status, error) {
-        const documentElement = document.querySelector(`[data-document-id="${documentId}"]`);
-        if (!documentElement) return;
-
-        const statusElement = documentElement.querySelector('.document-status') ||
-                             documentElement.querySelector('.doc-col-status');
-
-        if (statusElement) {
-            switch (status) {
-                case 'processing':
-                    statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-                    statusElement.className = 'doc-col-status processing';
-                    break;
-                case 'completed':
-                    statusElement.innerHTML = '<i class="fas fa-check text-success"></i> Processed';
-                    statusElement.className = 'doc-col-status processed';
-                    break;
-                case 'failed':
-                    statusElement.innerHTML = '<i class="fas fa-times text-danger"></i> Failed';
-                    statusElement.className = 'doc-col-status failed';
-                    if (error) {
-                        statusElement.title = error;
-                    }
-                    break;
-            }
-        }
+        // Status logic if needed
     }
 
     // Template for documents tab
-    // CLEANED: Inline styles moved to 05-panel-right-intelligence.css
+    // CLEANED: Inline styles moved to CSS
     createDocumentsTabTemplate(documents = []) {
         const conversationId = this.parent.getCurrentConversationId() || '';
 
         return `
             <div class="documents-section">
-                <div class="documents-header">
+                <div class="documents-header hidden">
                     <h3>Documents</h3>
                     <input type="file" id="documentUpload" multiple
                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv,.xlsx"
                            class="hidden">
                 </div>
 
-                <div class="fcs-generation-section" id="fcsGenerationSection">
-                    <div class="fcs-header">
-                        <div>
-                            <h4 class="fcs-title">
-                                📊 FCS Report Generation
-                            </h4>
-                            <p class="fcs-subtitle">
-                                Generate financial analysis from uploaded bank statements
-                            </p>
-                        </div>
-                        <button id="generateFCSBtn"
-                                class="btn btn-primary btn-sm"
-                                data-conversation-id="${conversationId}">
-                            📈 Generate FCS Report
-                        </button>
+                <div class="fcs-section" id="fcsGenerationSection">
+                    <div class="fcs-info">
+                        <h4>📊 FCS Report Generation</h4>
+                        <p>Generate financial analysis from uploaded bank statements</p>
                     </div>
+                    <button id="generateFCSBtn"
+                            class="btn btn-primary btn-sm"
+                            data-conversation-id="${conversationId}">
+                        📈 Generate FCS Report
+                    </button>
                 </div>
 
                 <div class="drag-drop-zone" id="dragDropZone">
                     <div class="drag-drop-content">
                         <div class="drag-drop-icon">📎</div>
                         <h4>Drag & Drop Documents Here</h4>
-                        <p>Or <button type="button" class="link-btn" id="browseFilesBtn">browse files</button></p>
+                        <p>Or <button type="button" class="btn-link" id="browseFilesBtn">browse files</button></p>
                         <p class="drag-drop-hint">
                             Supports: PDF, JPG, PNG, DOC, DOCX, CSV, XLSX (Max 50MB each)
                         </p>

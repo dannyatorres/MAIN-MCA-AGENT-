@@ -589,44 +589,44 @@
 }
 
 /* ==========================================================================
-   [FIX] Documents Table Layout
-   Aligns columns and fixes the broken list view
+   [MODULE: DOCUMENTS TAB]
+   Complete styling for the Documents Intelligence Tab
    ========================================================================== */
 
-/* 1. The Table Container */
+/* --- 1. Layout & Grid System --- */
 .documents-table {
     display: flex;
     flex-direction: column;
     width: 100%;
-    border: 1px solid #30363d;
+    border: 1px solid var(--gray-200);
     border-radius: 8px;
+    background: var(--corgi-cream);
     overflow: hidden;
-    background: #161b22;
+    margin-top: 16px;
 }
 
-/* 2. The Grid Layout (Applies to Header AND Rows) */
+/* Grid columns: Name (Flexible), Size (Fixed), Actions (Fixed) */
 .documents-table-header,
 .document-row {
     display: grid;
-    /* Columns: Name (Flex), Size (Fixed), Actions (Fixed) */
-    grid-template-columns: 1fr 90px 110px;
-    gap: 16px;
+    grid-template-columns: 1fr 100px 120px;
+    gap: 12px;
     align-items: center;
     padding: 12px 16px;
 }
 
-/* 3. Header Specifics */
+/* Header Specifics */
 .documents-table-header {
-    background: #0d1117;
-    border-bottom: 1px solid #30363d;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--gray-200);
+    color: var(--gray-500);
     font-size: 11px;
-    font-weight: 600;
-    color: #8b949e;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
-/* 4. Row Specifics */
+/* Row Specifics */
 .document-row {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     transition: background 0.2s;
@@ -637,10 +637,10 @@
 }
 
 .document-row:hover {
-    background: #1c2128;
+    background: rgba(255, 255, 255, 0.05);
 }
 
-/* 5. Column Alignments */
+/* --- 2. Typography & Icons --- */
 .doc-col-name {
     display: flex;
     align-items: center;
@@ -648,25 +648,29 @@
     overflow: hidden;
 }
 
-.doc-col-size {
-    text-align: right;
-    font-family: 'Monaco', monospace;
-    font-size: 11px;
-    color: #6e7681;
-}
-
-.doc-col-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-}
-
-/* 6. Fix the "Big Text" & Icons */
 .doc-icon {
     font-size: 18px;
     flex-shrink: 0;
+    opacity: 0.8;
 }
 
+.doc-name-clickable {
+    color: var(--gray-900);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.doc-name-clickable:hover {
+    text-decoration: underline;
+    color: white;
+}
+
+/* Legacy class support */
 .document-name-compact {
     white-space: nowrap;
     overflow: hidden;
@@ -675,25 +679,47 @@
     color: #e6edf3;
 }
 
-/* 7. Fix the "Browse Files" Button inside Drop Zone */
-.link-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    color: #3b82f6;
-    text-decoration: underline;
+.doc-col-size {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    color: var(--gray-500);
+    text-align: right;
+}
+
+.doc-col-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+/* --- 3. Buttons --- */
+.btn-doc-action {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--gray-400);
     cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    display: inline;
+    transition: all 0.2s;
 }
 
-.link-btn:hover {
-    color: #60a5fa;
-    text-decoration: none;
+.btn-doc-action:hover {
+    background: var(--gray-100);
+    color: white;
+    border-color: var(--gray-200);
 }
 
-/* 8. Fix the Action Buttons (Edit/Trash) */
+.btn-doc-action.delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--red);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Legacy btn-action support */
 .btn-action {
     width: 28px;
     height: 28px;
@@ -714,18 +740,101 @@
     border-color: #30363d;
 }
 
-/* Specific red hover for trash */
 .document-delete-btn:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
     border-color: rgba(239, 68, 68, 0.2);
 }
 
-/* Ensure Icons inside buttons are small */
 .btn-action i,
-.btn-action svg {
+.btn-action svg,
+.btn-doc-action i,
+.btn-doc-action svg {
     font-size: 13px;
     pointer-events: none;
+}
+
+/* Link Button (Browse Files) */
+.btn-link,
+.link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #3b82f6;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    display: inline;
+}
+
+.btn-link:hover,
+.link-btn:hover {
+    color: #60a5fa;
+    text-decoration: none;
+}
+
+/* --- 4. FCS Section (The Top Box) --- */
+.fcs-section {
+    background: var(--corgi-cream);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fcs-info h4 {
+    margin: 0 0 4px 0;
+    color: var(--gray-900);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fcs-info p {
+    margin: 0;
+    color: var(--gray-500);
+    font-size: 12px;
+}
+
+/* --- 5. Edit Modal Styling --- */
+.doc-modal-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+/* Form inputs inside modal */
+.doc-form-label {
+    display: block;
+    color: var(--gray-500);
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.doc-form-input,
+.doc-form-select {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.doc-form-input:focus,
+.doc-form-select:focus {
+    border-color: var(--blue-accent);
 }
 
 /* ==========================================================================
