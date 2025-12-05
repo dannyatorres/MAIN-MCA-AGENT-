@@ -141,31 +141,35 @@
     height: 100%;
 }
 
+/* Document Item - Dark "Data Chip" Style */
 .document-item {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 10px;
-    border: 1px solid var(--gray-200);
+    border: 1px solid #30363d;
     border-radius: 8px;
     margin-bottom: 8px;
-    background: var(--white);
-    transition: border-color 0.2s;
+    background: #21262d;
+    transition: all 0.2s;
 }
 
 .document-item:hover {
-    border-color: var(--blue);
+    border-color: #2dd4bf;
+    background: #2d333b;
 }
 
 .document-thumbnail {
     width: 36px;
     height: 36px;
-    background: var(--gray-100);
+    background: #0d1117;
+    border: 1px solid #30363d;
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 18px;
+    color: #8b949e;
 }
 
 .document-details {
@@ -176,6 +180,7 @@
 .document-name {
     font-size: 13px;
     font-weight: 600;
+    color: #e6edf3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -183,7 +188,7 @@
 
 .document-meta {
     font-size: 11px;
-    color: var(--gray-500);
+    color: #6e7681;
 }
 
 /* 6. Drag & Drop Zone */

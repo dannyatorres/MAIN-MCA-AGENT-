@@ -33,27 +33,28 @@
     cursor: not-allowed;
 }
 
-/* 2. Primary (Black) */
+/* 2. Primary (Teal Accent) */
 .btn-primary {
-    background-color: var(--primary-btn);
-    color: var(--white);
+    background-color: #2dd4bf;
+    color: #0f1115;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .btn-primary:hover {
-    background-color: var(--primary-btn-hover);
+    background-color: #5eead4;
+    box-shadow: 0 4px 12px rgba(45, 212, 191, 0.3);
 }
 
-/* 3. Secondary (Gray/White) */
+/* 3. Secondary (Dark Outline) */
 .btn-secondary {
-    background-color: var(--white);
-    color: var(--gray-700);
-    border: 1px solid var(--gray-300);
+    background-color: transparent;
+    color: #e6edf3;
+    border: 1px solid #30363d;
 }
 
 .btn-secondary:hover {
-    background-color: var(--gray-50);
-    border-color: var(--gray-400);
+    background-color: #21262d;
+    border-color: #8b949e;
 }
 
 /* 4. Danger (Red) */
