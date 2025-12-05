@@ -102,48 +102,41 @@ class LendersModule {
     injectSubmissionModal() {
         if (document.getElementById('lenderSubmissionModal')) return;
 
+        // Use CSS classes instead of inline styles
         const modalHtml = `
-            <div id="lenderSubmissionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
-                <div style="background: white; width: 90%; max-width: 800px; max-height: 90vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-
-                    <div style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f9fafb;">
-                        <h3 style="margin: 0; font-size: 18px; color: #111827;">Send to Lenders</h3>
-                        <button id="closeLenderSubmissionModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
+            <div id="lenderSubmissionModal" class="modal hidden">
+                <div class="modal-content modal-lg">
+                    <div class="modal-header">
+                        <h3>Send to Lenders</h3>
+                        <button id="closeLenderSubmissionModal" class="modal-close">&times;</button>
                     </div>
-
-                    <div style="padding: 24px; overflow-y: auto;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h4 style="margin: 0; color: #374151;">Select Lenders</h4>
-                                    <button id="toggleAllLendersBtn" style="font-size: 12px; color: #2563eb; background: none; border: none; cursor: pointer;">Deselect All</button>
+                    <div class="modal-body">
+                        <div class="submission-grid">
+                            <div class="col">
+                                <div class="flex-between-center mb-2">
+                                    <h4>Select Lenders</h4>
+                                    <button id="toggleAllLendersBtn" class="btn-link">Deselect All</button>
                                 </div>
-                                <div id="lenderSelectionList" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto; background: #f9fafb;">
-                                    </div>
+                                <div id="lenderSelectionList" class="selection-list"></div>
                             </div>
-
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h4 style="margin: 0; color: #374151;">Select Documents</h4>
-                                    <button id="toggleAllDocumentsBtn" style="font-size: 12px; color: #2563eb; background: none; border: none; cursor: pointer;">Select All</button>
+                            <div class="col">
+                                <div class="flex-between-center mb-2">
+                                    <h4>Select Documents</h4>
+                                    <button id="toggleAllDocumentsBtn" class="btn-link">Select All</button>
                                 </div>
-                                <div id="submissionDocumentList" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto; background: #f9fafb;">
-                                    </div>
+                                <div id="submissionDocumentList" class="selection-list"></div>
                             </div>
                         </div>
-
-                        <div style="margin-top: 24px;">
-                            <label style="display: block; font-weight: 500; color: #374151; margin-bottom: 8px;">Email Message</label>
-                            <textarea id="submissionMessage" style="width: 100%; height: 150px; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box;"></textarea>
+                        <div class="mt-4">
+                            <label class="field-label">Email Message</label>
+                            <textarea id="submissionMessage" class="form-textarea" rows="6"></textarea>
                         </div>
                     </div>
-
-                    <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: flex-end; gap: 12px;">
-                        <button id="cancelLenderSubmission" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; border-radius: 6px; color: #374151; cursor: pointer;">Cancel</button>
-                        <button id="confirmLenderSubmission" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    <div class="modal-footer">
+                        <button id="cancelLenderSubmission" class="btn btn-secondary">Cancel</button>
+                        <button id="confirmLenderSubmission" class="btn btn-primary">
                             <span id="sendSubmissionsText">Send Emails</span>
-                            <span id="sendSubmissionsLoading" style="display: none;">Sending...</span>
+                            <span id="sendSubmissionsLoading" class="hidden">Sending...</span>
                         </button>
                     </div>
                 </div>
@@ -251,12 +244,9 @@ class LendersModule {
                         tibDisplay.textContent = `${months} month${months > 1 ? 's' : ''}`;
                     }
 
-                    tibDisplay.style.display = 'block';
-                    tibDisplay.style.fontSize = '12px';
-                    tibDisplay.style.color = '#6b7280';
-                    tibDisplay.style.marginTop = '4px';
+                    tibDisplay.classList.remove('hidden');
                 } else {
-                    tibDisplay.style.display = 'none';
+                    tibDisplay.classList.add('hidden');
                 }
             });
         }
@@ -367,9 +357,14 @@ class LendersModule {
 
         if (toggleBtn && quickImportContent) {
             toggleBtn.addEventListener('click', () => {
-                const isHidden = quickImportContent.style.display === 'none';
-                quickImportContent.style.display = isHidden ? 'block' : 'none';
-                toggleBtn.textContent = isHidden ? 'Hide ▲' : 'Show ▼';
+                const isHidden = quickImportContent.classList.contains('hidden');
+                if (isHidden) {
+                    quickImportContent.classList.remove('hidden');
+                    toggleBtn.textContent = 'Hide ▲';
+                } else {
+                    quickImportContent.classList.add('hidden');
+                    toggleBtn.textContent = 'Show ▼';
+                }
             });
         }
 
@@ -400,7 +395,7 @@ class LendersModule {
 
                         // Hide the Quick Import section
                         if (quickImportContent && toggleBtn) {
-                            quickImportContent.style.display = 'none';
+                            quickImportContent.classList.add('hidden');
                             toggleBtn.textContent = 'Show ▼';
                         }
                     } else {
@@ -740,7 +735,7 @@ class LendersModule {
                         tibDisplay.textContent = `${months} month${months > 1 ? 's' : ''}`;
                     }
 
-                    tibDisplay.style.display = 'block';
+                    tibDisplay.classList.remove('hidden');
                 }
             }
         }
@@ -1076,7 +1071,7 @@ class LendersModule {
 
         const tibDisplay = document.getElementById('lenderTibDisplay');
         if (tibDisplay) {
-            tibDisplay.style.display = 'none';
+            tibDisplay.classList.add('hidden');
         }
 
         console.log('All lender form fields cleared');
@@ -1241,8 +1236,8 @@ class LendersModule {
         // ALWAYS re-attach listeners when modal opens
         this.attachModalEventListeners();
 
-        // Show modal
-        modal.style.display = 'flex';
+        // Show modal (use classList)
+        modal.classList.remove('hidden');
         console.log('✅ Modal displayed successfully');
     }
 
@@ -1277,13 +1272,13 @@ class LendersModule {
         // Close button
         attachListener('closeLenderSubmissionModal', (e) => {
             e.preventDefault();
-            modal.style.display = 'none';
+            modal.classList.add('hidden');
         });
 
         // Cancel button
         attachListener('cancelLenderSubmission', (e) => {
             e.preventDefault();
-            modal.style.display = 'none';
+            modal.classList.add('hidden');
         });
 
         // Toggle lenders button
