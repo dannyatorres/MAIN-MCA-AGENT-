@@ -27,8 +27,8 @@
     height: 70px;
     min-height: 70px;
 
-    background: var(--white);
-    border-bottom: 1px solid var(--gray-200);
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
 
     display: flex;
     align-items: center;
@@ -52,7 +52,7 @@
 .header-merchant-name {
     font-size: 20px;        /* Much bigger (was 16px) */
     font-weight: 800;       /* Extra Bold */
-    color: #111827;         /* Deepest Black */
+    color: #e6edf3;         /* Platinum text for dark mode */
     line-height: 1;         /* Tight line height */
     letter-spacing: -0.6px; /* Tight tracking looks expensive */
     margin: 0;
@@ -62,7 +62,7 @@
 .header-business-name {
     font-size: 12px;
     font-weight: 600;       /* Semi-bold */
-    color: #6b7280;         /* Medium Gray */
+    color: #8b949e;         /* Muted gray for dark mode */
 
     /* The "Financial Data" Look: */
     text-transform: uppercase;
@@ -70,25 +70,25 @@
     margin-top: 4px;        /* Push it down slightly */
 }
 
-/* Back Button - Fixed for Light Mode */
+/* Back Button - Dark Mode */
 #backHomeBtn {
     position: absolute;
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
 
-    /* 1. VISIBILITY FIX: Light gray box on white header */
-    background: #ffffff;
-    border: 1px solid #e2e8f0; /* Visible border */
-    color: #64748b;            /* Slate gray icon */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Subtle shadow */
+    /* Dark theme styling */
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #8b949e;
+    box-shadow: none;
 
-    /* 2. Shape */
+    /* Shape */
     border-radius: 10px;
     width: 38px;
     height: 38px;
 
-    /* 3. Layout */
+    /* Layout */
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -97,10 +97,9 @@
 }
 
 #backHomeBtn:hover {
-    background: #f8fafc;    /* Slightly darker on hover */
-    border-color: #94a3b8;  /* Darker border */
-    color: #0f172a;         /* Black icon */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background: #30363d;
+    border-color: #484f58;
+    color: #e6edf3;
 }
 
 /* SAFEGUARD: If your HTML is empty <div id="backHomeBtn"></div>, this adds an arrow */
@@ -527,15 +526,15 @@
 }
 
 .date-pill {
-    background: rgba(243, 244, 246, 0.9); /* Gray-100 with transparency */
+    background: rgba(33, 38, 45, 0.9);
     backdrop-filter: blur(4px);
     padding: 4px 12px;
     border-radius: 12px;
     font-size: 11px;
     font-weight: 600;
-    color: var(--gray-500);
-    border: 1px solid rgba(0,0,0,0.05);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    color: #8b949e;
+    border: 1px solid #30363d;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* ==========================================================================
@@ -551,9 +550,9 @@
     height: 100%;
     text-align: center;
 
-    /* The Look: Subtle Warm Gradient */
-    background: linear-gradient(180deg, var(--white) 0%, var(--corgi-cream) 100%);
-    color: var(--gray-500);
+    /* Dark mode gradient */
+    background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+    color: #8b949e;
     padding: 40px;
 }
 
@@ -562,30 +561,30 @@
     font-size: 64px;
     margin-bottom: 24px;
 
-    /* The "Watermark" Effect */
-    color: var(--corgi-hyper); /* Your brand orange */
-    opacity: 0.2;              /* Make it subtle */
-    background: var(--white);
+    /* Dark mode watermark */
+    color: #3b82f6;
+    opacity: 0.3;
+    background: #21262d;
     width: 120px;
     height: 120px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 10px 30px rgba(234, 88, 12, 0.1); /* Soft orange glow */
+    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1);
 }
 
 .empty-state h3 {
     font-size: 20px;
     font-weight: 700;
-    color: var(--gray-900);
+    color: #e6edf3;
     margin-bottom: 8px;
     letter-spacing: -0.5px;
 }
 
 .empty-state p {
     font-size: 14px;
-    color: var(--gray-500);
+    color: #8b949e;
     max-width: 300px;
     line-height: 1.5;
 }
@@ -594,11 +593,11 @@
 .empty-state-hint {
     margin-top: 32px;
     padding: 8px 16px;
-    background: var(--white);
-    border: 1px solid var(--gray-200);
+    background: #21262d;
+    border: 1px solid #30363d;
     border-radius: 20px;
     font-size: 12px;
-    color: var(--gray-400);
+    color: #8b949e;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -626,13 +625,13 @@
 .dashboard-header h1 {
     font-size: 28px;
     font-weight: 700;
-    color: var(--gray-900);
+    color: #e6edf3;
     margin-bottom: 8px;
     letter-spacing: -0.5px;
 }
 
 .dashboard-header p {
-    color: var(--gray-500);
+    color: #8b949e;
     font-size: 14px;
 }
 
@@ -645,29 +644,29 @@
 }
 
 .stat-card {
-    background: var(--white);
-    border: 1px solid var(--gray-200);
+    background: #161b22;
+    border: 1px solid #30363d;
     border-radius: 16px;
     padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
-    transition: transform 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s, border-color 0.2s;
 }
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    border-color: var(--corgi-hyper-pop);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    border-color: #3b82f6;
 }
 
 .stat-icon {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: var(--corgi-cream);
-    color: var(--corgi-hyper);
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -678,14 +677,14 @@
 .stat-value {
     font-size: 24px;
     font-weight: 700;
-    color: var(--gray-900);
+    color: #e6edf3;
     font-family: 'Inter', sans-serif; /* Ensure nice numbers */
 }
 
 .stat-label {
     font-size: 12px;
     font-weight: 600;
-    color: var(--gray-500);
+    color: #8b949e;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
