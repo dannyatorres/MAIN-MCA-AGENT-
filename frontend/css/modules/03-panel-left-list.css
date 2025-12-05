@@ -417,4 +417,13 @@
     border-color: #fca5a5;
 }
 
+/* List Limit Message (Showing top 50...) */
+.list-limit-message {
+    text-align: center;
+    padding: 15px;
+    color: var(--gray-400);
+    font-size: 12px;
+    border-top: 1px solid var(--gray-100);
+}
+
 /* ==========================================================================

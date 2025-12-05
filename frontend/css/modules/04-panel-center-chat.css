@@ -847,3 +847,48 @@
 /* Adjust alignment */
 .message.outbound .message-meta { justify-content: flex-end; }
 .message.inbound .message-meta { justify-content: flex-start; }
+
+/* ==========================================================================
+   [ADDITIONS] Dashboard Elements - Refactored from conversation-core.js
+   ========================================================================== */
+
+/* Dashboard Elements */
+.pill-merchant-name {
+    color: var(--corgi-hyper);
+}
+
+.goal-subtext {
+    opacity: 0.5;
+    font-size: 14px;
+}
+
+.goal-footer {
+    margin-top: 8px;
+    font-size: 11px;
+    opacity: 0.6;
+}
+
+/* Overrides for the Empty State inside Dashboard */
+.empty-state.dashboard-style {
+    background: transparent;
+    padding: 0;
+}
+
+.empty-state-hint.white-theme {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+}
+
+.icon-brand {
+    color: var(--corgi-hyper);
+}
+
+/* Text color helpers */
+.text-gray-600 {
+    color: var(--gray-600);
+}
+
+/* Hidden utility class */
+.hidden {
+    display: none !important;
+}

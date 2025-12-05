@@ -460,7 +460,7 @@ class ConversationCore {
         // Add a subtle footer if items are hidden
         if (remainingCount > 0) {
             listHtml += `
-                <div class="list-limit-message" style="text-align: center; padding: 15px; color: #9ca3af; font-size: 12px; border-top: 1px solid #f3f4f6;">
+                <div class="list-limit-message">
                     Showing top 50 of ${conversations.length} matches.<br>
                     Refine your search to see more.
                 </div>
@@ -756,7 +756,7 @@ class ConversationCore {
         if (headerContainer) {
             // Reset to dashboard pill
             headerContainer.innerHTML = `
-                <button id="backHomeBtn" onclick="loadDashboard()" style="display: none;" title="Back to Dashboard">
+                <button id="backHomeBtn" onclick="loadDashboard()" class="hidden" title="Back to Dashboard">
                     <i class="fas fa-arrow-left"></i>
                 </button>
 
@@ -764,7 +764,7 @@ class ConversationCore {
                     <div class="pill-avatar">MA</div>
                     <div class="pill-info">
                         <span class="pill-business-name">MCAagent</span>
-                        <span class="pill-merchant-name" style="color: var(--corgi-hyper);">Dashboard</span>
+                        <span class="pill-merchant-name">Dashboard</span>
                     </div>
                 </div>
             `;
@@ -783,13 +783,13 @@ class ConversationCore {
                     <div class="goal-card">
                         <div class="goal-header">
                             <span class="goal-title">Monthly Funding Goal</span>
-                            <span class="goal-numbers">$145,000 <span style="opacity:0.5; font-size: 14px;">/ $250k</span></span>
+                            <span class="goal-numbers">$145,000 <span class="goal-subtext">/ $250k</span></span>
                         </div>
                         <div class="progress-track">
                             <div class="progress-fill" style="width: 58%;"></div>
                         </div>
-                        <div style="margin-top: 8px; font-size: 11px; opacity: 0.6;">
-                            📅 12 days left in the month
+                        <div class="goal-footer">
+                            12 days left in the month
                         </div>
                     </div>
 
@@ -813,10 +813,10 @@ class ConversationCore {
                         </div>
                     </div>
 
-                    <div class="empty-state" style="background: transparent; padding: 0;">
-                        <div class="empty-state-hint" style="background: var(--white); border: 1px solid var(--gray-200);">
-                            <i class="fas fa-arrow-left" style="color: var(--corgi-hyper);"></i>
-                            <span style="color: var(--gray-600);">Select a conversation to start working</span>
+                    <div class="empty-state dashboard-style">
+                        <div class="empty-state-hint white-theme">
+                            <i class="fas fa-arrow-left icon-brand"></i>
+                            <span class="text-gray-600">Select a conversation to start working</span>
                         </div>
                     </div>
                 </div>
@@ -839,7 +839,7 @@ class ConversationCore {
         if (intelligenceContent) {
             intelligenceContent.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-icon" style="font-size: 48px; width: 80px; height: 80px;">
+                    <div class="empty-icon large-icon">
                         <i class="fas fa-chart-pie"></i>
                     </div>
                     <h3>Lead Intelligence</h3>
