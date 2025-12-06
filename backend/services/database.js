@@ -44,10 +44,11 @@ async function initialize() {
             ALTER TABLE csv_imports ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
         `);
 
-        // 2. Fix 'messages' table (Adding Twilio ID)
+        // 2. Fix 'messages' table (Adding Twilio ID AND Media URL for MMS)
         await pool.query(`
             ALTER TABLE messages ADD COLUMN IF NOT EXISTS external_id VARCHAR(255);
             ALTER TABLE messages ADD COLUMN IF NOT EXISTS twilio_sid VARCHAR(255);
+            ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url TEXT;
         `);
 
         // 3. Fix 'documents' table (Ensure it exists)

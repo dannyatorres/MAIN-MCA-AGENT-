@@ -221,25 +221,21 @@ router.post('/send', async (req, res) => {
 // Webhook endpoint to receive incoming messages (e.g., from Twilio)
 router.post('/webhook/receive', async (req, res) => {
     try {
-        const { From, To, Body, MessageSid } = req.body;
+        // 1. Grab MediaUrl0 from Twilio (This is the picture!)
+        const { From, To, Body, MessageSid, MediaUrl0 } = req.body;
         const db = getDatabase();
 
-        console.log('📥 Incoming webhook message:', { From, To, Body });
+        console.log('📥 Incoming webhook message:', { From, To, Body, HasMedia: !!MediaUrl0 });
 
-        // 1. NORMALIZE PHONE NUMBERS
-        // Twilio sends "+15165550123". We need to match "5165550123", "(516) 555-0123", etc.
-        // We strip all non-numeric characters from the incoming 'From' number.
+        // 2. NORMALIZE PHONE NUMBERS
         const cleanPhone = From.replace(/\D/g, '');
-        // If it starts with '1' (US Country code) and is 11 digits, remove the '1'
         const searchPhone = (cleanPhone.length === 11 && cleanPhone.startsWith('1'))
             ? cleanPhone.substring(1)
             : cleanPhone;
 
         console.log('🔍 Searching for phone match:', searchPhone);
 
-        // 2. FUZZY SEARCH QUERY
-        // Look for any lead_phone that contains these last 10 digits
-        // We use regex to strip the DB column before comparing
+        // 3. FIND CONVERSATION
         const convResult = await db.query(
             `SELECT id, business_name
              FROM conversations
@@ -251,37 +247,39 @@ router.post('/webhook/receive', async (req, res) => {
 
         if (convResult.rows.length === 0) {
             console.log('⚠️ No conversation found for phone:', From);
-            // Return 200 OK anyway so Twilio doesn't keep retrying and spamming error logs
             return res.status(200).send('No conversation found');
         }
 
         const conversation = convResult.rows[0];
         console.log(`✅ Found conversation: ${conversation.business_name} (${conversation.id})`);
 
-        // 3. Insert Message
+        // 4. INSERT MESSAGE (With media_url for MMS!)
         const msgResult = await db.query(`
             INSERT INTO messages (
                 conversation_id, content, direction, message_type,
-                sent_by, twilio_sid, timestamp, status
+                sent_by, twilio_sid, media_url, timestamp, status
             )
-            VALUES ($1, $2, 'inbound', 'sms', 'lead', $3, NOW(), 'delivered')
+            VALUES ($1, $2, 'inbound', $3, 'lead', $4, $5, NOW(), 'delivered')
             RETURNING *
-        `, [conversation.id, Body, MessageSid]);
+        `, [
+            conversation.id,
+            Body || '', // Handle case where body is empty but image exists
+            MediaUrl0 ? 'mms' : 'sms', // Detect type
+            MessageSid,
+            MediaUrl0 || null // Save the image URL
+        ]);
 
         const newMessage = msgResult.rows[0];
 
-        // 4. Update Conversation Activity
+        // 5. UPDATE CONVERSATION ACTIVITY
         await db.query(
             'UPDATE conversations SET last_activity = NOW() WHERE id = $1',
             [conversation.id]
         );
 
-        // 5. Emit WebSocket Event (BROADCAST TO ALL)
+        // 6. BROADCAST TO FRONTEND
         if (global.io) {
             console.log(`📨 Broadcasting new_message to ALL clients`);
-
-            // ✅ USE THIS: .emit() sends to everyone (Global)
-            // ❌ NOT THIS: .to().emit() sends only to specific rooms
             global.io.emit('new_message', {
                 conversation_id: conversation.id,
                 message: newMessage,
@@ -291,7 +289,7 @@ router.post('/webhook/receive', async (req, res) => {
 
         console.log(`✅ Incoming message saved: ${newMessage.id}`);
 
-        // 6. Reply to Twilio (Empty TwiML to prevent auto-reply errors)
+        // 7. REPLY TO TWILIO
         res.set('Content-Type', 'text/xml');
         res.send('<Response></Response>');
 
