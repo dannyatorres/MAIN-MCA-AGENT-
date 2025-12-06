@@ -1396,7 +1396,7 @@ class LendersModule {
                         <div class="list-icon lender"><i class="fas fa-building"></i></div>
                         <div class="list-text">
                             ${lenderName}
-                            ${isPreferred ? '<span style="color:#eab308; margin-left:6px;">★</span>' : ''}
+                            ${isPreferred ? '<span class="star-preferred" style="margin-left:6px;">★</span>' : ''}
                         </div>
                     </label>
                 `;

@@ -590,7 +590,12 @@ select.form-input {
 .list-icon.pdf { color: #ef4444; }
 .list-icon.img { color: #a855f7; }
 .list-icon.xls { color: #10b981; }
-.list-icon.lender { color: #eab308; }
+.list-icon.lender { color: #3b82f6; }
+
+/* Preferred Star */
+.star-preferred {
+    color: #3b82f6 !important;
+}
 
 /* 4. Text Styling */
 .list-text {
