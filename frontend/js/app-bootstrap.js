@@ -4,10 +4,23 @@ import { LeadFormController } from './lead-form-controller.js';
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Main Module: Waiting for CommandCenter...');
 
-    // Wait for Core to Init
-    setTimeout(() => {
-        if (window.commandCenter) {
-            console.log('✅ Main Module: Attaching Logic to CommandCenter');
+    // Initialize app when CommandCenter is ready
+    const initApp = () => {
+        if (!window.commandCenter) return false;
+
+        console.log('✅ Main Module: Attaching Logic to CommandCenter');
+        return true;
+    };
+
+    // Poll for CommandCenter (fixes race condition on slow connections)
+    let attempts = 0;
+    const maxAttempts = 200; // 10 seconds max (50ms * 200)
+
+    const appInitInterval = setInterval(() => {
+        attempts++;
+
+        if (initApp()) {
+            clearInterval(appInitInterval);
 
             // --- A. INJECT CONTROLLER ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
@@ -308,8 +321,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.loadDashboard();
             }
 
-        } else {
-            console.error('❌ CommandCenter Global Object not found!');
+        } else if (attempts >= maxAttempts) {
+            clearInterval(appInitInterval);
+            console.error('❌ Critical: CommandCenter failed to load after 10 seconds.');
         }
-    }, 100);
+    }, 50);
 });

@@ -15,6 +15,7 @@ class ConversationCore {
         this.selectedForDeletion = new Set();
         this.unreadMessages = new Map();
         this.searchTimeout = null;
+        this.currentRenderLimit = 50; // For "Load More" functionality
 
         this.init();
     }
@@ -433,12 +434,13 @@ class ConversationCore {
         // Sort by last activity
         conversations.sort((a, b) => new Date(b.last_activity) - new Date(a.last_activity));
 
+        // Store for "Load More" functionality
+        this._lastFilteredConversations = conversations;
+
         // 🚀 PERFORMANCE FIX: Render Limit
-        // Only render the top 50 items to prevent browser freezing (DOM overload).
-        // This makes searching 5,000 leads feel instant.
-        const RENDER_LIMIT = 50;
-        const visibleConversations = conversations.slice(0, RENDER_LIMIT);
-        const remainingCount = conversations.length - RENDER_LIMIT;
+        // Only render up to currentRenderLimit items to prevent browser freezing.
+        const visibleConversations = conversations.slice(0, this.currentRenderLimit);
+        const remainingCount = conversations.length - this.currentRenderLimit;
 
         let indicator = '';
         const searchTerm = document.getElementById('searchInput')?.value.trim();
@@ -457,12 +459,14 @@ class ConversationCore {
             this.templates.conversationItem(conv)
         ).join('');
 
-        // Add a subtle footer if items are hidden
+        // Add "Load More" button if items are hidden (fixes Ghost Lead trap)
         if (remainingCount > 0) {
             listHtml += `
                 <div class="list-limit-message">
-                    Showing top 50 of ${conversations.length} matches.<br>
-                    Refine your search to see more.
+                    Showing ${this.currentRenderLimit} of ${conversations.length} leads.<br>
+                    <button class="btn-load-more" id="loadMoreBtn">
+                        Load More (${remainingCount} remaining)
+                    </button>
                 </div>
             `;
         }
@@ -495,6 +499,17 @@ class ConversationCore {
                 });
             }
         });
+
+        // Handle "Load More" button (fixes Ghost Lead trap)
+        const loadMoreBtn = container.querySelector('#loadMoreBtn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', () => {
+                this.currentRenderLimit += 50; // Load 50 more
+                if (this._lastFilteredConversations) {
+                    this.renderFilteredConversations(this._lastFilteredConversations, false);
+                }
+            });
+        }
     }
 
     updateConversationSelection() {
@@ -554,12 +569,17 @@ class ConversationCore {
                 badge.textContent = this.unreadMessages.get(conversationId) || '1';
             }
 
-            // 🚀 MOVE TO TOP ANIMATION
-            // Only move if it's not already the first item
-            if (container.firstElementChild !== item) {
-                // Optional: Fade out, move, fade in
+            // 🚀 MOVE TO TOP ANIMATION (with search protection)
+            // Only move if user is NOT currently searching/filtering
+            const searchInput = document.getElementById('searchInput');
+            const isSearching = searchInput && searchInput.value.trim().length > 0;
+
+            if (!isSearching && container.firstElementChild !== item) {
+                // Move to top only when not searching (fixes Search Jump glitch)
                 item.style.transition = 'transform 0.3s ease';
                 container.prepend(item);
+            } else if (isSearching) {
+                console.log('🔍 Search active: blocking re-order to prevent UI jump');
             }
         } else if (conversation && container) {
             // BUG FIX: Was calling renderConversationsList(), which ignored current search filters
@@ -571,6 +591,9 @@ class ConversationCore {
     filterConversations() {
         const stateFilter = document.getElementById('stateFilter')?.value;
         const searchTerm = document.getElementById('searchInput')?.value.trim();
+
+        // Reset render limit when filter changes (so "Load More" starts fresh)
+        this.currentRenderLimit = 50;
 
         if (!searchTerm && !stateFilter) {
             this.renderConversationsList();

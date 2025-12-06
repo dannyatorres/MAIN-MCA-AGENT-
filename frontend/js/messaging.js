@@ -11,6 +11,7 @@ class MessagingModule {
         this.messagePollingInterval = null;
         this.aiSuggestionsVisible = false;
         this.firstMessageSent = false;
+        this.socketRetries = 0; // Prevent infinite recursion
 
         this.init();
     }
@@ -21,7 +22,7 @@ class MessagingModule {
         this.requestNotificationPermissionOnDemand();
     }
 
-    // NEW: Setup WebSocket listeners for real-time updates
+    // Setup WebSocket listeners for real-time updates (with retry limit)
     setupWebSocketListeners() {
         // Check if global Socket.io connection exists
         if (window.globalSocket) {
@@ -44,9 +45,14 @@ class MessagingModule {
 
             console.log('✅ WebSocket listeners attached to messaging module');
         } else {
-            console.warn('⚠️ Global Socket not available yet, will retry...');
-            // Retry after a delay
-            setTimeout(() => this.setupWebSocketListeners(), 1000);
+            // Retry with limit to prevent infinite recursion
+            if (this.socketRetries < 10) {
+                this.socketRetries++;
+                console.warn(`⚠️ Socket not ready (Attempt ${this.socketRetries}/10)...`);
+                setTimeout(() => this.setupWebSocketListeners(), 1000);
+            } else {
+                console.error('❌ Gave up connecting Messaging to WebSocket after 10 attempts.');
+            }
         }
     }
 
