@@ -424,32 +424,39 @@ class CSVImportModalManager {
     importCompleted(status) {
         const importStatus = document.getElementById('csvImportStatus');
 
+        // Auto-refresh conversation list immediately
+        if (typeof window.loadConversations === 'function') {
+            console.log('🔄 Auto-refreshing conversation list...');
+            window.loadConversations();
+        }
+
         if (importStatus) {
             if (status.status === 'completed') {
                 importStatus.innerHTML = `
-                    <div style="padding: 16px; background: #ecfdf5; border: 1px solid #10b981; border-radius: 6px; color: #065f46;">
-                        <h4 style="margin: 0 0 8px 0;">✓ Import Completed Successfully!</h4>
-                        <p style="margin: 0;">Successfully imported ${status.successfulRows} out of ${status.totalRows} rows.</p>
-                        ${status.failedRows > 0 ? `<p style="margin: 8px 0 0 0;">Failed rows: ${status.failedRows}</p>` : ''}
+                    <div class="import-success-card">
+                        <div class="success-icon">✓</div>
+                        <h4>Import Complete!</h4>
+                        <p>Successfully imported <strong>${status.successfulRows}</strong> / ${status.totalRows} leads.</p>
+                        ${status.failedRows > 0 ? `<p class="error-text">Failed rows: ${status.failedRows}</p>` : ''}
+                        <div style="margin-top: 15px;">
+                            <button class="btn btn-primary" onclick="window.csvImportModalManager.closeModal()">Done</button>
+                        </div>
                     </div>
                 `;
-                this.showMessage('CSV import completed successfully!', 'success');
             } else {
                 importStatus.innerHTML = `
-                    <div style="padding: 16px; background: #fef2f2; border: 1px solid #ef4444; border-radius: 6px; color: #991b1b;">
-                        <h4 style="margin: 0 0 8px 0;">✗ Import Failed</h4>
-                        <p style="margin: 0;">The import process encountered an error and could not be completed.</p>
+                    <div class="import-error-card">
+                        <div class="error-icon">✕</div>
+                        <h4>Import Failed</h4>
+                        <p>The process stopped unexpectedly.</p>
                     </div>
                 `;
-                this.showMessage('CSV import failed. Please check the logs.', 'error');
             }
         }
 
-        // Show view results button
+        // Hide view results button since we show Done button above
         const viewResultsBtn = document.getElementById('csvViewResultsBtn');
-        if (viewResultsBtn) {
-            viewResultsBtn.style.display = 'inline-flex';
-        }
+        if (viewResultsBtn) viewResultsBtn.style.display = 'none';
     }
 
     viewResults() {

@@ -447,3 +447,136 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================================================
+   [MODULE: CSV IMPORT STYLING]
+   Dark Theme styling for the import wizard
+   ========================================================================== */
+
+/* 1. Progress Bar Container */
+#csvProgressFill {
+    background: linear-gradient(90deg, #2dd4bf, #3b82f6);
+    height: 8px;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.3);
+}
+
+.progress-track-bg {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    height: 8px;
+    border-radius: 4px;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+/* 2. Success Card (Shown after import) */
+.import-success-card {
+    text-align: center;
+    padding: 30px;
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid #10b981;
+    border-radius: 12px;
+    animation: scaleIn 0.3s ease;
+}
+
+.success-icon {
+    width: 50px;
+    height: 50px;
+    background: #10b981;
+    color: #000;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px auto;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.import-success-card h4 {
+    color: #e6edf3;
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.import-success-card p {
+    color: #8b949e;
+    font-size: 14px;
+}
+
+.import-success-card .error-text {
+    color: #ef4444;
+}
+
+/* 3. Error Card */
+.import-error-card {
+    text-align: center;
+    padding: 30px;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid #ef4444;
+    border-radius: 12px;
+    animation: scaleIn 0.3s ease;
+}
+
+.error-icon {
+    width: 50px;
+    height: 50px;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px auto;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.import-error-card h4 {
+    color: #e6edf3;
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.import-error-card p {
+    color: #8b949e;
+    font-size: 14px;
+}
+
+/* 4. Drop Zone Styling Overrides */
+.upload-drop-zone {
+    background: #161b22 !important;
+    border: 2px dashed #30363d !important;
+    transition: all 0.2s;
+}
+
+.upload-drop-zone:hover {
+    border-color: #2dd4bf !important;
+    background: #0d1117 !important;
+}
+
+.upload-title {
+    color: #e6edf3 !important;
+}
+
+/* 5. Steps Indicator */
+.step-indicator {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.step-dot {
+    height: 4px;
+    flex: 1;
+    background: #30363d;
+    border-radius: 2px;
+}
+
+.step-dot.active {
+    background: #2dd4bf;
+}
