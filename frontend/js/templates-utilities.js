@@ -390,10 +390,21 @@ class Templates {
             }
         }
 
+        // Handle MMS images
+        let mediaHtml = '';
+        if (message.media_url) {
+            mediaHtml = `
+                <div class="message-media">
+                    <img src="${message.media_url}" alt="Attachment" onclick="window.open(this.src, '_blank')">
+                </div>
+            `;
+        }
+
         return `
             <div class="message ${isInbound ? 'inbound' : 'outbound'}" data-message-id="${message.id}">
                 <div class="message-wrapper">
-                    <div class="message-content">${message.content}</div>
+                    ${mediaHtml}
+                    <div class="message-content">${message.content || ''}</div>
                     <div class="message-meta">
                         <span class="timestamp">${timestamp}</span>
                         <button class="delete-message-btn"

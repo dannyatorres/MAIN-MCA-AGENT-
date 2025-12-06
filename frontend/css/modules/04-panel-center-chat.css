@@ -1027,6 +1027,32 @@
 .message.outbound .message-meta { justify-content: flex-end; }
 .message.inbound .message-meta { justify-content: flex-start; }
 
+/* ---------------------------------------------------------
+   MMS / IMAGE MESSAGES
+   Constrain image size and add click-to-open functionality.
+   --------------------------------------------------------- */
+.message-media {
+    margin-bottom: 5px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.message-media img {
+    max-width: 250px;
+    max-height: 300px;
+    width: 100%;
+    height: auto;
+    display: block;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: opacity 0.2s ease;
+}
+
+.message-media img:hover {
+    opacity: 0.85;
+}
+
 /* ==========================================================================
    [ADDITIONS] Dashboard Elements - Refactored from conversation-core.js
    ========================================================================== */

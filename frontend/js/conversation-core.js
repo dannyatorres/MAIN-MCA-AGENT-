@@ -533,8 +533,15 @@ class ConversationCore {
     updateConversationPreview(conversationId, message) {
         // 1. Update the data in memory
         const conversation = this.conversations.get(conversationId);
+
+        // Handle image-only messages (MMS)
+        let previewText = message.content;
+        if ((!previewText || previewText.trim() === '') && message.media_url) {
+            previewText = '📷 Photo';
+        }
+
         if (conversation) {
-            conversation.last_message = message.content;
+            conversation.last_message = previewText;
             conversation.last_activity = message.created_at || new Date().toISOString();
             // NOTE: Unread count is handled by messaging.js to prevent double counting
             this.conversations.set(conversationId, conversation);
@@ -549,8 +556,8 @@ class ConversationCore {
             const messagePreview = item.querySelector('.message-preview');
             const timeAgo = item.querySelector('.time-ago');
 
-            // Update text content
-            if (messagePreview) messagePreview.textContent = message.content;
+            // Update text content (use calculated previewText for image support)
+            if (messagePreview) messagePreview.textContent = previewText;
             if (timeAgo) timeAgo.textContent = 'Just now';
 
             // NOTE: Badge rendering is handled by messaging.js (addConversationBadge)
