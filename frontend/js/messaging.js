@@ -23,32 +23,34 @@ class MessagingModule {
         this.requestNotificationPermissionOnDemand();
     }
 
-    // Setup WebSocket listeners for real-time updates (with retry limit)
+    // Setup WebSocket listeners for real-time updates
     setupWebSocketListeners() {
-        // 1. Prevent multiple attachments (fixes triple count bug)
-        if (this.socketListenersAttached) {
-            console.log('✅ WebSocket listeners already active. Skipping.');
+        // 1. Safety Check: If we are already listening, STOP
+        if (this.socketListenersAttached === true) {
             return;
         }
 
         if (window.globalSocket) {
             console.log('✅ Connecting messaging module to WebSocket...');
 
-            // Listen for new messages
+            // 2. Remove any existing listeners to prevent duplicates
+            window.globalSocket.off('new_message');
+            window.globalSocket.off('conversation_updated');
+
+            // 3. Attach the new listeners
             window.globalSocket.on('new_message', (data) => {
                 this.handleIncomingMessage(data);
             });
 
-            // Listen for conversation updates
             window.globalSocket.on('conversation_updated', (data) => {
                 if (this.parent.conversationUI) {
                     this.parent.conversationUI.loadConversations();
                 }
             });
 
-            // Mark as attached so we never attach again
+            // 4. Mark as attached so this block never runs again
             this.socketListenersAttached = true;
-            console.log('✅ WebSocket listeners attached successfully');
+            console.log('✅ WebSocket listeners active (Single Instance)');
         } else {
             // Retry with limit to prevent infinite recursion
             if (this.socketRetries < 10) {

@@ -536,11 +536,7 @@ class ConversationCore {
         if (conversation) {
             conversation.last_message = message.content;
             conversation.last_activity = message.created_at || new Date().toISOString();
-            // If it's not the currently selected conversation, increment unread count
-            if (this.currentConversationId !== conversationId) {
-                const currentUnread = this.unreadMessages.get(conversationId) || 0;
-                this.unreadMessages.set(conversationId, currentUnread + 1);
-            }
+            // NOTE: Unread count is handled by messaging.js to prevent double counting
             this.conversations.set(conversationId, conversation);
         }
 
