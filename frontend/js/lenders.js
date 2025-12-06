@@ -1776,82 +1776,83 @@ Best regards`;
         const businessName = conversationData?.business_name || '';
         const revenue = conversationData?.monthly_revenue || '';
 
+        // Helper to generate the HTML for a field wrapped in a grid cell
+        const renderField = (id, val, spanClass = '') => {
+            const field = this.lenderFormFields.find(f => f.id === id);
+            if (!field) return '';
+            if (id === 'lenderStartDate') {
+                return `<div class="${spanClass}" style="position: relative;">
+                            ${this.createFormField(field, val)}
+                        </div>`;
+            }
+            return `<div class="${spanClass}">${this.createFormField(field, val)}</div>`;
+        };
+
         return `
-            <div class="lender-form-content" style="height: 100%; overflow-y: auto; padding-bottom: 100px;">
-                <div class="quick-import-card">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 20px;">📋</span>
-                            <h4>Quick Import</h4>
+            <div style="display: flex; flex-direction: column; height: 100%;">
+
+                <div class="lender-form-scroll-area custom-scrollbar">
+
+                    <div class="quick-import-card">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 16px;">📋</span>
+                                <h4 style="font-size: 14px; margin:0;">Quick Import</h4>
+                            </div>
+                            <button type="button" id="toggleQuickImport" class="btn-link">Show ▼</button>
                         </div>
-                        <button type="button" id="toggleQuickImport" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 14px; font-weight: 500;">
-                            Show ▼
-                        </button>
+                        <div id="quickImportContent" style="display: none;">
+                            <textarea id="quickImportTextarea" placeholder="Paste data here..." style="width: 100%; height: 80px; padding: 8px; font-size: 12px; font-family: monospace; border-radius: 6px; background: #0d1117; border: 1px solid #30363d; color: #e6edf3; margin-bottom: 8px;"></textarea>
+                            <button type="button" id="importDataBtn" class="btn-icon-action" style="width: auto; padding: 4px 12px; background: #3b82f6; color: white; border:none;">Import</button>
+                        </div>
                     </div>
-                    <div id="quickImportContent" style="display: none;">
-                        <p>Paste lender data here (from email, spreadsheet, etc.) and we'll auto-fill the form</p>
-                        <textarea id="quickImportTextarea"
-                                  placeholder="Example:\nBusiness Name: ABC Corporation\nMonthly Revenue: $45,000..."
-                                  style="width: 100%; min-height: 140px; padding: 12px; font-size: 13px; font-family: monospace; border-radius: 6px; resize: vertical;"></textarea>
-                        <button type="button" id="importDataBtn"
-                                style="margin-top: 10px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
-                            Import Data
-                        </button>
-                        <button type="button" id="clearImportBtn"
-                                style="margin-top: 10px; margin-left: 8px; padding: 10px 20px; background: #30363d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
-                            Clear
-                        </button>
-                    </div>
+
+                    <form id="lenderForm">
+                        <div class="lender-input-grid">
+                            ${renderField('lenderBusinessName', businessName, 'grid-span-2')}
+                            ${renderField('lenderPosition', '', '')}
+
+                            ${renderField('lenderRevenue', revenue, '')}
+                            ${renderField('lenderFico', '', '')}
+                            ${renderField('lenderState', '', '')}
+
+                            ${renderField('lenderIndustry', '', '')}
+                            ${renderField('lenderStartDate', '', '')}
+                            ${renderField('lenderDepositsPerMonth', '', '')}
+
+                            ${renderField('lenderNegativeDays', '', '')}
+                            <div></div>
+                            <div></div>
+                        </div>
+
+                        <div class="checkbox-row-card" style="margin: 0 0 20px 0; padding: 12px;">
+                            ${this.lenderFormCheckboxes.map(field => this.createCheckboxField(field)).join('')}
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <label class="field-label" style="font-size: 11px; margin-bottom: 4px; display:block; color:#8b949e;">Current Positions</label>
+                            <input type="text" id="lenderCurrentPositions" class="form-input" style="width: 100%;">
+                        </div>
+
+                        <div>
+                            <label class="field-label" style="font-size: 11px; margin-bottom: 4px; display:block; color:#8b949e;">Additional Notes</label>
+                            <textarea id="lenderAdditionalNotes" class="form-textarea" style="height: 80px; width: 100%; resize: vertical;"></textarea>
+                        </div>
+
+                        <div class="loading" id="lenderLoading" style="display: none; text-align: center; margin-top: 15px; color: #8b949e;">Processing...</div>
+                        <div class="error" id="lenderErrorMsg" style="display: none; margin-top: 15px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; color: #ef4444;"></div>
+                    </form>
+
+                    <div id="lenderResults" style="margin-top: 20px;"></div>
                 </div>
 
-                <form id="lenderForm" class="lender-form">
-                    <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
-                        ${this.lenderFormFields.map(field => {
-                            let value = '';
-                            if (field.id === 'lenderBusinessName') value = businessName;
-                            if (field.id === 'lenderRevenue') value = revenue;
-                            return this.createFormField(field, value);
-                        }).join('')}
-                    </div>
-
-                    <div class="checkbox-row-card">
-                        ${this.lenderFormCheckboxes.map(field => this.createCheckboxField(field)).join('')}
-                    </div>
-
-                    <div style="margin-top: 16px;">
-                        <label for="lenderCurrentPositions" style="display: block; margin-bottom: 6px; font-weight: 500; color: #8b949e;">Current Positions</label>
-                        <input type="text"
-                               id="lenderCurrentPositions"
-                               placeholder="e.g., OnDeck $500 daily, Forward $750 weekly"
-                               class="form-input"
-                               style="width: 100%;">
-                    </div>
-
-                    <div style="margin-top: 16px;">
-                        <label for="lenderAdditionalNotes" style="display: block; margin-bottom: 6px; font-weight: 500; color: #8b949e;">Additional Notes</label>
-                        <textarea id="lenderAdditionalNotes"
-                                  placeholder="Any additional notes or special circumstances..."
-                                  class="form-input"
-                                  style="width: 100%; min-height: 120px; resize: vertical;"></textarea>
-                    </div>
-
-                    <div class="form-actions" style="margin-top: 30px; margin-bottom: 40px; display: flex; gap: 15px; justify-content: center;">
-                        <button type="submit" class="process-btn" id="processLendersBtn" style="padding: 14px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                            <span id="processLendersText">Process Lenders</span>
-                            <span id="processLendersSpinner" style="display: none;">Processing...</span>
-                        </button>
-                        <button type="button" class="clear-cache-btn" id="clearLenderCacheBtn" style="padding: 14px 24px; background: transparent; color: #8b949e; border: 1px solid #30363d; border-radius: 8px; font-size: 15px; cursor: pointer;">
-                            Clear Cache
-                        </button>
-                    </div>
-
-                    <div class="loading" id="lenderLoading" style="display: none; text-align: center; margin: 20px 0; color: #8b949e;">
-                        <span>Processing lenders...</span>
-                    </div>
-                    <div class="error" id="lenderErrorMsg" style="display: none; margin: 20px 0; padding: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; color: #ef4444;"></div>
-                </form>
-
-                <div class="results" id="lenderResults" style="margin-bottom: 50px;"></div>
+                <div class="lender-form-footer">
+                    <button type="button" id="clearLenderCacheBtn" style="background: transparent; border: none; color: #8b949e; font-size: 13px; cursor: pointer; margin-right: auto;">Clear Form</button>
+                    <button type="button" onclick="document.getElementById('lenderForm').dispatchEvent(new Event('submit'))" class="btn btn-primary">
+                        <span id="processLendersText">Process Qualification</span>
+                        <span id="processLendersSpinner" style="display: none;">...</span>
+                    </button>
+                </div>
             </div>
         `;
     }
