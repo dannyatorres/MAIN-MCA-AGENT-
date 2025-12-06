@@ -362,7 +362,13 @@ router.post('/upload', upload.single('file'), (req, res) => {
     }
 
     // Return the URL that points to this file
-    const baseUrl = process.env.BASE_URL || `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` || 'http://localhost:3000';
+    let baseUrl = 'http://localhost:3000';
+    if (process.env.BASE_URL) {
+        baseUrl = process.env.BASE_URL;
+    } else if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+        baseUrl = `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+    }
+
     const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
     console.log('📸 File uploaded:', fileUrl);
