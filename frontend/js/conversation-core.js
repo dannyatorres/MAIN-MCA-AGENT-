@@ -550,24 +550,15 @@ class ConversationCore {
 
         if (item && container) {
             // Update the preview text and time
-            const messagePreview = item.querySelector('.message-preview') || item.querySelector('.business-name');
+            const messagePreview = item.querySelector('.message-preview');
             const timeAgo = item.querySelector('.time-ago');
 
-            // Visual update
+            // Update text content
+            if (messagePreview) messagePreview.textContent = message.content;
             if (timeAgo) timeAgo.textContent = 'Just now';
 
-            // Add "unread" styling if not selected
-            if (this.currentConversationId !== conversationId) {
-                item.classList.add('has-unread');
-                // Add/Update badge
-                let badge = item.querySelector('.unread-badge');
-                if (!badge) {
-                    badge = document.createElement('div');
-                    badge.className = 'unread-badge';
-                    item.appendChild(badge);
-                }
-                badge.textContent = this.unreadMessages.get(conversationId) || '1';
-            }
+            // NOTE: Badge rendering is handled by messaging.js (addConversationBadge)
+            // to prevent duplicate badges. We only track unread count in memory here.
 
             // 🚀 MOVE TO TOP ANIMATION (with search protection)
             // Only move if user is NOT currently searching/filtering

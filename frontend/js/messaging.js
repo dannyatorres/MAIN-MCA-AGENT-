@@ -12,6 +12,7 @@ class MessagingModule {
         this.aiSuggestionsVisible = false;
         this.firstMessageSent = false;
         this.socketRetries = 0; // Prevent infinite recursion
+        this.socketListenersAttached = false; // Prevent multiple attachments
 
         this.init();
     }
@@ -24,26 +25,30 @@ class MessagingModule {
 
     // Setup WebSocket listeners for real-time updates (with retry limit)
     setupWebSocketListeners() {
-        // Check if global Socket.io connection exists
+        // 1. Prevent multiple attachments (fixes triple count bug)
+        if (this.socketListenersAttached) {
+            console.log('✅ WebSocket listeners already active. Skipping.');
+            return;
+        }
+
         if (window.globalSocket) {
             console.log('✅ Connecting messaging module to WebSocket...');
 
             // Listen for new messages
             window.globalSocket.on('new_message', (data) => {
-                console.log('📨 Real-time message received:', data);
                 this.handleIncomingMessage(data);
             });
 
             // Listen for conversation updates
             window.globalSocket.on('conversation_updated', (data) => {
-                console.log('📋 Conversation updated:', data);
-                // Reload conversation list if needed
                 if (this.parent.conversationUI) {
                     this.parent.conversationUI.loadConversations();
                 }
             });
 
-            console.log('✅ WebSocket listeners attached to messaging module');
+            // Mark as attached so we never attach again
+            this.socketListenersAttached = true;
+            console.log('✅ WebSocket listeners attached successfully');
         } else {
             // Retry with limit to prevent infinite recursion
             if (this.socketRetries < 10) {
@@ -453,31 +458,20 @@ class MessagingModule {
 
     // Badge management for unread conversations
     addConversationBadge(conversationId) {
-        console.log('🔔 Adding badge to conversation:', conversationId);
-
-        // Find the conversation item in the sidebar
         const conversationItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+        if (!conversationItem) return;
 
-        if (!conversationItem) {
-            console.warn('⚠️ Conversation item not found for badge:', conversationId);
-            return;
-        }
-
-        // Check if badge already exists
+        // Check for existing badge (use standardized class name)
         let badge = conversationItem.querySelector('.conversation-badge');
 
         if (!badge) {
-            // Create new badge
             badge = document.createElement('div');
             badge.className = 'conversation-badge';
             badge.textContent = '1';
             conversationItem.appendChild(badge);
-            console.log('✅ Added badge to conversation:', conversationId);
         } else {
-            // Increment existing badge count
-            const currentCount = parseInt(badge.textContent) || 1;
+            const currentCount = parseInt(badge.textContent) || 0;
             badge.textContent = currentCount + 1;
-            console.log('✅ Incremented badge count:', badge.textContent);
         }
 
         // Store unread count in data attribute
@@ -485,15 +479,12 @@ class MessagingModule {
     }
 
     removeConversationBadge(conversationId) {
-        console.log('🔕 Removing badge from conversation:', conversationId);
-
         const conversationItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
 
         if (conversationItem) {
             const badge = conversationItem.querySelector('.conversation-badge');
             if (badge) {
                 badge.remove();
-                console.log('✅ Removed badge from conversation:', conversationId);
             }
 
             // Clear unread count
