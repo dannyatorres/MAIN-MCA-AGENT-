@@ -51,6 +51,13 @@ async function initialize() {
             ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url TEXT;
         `);
 
+        // 3. Fix message_type constraint to allow 'mms'
+        await pool.query(`
+            ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_message_type_check;
+            ALTER TABLE messages ADD CONSTRAINT messages_message_type_check
+            CHECK (message_type IN ('sms', 'mms', 'email', 'system', 'whatsapp'));
+        `);
+
         // 3. Fix 'documents' table (Ensure it exists)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS documents (
