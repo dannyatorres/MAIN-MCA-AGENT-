@@ -111,6 +111,55 @@ class MessagingModule {
 
             console.log('✅ Delete button event delegation set up');
         }
+
+        // Wire up the Attachment Button for MMS
+        const attachBtn = document.getElementById('attachmentBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        if (attachBtn && fileInput) {
+            attachBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+        }
+    }
+
+    // Handle file upload for MMS
+    async handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const attachBtn = document.getElementById('attachmentBtn');
+
+        // Show spinner while uploading
+        const originalIcon = attachBtn.innerHTML;
+        attachBtn.innerHTML = '⏳';
+        attachBtn.disabled = true;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Upload to backend
+            const response = await fetch('/api/messages/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.url) {
+                console.log('✅ File uploaded, sending message with URL:', data.url);
+                await this.sendMessage(null, data.url);
+            } else {
+                alert('Upload failed: Server did not return a URL');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Failed to upload image');
+        } finally {
+            attachBtn.innerHTML = originalIcon;
+            attachBtn.disabled = false;
+            e.target.value = ''; // Reset input
+        }
     }
 
     async loadConversationMessages(conversationId = null) {
@@ -211,12 +260,13 @@ class MessagingModule {
         }
     }
 
-    async sendMessage() {
+    async sendMessage(textOverride = null, mediaUrl = null) {
         const input = document.getElementById('messageInput');
-        const content = input.value.trim();
+        // Use textOverride if provided (for image-only sends), otherwise grab input
+        const content = textOverride !== null ? textOverride : input.value.trim();
         const conversationId = this.parent.getCurrentConversationId();
 
-        if (!content || !conversationId) return;
+        if ((!content && !mediaUrl) || !conversationId) return;
 
         // Request notification permission on first message
         if (this.firstMessageSent !== true) {
@@ -224,22 +274,25 @@ class MessagingModule {
             this.requestNotificationPermissionOnDemand();
         }
 
-        // Clear input immediately for better UX
-        input.value = '';
-        input.style.height = 'auto'; // Reset height
+        // Clear input only if we grabbed the value from it
+        if (textOverride === null) {
+            input.value = '';
+            input.style.height = 'auto';
+        }
 
         try {
             const result = await this.parent.apiCall(`/api/conversations/${conversationId}/messages`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    message_content: content,
-                    sender_type: 'user'
+                    message_content: content || '',
+                    sender_type: 'user',
+                    media_url: mediaUrl,
+                    message_type: mediaUrl ? 'mms' : 'sms'
                 })
             });
 
             if (result && result.message) {
                 // ✅ INSTANT UPDATE: Manually add the message to the UI
-                // We don't wait for the WebSocket here.
                 this.addMessage(result.message);
             }
 
@@ -249,8 +302,8 @@ class MessagingModule {
         } catch (error) {
             console.error('Error sending message:', error);
             this.parent.utils.showNotification('Failed to send message', 'error');
-            // Restore the text so the user doesn't lose it
-            input.value = content;
+            // Restore the text if failed
+            if (textOverride === null) input.value = content;
         }
     }
 

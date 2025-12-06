@@ -4,6 +4,26 @@
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure storage for MMS uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, '../../frontend/uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'image-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
 
 // Helper function to convert display_id to UUID if needed
 async function resolveConversationId(conversationId, db) {
@@ -333,6 +353,24 @@ router.get('/:conversationId/count', async (req, res) => {
             error: error.message
         });
     }
+});
+
+// Handle File Uploads for MMS
+router.post('/upload', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Return the URL that points to this file
+    const baseUrl = process.env.BASE_URL || `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` || 'http://localhost:3000';
+    const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+
+    console.log('📸 File uploaded:', fileUrl);
+
+    res.json({
+        success: true,
+        url: fileUrl
+    });
 });
 
 module.exports = router;
