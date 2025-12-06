@@ -1367,30 +1367,11 @@ class LendersModule {
 
 
     populateSubmissionLenders() {
-        console.log('=== populateSubmissionLenders called ===');
-
         const lenderList = document.getElementById('lenderSelectionList');
-        console.log('Lender list element:', lenderList);
-        console.log('Qualified lenders:', this.qualifiedLenders);
-
-        if (!lenderList) {
-            console.error('❌ lenderSelectionList element not found!');
+        if (!lenderList || !this.qualifiedLenders || this.qualifiedLenders.length === 0) {
+            if (lenderList) lenderList.innerHTML = '<p style="color: #6b7280; padding: 10px;">No qualified lenders available.</p>';
             return;
         }
-
-        if (!this.qualifiedLenders) {
-            console.warn('⚠️ No qualified lenders available');
-            lenderList.innerHTML = '<p style="color: #6b7280;">No qualified lenders available.</p>';
-            return;
-        }
-
-        if (this.qualifiedLenders.length === 0) {
-            console.warn('⚠️ Qualified lenders array is empty');
-            lenderList.innerHTML = '<p style="color: #6b7280;">No qualified lenders available.</p>';
-            return;
-        }
-
-        console.log(`Populating ${this.qualifiedLenders.length} lenders...`);
 
         // Group by tier
         const lendersByTier = {};
@@ -1400,19 +1381,23 @@ class LendersModule {
             lendersByTier[tier].push(lender);
         });
 
-        console.log('Lenders by tier:', lendersByTier);
-
         let html = '';
         Object.keys(lendersByTier).sort().forEach(tier => {
             html += `<div style="margin-bottom: 12px;">`;
-            html += `<div style="font-weight: 600; color: #374151; margin-bottom: 8px;">Tier ${tier}</div>`;
+            html += `<div style="font-size: 11px; font-weight: 700; color: #8b949e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Tier ${tier}</div>`;
+
             lendersByTier[tier].forEach(lender => {
                 const lenderName = lender['Lender Name'] || lender.name;
-                const isPreferred = lender.isPreferred ? '⭐' : '';
+                const isPreferred = lender.isPreferred;
+
                 html += `
-                    <label style="display: flex; align-items: center; padding: 6px; cursor: pointer;">
-                        <input type="checkbox" class="lender-checkbox" value="${lenderName}" checked style="margin-right: 8px;">
-                        <span>${lenderName} ${isPreferred}</span>
+                    <label>
+                        <input type="checkbox" class="lender-checkbox" value="${lenderName}" checked>
+                        <div class="list-icon lender"><i class="fas fa-building"></i></div>
+                        <div class="list-text">
+                            ${lenderName}
+                            ${isPreferred ? '<span style="color:#eab308; margin-left:6px;">★</span>' : ''}
+                        </div>
                     </label>
                 `;
             });
@@ -1420,63 +1405,63 @@ class LendersModule {
         });
 
         lenderList.innerHTML = html;
-        console.log('✅ Lenders HTML inserted');
 
-        // Verify checkboxes
-        setTimeout(() => {
-            const checkboxes = lenderList.querySelectorAll('.lender-checkbox');
-            console.log('Lender checkboxes found:', checkboxes.length);
-        }, 50);
-
-        // Set initial button text since all start checked
+        // Update button text
         const toggleBtn = document.getElementById('toggleAllLendersBtn');
-        if (toggleBtn) {
-            toggleBtn.textContent = 'Deselect All';
-        }
+        if (toggleBtn) toggleBtn.textContent = 'Deselect All';
     }
 
     populateSubmissionDocuments() {
         const docList = document.getElementById('submissionDocumentList');
-        if (!docList) return;
-
-        // Check if documents are loaded
         const documents = this.parent.documents?.currentDocuments;
 
+        if (!docList) return;
         if (!documents || documents.length === 0) {
-            docList.innerHTML = '<p style="color: #6b7280;">No documents available.</p>';
+            docList.innerHTML = '<p style="color: #6b7280; padding: 10px;">No documents available.</p>';
             return;
         }
 
         let html = '';
         documents.forEach(doc => {
-            const icon = '📄'; // Simplified icon
+            const name = doc.originalFilename || doc.filename || 'Unknown Document';
             const isImportant = doc.documentType === 'Bank Statement' ||
                               doc.documentType === 'Signed Application' ||
-                              doc.originalFilename?.toLowerCase().includes('application');
+                              name.toLowerCase().includes('application');
+
+            // Determine Icon
+            let iconClass = 'fas fa-file-alt';
+            let colorClass = '';
+
+            const lowerName = name.toLowerCase();
+            if (lowerName.endsWith('.pdf')) {
+                iconClass = 'fas fa-file-pdf';
+                colorClass = 'pdf';
+            } else if (lowerName.match(/\.(jpg|jpeg|png|gif)$/)) {
+                iconClass = 'fas fa-file-image';
+                colorClass = 'img';
+            } else if (lowerName.match(/\.(xls|xlsx|csv)$/)) {
+                iconClass = 'fas fa-file-excel';
+                colorClass = 'xls';
+            }
 
             html += `
-                <label style="display: flex; align-items: center; padding: 6px; cursor: pointer;">
-                    <input type="checkbox" class="document-checkbox" value="${doc.id}" ${isImportant ? 'checked' : ''} style="margin-right: 8px;">
-                    <span>${icon} ${doc.originalFilename || doc.filename || 'Unknown Document'}</span>
+                <label>
+                    <input type="checkbox" class="document-checkbox" value="${doc.id}" ${isImportant ? 'checked' : ''}>
+                    <div class="list-icon ${colorClass}"><i class="${iconClass}"></i></div>
+                    <div class="list-text">${name}</div>
                 </label>
             `;
         });
 
         docList.innerHTML = html;
 
-        // Update button text based on initial state
+        // Update button text logic
         const toggleBtn = document.getElementById('toggleAllDocumentsBtn');
         if (toggleBtn) {
-            const checkboxes = document.querySelectorAll('#submissionDocumentList input[type="checkbox"]');
+            const checkboxes = docList.querySelectorAll('input[type="checkbox"]');
             const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-            if (checkedCount === checkboxes.length) {
-                toggleBtn.textContent = 'Deselect All';
-            } else {
-                toggleBtn.textContent = 'Select All';
-            }
+            toggleBtn.textContent = checkedCount === checkboxes.length ? 'Deselect All' : 'Select All';
         }
-
-        console.log(`Populated ${documents.length} documents in submission modal`);
     }
 
     async loadDocumentsForSubmission() {
