@@ -390,7 +390,7 @@ class Templates {
             }
         }
 
-        // Handle MMS images
+        // 1. Handle MMS images
         let mediaHtml = '';
         if (message.media_url) {
             mediaHtml = `
@@ -400,11 +400,18 @@ class Templates {
             `;
         }
 
+        // 2. Handle Text Content - Only show bubble if there's actual text
+        let contentHtml = '';
+        if (message.content && message.content.trim().length > 0) {
+            contentHtml = `<div class="message-content">${message.content}</div>`;
+        }
+
+        // 3. Return combined HTML (no ghost bubble for image-only messages)
         return `
             <div class="message ${isInbound ? 'inbound' : 'outbound'}" data-message-id="${message.id}">
                 <div class="message-wrapper">
                     ${mediaHtml}
-                    <div class="message-content">${message.content || ''}</div>
+                    ${contentHtml}
                     <div class="message-meta">
                         <span class="timestamp">${timestamp}</span>
                         <button class="delete-message-btn"
