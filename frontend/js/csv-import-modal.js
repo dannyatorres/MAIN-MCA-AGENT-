@@ -14,6 +14,7 @@ class CSVImportModalManager {
     openModal() {
         this.modal = document.getElementById('csvImportModal');
         if (this.modal) {
+            this.modal.classList.remove('hidden');
             this.modal.style.display = 'flex';
             this.resetModal();
             this.initializeEventListeners();
@@ -23,6 +24,7 @@ class CSVImportModalManager {
 
     closeModal() {
         if (this.modal) {
+            this.modal.classList.add('hidden');
             this.modal.style.display = 'none';
             this.resetModal();
         }
