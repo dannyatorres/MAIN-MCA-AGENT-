@@ -711,15 +711,17 @@ router.get('/:id/messages', async (req, res) => {
     }
 });
 
-// Send message (nested under conversations)
+// Send message (nested under conversations) - Supports SMS and MMS
 router.post('/:id/messages', async (req, res) => {
     try {
         const { id: conversationId } = req.params;
-        const { message_content, sender_type = 'user' } = req.body;
+        // Accept media_url from the frontend for MMS
+        const { message_content, sender_type = 'user', media_url } = req.body;
         const db = getDatabase();
 
-        if (!message_content) {
-            return res.status(400).json({ error: 'Message content is required' });
+        // Allow empty text IF there is an image
+        if (!message_content && !media_url) {
+            return res.status(400).json({ error: 'Message content or attachment is required' });
         }
 
         console.log('📤 Sending message to conversation:', conversationId);
@@ -737,55 +739,65 @@ router.post('/:id/messages', async (req, res) => {
         const { lead_phone, business_name } = convResult.rows[0];
         const direction = sender_type === 'user' ? 'outbound' : 'inbound';
 
-        // Insert message with initial status
+        // Determine message type (SMS vs MMS)
+        const messageType = media_url ? 'mms' : 'sms';
+
+        // Insert message with media_url
         const result = await db.query(`
             INSERT INTO messages (
                 conversation_id, content, direction, message_type,
-                sent_by, timestamp, status
+                sent_by, media_url, timestamp, status
             )
-            VALUES ($1, $2, $3, 'sms', $4, NOW(), 'pending')
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), 'pending')
             RETURNING *
         `, [
             conversationId,
-            message_content,
+            message_content || '', // Allow empty string if image exists
             direction,
-            sender_type
+            messageType,
+            sender_type,
+            media_url || null
         ]);
 
         const newMessage = result.rows[0];
 
-        // SEND VIA TWILIO (if outbound SMS)
+        // SEND VIA TWILIO (if outbound)
         if (direction === 'outbound') {
             try {
                 if (!lead_phone) {
                     throw new Error('No phone number found for this conversation');
                 }
 
-                console.log(`📞 Sending SMS to ${lead_phone}...`);
+                console.log(`📞 Sending ${messageType.toUpperCase()} to ${lead_phone}...`);
 
-                // Check if Twilio credentials exist
                 if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
                     console.error('❌ Twilio credentials not configured!');
                     await db.query('UPDATE messages SET status = $1 WHERE id = $2', ['failed', newMessage.id]);
                     newMessage.status = 'failed';
                 } else {
-                    // Initialize Twilio client
                     const twilio = require('twilio');
                     const twilioClient = twilio(
                         process.env.TWILIO_ACCOUNT_SID,
                         process.env.TWILIO_AUTH_TOKEN
                     );
 
-                    // Send SMS via Twilio
-                    const twilioMessage = await twilioClient.messages.create({
-                        body: message_content,
+                    // Prepare Twilio options
+                    const msgOptions = {
+                        body: message_content || '',
                         from: process.env.TWILIO_PHONE_NUMBER,
                         to: lead_phone
-                    });
+                    };
 
-                    console.log(`✅ SMS sent! SID: ${twilioMessage.sid}`);
+                    // Attach the image if it exists (MMS)
+                    if (media_url) {
+                        msgOptions.mediaUrl = [media_url];
+                    }
 
-                    // Update message status to sent
+                    // Send SMS/MMS via Twilio
+                    const twilioMessage = await twilioClient.messages.create(msgOptions);
+
+                    console.log(`✅ ${messageType.toUpperCase()} sent! SID: ${twilioMessage.sid}`);
+
                     await db.query(
                         'UPDATE messages SET status = $1, twilio_sid = $2 WHERE id = $3',
                         ['sent', twilioMessage.sid, newMessage.id]
@@ -809,7 +821,7 @@ router.post('/:id/messages', async (req, res) => {
 
         // Emit WebSocket event
         if (global.io) {
-            global.io.to(`conversation_${conversationId}`).emit('new_message', {
+            global.io.emit('new_message', {
                 conversation_id: conversationId,
                 message: newMessage
             });
@@ -818,12 +830,11 @@ router.post('/:id/messages', async (req, res) => {
 
         console.log(`✅ Message sent in conversation ${conversationId}`);
 
-        // Return the message object with the actual status
         res.json({ message: newMessage });
 
     } catch (error) {
         console.error('❌ Error sending message:', error);
-        res.status(500).json({ error: 'Failed to send message' });
+        res.status(500).json({ error: 'Failed to send message: ' + error.message });
     }
 });
 
