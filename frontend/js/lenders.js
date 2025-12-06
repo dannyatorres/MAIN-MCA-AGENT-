@@ -1735,39 +1735,27 @@ Best regards`;
 
         return `
             <div class="lender-form-content" style="height: 100%; overflow-y: auto; padding-bottom: 100px;">
-                <!-- Quick Import Section -->
-                <div style="margin-bottom: 20px; background: #f0f9ff; border: 2px dashed #3b82f6; border-radius: 8px; padding: 16px;">
+                <div class="quick-import-card">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 20px;">📋</span>
-                            <h4 style="margin: 0; color: #1e40af; font-size: 16px;">Quick Import</h4>
+                            <h4>Quick Import</h4>
                         </div>
                         <button type="button" id="toggleQuickImport" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 14px; font-weight: 500;">
                             Show ▼
                         </button>
                     </div>
                     <div id="quickImportContent" style="display: none;">
-                        <p style="margin: 0 0 12px 0; color: #475569; font-size: 14px;">
-                            Paste lender data here (from email, spreadsheet, etc.) and we'll auto-fill the form
-                        </p>
+                        <p>Paste lender data here (from email, spreadsheet, etc.) and we'll auto-fill the form</p>
                         <textarea id="quickImportTextarea"
-                                  placeholder="Example:
-Business Name: ABC Corporation
-Monthly Revenue: $45,000
-FICO Score: 680
-State: NY
-Industry: Retail
-Position: 2nd
-Business Start Date: 01/15/2020
-Deposits Per Month: 15
-Negative Days: 3"
-                                  style="width: 100%; min-height: 140px; padding: 12px; font-size: 13px; font-family: monospace; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; background: white;"></textarea>
+                                  placeholder="Example:\nBusiness Name: ABC Corporation\nMonthly Revenue: $45,000..."
+                                  style="width: 100%; min-height: 140px; padding: 12px; font-size: 13px; font-family: monospace; border-radius: 6px; resize: vertical;"></textarea>
                         <button type="button" id="importDataBtn"
                                 style="margin-top: 10px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
                             Import Data
                         </button>
                         <button type="button" id="clearImportBtn"
-                                style="margin-top: 10px; margin-left: 8px; padding: 10px 20px; background: #94a3b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                                style="margin-top: 10px; margin-left: 8px; padding: 10px 20px; background: #30363d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
                             Clear
                         </button>
                     </div>
@@ -1783,66 +1771,41 @@ Negative Days: 3"
                         }).join('')}
                     </div>
 
-                    <div class="checkbox-group" style="display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; padding: 16px; background: #f8fafc; border-radius: 8px;">
+                    <div class="checkbox-row-card">
                         ${this.lenderFormCheckboxes.map(field => this.createCheckboxField(field)).join('')}
                     </div>
 
                     <div style="margin-top: 16px;">
-                        <label for="lenderCurrentPositions" style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Current Positions</label>
+                        <label for="lenderCurrentPositions" style="display: block; margin-bottom: 6px; font-weight: 500; color: #8b949e;">Current Positions</label>
                         <input type="text"
                                id="lenderCurrentPositions"
                                placeholder="e.g., OnDeck $500 daily, Forward $750 weekly"
                                class="form-input"
-                               style="width: 100%; padding: 12px; font-size: 14px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                               style="width: 100%;">
                     </div>
 
                     <div style="margin-top: 16px;">
-                        <label for="lenderAdditionalNotes" style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Additional Notes</label>
+                        <label for="lenderAdditionalNotes" style="display: block; margin-bottom: 6px; font-weight: 500; color: #8b949e;">Additional Notes</label>
                         <textarea id="lenderAdditionalNotes"
                                   placeholder="Any additional notes or special circumstances..."
                                   class="form-input"
-                                  style="width: 100%; padding: 12px; min-height: 120px; font-size: 14px; resize: vertical; border: 1px solid #e5e7eb; border-radius: 6px;"></textarea>
+                                  style="width: 100%; min-height: 120px; resize: vertical;"></textarea>
                     </div>
 
                     <div class="form-actions" style="margin-top: 30px; margin-bottom: 40px; display: flex; gap: 15px; justify-content: center;">
-                        <button type="submit" class="process-btn" id="processLendersBtn" style="
-                            padding: 14px 32px;
-                            background: #3b82f6;
-                            color: white;
-                            border: none;
-                            border-radius: 8px;
-                            font-size: 16px;
-                            font-weight: 600;
-                            cursor: pointer;
-                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                            transition: all 0.2s;
-                            position: relative;
-                            overflow: hidden;">
+                        <button type="submit" class="process-btn" id="processLendersBtn" style="padding: 14px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
                             <span id="processLendersText">Process Lenders</span>
-                            <span id="processLendersSpinner" style="display: none;">
-                                <span style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-left: 8px;"></span>
-                            </span>
+                            <span id="processLendersSpinner" style="display: none;">Processing...</span>
                         </button>
-                        <button type="button" class="clear-cache-btn" id="clearLenderCacheBtn" style="
-                            padding: 14px 24px;
-                            background: white;
-                            color: #6b7280;
-                            border: 2px solid #e5e7eb;
-                            border-radius: 8px;
-                            font-size: 15px;
-                            font-weight: 500;
-                            cursor: pointer;
-                            transition: all 0.2s;">
+                        <button type="button" class="clear-cache-btn" id="clearLenderCacheBtn" style="padding: 14px 24px; background: transparent; color: #8b949e; border: 1px solid #30363d; border-radius: 8px; font-size: 15px; cursor: pointer;">
                             Clear Cache
                         </button>
                     </div>
 
-                    <div class="loading" id="lenderLoading" style="display: none; text-align: center; margin: 20px 0; font-size: 16px; color: #6b7280;">
-                        <span style="display: inline-block; padding: 12px 24px; background: #f3f4f6; border-radius: 8px;">
-                            Processing lenders...
-                        </span>
+                    <div class="loading" id="lenderLoading" style="display: none; text-align: center; margin: 20px 0; color: #8b949e;">
+                        <span>Processing lenders...</span>
                     </div>
-                    <div class="error" id="lenderErrorMsg" style="display: none; margin: 20px 0; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626;"></div>
+                    <div class="error" id="lenderErrorMsg" style="display: none; margin: 20px 0; padding: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; color: #ef4444;"></div>
                 </form>
 
                 <div class="results" id="lenderResults" style="margin-bottom: 50px;"></div>

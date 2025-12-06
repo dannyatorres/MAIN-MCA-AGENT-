@@ -452,3 +452,63 @@ select.form-input {
     overflow-y: auto;
     background: #0d1117;
 }
+
+/* ==========================================================================
+   [FIX] Dark Theme Cards (Replaces White Inline Styles)
+   ========================================================================== */
+
+/* 1. Quick Import Card */
+.quick-import-card {
+    margin-bottom: 20px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px dashed #3b82f6;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* Fix text inside Quick Import */
+.quick-import-card h4 {
+    color: #60a5fa !important;
+    margin: 0;
+    font-size: 16px;
+}
+
+.quick-import-card p {
+    color: #94a3b8 !important;
+    margin: 0 0 12px 0;
+    font-size: 14px;
+}
+
+.quick-import-card textarea {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+}
+
+/* 2. Checkbox Row Card */
+.checkbox-row-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 20px 0;
+    padding: 16px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+}
+
+/* Fix the label text color */
+.checkbox-label {
+    color: #e6edf3;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    accent-color: #3b82f6;
+    width: 16px;
+    height: 16px;
+}
