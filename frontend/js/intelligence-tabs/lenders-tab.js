@@ -65,6 +65,11 @@ export class LendersTab {
 
         if (!modal || !modalContent) return;
 
+        // Clear previous conversation's data first to prevent "Ghost Data"
+        if (this.lendersLogic && this.lendersLogic.clearData) {
+            this.lendersLogic.clearData();
+        }
+
         // 1. Inject Form
         if (this.lendersLogic.createLenderFormTemplate) {
             modalContent.innerHTML = this.lendersLogic.createLenderFormTemplate(conversation);
@@ -77,8 +82,9 @@ export class LendersTab {
         setTimeout(() => {
             if (this.lendersLogic.initializeLenderForm) this.lendersLogic.initializeLenderForm();
             if (this.lendersLogic.populateLenderForm) this.lendersLogic.populateLenderForm();
+            // Restore cached results for THIS conversation (uses unique key)
+            if (this.lendersLogic.restoreCachedResults) this.lendersLogic.restoreCachedResults();
             if (this.lendersLogic.restoreLenderFormCacheIfNeeded) this.lendersLogic.restoreLenderFormCacheIfNeeded();
-            this.handleCachedResults();
         }, 100);
 
         // 4. Setup Close Handlers

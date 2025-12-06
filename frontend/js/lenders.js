@@ -51,6 +51,24 @@ class LendersModule {
         // Initialize lender module
     }
 
+    // Clears data when switching conversations to prevent "Ghost Data"
+    clearData() {
+        console.log('🧹 Clearing Lender Data...');
+        this.qualifiedLenders = [];
+        this.lastLenderCriteria = null;
+
+        // Clear the visual results immediately
+        const resultsEl = document.getElementById('lenderResults');
+        if (resultsEl) {
+            resultsEl.innerHTML = '';
+            resultsEl.classList.remove('active');
+        }
+
+        // Clear errors/loading
+        const errorEl = document.getElementById('lenderErrorMsg');
+        if (errorEl) errorEl.classList.remove('active');
+    }
+
     setupGlobalEventListeners() {
         // Listen for clicks anywhere in the results container
         // This works even if the HTML inside is replaced 100 times
@@ -71,26 +89,26 @@ class LendersModule {
     }
 
     restoreCachedResults() {
+        // Get the ID so we only load THIS conversation's data
+        const conversationId = this.parent.getCurrentConversationId();
+        if (!conversationId) return;
+
         try {
-            const cached = localStorage.getItem('cached_lender_results');
+            // Use unique key (lender_results_123) instead of global key
+            const cached = localStorage.getItem(`lender_results_${conversationId}`);
+
             if (cached) {
                 const parsed = JSON.parse(cached);
 
                 // Only restore if less than 24 hours old
                 const oneDay = 24 * 60 * 60 * 1000;
                 if (Date.now() - parsed.timestamp < oneDay) {
-                    console.log('♻️ Restoring cached lender results');
-                    // We call the display function directly
-                    // Note: We pass the data, but displayLenderResults will try to save it again.
-                    // That's fine, but to be cleaner we can just set the variable:
-                    this.qualifiedLenders = parsed.data.qualified || [];
+                    console.log('♻️ Restoring cached lender results for:', conversationId);
 
-                    // Now render the HTML
-                    // We reuse the display logic but skip saving to avoid loops if you want,
-                    // or just let it overwrite. For simplicity, just call it:
+                    this.qualifiedLenders = parsed.data.qualified || [];
                     this.displayLenderResults(parsed.data, parsed.criteria);
                 } else {
-                    localStorage.removeItem('cached_lender_results');
+                    localStorage.removeItem(`lender_results_${conversationId}`);
                 }
             }
         } catch (e) {
@@ -748,12 +766,15 @@ class LendersModule {
     displayLenderResults(data, criteria) {
         console.log('=== displayLenderResults called ===');
 
-        // 1. SAVE RESULTS TO STORAGE (Fixes "having to process again")
-        localStorage.setItem('cached_lender_results', JSON.stringify({
-            data: data,
-            criteria: criteria,
-            timestamp: Date.now()
-        }));
+        // Save to conversation-specific key
+        const conversationId = this.parent.getCurrentConversationId();
+        if (conversationId) {
+            localStorage.setItem(`lender_results_${conversationId}`, JSON.stringify({
+                data: data,
+                criteria: criteria,
+                timestamp: Date.now()
+            }));
+        }
 
         this.qualifiedLenders = data.qualified || [];
         this.lastLenderCriteria = criteria;
