@@ -215,11 +215,22 @@
 }
 
 /* 6. Utility / Form Tweaks */
+
+/* Ensure parent container is the reference point for absolute positioning */
+.form-group {
+    position: relative;
+}
+
+/* Position TIB text so it floats below the input without shifting layout */
 .tib-display {
-    font-size: 12px;
+    position: absolute;
+    bottom: -18px;
+    left: 2px;
+    font-size: 11px;
     color: #2dd4bf;
-    margin-top: 4px;
     font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 .quick-import-box {

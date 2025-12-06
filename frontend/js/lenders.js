@@ -18,7 +18,7 @@ class LendersModule {
             { id: 'lenderBusinessName', label: 'Business Name', type: 'text', required: false, placeholder: 'Enter business name' },
             { id: 'lenderPosition', label: 'Position', type: 'select', required: true, options: [
                 { value: '', label: 'Select Position...' },
-                { value: '1', label: '1st Position (Preferred)' },
+                { value: '1', label: '1st Position' },
                 { value: '2', label: '2nd Position' },
                 { value: '3', label: '3rd Position' },
                 { value: '4', label: '4th Position' },
