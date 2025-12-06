@@ -120,36 +120,47 @@ class LendersModule {
     injectSubmissionModal() {
         if (document.getElementById('lenderSubmissionModal')) return;
 
-        // Use CSS classes instead of inline styles
         const modalHtml = `
             <div id="lenderSubmissionModal" class="modal hidden">
-                <div class="modal-content modal-lg">
+                <div class="modal-content lender-submission-modal">
                     <div class="modal-header">
                         <h3>Send to Lenders</h3>
                         <button id="closeLenderSubmissionModal" class="modal-close">&times;</button>
                     </div>
-                    <div class="modal-body">
+
+                    <div class="modal-body" style="overflow: hidden; display: flex; flex-direction: column;">
                         <div class="submission-grid">
-                            <div class="col">
-                                <div class="flex-between-center mb-2">
-                                    <h4>Select Lenders</h4>
+                            <div class="submission-col">
+                                <div class="submission-col-header">
+                                    <span>Select Lenders</span>
                                     <button id="toggleAllLendersBtn" class="btn-link">Deselect All</button>
                                 </div>
-                                <div id="lenderSelectionList" class="selection-list"></div>
+
+                                <div class="submission-search-container">
+                                    <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders...">
+                                </div>
+
+                                <div id="lenderSelectionList" class="selection-list custom-scrollbar"></div>
                             </div>
-                            <div class="col">
-                                <div class="flex-between-center mb-2">
-                                    <h4>Select Documents</h4>
+
+                            <div class="submission-col">
+                                <div class="submission-col-header">
+                                    <span>Select Documents</span>
                                     <button id="toggleAllDocumentsBtn" class="btn-link">Select All</button>
                                 </div>
-                                <div id="submissionDocumentList" class="selection-list"></div>
+                                <div class="submission-search-container" style="visibility: hidden;">
+                                    <input type="text" class="submission-search-input">
+                                </div>
+                                <div id="submissionDocumentList" class="selection-list custom-scrollbar"></div>
                             </div>
                         </div>
-                        <div class="mt-4">
-                            <label class="field-label">Email Message</label>
-                            <textarea id="submissionMessage" class="form-textarea" rows="6"></textarea>
+
+                        <div class="submission-message-area">
+                            <label class="field-label" style="font-size: 12px; margin-bottom: 6px; display:block;">Email Message</label>
+                            <textarea id="submissionMessage" class="form-textarea" placeholder="Enter your message to lenders..."></textarea>
                         </div>
                     </div>
+
                     <div class="modal-footer">
                         <button id="cancelLenderSubmission" class="btn btn-secondary">Cancel</button>
                         <button id="confirmLenderSubmission" class="btn btn-primary">
@@ -1335,6 +1346,43 @@ class LendersModule {
             e.preventDefault();
             await lendersModule.sendLenderSubmissions();
         });
+
+        // Search functionality
+        const searchInput = document.getElementById('lenderSearchInput');
+        if (searchInput) {
+            // Remove old listener if exists (cloning trick)
+            const newSearch = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(newSearch, searchInput);
+
+            newSearch.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const list = document.getElementById('lenderSelectionList');
+
+                // Get all Tier blocks (the divs wrapping headers and labels)
+                const tiers = list.children;
+
+                Array.from(tiers).forEach(tierDiv => {
+                    const labels = tierDiv.querySelectorAll('label');
+                    let hasVisibleLenders = false;
+
+                    labels.forEach(label => {
+                        const text = label.textContent.toLowerCase();
+                        if (text.includes(searchTerm)) {
+                            label.style.display = 'flex';
+                            hasVisibleLenders = true;
+                        } else {
+                            label.style.display = 'none';
+                        }
+                    });
+
+                    // Hide the entire tier block if no lenders match
+                    tierDiv.style.display = hasVisibleLenders ? 'block' : 'none';
+                });
+            });
+
+            // Auto-focus the search bar when modal opens
+            setTimeout(() => newSearch.focus(), 100);
+        }
 
         console.log('All modal event listeners attached successfully');
     }
