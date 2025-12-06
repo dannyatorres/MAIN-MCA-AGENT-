@@ -35,8 +35,8 @@
 }
 
 .comprehensive-modal {
-    max-width: 1200px;
-    width: 95vw;
+    max-width: 900px !important;
+    width: 95%;
 }
 
 .modal-header {
@@ -284,13 +284,20 @@
 /* Grid Layouts */
 .form-grid {
     display: grid;
-    gap: 1.25rem;
-    margin-bottom: 1.25rem;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 .col-2 { grid-template-columns: 1fr 1fr; }
 .col-3 { grid-template-columns: 1fr 1fr 1fr; }
 .col-3-small { grid-template-columns: 2fr 1fr 1fr; }
 .col-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.col-3-1 { grid-template-columns: 3fr 1fr; }
+.col-2-1-1 { grid-template-columns: 2fr 1fr 1fr; }
+
+/* Tighter form spacing */
+.sleek-form .form-group {
+    margin-bottom: 0 !important;
+}
 
 /* Input With Icons */
 .input-wrapper {
@@ -389,6 +396,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+/* Sleek Form Section Headers */
+.sleek-form .section-header {
+    padding: 10px 0;
+    margin-bottom: 15px;
+    background: transparent;
+    border-bottom: 1px solid #30363d;
 }
 
 /* Sleek Actions Footer */
