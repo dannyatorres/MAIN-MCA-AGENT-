@@ -1,9 +1,13 @@
 /* ==========================================================================
-   [TAB] Lenders & Submission
+   [TAB] Lenders - Qualification & Management
    ========================================================================== */
 
 /* 1. Landing Page */
 .lender-landing-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     padding: 60px 40px;
     text-align: center;
 }
@@ -14,42 +18,218 @@
 }
 
 .lender-landing-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #e6edf3;
     margin-bottom: 16px;
-    color: var(--blue);
 }
 
 .lender-landing-text {
-    margin-bottom: 32px;
     color: #8b949e;
+    margin-bottom: 32px;
     max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
     line-height: 1.5;
 }
 
-/* 2. Main Layout */
-.lender-qualification-system {
-    height: 100%;
+/* 2. Results Dashboard (Summary Stats) */
+.lender-summary-container {
     display: flex;
-    flex-direction: column;
-}
-
-.lender-form-content {
-    flex: 1;
-    overflow-y: auto;
+    justify-content: center;
+    gap: 40px;
+    margin: 20px 0;
     padding: 20px;
-    padding-bottom: 100px; /* Space for fixed buttons if needed */
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
 }
 
-/* 3. Grid Layout for Form */
+.lender-stat-box {
+    text-align: center;
+}
+
+.lender-stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.lender-stat-label {
+    font-size: 0.75rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+/* Color Variants */
+.lender-stat-number.qualified { color: #2dd4bf; }
+.lender-stat-number.non-qualified { color: #ef4444; }
+
+/* 3. Qualified Lenders Grid */
+.qualified-section-header {
+    padding: 12px;
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    color: #2dd4bf;
+    font-weight: 600;
+}
+
+.tier-group {
+    margin-bottom: 16px;
+}
+
+.tier-header {
+    font-weight: 600;
+    padding: 8px 12px;
+    background: #21262d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
 .lender-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    padding: 0 8px;
 }
 
-/* 4. Quick Import Component */
+.lender-tag {
+    padding: 8px 12px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s;
+}
+
+.lender-tag:hover {
+    border-color: #2dd4bf;
+    transform: translateY(-1px);
+}
+
+/* 4. Non-Qualified List */
+.non-qual-toggle {
+    width: 100%;
+    padding: 12px;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    color: #ef4444;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.non-qual-toggle:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.non-qual-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
+    font-size: 13px;
+}
+
+.non-qual-reason { color: #ff7b72; }
+
+/* 5. Lender Management List */
+.lender-list-container {
+    background: #161b22;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #30363d;
+}
+
+.lender-list-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 12px 20px;
+    background: #21262d;
+    border-bottom: 1px solid #30363d;
+    font-size: 12px;
+    font-weight: 600;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.lender-list-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 12px 20px;
+    border-bottom: 1px solid #21262d;
+    transition: all 0.2s ease;
+    background: #0d1117;
+    align-items: center;
+}
+
+.lender-list-row:last-child { border-bottom: none; }
+
+.lender-list-row:hover {
+    background: #161b22;
+    padding-left: 24px;
+}
+
+.lender-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    margin-right: 12px;
+}
+
+.lender-name-wrapper {
+    display: flex;
+    align-items: center;
+    color: #e6edf3;
+    font-weight: 500;
+}
+
+.lender-actions {
+    display: flex;
+    gap: 6px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.lender-list-row:hover .lender-actions {
+    opacity: 1;
+}
+
+/* 6. Utility / Form Tweaks */
+.tib-display {
+    font-size: 12px;
+    color: #2dd4bf;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.quick-import-box {
+    margin-bottom: 20px;
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px dashed #3b82f6;
+    border-radius: 8px;
+    padding: 16px;
+}
+
 .quick-import-card {
     background: #0d1117;
     border: 1px dashed #3b82f6;
@@ -72,13 +252,54 @@
     box-sizing: border-box;
 }
 
-/* 5. Form Inputs (Dark Mode) */
+.btn-icon-action {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-icon-action:hover {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.btn-icon-action.delete:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+
+/* 7. Main Layout */
+.lender-qualification-system {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.lender-form-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    padding-bottom: 100px;
+}
+
+/* 8. Form Inputs (Dark Mode) */
 .form-group {
     margin-bottom: 16px;
 }
 
 .form-input,
 .form-textarea,
+.form-select,
 select.form-input {
     width: 100%;
     padding: 10px;
@@ -91,7 +312,8 @@ select.form-input {
 }
 
 .form-input:focus,
-.form-textarea:focus {
+.form-textarea:focus,
+.form-select:focus {
     border-color: #3b82f6;
     outline: none;
 }
@@ -113,7 +335,7 @@ select.form-input {
     color: #ef4444;
 }
 
-/* 6. Checkboxes */
+/* 9. Checkboxes */
 .checkbox-group-card {
     display: flex;
     flex-wrap: wrap;
@@ -134,15 +356,7 @@ select.form-input {
     color: #c9d1d9;
 }
 
-/* 7. TIB Display */
-.tib-display {
-    font-size: 12px;
-    color: #3fb950;
-    margin-top: 4px;
-    font-weight: 600;
-}
-
-/* 8. Action Buttons */
+/* 10. Action Buttons */
 .form-actions-center {
     display: flex;
     justify-content: center;
@@ -150,34 +364,63 @@ select.form-input {
     margin-top: 30px;
 }
 
-/* 9. Results Area */
-.results-container {
-    margin-top: 20px;
+/* 11. Results Area */
+#lenderResults {
+    display: none;
 }
 
-.results-container.active {
+#lenderResults.active {
     display: block;
 }
 
-/* 10. Error & Loading States */
-.error-banner {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
+#lenderLoading,
+#lenderErrorMsg {
+    display: none;
+}
+
+#lenderLoading.active,
+#lenderErrorMsg.active {
+    display: block;
+}
+
+#lenderErrorMsg {
+    color: #ef4444;
     padding: 12px;
-    border-radius: 6px;
-    margin-top: 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 8px;
+    margin-top: 10px;
 }
 
-.loading-state {
+/* 12. Empty State Card */
+.empty-state-card {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    color: #8b949e;
-    margin-top: 16px;
+    justify-content: center;
+    padding: 40px 20px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    text-align: center;
 }
 
-/* 11. Spinner */
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+.empty-state-text h4 {
+    color: #e6edf3;
+    margin-bottom: 8px;
+}
+
+.empty-state-text p {
+    color: #8b949e;
+    font-size: 14px;
+}
+
+/* 13. Spinner */
 .spinner-small {
     display: inline-block;
     width: 16px;
@@ -192,7 +435,7 @@ select.form-input {
     to { transform: rotate(360deg); }
 }
 
-/* 12. Submission Modal Specifics */
+/* 14. Submission Modal Specifics */
 .submission-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -208,67 +451,4 @@ select.form-input {
     max-height: 300px;
     overflow-y: auto;
     background: #0d1117;
-}
-
-/* 13. Lender Results Display */
-.lender-results-summary {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    margin: 20px 0;
-    padding: 20px;
-    background: #0d1117;
-    border-radius: 8px;
-}
-
-.lender-stat {
-    text-align: center;
-}
-
-.lender-stat-value {
-    font-size: 2.5rem;
-    font-weight: 700;
-}
-
-.lender-stat-value.qualified { color: #10b981; }
-.lender-stat-value.non-qualified { color: #ef4444; }
-
-.lender-stat-label {
-    font-size: 0.875rem;
-    color: #6e7681;
-    text-transform: uppercase;
-}
-
-/* 14. Lender Cards */
-.lender-tier-section {
-    margin-bottom: 16px;
-}
-
-.lender-tier-header {
-    font-weight: 600;
-    padding: 8px;
-    background: #161b22;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    color: #e6edf3;
-}
-
-.lender-tier-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 8px;
-}
-
-.lender-card {
-    padding: 8px 12px;
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 4px;
-    color: #e6edf3;
-    font-size: 13px;
-}
-
-.lender-card.qualified {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
 }

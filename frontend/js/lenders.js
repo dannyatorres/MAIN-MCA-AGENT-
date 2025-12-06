@@ -800,39 +800,37 @@ class LendersModule {
 
         let html = `<div style="padding: 10px;">`;
 
-        // Summary Section
+        // Summary Section (CSS: lender-summary-container)
         html += `
-            <div style="display: flex; justify-content: center; gap: 40px; margin: 20px 0; padding: 20px; background: #f9fafb; border-radius: 8px;">
-                <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: #10b981;">${data.qualified?.length || 0}</div>
-                    <div style="font-size: 0.875rem; color: #6b7280; text-transform: uppercase;">Qualified</div>
+            <div class="lender-summary-container">
+                <div class="lender-stat-box">
+                    <div class="lender-stat-number qualified">${data.qualified?.length || 0}</div>
+                    <div class="lender-stat-label">Qualified</div>
                 </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: #ef4444;">${data.nonQualified?.length || 0}</div>
-                    <div style="font-size: 0.875rem; color: #6b7280; text-transform: uppercase;">Non-Qualified</div>
+                <div class="lender-stat-box">
+                    <div class="lender-stat-number non-qualified">${data.nonQualified?.length || 0}</div>
+                    <div class="lender-stat-label">Non-Qualified</div>
                 </div>
             </div>
         `;
 
-        // Send Button - SIMPLIFIED (Fixes glitchy clicks)
-        // We added a specific class 'trigger-lender-modal' to catch it later
+        // Qualified Section
         if (data.qualified && data.qualified.length > 0) {
+            // Send Button
             html += `
                 <div style="margin: 20px 0; text-align: center;">
-                    <button id="sendToLendersBtn" class="trigger-lender-modal"
-                            style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;">
+                    <button id="sendToLendersBtn" class="trigger-lender-modal btn btn-primary">
                         📧 Send to Lenders
                     </button>
                 </div>
             `;
 
-            // Qualified Lenders Section
             html += `
                 <div style="margin-top: 20px;">
-                    <div style="padding: 12px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; margin-bottom: 10px;">
-                        <span style="color: #16a34a; font-weight: 600;">✅ Qualified Lenders</span>
+                    <div class="qualified-section-header">
+                        ✅ Qualified Lenders
                     </div>
-                    <div id="qualifiedSection" style="display: block; padding: 10px;">`;
+                    <div id="qualifiedSection">`;
 
             // Group by tiers
             const tiers = {};
@@ -843,12 +841,12 @@ class LendersModule {
             });
 
             Object.keys(tiers).sort().forEach(tier => {
-                html += `<div style="margin-bottom: 16px;">`;
-                html += `<div style="font-weight: 600; padding: 8px; background: #f8fafc; border-radius: 4px;">Tier ${tier}</div>`;
-                html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; padding: 8px;">`;
+                html += `<div class="tier-group">`;
+                html += `<div class="tier-header">Tier ${tier}</div>`;
+                html += `<div class="lender-grid">`;
                 tiers[tier].forEach(lender => {
                     const star = lender.isPreferred ? '⭐' : '';
-                    html += `<div style="padding: 8px; background: white; border: 1px solid #d1fae5; border-radius: 4px;">${lender['Lender Name']}${star}</div>`;
+                    html += `<div class="lender-tag">${lender['Lender Name']} <span>${star}</span></div>`;
                 });
                 html += `</div></div>`;
             });
@@ -857,17 +855,16 @@ class LendersModule {
 
         // Non-Qualified Section
         if (data.nonQualified && data.nonQualified.length > 0) {
-             html += `
+            html += `
                 <div style="margin-top: 30px;">
-                    <button onclick="document.getElementById('nonQualList').style.display = document.getElementById('nonQualList').style.display === 'none' ? 'block' : 'none'"
-                            style="width: 100%; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; text-align: left; color: #dc2626; font-weight: 600;">
+                    <button id="toggleNonQualified" class="non-qual-toggle" onclick="document.getElementById('nonQualList').style.display = document.getElementById('nonQualList').style.display === 'none' ? 'block' : 'none'">
                         ❌ View Non-Qualified Lenders (${data.nonQualified.length}) ▼
                     </button>
                     <div id="nonQualList" style="display: none; margin-top: 10px;">
                         ${data.nonQualified.map(item => `
-                            <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-bottom: 1px solid #eee;">
-                                <span style="font-weight: 500;">${item.lender}</span>
-                                <span style="color: #dc2626;">${item.blockingRule}</span>
+                            <div class="non-qual-item">
+                                <span style="font-weight: 500; color: #e6edf3;">${item.lender}</span>
+                                <span class="non-qual-reason">${item.blockingRule}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -1664,143 +1661,49 @@ Best regards`;
 
         if (!lenders || lenders.length === 0) {
             container.innerHTML = `
-                <div class="empty-state" style="
-                    text-align: center;
-                    padding: 60px 20px;
-                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                    border-radius: 16px;
-                    border: 2px dashed #cbd5e1;
-                ">
-                    <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">🏦</div>
-                    <h4 style="margin: 0 0 8px 0; font-size: 20px; color: #1e293b; font-weight: 600;">No Lenders Found</h4>
-                    <p style="margin: 0; color: #64748b; font-size: 15px;">Start by adding your first lender to the database.</p>
+                <div class="empty-state-card">
+                    <div class="empty-state-icon">🏦</div>
+                    <div class="empty-state-text">
+                        <h4>No Lenders Found</h4>
+                        <p>Start by adding your first lender to the database.</p>
+                    </div>
                 </div>
             `;
             return;
         }
 
-        // Sort lenders alphabetically by name (A-Z)
         const sortedLenders = [...lenders].sort((a, b) =>
             a.name.toLowerCase().localeCompare(b.name.toLowerCase())
         );
 
         container.innerHTML = `
-            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="
-                    display: grid;
-                    grid-template-columns: 1fr auto;
-                    padding: 16px 20px;
-                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                    border-bottom: 1px solid #e2e8f0;
-                ">
-                    <div style="
-                        font-size: 14px;
-                        font-weight: 600;
-                        color: #475569;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                    ">
-                        <span style="font-size: 18px;">🏦</span>
-                        Lender Name
+            <div class="lender-list-container">
+                <div class="lender-list-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>🏦</span> Lender Name
                     </div>
-                    <div style="
-                        font-size: 14px;
-                        font-weight: 600;
-                        color: #475569;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                        text-align: right;
-                    ">Actions</div>
+                    <div style="text-align: right;">Actions</div>
                 </div>
                 <div>
-                    ${sortedLenders.map((lender, index) => `
-                        <div style="
-                            display: grid;
-                            grid-template-columns: 1fr auto;
-                            padding: 10px 16px;
-                            border-bottom: 1px solid #f1f5f9;
-                            transition: all 0.2s ease;
-                            background: ${index % 2 === 0 ? '#ffffff' : '#fafbfc'};
-                        "
-                        onmouseover="this.style.background='#f8fafc'; this.style.transform='translateX(4px)';"
-                        onmouseout="this.style.background='${index % 2 === 0 ? '#ffffff' : '#fafbfc'}'; this.style.transform='translateX(0)';">
-                            <div style="
-                                font-size: 15px;
-                                font-weight: 500;
-                                color: #1e293b;
-                                display: flex;
-                                align-items: center;
-                                gap: 10px;
-                            ">
-                                <div style="
-                                    width: 32px;
-                                    height: 32px;
-                                    border-radius: 8px;
-                                    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    color: white;
-                                    font-weight: 700;
-                                    font-size: 14px;
-                                    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
-                                ">${lender.name.charAt(0).toUpperCase()}</div>
+                    ${sortedLenders.map(lender => `
+                        <div class="lender-list-row">
+                            <div class="lender-name-wrapper">
+                                <div class="lender-avatar">
+                                    ${lender.name.charAt(0).toUpperCase()}
+                                </div>
                                 <span>${lender.name}</span>
                             </div>
-                            <div style="
-                                display: flex;
-                                align-items: center;
-                                gap: 6px;
-                            ">
+                            <div class="lender-actions">
                                 <button
                                     onclick="window.conversationUI.lenders.editLender('${lender.id}')"
                                     title="Edit lender"
-                                    style="
-                                        width: 28px;
-                                        height: 28px;
-                                        padding: 0;
-                                        background: white;
-                                        color: #3b82f6;
-                                        border: 1.5px solid #e2e8f0;
-                                        border-radius: 5px;
-                                        font-size: 14px;
-                                        cursor: pointer;
-                                        transition: all 0.2s ease;
-                                        display: inline-flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                    "
-                                    onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#3b82f6'; this.style.transform='scale(1.1)';"
-                                    onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'; this.style.transform='scale(1)';"
-                                >
-                                    ✏️
-                                </button>
+                                    class="btn-icon-action"
+                                >✏️</button>
                                 <button
                                     onclick="window.conversationUI.lenders.deleteLender('${lender.id}', '${lender.name}')"
                                     title="Delete lender"
-                                    style="
-                                        width: 28px;
-                                        height: 28px;
-                                        padding: 0;
-                                        background: white;
-                                        color: #ef4444;
-                                        border: 1.5px solid #e2e8f0;
-                                        border-radius: 5px;
-                                        font-size: 14px;
-                                        cursor: pointer;
-                                        transition: all 0.2s ease;
-                                        display: inline-flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                    "
-                                    onmouseover="this.style.background='#fef2f2'; this.style.borderColor='#ef4444'; this.style.transform='scale(1.1)';"
-                                    onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'; this.style.transform='scale(1)';"
-                                >
-                                    🗑️
-                                </button>
+                                    class="btn-icon-action delete"
+                                >🗑️</button>
                             </div>
                         </div>
                     `).join('')}
@@ -1948,23 +1851,14 @@ Negative Days: 3"
     }
 
     createFormField(field, value = '') {
-        const requiredMark = field.required ? '<span class="required">*</span>' : '';
+        const requiredMark = field.required ? '<span class="required" style="color:#ef4444">*</span>' : '';
 
+        // Standard Select
         if (field.type === 'select') {
             return `
-                <div class="form-group" style="width: 100%;">
+                <div class="form-group">
                     <label for="${field.id}">${field.label} ${requiredMark}</label>
-                    <select id="${field.id}"
-                            class="form-input"
-                            ${field.required ? 'required' : ''}
-                            style="width: 100%;
-                                   height: 40px;
-                                   padding: 8px 12px;
-                                   font-size: 14px;
-                                   box-sizing: border-box;
-                                   text-overflow: ellipsis;
-                                   white-space: nowrap;
-                                   overflow: hidden;">
+                    <select id="${field.id}" class="form-select" ${field.required ? 'required' : ''}>
                         ${field.options.map(opt =>
                             `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`
                         ).join('')}
@@ -1973,21 +1867,17 @@ Negative Days: 3"
             `;
         }
 
+        // Standard Input
         return `
-            <div class="form-group" style="width: 100%;">
+            <div class="form-group">
                 <label for="${field.id}">${field.label} ${requiredMark}</label>
                 <input type="${field.type}"
                        id="${field.id}"
                        class="form-input"
                        value="${value}"
                        placeholder="${field.placeholder || ''}"
-                       style="width: 100%;
-                              height: 40px;
-                              padding: 8px 12px;
-                              font-size: 14px;
-                              box-sizing: border-box;"
                        ${field.required ? 'required' : ''}>
-                ${field.id === 'lenderStartDate' ? '<div id="lenderTibDisplay" class="tib-display" style="display: none;"></div>' : ''}
+                ${field.id === 'lenderStartDate' ? '<div id="lenderTibDisplay" class="tib-display hidden"></div>' : ''}
             </div>
         `;
     }
@@ -2108,51 +1998,77 @@ Negative Days: 3"
 
     // Modal CRUD Functions
     showAddLenderModal() {
+        // Remove existing if any
         const existingModal = document.getElementById('addLenderModal');
         if (existingModal) existingModal.remove();
 
+        // Uses standard .modal structure from 06-components-modals.css
         const modalHtml = `
-            <div id="addLenderModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 999999; display: flex; align-items: center; justify-content: center;">
-                <div style="background: white; border-radius: 8px; padding: 0; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
-                    <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
-                        <h3 style="margin: 0;">Add New Lender</h3>
+            <div id="addLenderModal" class="modal" style="display: flex;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Add New Lender</h3>
+                        <button class="modal-close" onclick="document.getElementById('addLenderModal').remove()">&times;</button>
                     </div>
-                    <div style="padding: 20px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Lender Name *</label>
-                        <input type="text" id="newLenderName" placeholder="e.g., ABC Capital Lending" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-
-                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Email Address *</label>
-                        <input type="email" id="newLenderEmail" placeholder="e.g., deals@abclending.com" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-
-                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Phone Number</label>
-                        <input type="text" id="newLenderPhone" placeholder="(555) 123-4567" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-
-                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Company Name</label>
-                        <input type="text" id="newLenderCompany" placeholder="ABC Lending LLC" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-
-                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                            <div style="flex: 1;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Min Amount ($)</label>
-                                <input type="number" id="newLenderMinAmount" placeholder="10000" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-                            </div>
-                            <div style="flex: 1;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Max Amount ($)</label>
-                                <input type="number" id="newLenderMaxAmount" placeholder="500000" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                    <div class="modal-body">
+                        <div class="form-section">
+                            <div class="section-content">
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label>Lender Name *</label>
+                                        <input type="text" id="newLenderName" class="form-input" placeholder="e.g., ABC Capital Lending">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label>Email Address *</label>
+                                        <input type="email" id="newLenderEmail" class="form-input" placeholder="e.g., deals@abclending.com">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Phone Number</label>
+                                        <input type="text" id="newLenderPhone" class="form-input" placeholder="(555) 123-4567">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Company Name</label>
+                                        <input type="text" id="newLenderCompany" class="form-input" placeholder="ABC Lending LLC">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Min Amount ($)</label>
+                                        <input type="number" id="newLenderMinAmount" class="form-input" placeholder="10000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Max Amount ($)</label>
+                                        <input type="number" id="newLenderMaxAmount" class="form-input" placeholder="500000">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label>Industries (comma-separated)</label>
+                                        <input type="text" id="newLenderIndustries" class="form-input" placeholder="retail, construction, healthcare">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label>States (comma-separated)</label>
+                                        <input type="text" id="newLenderStates" class="form-input" placeholder="CA, NY, TX, FL">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label>Notes</label>
+                                        <textarea id="newLenderNotes" class="form-textarea" rows="3" placeholder="Additional notes..."></textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Industries (comma-separated)</label>
-                        <input type="text" id="newLenderIndustries" placeholder="retail, construction, healthcare" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-
-                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">States (comma-separated)</label>
-                        <input type="text" id="newLenderStates" placeholder="CA, NY, TX, FL" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-
-                        <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #334155;">Notes</label>
-                        <textarea id="newLenderNotes" rows="3" placeholder="Additional notes about this lender..." style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
                     </div>
-                    <div style="padding: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
-                        <button onclick="document.getElementById('addLenderModal').remove()" style="padding: 10px 20px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
-                        <button onclick="window.conversationUI.lenders.saveLender()" style="padding: 10px 20px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Add Lender</button>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="document.getElementById('addLenderModal').remove()">Cancel</button>
+                        <button class="btn btn-primary" onclick="window.conversationUI.lenders.saveLender()">Add Lender</button>
                     </div>
                 </div>
             </div>
