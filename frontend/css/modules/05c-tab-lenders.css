@@ -614,11 +614,63 @@ select.form-input {
 }
 
 /* ==========================================================================
-   [ADDITION] Lender Modal Search Bar
+   [MODAL] Lender Submission Layout (Fixed Window Style)
    ========================================================================== */
 
+/* 1. The Fixed Window Frame */
+.modal-content.lender-submission-modal {
+    max-width: 900px;
+    width: 90vw;
+    height: 85vh;
+    max-height: 800px;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 2. The Body (Flex Container) */
+.modal-body.submission-body {
+    flex: 1;
+    overflow: hidden;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 3. The Grid (Fills available space) */
+.submission-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* 4. Columns */
+.submission-col {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.submission-col-header {
+    flex-shrink: 0;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #e6edf3;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* 5. The Search Bar (Fixed at top of list) */
 .submission-search-container {
-    padding: 0 0 10px 0;
+    flex-shrink: 0;
+    margin-bottom: 10px;
 }
 
 .submission-search-input {
@@ -640,4 +692,26 @@ select.form-input {
 
 .submission-search-input::placeholder {
     color: #6e7681;
+}
+
+/* 6. The Scrolling List (The only thing that moves) */
+.selection-list {
+    flex: 1;
+    overflow-y: auto;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+/* 7. Message Area (Pinned to bottom of body) */
+.submission-message-area {
+    flex-shrink: 0;
+    padding-top: 10px;
+    border-top: 1px solid #30363d;
+}
+
+.submission-message-area textarea {
+    height: 80px;
+    resize: none;
 }

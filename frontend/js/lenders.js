@@ -128,7 +128,8 @@ class LendersModule {
                         <button id="closeLenderSubmissionModal" class="modal-close">&times;</button>
                     </div>
 
-                    <div class="modal-body" style="overflow: hidden; display: flex; flex-direction: column;">
+                    <div class="modal-body submission-body">
+
                         <div class="submission-grid">
                             <div class="submission-col">
                                 <div class="submission-col-header">
@@ -148,15 +149,17 @@ class LendersModule {
                                     <span>Select Documents</span>
                                     <button id="toggleAllDocumentsBtn" class="btn-link">Select All</button>
                                 </div>
+
                                 <div class="submission-search-container" style="visibility: hidden;">
                                     <input type="text" class="submission-search-input">
                                 </div>
+
                                 <div id="submissionDocumentList" class="selection-list custom-scrollbar"></div>
                             </div>
                         </div>
 
                         <div class="submission-message-area">
-                            <label class="field-label" style="font-size: 12px; margin-bottom: 6px; display:block;">Email Message</label>
+                            <label class="field-label" style="font-size: 12px; margin-bottom: 6px; display:block; color: #8b949e;">Email Message</label>
                             <textarea id="submissionMessage" class="form-textarea" placeholder="Enter your message to lenders..."></textarea>
                         </div>
                     </div>
