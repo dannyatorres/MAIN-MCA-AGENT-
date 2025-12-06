@@ -344,6 +344,25 @@ class LendersModule {
                     const data = await response.json();
                     this.displayLenderResults(data, criteria);
 
+                    // Save results to database (So AI can reference them)
+                    const conversationId = this.parent.getCurrentConversationId();
+                    if (conversationId) {
+                        console.log('💾 Persisting results to database...');
+                        try {
+                            await this.parent.apiCall(`/api/conversations/${conversationId}/lenders/save-results`, {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    results: data,
+                                    criteria: criteria
+                                })
+                            });
+                            console.log('✅ Results saved for AI');
+                        } catch (saveError) {
+                            console.error('⚠️ Failed to save results to DB:', saveError);
+                            // Don't fail the whole operation, results are still displayed
+                        }
+                    }
+
                 } catch (error) {
                     console.error('Error:', error);
                     errorEl.textContent = 'Error processing request. Please try again.';

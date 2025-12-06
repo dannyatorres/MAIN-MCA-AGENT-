@@ -1522,4 +1522,78 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
     }
 });
 
+// ============================================================================
+// LENDER QUALIFICATION PERSISTENCE (For AI to reference results)
+// ============================================================================
+
+// SAVE Lender Qualification Results
+router.post('/:id/lenders/save-results', async (req, res) => {
+    try {
+        const { id: conversationId } = req.params;
+        const { results, criteria } = req.body;
+        const db = getDatabase();
+
+        console.log(`💾 Saving lender qualifications for conversation: ${conversationId}`);
+
+        const recordId = uuidv4();
+
+        // Delete old qualifications for this conversation (keep only the latest)
+        await db.query('DELETE FROM lender_qualifications WHERE conversation_id = $1', [conversationId]);
+
+        // Insert new results
+        await db.query(`
+            INSERT INTO lender_qualifications (
+                id, conversation_id, qualification_data, criteria_used, qualified_lenders, created_at
+            )
+            VALUES ($1, $2, $3, $4, $5, NOW())
+        `, [
+            recordId,
+            conversationId,
+            JSON.stringify(results),
+            JSON.stringify(criteria),
+            JSON.stringify(results.qualified || [])
+        ]);
+
+        console.log('✅ Qualification results saved to database');
+
+        // Update conversation last_activity
+        await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error('❌ Error saving lender qualifications:', error);
+        res.status(500).json({ error: 'Failed to save results' });
+    }
+});
+
+// GET Lender Qualification Results (For loading history)
+router.get('/:id/lenders/results', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(`
+            SELECT * FROM lender_qualifications
+            WHERE conversation_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.json({ success: false, message: 'No qualification data found' });
+        }
+
+        res.json({
+            success: true,
+            data: result.rows[0].qualification_data,
+            criteria: result.rows[0].criteria_used
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching lender qualifications:', error);
+        res.status(500).json({ error: 'Failed to fetch results' });
+    }
+});
+
 module.exports = router;

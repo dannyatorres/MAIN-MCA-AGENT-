@@ -96,6 +96,21 @@ async function initialize() {
             ON messages(conversation_id);
         `);
 
+        // 5. Create lender_qualifications table (For AI to reference results)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS lender_qualifications (
+                id UUID PRIMARY KEY,
+                conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+                qualification_data JSONB,
+                criteria_used JSONB,
+                qualified_lenders JSONB,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_lender_qual_conversation
+            ON lender_qualifications(conversation_id);
+        `);
+
         console.log('✅ Database schema verified and repaired');
     } catch (err) {
         console.warn('⚠️ Schema verification warning (non-fatal):', err.message);
