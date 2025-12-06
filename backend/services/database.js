@@ -11,7 +11,8 @@ async function initialize() {
 
     pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
+        ssl: { rejectUnauthorized: false },
+        client_encoding: 'UTF8'
     });
 
     pool.on('error', (err) => {
@@ -99,7 +100,8 @@ function getDatabase() {
     if (!pool) {
         pool = new Pool({
             connectionString: process.env.DATABASE_URL,
-            ssl: { rejectUnauthorized: false }
+            ssl: { rejectUnauthorized: false },
+            client_encoding: 'UTF8'
         });
 
         pool.on('error', (err) => {
