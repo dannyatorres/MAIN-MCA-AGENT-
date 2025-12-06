@@ -1368,8 +1368,11 @@ class LendersModule {
 
     populateSubmissionLenders() {
         const lenderList = document.getElementById('lenderSelectionList');
-        if (!lenderList || !this.qualifiedLenders || this.qualifiedLenders.length === 0) {
-            if (lenderList) lenderList.innerHTML = '<p style="color: #6b7280; padding: 10px;">No qualified lenders available.</p>';
+
+        // Safety check
+        if (!lenderList) return;
+        if (!this.qualifiedLenders || this.qualifiedLenders.length === 0) {
+            lenderList.innerHTML = '<p style="color: #6b7280; padding: 10px;">No qualified lenders available.</p>';
             return;
         }
 
@@ -1384,19 +1387,20 @@ class LendersModule {
         let html = '';
         Object.keys(lendersByTier).sort().forEach(tier => {
             html += `<div style="margin-bottom: 12px;">`;
+            // Tier Header
             html += `<div style="font-size: 11px; font-weight: 700; color: #8b949e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Tier ${tier}</div>`;
 
             lendersByTier[tier].forEach(lender => {
                 const lenderName = lender['Lender Name'] || lender.name;
                 const isPreferred = lender.isPreferred;
 
+                // Clean HTML (No Icon)
                 html += `
                     <label>
                         <input type="checkbox" class="lender-checkbox" value="${lenderName}" checked>
-                        <div class="list-icon lender"><i class="fas fa-building"></i></div>
                         <div class="list-text">
                             ${lenderName}
-                            ${isPreferred ? '<span class="star-preferred" style="margin-left:6px;">★</span>' : ''}
+                            ${isPreferred ? '<span style="color:#3b82f6; margin-left:6px;">★</span>' : ''}
                         </div>
                     </label>
                 `;
@@ -1406,9 +1410,12 @@ class LendersModule {
 
         lenderList.innerHTML = html;
 
-        // Update button text
+        // Ensure the "Select All" button uses the text-link style
         const toggleBtn = document.getElementById('toggleAllLendersBtn');
-        if (toggleBtn) toggleBtn.textContent = 'Deselect All';
+        if (toggleBtn) {
+            toggleBtn.textContent = 'Deselect All';
+            toggleBtn.className = 'btn-link';
+        }
     }
 
     populateSubmissionDocuments() {

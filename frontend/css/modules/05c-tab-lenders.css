@@ -529,23 +529,22 @@ select.form-input {
    ========================================================================== */
 
 /* 1. Sleek "Select All" Buttons */
-.submission-col-header button {
-    background: transparent;
-    border: none;
+.submission-col-header button,
+.btn-link {
+    background: transparent !important;
+    border: none !important;
     color: #3b82f6;
+    cursor: pointer;
     font-size: 12px;
     font-weight: 600;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    padding: 0;
 }
 
-.submission-col-header button:hover {
-    background: rgba(59, 130, 246, 0.1);
+.submission-col-header button:hover,
+.btn-link:hover {
     color: #60a5fa;
+    text-decoration: none;
 }
 
 /* 2. List Items as "Mini Cards" */
