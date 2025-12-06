@@ -5,7 +5,7 @@ export class LeadFormController {
     constructor(parent) {
         this.parent = parent;
         this.usStates = [
-            { value: '', label: 'Select State...' },
+            { value: '', label: 'State' },
             { value: 'AL', label: 'Alabama' }, { value: 'AK', label: 'Alaska' }, { value: 'AZ', label: 'Arizona' },
             { value: 'AR', label: 'Arkansas' }, { value: 'CA', label: 'California' }, { value: 'CO', label: 'Colorado' },
             { value: 'CT', label: 'Connecticut' }, { value: 'DE', label: 'Delaware' }, { value: 'FL', label: 'Florida' },
@@ -49,74 +49,104 @@ export class LeadFormController {
             ).join('');
         };
 
+        // Helper for input icons
+        const iconInput = (iconClass) => `<span class="input-icon"><i class="${iconClass}"></i></span>`;
+
         return `
         <div class="edit-form-container">
-            <form id="${mode}LeadForm" class="lead-form">
+            <form id="${mode}LeadForm" class="lead-form sleek-form">
 
                 <div class="form-section">
-                    <div class="section-header">Business Information</div>
+                    <div class="section-header">
+                        <div class="header-title"><i class="fas fa-building text-accent"></i> Business Profile</div>
+                    </div>
                     <div class="section-content">
-                        <div class="form-row-six">
+                        <div class="form-grid col-2">
                             <div class="form-group">
                                 <label>Legal Name *</label>
-                                <input type="text" name="businessName" value="${val('business_name', 'businessName')}" class="form-input" required>
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-store')}
+                                    <input type="text" name="businessName" value="${val('business_name', 'businessName')}" class="form-input" required placeholder="Legal Entity Name">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>DBA Name</label>
-                                <input type="text" name="dbaName" value="${val('dba_name', 'dbaName')}" class="form-input">
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-tag')}
+                                    <input type="text" name="dbaName" value="${val('dba_name', 'dbaName')}" class="form-input" placeholder="Doing Business As">
+                                </div>
                             </div>
+                        </div>
+
+                        <div class="form-grid col-3">
                             <div class="form-group">
                                 <label>Primary Phone *</label>
-                                <input type="tel" name="primaryPhone" value="${Formatters.phone(val('lead_phone', 'phone', 'primaryPhone'))}" class="form-input phone-format" required>
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-phone')}
+                                    <input type="tel" name="primaryPhone" value="${Formatters.phone(val('lead_phone', 'phone', 'primaryPhone'))}" class="form-input phone-format" required placeholder="(555) 555-5555">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Business Email</label>
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-envelope')}
+                                    <input type="email" name="businessEmail" value="${val('email', 'business_email', 'businessEmail')}" class="form-input" placeholder="email@company.com">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Cell Phone</label>
-                                <input type="tel" name="cellPhone" value="${Formatters.phone(val('cell_phone', 'cellPhone'))}" class="form-input phone-format">
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-mobile-alt')}
+                                    <input type="tel" name="cellPhone" value="${Formatters.phone(val('cell_phone', 'cellPhone'))}" class="form-input phone-format" placeholder="(555) 555-5555">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="form-row-six">
-                            <div class="form-group full-width">
-                                <label>Business Address</label>
-                                <input type="text" name="businessAddress" value="${val('address', 'business_address', 'businessAddress')}" class="form-input">
+                        <div class="form-group">
+                            <label>Business Address</label>
+                            <div class="input-wrapper">
+                                ${iconInput('fas fa-map-marker-alt')}
+                                <input type="text" name="businessAddress" value="${val('address', 'business_address', 'businessAddress')}" class="form-input" placeholder="Street Address">
                             </div>
                         </div>
 
-                        <div class="form-row-six">
+                        <div class="form-grid col-3-small">
                             <div class="form-group">
                                 <label>City</label>
                                 <input type="text" name="businessCity" value="${val('city', 'business_city', 'businessCity')}" class="form-input">
                             </div>
                             <div class="form-group">
                                 <label>State</label>
-                                <select name="businessState" class="form-select">
-                                    ${getStateOptions(val('us_state', 'business_state', 'businessState'))}
-                                </select>
+                                <div class="select-wrapper">
+                                    <select name="businessState" class="form-select">
+                                        ${getStateOptions(val('us_state', 'business_state', 'businessState'))}
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Zip Code</label>
                                 <input type="text" name="businessZip" value="${val('zip', 'business_zip', 'businessZip')}" class="form-input" maxlength="10">
                             </div>
-                            <div class="form-group">
-                                <label>Business Email</label>
-                                <input type="email" name="businessEmail" value="${val('email', 'business_email', 'businessEmail')}" class="form-input">
-                            </div>
                         </div>
 
-                        <div class="form-row-six">
+                        <div class="separator"></div>
+
+                        <div class="form-grid col-4">
                             <div class="form-group">
                                 <label>Tax ID (EIN)</label>
                                 <input type="text" name="federalTaxId" value="${this.formatEIN(val('tax_id', 'federal_tax_id', 'tax_id_encrypted'))}" class="form-input ein-format" maxlength="10" placeholder="XX-XXXXXXX">
                             </div>
                             <div class="form-group">
                                 <label>Entity Type</label>
-                                <select name="entityType" class="form-select">
-                                    <option value="">Select...</option>
-                                    <option value="LLC" ${val('entity_type', 'entityType')==='LLC'?'selected':''}>LLC</option>
-                                    <option value="Corporation" ${val('entity_type', 'entityType')==='Corporation'?'selected':''}>Corporation</option>
-                                    <option value="Sole Proprietorship" ${val('entity_type', 'entityType')==='Sole Proprietorship'?'selected':''}>Sole Prop</option>
-                                    <option value="Partnership" ${val('entity_type', 'entityType')==='Partnership'?'selected':''}>Partnership</option>
-                                </select>
+                                <div class="select-wrapper">
+                                    <select name="entityType" class="form-select">
+                                        <option value="">Select...</option>
+                                        <option value="LLC" ${val('entity_type', 'entityType')==='LLC'?'selected':''}>LLC</option>
+                                        <option value="Corporation" ${val('entity_type', 'entityType')==='Corporation'?'selected':''}>Corporation</option>
+                                        <option value="Sole Proprietorship" ${val('entity_type', 'entityType')==='Sole Proprietorship'?'selected':''}>Sole Prop</option>
+                                        <option value="Partnership" ${val('entity_type', 'entityType')==='Partnership'?'selected':''}>Partnership</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Industry</label>
@@ -131,20 +161,31 @@ export class LeadFormController {
                 </div>
 
                 <div class="form-section">
-                    <div class="section-header">Financials</div>
+                    <div class="section-header">
+                        <div class="header-title"><i class="fas fa-chart-line text-accent"></i> Financial Overview</div>
+                    </div>
                     <div class="section-content">
-                        <div class="form-row-six">
+                        <div class="form-grid col-3">
                             <div class="form-group">
                                 <label>Annual Revenue</label>
-                                <input type="text" name="annualRevenue" value="${Formatters.currency(val('annual_revenue', 'annualRevenue'))}" class="form-input money-format">
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-dollar-sign')}
+                                    <input type="text" name="annualRevenue" value="${Formatters.currency(val('annual_revenue', 'annualRevenue'))}" class="form-input money-format" placeholder="0.00">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Monthly Revenue</label>
-                                <input type="text" name="monthlyRevenue" value="${Formatters.currency(val('monthly_revenue', 'monthlyRevenue'))}" class="form-input money-format">
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-dollar-sign')}
+                                    <input type="text" name="monthlyRevenue" value="${Formatters.currency(val('monthly_revenue', 'monthlyRevenue'))}" class="form-input money-format" placeholder="0.00">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Requested Amount</label>
-                                <input type="text" name="requestedAmount" value="${Formatters.currency(val('requested_amount', 'funding_amount', 'requestedAmount'))}" class="form-input money-format">
+                                <div class="input-wrapper highlight-input">
+                                    ${iconInput('fas fa-money-bill-wave')}
+                                    <input type="text" name="requestedAmount" value="${Formatters.currency(val('requested_amount', 'funding_amount', 'requestedAmount'))}" class="form-input money-format" placeholder="0.00">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -152,13 +193,15 @@ export class LeadFormController {
 
                 <div class="form-section">
                     <div class="section-header">
-                        Owner 1
-                        <label class="section-header-actions">
-                            <input type="checkbox" id="copyAddr1"> Same as Business Address
+                        <div class="header-title"><i class="fas fa-user-tie text-accent"></i> Owner 1</div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="copyAddr1">
+                            <span class="slider round"></span>
+                            <span class="toggle-label">Use Biz Address</span>
                         </label>
                     </div>
                     <div class="section-content">
-                        <div class="form-row-six">
+                        <div class="form-grid col-2">
                             <div class="form-group">
                                 <label>First Name</label>
                                 <input type="text" name="ownerFirstName" value="${val('first_name', 'owner_first_name', 'ownerFirstName')}" class="form-input">
@@ -167,19 +210,30 @@ export class LeadFormController {
                                 <label>Last Name</label>
                                 <input type="text" name="ownerLastName" value="${val('last_name', 'owner_last_name', 'ownerLastName')}" class="form-input">
                             </div>
+                        </div>
+                        <div class="form-grid col-2">
                             <div class="form-group">
                                 <label>Email</label>
-                                <input type="email" name="ownerEmail" value="${val('owner_email', 'ownerEmail')}" class="form-input">
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-envelope')}
+                                    <input type="email" name="ownerEmail" value="${val('owner_email', 'ownerEmail')}" class="form-input">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Mobile</label>
-                                <input type="tel" name="ownerPhone" value="${Formatters.phone(val('owner_phone', 'ownerPhone'))}" class="form-input phone-format">
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-mobile-alt')}
+                                    <input type="tel" name="ownerPhone" value="${Formatters.phone(val('owner_phone', 'ownerPhone'))}" class="form-input phone-format">
+                                </div>
                             </div>
                         </div>
-                        <div class="form-row-six">
+                        <div class="form-grid col-3">
                             <div class="form-group">
                                 <label>SSN</label>
-                                <input type="text" name="ownerSSN" value="${this.formatSSN(val('ssn', 'ssn_encrypted', 'ownerSSN'))}" class="form-input ssn-format" maxlength="11" placeholder="XXX-XX-XXXX">
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-id-card')}
+                                    <input type="text" name="ownerSSN" value="${this.formatSSN(val('ssn', 'ssn_encrypted', 'ownerSSN'))}" class="form-input ssn-format" maxlength="11" placeholder="XXX-XX-XXXX">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Date of Birth</label>
@@ -187,25 +241,29 @@ export class LeadFormController {
                             </div>
                             <div class="form-group">
                                 <label>Ownership %</label>
-                                <input type="number" name="ownershipPercent" value="${val('ownership_percentage', 'ownership_percent', 'ownerOwnershipPercentage')}" class="form-input" max="100">
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-percent')}
+                                    <input type="number" name="ownershipPercent" value="${val('ownership_percentage', 'ownership_percent', 'ownerOwnershipPercentage')}" class="form-input" max="100">
+                                </div>
                             </div>
                         </div>
-                        <div class="form-row-six">
-                            <div class="form-group full-width">
-                                <label>Home Address</label>
-                                <input type="text" name="ownerHomeAddress" value="${val('owner_address', 'owner_home_address', 'ownerHomeAddress')}" class="form-input">
-                            </div>
+
+                        <div class="form-group">
+                            <label>Home Address</label>
+                            <input type="text" name="ownerHomeAddress" value="${val('owner_address', 'owner_home_address', 'ownerHomeAddress')}" class="form-input">
                         </div>
-                        <div class="form-row-six">
+                        <div class="form-grid col-3-small">
                             <div class="form-group">
                                 <label>City</label>
                                 <input type="text" name="ownerHomeCity" value="${val('owner_city', 'owner_home_city', 'ownerHomeCity')}" class="form-input">
                             </div>
                             <div class="form-group">
                                 <label>State</label>
-                                <select name="ownerHomeState" class="form-select">
-                                    ${getStateOptions(val('owner_state', 'owner_home_state', 'ownerHomeState'))}
-                                </select>
+                                <div class="select-wrapper">
+                                    <select name="ownerHomeState" class="form-select">
+                                        ${getStateOptions(val('owner_state', 'owner_home_state', 'ownerHomeState'))}
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Zip</label>
@@ -217,13 +275,15 @@ export class LeadFormController {
 
                 <div class="form-section">
                     <div class="section-header">
-                        Partner (Optional)
-                        <label class="section-header-actions">
-                            <input type="checkbox" id="hasPartner" ${val('owner2_first_name', 'owner2FirstName') ? 'checked' : ''}> Add Partner
+                        <div class="header-title"><i class="fas fa-users text-accent"></i> Partner (Optional)</div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="hasPartner" ${val('owner2_first_name', 'owner2FirstName') ? 'checked' : ''}>
+                            <span class="slider round"></span>
+                            <span class="toggle-label">Add Partner</span>
                         </label>
                     </div>
                     <div class="section-content ${val('owner2_first_name', 'owner2FirstName') ? '' : 'hidden-section'}" id="partnerSection">
-                        <div class="form-row-six">
+                         <div class="form-grid col-2">
                             <div class="form-group">
                                 <label>First Name</label>
                                 <input type="text" name="owner2FirstName" value="${val('owner2_first_name', 'owner2FirstName')}" class="form-input">
@@ -232,6 +292,8 @@ export class LeadFormController {
                                 <label>Last Name</label>
                                 <input type="text" name="owner2LastName" value="${val('owner2_last_name', 'owner2LastName')}" class="form-input">
                             </div>
+                        </div>
+                        <div class="form-grid col-2">
                             <div class="form-group">
                                 <label>Email</label>
                                 <input type="email" name="owner2Email" value="${val('owner2_email', 'owner2Email')}" class="form-input">
@@ -242,7 +304,7 @@ export class LeadFormController {
                             </div>
                         </div>
 
-                        <div class="form-row-six">
+                        <div class="form-grid col-3">
                             <div class="form-group">
                                 <label>SSN</label>
                                 <input type="text" name="owner2SSN" value="${this.formatSSN(val('owner2_ssn', 'owner2SSN'))}" class="form-input ssn-format" maxlength="11" placeholder="XXX-XX-XXXX">
@@ -257,22 +319,22 @@ export class LeadFormController {
                             </div>
                         </div>
 
-                        <div class="form-row-six">
-                            <div class="form-group full-width">
-                                <label>Home Address</label>
-                                <input type="text" name="owner2HomeAddress" value="${val('owner2_address', 'owner2HomeAddress')}" class="form-input">
-                            </div>
+                        <div class="form-group">
+                            <label>Home Address</label>
+                            <input type="text" name="owner2HomeAddress" value="${val('owner2_address', 'owner2HomeAddress')}" class="form-input">
                         </div>
-                        <div class="form-row-six">
+                        <div class="form-grid col-3-small">
                             <div class="form-group">
                                 <label>City</label>
                                 <input type="text" name="owner2HomeCity" value="${val('owner2_city', 'owner2HomeCity')}" class="form-input">
                             </div>
                             <div class="form-group">
                                 <label>State</label>
-                                <select name="owner2HomeState" class="form-select">
-                                    ${getStateOptions(val('owner2_state', 'owner2HomeState'))}
-                                </select>
+                                <div class="select-wrapper">
+                                    <select name="owner2HomeState" class="form-select">
+                                        ${getStateOptions(val('owner2_state', 'owner2HomeState'))}
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Zip</label>
@@ -282,14 +344,14 @@ export class LeadFormController {
                     </div>
                 </div>
 
-                <div class="form-actions">
+                <div class="form-actions sleek-actions">
                     ${isEdit ? `
                         <button type="button" id="generateAppBtn" class="btn btn-generate">
-                            <i class="fas fa-file-pdf"></i> Generate App
+                            <i class="fas fa-file-pdf"></i> Generate PDF
                         </button>
                     ` : ''}
 
-                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('leadModalWrapper').remove()">Cancel</button>
+                    <button type="button" class="btn btn-text" onclick="document.getElementById('leadModalWrapper').remove()">Cancel</button>
 
                     <button type="submit" class="btn btn-primary btn-wide">
                         ${isEdit ? 'Save Changes' : 'Create Lead'}
@@ -316,16 +378,16 @@ export class LeadFormController {
         const existing = document.getElementById('leadModalWrapper');
         if (existing) existing.remove();
 
-        const title = mode === 'edit' ? 'Edit Lead Details' : 'New Lead Application';
+        const title = mode === 'edit' ? 'Edit Lead' : 'New Lead';
 
         const modalHTML = `
-            <div id="leadModalWrapper" class="modal">
-                <div class="modal-content comprehensive-modal">
-                    <div class="modal-header">
+            <div id="leadModalWrapper" class="modal fade-in">
+                <div class="modal-content comprehensive-modal glass-panel">
+                    <div class="modal-header sleek-header">
                         <h3>${title}</h3>
                         <button class="modal-close" onclick="document.getElementById('leadModalWrapper').remove()">&times;</button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body custom-scrollbar">
                         ${this.getFormHTML(data, mode)}
                     </div>
                 </div>
@@ -340,7 +402,7 @@ export class LeadFormController {
     renderEditTab(container) {
         const conv = this.parent.getSelectedConversation();
         if (!conv) {
-            container.innerHTML = `<div class="empty-state">Select a conversation to edit details.</div>`;
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i> Select a conversation to edit details.</div>`;
             return;
         }
         container.innerHTML = this.getFormHTML(conv, 'edit');

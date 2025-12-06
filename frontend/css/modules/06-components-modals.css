@@ -276,3 +276,159 @@
 .hidden-section {
     display: none;
 }
+
+/* ==========================================================================
+   [SLEEK FORM] Grid Layouts & Modern Styling
+   ========================================================================== */
+
+/* Grid Layouts */
+.form-grid {
+    display: grid;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+.col-2 { grid-template-columns: 1fr 1fr; }
+.col-3 { grid-template-columns: 1fr 1fr 1fr; }
+.col-3-small { grid-template-columns: 2fr 1fr 1fr; }
+.col-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+/* Input With Icons */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.input-icon {
+    position: absolute;
+    left: 12px;
+    color: #8b949e;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+.input-wrapper input {
+    padding-left: 36px !important;
+    width: 100%;
+}
+
+/* Select Wrapper */
+.select-wrapper {
+    position: relative;
+}
+.select-wrapper select {
+    width: 100%;
+}
+
+/* Separator Line */
+.separator {
+    border-top: 1px solid #30363d;
+    margin: 1.25rem 0;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.toggle-switch input { display: none; }
+.toggle-switch .slider {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background-color: #30363d;
+    border-radius: 34px;
+    margin-right: 10px;
+    transition: .3s;
+}
+.toggle-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .3s;
+}
+.toggle-switch input:checked + .slider { background-color: #3b82f6; }
+.toggle-switch input:checked + .slider:before { transform: translateX(16px); }
+.toggle-switch .toggle-label {
+    color: #8b949e;
+    font-weight: 500;
+}
+
+/* Glass Panel Effect */
+.glass-panel {
+    background: rgba(22, 27, 34, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+/* Sleek Header */
+.sleek-header {
+    background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+}
+
+/* Text Accent Color */
+.text-accent {
+    color: #3b82f6;
+    margin-right: 8px;
+}
+
+/* Header Title with Icon */
+.header-title {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: #e6edf3;
+}
+
+/* Section Header Flex Layout */
+.form-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Sleek Actions Footer */
+.sleek-actions {
+    background: #0d1117;
+    margin: 20px -20px -20px;
+    padding: 16px 20px;
+    border-radius: 0 0 12px 12px;
+}
+
+/* Text Button */
+.btn-text {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    cursor: pointer;
+    font-size: 14px;
+}
+.btn-text:hover {
+    color: #e6edf3;
+}
+
+/* Highlight Input (for Requested Amount) */
+.highlight-input input {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+/* Fade In Animation */
+.fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Responsive Grid */
+@media (max-width: 768px) {
+    .col-2, .col-3, .col-3-small, .col-4 {
+        grid-template-columns: 1fr;
+    }
+}
