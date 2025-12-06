@@ -127,7 +127,7 @@ class ConversationCore {
                         <input type="checkbox" class="delete-checkbox" data-conversation-id="${conv.id}" ${isChecked}>
                     </div>
 
-                    ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                    ${unreadCount > 0 ? `<div class="conversation-badge">${unreadCount}</div>` : ''}
                 </div>
             `;
         };
