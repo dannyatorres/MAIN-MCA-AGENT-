@@ -523,3 +523,88 @@ select.form-input {
     width: 16px;
     height: 16px;
 }
+
+/* ==========================================================================
+   [FIX] Selection Lists & Header Buttons
+   ========================================================================== */
+
+/* 1. Sleek "Select All" Buttons */
+.submission-col-header button {
+    background: transparent;
+    border: none;
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.submission-col-header button:hover {
+    background: rgba(59, 130, 246, 0.1);
+    color: #60a5fa;
+}
+
+/* 2. List Items as "Mini Cards" */
+.selection-list label {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.selection-list label:hover {
+    background: #21262d;
+    border-color: #3b82f6;
+    transform: translateX(2px);
+}
+
+/* Custom Checkbox Spacing */
+.selection-list input[type="checkbox"] {
+    accent-color: #3b82f6;
+    width: 16px;
+    height: 16px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+/* 3. Icon Styling */
+.list-icon {
+    font-size: 16px;
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.list-icon.pdf { color: #ef4444; }
+.list-icon.img { color: #a855f7; }
+.list-icon.xls { color: #10b981; }
+.list-icon.lender { color: #eab308; }
+
+/* 4. Text Styling */
+.list-text {
+    font-size: 13px;
+    color: #e6edf3;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.list-subtext {
+    font-size: 11px;
+    color: #8b949e;
+    margin-left: 8px;
+}
