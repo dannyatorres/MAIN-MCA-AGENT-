@@ -175,16 +175,12 @@
             </div>
             <div class="modal-body modal-body-scroll">
                 <div id="csvUploadSection" class="csv-section">
-                    <div id="csvStatusMessages"></div>
                     <div class="upload-drop-zone" id="csvUploadArea">
                         <div class="upload-icon">📄</div>
                         <h4 class="upload-title">Drag and drop your CSV file here</h4>
                         <p class="upload-subtitle">Or click to select a file</p>
                         <input type="file" class="hidden" id="csvFileInput" accept=".csv" />
                         <button class="btn btn-primary" id="csvSelectFileBtn">Select File</button>
-                        <a href="/assets/sample-import.csv" class="download-template-link" download onclick="event.stopPropagation();">
-                            <i class="fas fa-download"></i> Download Sample CSV
-                        </a>
                     </div>
                     <div class="csv-file-info hidden" id="csvFileInfo">
                         <h4 class="info-header">File Information</h4>
