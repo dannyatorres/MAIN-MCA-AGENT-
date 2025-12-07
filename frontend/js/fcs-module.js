@@ -86,56 +86,47 @@ class FCSModule {
     attachModalButtonListeners() {
         console.log('Attaching FCS modal button listeners...');
 
-        // Remove ALL existing handlers by cloning buttons
         const confirmBtn = document.getElementById('confirmFcs');
         const cancelBtn = document.getElementById('cancelFcs');
-        const closeBtn = document.getElementById('closeFCSModalBtn');
+        const closeBtn = document.querySelector('#fcsModal .modal-close'); // Better selector
         const toggleAllBtn = document.getElementById('toggleAllFcsBtn');
 
         if (confirmBtn) {
-            // Clone to remove all existing listeners
+            // Remove old listeners by cloning
             const newConfirmBtn = confirmBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
-            // Attach fresh handler
             newConfirmBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                // 1. Immediate visual feedback
+                newConfirmBtn.disabled = true;
+                newConfirmBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Starting...';
+
                 console.log('✅ Confirm FCS button clicked - calling triggerFCS()');
-                this.triggerFCS();
+                this.triggerFCS(newConfirmBtn); // Pass button reference
             });
 
             console.log('✅ Confirm button handler attached');
         } else {
-            console.warn('⚠️ confirmFcs button not found');
+            console.error('❌ CRITICAL: confirmFcs button NOT found in DOM. Modal HTML might be broken.');
         }
 
         if (cancelBtn) {
             const newCancelBtn = cancelBtn.cloneNode(true);
             cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-
             newCancelBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                console.log('✅ Cancel FCS button clicked');
                 this.hideFCSModal();
             });
-
-            console.log('✅ Cancel button handler attached');
         }
 
         if (closeBtn) {
-            const newCloseBtn = closeBtn.cloneNode(true);
-            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-
-            newCloseBtn.addEventListener('click', (e) => {
+            // Simple close handler
+            closeBtn.onclick = (e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                console.log('✅ Close FCS modal clicked');
                 this.hideFCSModal();
-            });
-
-            console.log('✅ Close button handler attached');
+            };
         }
 
         if (toggleAllBtn) {
@@ -338,45 +329,56 @@ class FCSModule {
         setTimeout(() => this.showFCSModal(), 100);
     }
 
-    async triggerFCS() {
+    async triggerFCS(btnElement = null) {
+        // Prevent double clicks if logic falls through
+        if (this._fcsGenerationInProgress) return;
+
         const selectedDocuments = Array.from(document.querySelectorAll('#fcsDocumentSelection input[type="checkbox"]:checked'))
             .map(checkbox => checkbox.value);
 
         if (selectedDocuments.length === 0) {
             this.utils.showNotification('Please select at least one bank statement', 'error');
+            // Re-enable button if validation fails
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = 'Generate Report';
+            }
             return;
         }
 
-        const selectedElement = document.querySelector('.conversation-item.selected');
-        const conversationId = selectedElement?.dataset?.conversationId;
-        const businessName = selectedElement?.querySelector('.conversation-business')?.textContent || 'Auto-Generated Business';
+        // Get ID safely
+        const conversationId = this.parent.getCurrentConversationId();
+        const selectedElement = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+        const businessName = selectedElement?.querySelector('.business-name')?.textContent ||
+                             this.parent.selectedConversation?.business_name ||
+                             'Auto-Generated Business';
 
         if (!conversationId) {
             this.utils.showNotification('No conversation selected', 'error');
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = 'Generate Report';
+            }
             return;
         }
 
-        // ⭐ CRITICAL: Set flags FIRST before doing ANYTHING else
+        // Set flags
         this._fcsGenerationInProgress = true;
         this._generatingForConversation = conversationId;
         this._generationStartTime = Date.now();
 
-        console.log('🚀 FCS Generation Started:', {
-            conversationId,
-            documentCount: selectedDocuments.length,
-            timestamp: new Date().toISOString()
-        });
+        console.log('🚀 FCS Generation Started:', { conversationId, count: selectedDocuments.length });
 
-        // Close modal
+        // Close modal immediately
         this.hideFCSModal();
 
-        // Switch to FCS tab (this will trigger renderFCSTab which checks flags)
+        // Switch tab
         if (this.parent.intelligence) {
             this.parent.intelligence.switchIntelligenceTab('fcs');
         }
 
-        // Start the actual generation
-        this.startFCSGeneration(conversationId, businessName, selectedDocuments);
+        // Start generation
+        await this.startFCSGeneration(conversationId, businessName, selectedDocuments);
     }
 
     async startFCSGeneration(conversationId, businessName, selectedDocuments) {

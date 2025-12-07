@@ -365,17 +365,34 @@ class DocumentsModule {
         const autoProcessChecks = document.querySelectorAll('.auto-process-checkbox');
         const conversation = this.parent.getSelectedConversation();
 
+        // 1. Get Button References
+        const confirmBtn = document.getElementById('confirmUploadBtn');
+        const cancelBtn = document.getElementById('cancelUploadBtn');
+
         if (!conversation) {
             this.utils.showNotification('No conversation selected', 'error');
             return;
         }
 
+        // 2. UI LOCK: Disable buttons and show loading state
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            confirmBtn.style.opacity = '0.7';
+            confirmBtn.style.cursor = 'not-allowed';
+        }
+        if (cancelBtn) cancelBtn.style.display = 'none'; // Hide cancel during upload
+
         this.showUploadProgress(true);
 
         try {
             const uploadResults = [];
+            const totalFiles = this.selectedFiles.length;
 
-            for (let index = 0; index < this.selectedFiles.length; index++) {
+            for (let index = 0; index < totalFiles; index++) {
+                // 3. Update Progress Bar
+                this.updateProgressBar((index / totalFiles) * 100);
+
                 const file = this.selectedFiles[index];
                 const documentType = typeSelects[index] ? typeSelects[index].value : 'Other';
 
@@ -404,6 +421,9 @@ class DocumentsModule {
                 }
             }
 
+            // Finish Progress Bar
+            this.updateProgressBar(100);
+
             const successCount = uploadResults.filter(r => r.success).length;
             const failedCount = uploadResults.filter(r => !r.success).length;
 
@@ -413,16 +433,40 @@ class DocumentsModule {
                     (failedCount > 0 ? ` (${failedCount} failed)` : ''),
                     successCount === this.selectedFiles.length ? 'success' : 'warning'
                 );
-                this.loadDocuments();
-                this.cancelUpload();
+                // Wait a moment so user sees 100% bar
+                setTimeout(() => {
+                    this.loadDocuments();
+                    this.cancelUpload();
+                }, 500);
             } else {
                 this.utils.showNotification('All uploads failed. Please try again.', 'error');
+                // Re-enable button on total failure
+                this.resetUploadButton(confirmBtn, cancelBtn);
             }
         } catch (error) {
             this.utils.handleError(error, 'Upload error', 'Upload failed. Please try again.');
+            this.resetUploadButton(confirmBtn, cancelBtn);
         }
+    }
 
+    // Helper to reset button state if error occurs
+    resetUploadButton(confirmBtn, cancelBtn) {
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = 'Upload';
+            confirmBtn.style.opacity = '1';
+            confirmBtn.style.cursor = 'pointer';
+        }
+        if (cancelBtn) cancelBtn.style.display = 'inline-block';
         this.showUploadProgress(false);
+    }
+
+    // Helper to update progress bar width
+    updateProgressBar(percentage) {
+        const fill = document.getElementById('progressFill');
+        if (fill) {
+            fill.style.width = `${percentage}%`;
+        }
     }
 
     cancelUpload() {
