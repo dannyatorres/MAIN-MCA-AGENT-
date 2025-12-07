@@ -90,10 +90,13 @@
                         </div>
                         <div class="suggestions-list" id="suggestionsList"></div>
                     </div>
-                    <div class="input-row">
+                    <div class="input-deck-main">
                         <input type="file" id="fileInput" accept="image/*" class="hidden">
                         <button class="attachment-icon" id="attachmentBtn" title="Attach file">📎</button>
                         <textarea class="message-input" id="messageInput" placeholder="Message" rows="1"></textarea>
+                        <button class="icon-btn-small primary-send" id="sendMessageBtn" title="Send">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -101,21 +104,7 @@
             <div class="right-panel">
 
                 <div id="rightPanelHome" class="right-panel-state">
-                    <div class="panel-header">
-                        <div class="pulse-header flex-between-center w-full">
-                            <div>
-                                <h4 class="news-header-title">📰 Industry Wire</h4>
-                                <span class="news-header-subtitle">Daily updates</span>
-                            </div>
-                            <button class="icon-btn-small" onclick="loadMarketNews()" title="Refresh">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="intelligence-content">
-                        <div class="news-feed" id="newsFeedContainer"></div>
-                    </div>
+                    <div class="news-feed" id="newsFeedContainer"></div>
                 </div>
 
                 <div id="rightPanelIntelligence" class="right-panel-state hidden">

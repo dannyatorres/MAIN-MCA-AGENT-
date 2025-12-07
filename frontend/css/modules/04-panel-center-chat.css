@@ -510,6 +510,28 @@
     align-items: flex-end;
 }
 
+/* New Input Deck Layout */
+.input-deck-main {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    width: 100%;
+}
+
+/* Primary Send Button */
+.icon-btn-small.primary-send {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    flex-shrink: 0;
+}
+
+.icon-btn-small.primary-send:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
 #messageInput {
     flex: 1;
     background: #0d1117; /* Dark Inset */

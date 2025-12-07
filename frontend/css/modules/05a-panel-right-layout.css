@@ -87,11 +87,12 @@
     flex: 1;
     overflow-y: auto !important;
     overflow-x: hidden;
-    display: block;
+    display: flex;
+    flex-direction: column;
     position: relative;
     scrollbar-width: thin;
     scrollbar-color: #30363d transparent;
-    padding: 0 16px; /* Add padding to match left panel layout */
+    background: #0f1115;
 }
 
 #rightPanelHome::-webkit-scrollbar {
@@ -100,6 +101,12 @@
 #rightPanelHome::-webkit-scrollbar-thumb {
     background-color: #30363d;
     border-radius: 3px;
+}
+
+/* The Direct Child Container */
+.news-feed {
+    flex: 1;
+    padding: 0 16px;
 }
 
 /* The Content Container */
