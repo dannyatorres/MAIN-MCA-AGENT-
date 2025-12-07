@@ -209,10 +209,10 @@
 .conversation-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px; /* More space between avatar and text */
 
-    margin: 4px 10px;
-    padding: 10px 12px;
+    margin: 6px 12px;
+    padding: 16px 16px; /* Increased padding for bigger feel */
     border-radius: 12px;
 
     /* Gradient background for depth */
@@ -223,7 +223,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
-    min-height: 64px;
+    min-height: auto;
 }
 
 /* Hover: Slightly lighter */
@@ -261,20 +261,21 @@
     color: #ffffff;
     font-weight: 700;
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
+    font-size: 15px; /* Slightly larger text */
     letter-spacing: 0.5px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     text-transform: uppercase;
 
-    /* 4. Size & Shape */
-    width: 44px;
-    height: 44px;
+    /* 4. Size & Shape - Increased from 44px to 46px */
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
 
     /* 5. Layout */
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 /* Active Chat's avatar - Glowing Teal Gem */
@@ -293,7 +294,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 2px;
+    gap: 4px; /* More breathing room between Name and Phone */
 }
 
 /* Row 1: Name ---------------- Date */

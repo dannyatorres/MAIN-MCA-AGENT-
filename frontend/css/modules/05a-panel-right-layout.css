@@ -164,8 +164,9 @@
     /* 4. The Deep Shadow */
     box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 
-    padding: 16px;
-    margin-bottom: 12px;
+    /* Compact padding for feed-style cards */
+    padding: 12px 14px;
+    margin-bottom: 10px;
     cursor: pointer;
     position: relative;
     transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -184,7 +185,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 6px; /* Tighter gap */
 }
 
 /* Source Badge - Rounded Pill Style */
@@ -230,9 +231,9 @@
 .news-title {
     color: #f0f6fc; /* Bright White */
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.4; /* Tighter text */
     font-weight: 600; /* Semi-bold */
-    margin-bottom: 12px;
+    margin-bottom: 8px; /* Reduced gap */
 }
 
 /* Card Footer */
@@ -241,8 +242,8 @@
     justify-content: flex-end; /* Push link to right */
     align-items: center;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding-top: 10px;
-    margin-top: 4px;
+    padding-top: 6px; /* Tighter footer */
+    margin-top: 2px;
 }
 
 .read-more-link {
