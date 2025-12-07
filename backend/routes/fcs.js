@@ -93,13 +93,15 @@ router.post('/trigger/:conversationId', async (req, res) => {
 });
 
 // Get FCS results for a conversation
+// FIX: Query fcs_analyses table (where fcsService saves data) instead of fcs_results
 router.get('/results/:conversationId', async (req, res) => {
     try {
         const { conversationId } = req.params;
         const db = getDatabase();
 
+        // Query the fcs_analyses table (created by fcsService)
         const result = await db.query(
-            'SELECT * FROM fcs_results WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1',
+            'SELECT * FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1',
             [conversationId]
         );
 
@@ -110,9 +112,10 @@ router.get('/results/:conversationId', async (req, res) => {
             });
         }
 
+        // Return consistent structure with 'analysis' key
         res.json({
             success: true,
-            fcs_results: result.rows[0]
+            analysis: result.rows[0] // Contains fcs_report, extracted_business_name, etc.
         });
 
     } catch (error) {

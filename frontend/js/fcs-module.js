@@ -375,12 +375,15 @@ class FCSModule {
         }
 
         try {
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs?_=${Date.now()}`);
+            // FIX: Correct URL to match backend route
+            const result = await this.parent.apiCall(`/api/fcs/results/${conversationId}?_=${Date.now()}`);
+
             if (result.success && result.analysis) {
                 this.displayFCSReport({
-                    report_content: result.analysis.report,
-                    generated_at: result.analysis.completedAt,
-                    business_name: result.analysis.businessName
+                    // FIX: Use correct field names from fcs_analyses table
+                    report_content: result.analysis.fcs_report,
+                    generated_at: result.analysis.completed_at,
+                    business_name: result.analysis.extracted_business_name
                 });
             } else {
                 if (fcsResults) {
@@ -401,12 +404,28 @@ class FCSModule {
         } catch (e) {
             console.error('Error loading FCS:', e);
             if (fcsResults) {
-                fcsResults.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #ef4444;">
-                        <p>Error loading FCS report: ${e.message}</p>
-                        <button onclick="window.conversationUI.fcs.loadFCSData()" class="btn btn-primary" style="margin-top: 16px;">Retry</button>
-                    </div>
-                `;
+                // Handle 404 gracefully (just means no report yet)
+                if (e.message.includes('404')) {
+                    fcsResults.innerHTML = `
+                        <div style="text-align: center; padding: 60px 40px;">
+                            <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+                            <h3 style="color: #e6edf3; margin-bottom: 12px;">No FCS Report Available</h3>
+                            <p style="color: #8b949e; margin-bottom: 24px;">Generate a report to analyze your financial documents</p>
+                            <button onclick="window.conversationUI.fcs.showFCSModal()"
+                                    class="btn btn-primary"
+                                    style="padding: 10px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                Generate FCS Report
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    fcsResults.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #ef4444;">
+                            <p>Error loading FCS report: ${e.message}</p>
+                            <button onclick="window.conversationUI.fcs.loadFCSData()" class="btn btn-primary" style="margin-top: 16px;">Retry</button>
+                        </div>
+                    `;
+                }
             }
         }
     }
