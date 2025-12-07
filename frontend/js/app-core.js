@@ -157,12 +157,13 @@ class CommandCenter {
                 console.error('AIAssistant class not found!');
             }
 
-            // 8.5 Email Tab
+            // 8.5 Email Tab (Optional - may not exist yet)
             console.log('8.5 Initializing Email Tab...');
             if (typeof EmailTab !== 'undefined') {
                 this.emailTab = new EmailTab(this);
             } else {
-                console.error('EmailTab class not found!');
+                console.warn('⚠️ EmailTab class missing - feature disabled (check imports)');
+                // Do not throw error, just continue
             }
 
             // 9. Stats Module

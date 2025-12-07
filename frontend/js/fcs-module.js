@@ -13,16 +13,19 @@ class FCSModule {
     }
 
     init() {
-        if (this._initialized) {
-            console.warn('🔄 FCS Module already initialized, skipping duplicate init()');
-            return;
-        }
+        if (this._initialized) return;
 
-        console.log('🚀 Initializing FCS Module for the first time');
+        console.log('🚀 Initializing FCS Module');
         this._initialized = true;
 
+        // ONLY setup the main button delegation here.
+        // DO NOT call setupModalEventListeners() here - modal may not exist yet.
         this.setupFCSButtonDelegation();
-        this.setupModalEventListeners();
+
+        // Check if modal exists, if not, wait until showFCSModal is called
+        if (document.getElementById('fcsModal')) {
+            this.setupModalEventListeners();
+        }
     }
 
     setupFCSButtonDelegation() {
@@ -166,36 +169,28 @@ class FCSModule {
     async showFCSModal() {
         console.log('showFCSModal called');
 
-        const modal = document.getElementById('fcsModal');
-        if (!modal) {
-            console.error('❌ FCS Modal element not found in DOM');
-            console.log('Available modals:', Array.from(document.querySelectorAll('[id$="Modal"]')).map(m => m.id));
-
-            // Try to create modal if it doesn't exist
+        // 1. Create Modal if it doesn't exist
+        if (!document.getElementById('fcsModal')) {
             this.createFCSModalIfMissing();
-            return;
         }
 
-        // Re-attach event listeners when modal is shown
+        const modal = document.getElementById('fcsModal');
+
+        // 2. NOW attach the listeners (because we know the elements exist)
         this.attachModalButtonListeners();
 
-        // CRITICAL: Get conversation ID from the CURRENTLY SELECTED conversation item in the UI
+        // 3. Get conversation context
         const selectedElement = document.querySelector('.conversation-item.selected');
-        const conversationId = selectedElement?.dataset?.conversationId;
+        const conversationId = selectedElement?.dataset?.conversationId || this.parent.getCurrentConversationId();
 
         if (!conversationId) {
-            console.error('No conversation selected');
             this.parent.utils?.showNotification('Please select a conversation first', 'error');
             return;
         }
 
-        // FORCE update the parent's current conversation ID
+        // 4. Show the modal
         this.parent.currentConversationId = conversationId;
 
-        console.log('Opening FCS modal for conversation:', conversationId);
-        console.log('Selected conversation element:', selectedElement?.querySelector('.conversation-business')?.textContent);
-
-        // Reset modal state
         const confirmBtn = document.getElementById('confirmFcs');
         if (confirmBtn) {
             confirmBtn.disabled = false;
@@ -204,7 +199,7 @@ class FCSModule {
 
         modal.style.display = 'flex';
 
-        // ALWAYS fetch fresh documents - don't rely on cached data
+        // 5. Load documents
         await this.fetchAndDisplayFCSDocuments(conversationId);
 
         console.log('FCS modal opened with fresh documents for conversation:', conversationId);

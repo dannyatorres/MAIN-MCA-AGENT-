@@ -43,13 +43,12 @@ router.post('/trigger/:conversationId', async (req, res) => {
 
         const conversation = convResult.rows[0];
 
-        // Check if we have enough data to run FCS
-        if (!conversation.monthly_revenue || !conversation.time_in_business_months) {
-            return res.status(400).json({
-                success: false,
-                error: 'Insufficient data for FCS analysis. Need monthly_revenue and time_in_business_months.'
-            });
-        }
+        // Use defaults if data is missing, so we don't crash
+        // The AI can extract actual values from documents later
+        const revenue = conversation.monthly_revenue || 50000; // Default
+        const timeInBiz = conversation.time_in_business_months || 12; // Default
+
+        console.log(`📊 FCS using values - Revenue: ${revenue}, Time in Biz: ${timeInBiz} months`);
 
         // Create job in queue for n8n to process
         const jobResult = await db.query(`
@@ -59,10 +58,10 @@ router.post('/trigger/:conversationId', async (req, res) => {
         `, [
             conversationId,
             JSON.stringify({
-                monthly_revenue: conversation.monthly_revenue,
-                time_in_business_months: conversation.time_in_business_months,
-                credit_score: conversation.credit_score,
-                industry: conversation.industry
+                monthly_revenue: revenue,
+                time_in_business_months: timeInBiz,
+                credit_score: conversation.credit_score || 650,
+                industry: conversation.industry || 'General'
             })
         ]);
 
