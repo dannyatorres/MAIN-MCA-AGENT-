@@ -5,6 +5,7 @@ class CSVImportModalManager {
         this.uploadedFile = null;
         this.apiBase = '/api/csv-import';
         this.modal = null;
+        this.eventsInitialized = false; // Prevents duplicate listeners
     }
 
     openModal() {
@@ -13,8 +14,9 @@ class CSVImportModalManager {
             // Remove hidden class to show the main modal container
             this.modal.classList.remove('hidden');
             this.modal.style.display = 'flex';
+
+            this.initializeEventListeners(); // Safe to call now (checks flag internally)
             this.resetModal();
-            this.initializeEventListeners();
         }
     }
 
@@ -46,6 +48,9 @@ class CSVImportModalManager {
     }
 
     initializeEventListeners() {
+        // PREVENT DUPLICATE LISTENERS
+        if (this.eventsInitialized) return;
+
         // File upload events
         const uploadArea = document.getElementById('csvUploadArea');
         const fileInput = document.getElementById('csvFileInput');
@@ -89,11 +94,20 @@ class CSVImportModalManager {
 
         // Close button
         document.getElementById('closeCsvImportModal')?.addEventListener('click', () => this.closeModal());
+
+        // Mark as initialized so we don't do this again
+        this.eventsInitialized = true;
     }
 
     async handleFileSelect(file) {
         if (!file.name.toLowerCase().endsWith('.csv')) {
             alert('Please select a CSV file.');
+            return;
+        }
+
+        // File size safety check (50MB limit)
+        if (file.size > 50 * 1024 * 1024) {
+            alert('File size must be under 50MB.');
             return;
         }
 
