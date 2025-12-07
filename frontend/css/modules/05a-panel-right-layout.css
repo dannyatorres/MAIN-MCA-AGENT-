@@ -289,7 +289,22 @@
 
 #intelligenceContent {
     flex: 1;
-    overflow: hidden;
+    /* CHANGE THIS: */
+    overflow-y: auto;  /* Was 'hidden' or 'visible' */
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
+    
+    /* ADD THIS to ensure smooth scrolling */
+    scrollbar-width: thin;
+    scrollbar-color: #30363d transparent;
+}
+
+/* Add this to style the scrollbar for Chrome/Safari/Edge */
+#intelligenceContent::-webkit-scrollbar {
+    width: 6px;
+}
+#intelligenceContent::-webkit-scrollbar-thumb {
+    background-color: #30363d;
+    border-radius: 3px;
 }
