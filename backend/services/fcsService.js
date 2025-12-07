@@ -222,20 +222,28 @@ class FCSService {
 
     async generateFCSAnalysisWithGemini(extractedData, businessName) {
         await this.initializeOpenAI();
+        
+        // Prepare the data
         const allText = extractedData.map(d => `=== ${d.filename} ===\n${d.text.substring(0, 15000)}`).join('\n\n');
         
-        // Use the exact prompt you had before (condensed here for brevity)
         const prompt = `
-            You are an MCA Underwriter. Analyze these bank statements for: ${businessName}.
-            EXTRACTED_BUSINESS_NAME: [Name]
+            You are an expert MCA Underwriter. Analyze these bank statements for: ${businessName}.
             
-            Create a File Control Sheet (FCS).
+            First, extract the exact business name found in the documents.
+            Output format: EXTRACTED_BUSINESS_NAME: [Name]
+            
+            Then, create a comprehensive File Control Sheet (FCS) following these rules:
+            1. Identify Revenue, Deposits, Negative Days, and Ending Balance for each month.
+            2. Identify any existing MCA positions (Lender Name, Daily/Weekly Amount).
+            3. Calculate the "True Revenue" (excluding transfers/loans).
             
             Bank Data:
             ${allText}
             
-            Output strictly in Markdown. NO asterisks.
+            Output strictly in Markdown. NO asterisks or bolding stars (**).
         `;
+
+        console.log('🤖 Sending to OpenAI (GPT-4o)...');
 
         const completion = await this.openai.chat.completions.create({
             model: "gpt-4o",
@@ -243,7 +251,17 @@ class FCSService {
             temperature: 0.2
         });
 
-        return completion.choices[0].message.content;
+        const fcsAnalysis = completion.choices[0].message.content;
+
+        // --- 🔍 RESTORED LOGGING HERE ---
+        console.log('\n=============================');
+        console.log('📊 GENERATED FCS REPORT:');
+        console.log('=============================');
+        console.log(fcsAnalysis);
+        console.log('=============================\n');
+        // --------------------------------
+
+        return fcsAnalysis;
     }
 
     parseFCSMetadata(report) {
