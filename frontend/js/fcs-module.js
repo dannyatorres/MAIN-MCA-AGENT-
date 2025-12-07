@@ -348,7 +348,7 @@ class FCSModule {
 
         // Get ID safely
         const conversationId = this.parent.getCurrentConversationId();
-        const selectedElement = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+        const selectedElement = document.querySelector('.conversation-item.selected');
         const businessName = selectedElement?.querySelector('.business-name')?.textContent ||
                              this.parent.selectedConversation?.business_name ||
                              'Auto-Generated Business';
@@ -362,60 +362,72 @@ class FCSModule {
             return;
         }
 
-        // Set flags
+        // 1. Set flags
         this._fcsGenerationInProgress = true;
         this._generatingForConversation = conversationId;
         this._generationStartTime = Date.now();
 
-        console.log('🚀 FCS Generation Started:', { conversationId, count: selectedDocuments.length });
+        console.log('🚀 FCS Generation Triggered for:', conversationId);
 
-        // Close modal immediately
+        // 2. Hide Modal
         this.hideFCSModal();
 
-        // Switch tab
+        // 3. IMMEDIATE UI FEEDBACK (Fixes "nothing happens")
+        this.showFCSProgress('Initializing FCS Generation...');
+
+        // 4. Switch Tab (FIXED FUNCTION NAME)
+        // Was: switchIntelligenceTab (which crashed), Now: switchTab
         if (this.parent.intelligence) {
-            this.parent.intelligence.switchIntelligenceTab('fcs');
+            try {
+                this.parent.intelligence.switchTab('fcs');
+            } catch (e) {
+                console.warn('Could not switch tab automatically:', e);
+            }
         }
 
-        // Start generation
+        // 5. Start generation
         await this.startFCSGeneration(conversationId, businessName, selectedDocuments);
     }
 
     async startFCSGeneration(conversationId, businessName, selectedDocuments) {
-        console.log('🔵 Starting FCS generation for:', conversationId);
+        console.log('🔵 Sending request to backend...');
         console.log('📋 Generation parameters:', {
             businessName,
             documentCount: selectedDocuments.length,
             documentIds: selectedDocuments
         });
 
-        // Show initial progress
-        this.showFCSProgress('Starting FCS generation...');
-
         try {
-            // ✅ FIXED: Send business name and document IDs to backend
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs/generate`, {
+            // FIX: Route updated to match fcs.js backend route
+            // Old: /api/conversations/${conversationId}/fcs/generate
+            // New: /api/fcs/trigger/${conversationId}
+            const result = await this.parent.apiCall(`/api/fcs/trigger/${conversationId}`, {
                 method: 'POST',
                 body: JSON.stringify({
                     businessName: businessName,
                     documentIds: selectedDocuments
                 })
             });
+
             console.log('✅ FCS API response:', result);
 
             if (result.success) {
-                console.log('⏳ FCS generation started, beginning status polling...');
-
                 // Update progress message
-                this.showFCSProgress('Extracting text from documents with Document AI...');
+                this.showFCSProgress('Request queued! Waiting for AI analysis...');
 
-                // Start polling immediately (every 5 seconds)
+                // Start polling
                 setTimeout(() => {
                     console.log('📊 Starting to poll for FCS completion...');
                     this.pollForFCSStatus(conversationId);
-                }, 5000);  // First poll after 5 seconds
+                }, 2000);
             } else {
-                throw new Error(result.error || 'Failed to start generation');
+                // Handle "skipped" or other logical failures
+                if (result.status === 'skipped') {
+                    this.showFCSProgress('Analysis already in progress...');
+                    setTimeout(() => this.pollForFCSStatus(conversationId), 1000);
+                } else {
+                    throw new Error(result.error || 'Failed to start generation');
+                }
             }
         } catch (error) {
             console.error('❌ Error starting FCS:', error);
@@ -428,7 +440,7 @@ class FCSModule {
             // Hide progress indicator
             this.hideFCSProgress();
 
-            this.utils.showNotification('Failed to start FCS generation: ' + error.message, 'error');
+            this.utils.showNotification('Failed to start FCS: ' + error.message, 'error');
 
             // Show error in UI
             const fcsResults = document.getElementById('fcsResults');
