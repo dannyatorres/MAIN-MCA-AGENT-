@@ -8,7 +8,19 @@ class CSVImportModalManager {
         this.validationResults = null;
         this.importId = null;
         this.apiBase = '/api/csv-import';
-        this.modal = null;
+        this.modal = document.getElementById('csvImportModal');
+
+        // Fix: Initialize listeners only once
+        this.listenersAttached = false;
+        this.init();
+    }
+
+    init() {
+        // Attach listeners immediately if modal exists
+        if (this.modal && !this.listenersAttached) {
+            this.initializeEventListeners();
+            this.listenersAttached = true;
+        }
     }
 
     openModal() {
@@ -17,7 +29,11 @@ class CSVImportModalManager {
             this.modal.classList.remove('hidden');
             this.modal.style.display = 'flex';
             this.resetModal();
-            this.initializeEventListeners();
+            // Ensure listeners are attached even if they weren't in constructor
+            if (!this.listenersAttached) {
+                this.initializeEventListeners();
+                this.listenersAttached = true;
+            }
             this.updateStepDisplay();
         }
     }
@@ -58,66 +74,79 @@ class CSVImportModalManager {
     }
 
     initializeEventListeners() {
-        // File upload events
+        console.log('Initializing CSV Modal Listeners...');
+
         const uploadArea = document.getElementById('csvUploadArea');
         const fileInput = document.getElementById('csvFileInput');
         const selectFileBtn = document.getElementById('csvSelectFileBtn');
 
-        // Drag and drop
-        uploadArea?.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.style.borderColor = '#3b82f6';
-            uploadArea.style.background = 'rgba(59, 130, 246, 0.05)';
-        });
+        // Drag and Drop Logic - prevent defaults on all drag events
+        if (uploadArea) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
 
-        uploadArea?.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadArea.style.borderColor = '#d1d5db';
-            uploadArea.style.background = 'transparent';
-        });
+            uploadArea.addEventListener('dragover', () => {
+                uploadArea.style.borderColor = '#3b82f6';
+                uploadArea.style.background = 'rgba(59, 130, 246, 0.05)';
+            });
 
-        uploadArea?.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.style.borderColor = '#d1d5db';
-            uploadArea.style.background = 'transparent';
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                this.handleFileSelect(files[0]);
-            }
-        });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.borderColor = '#d1d5db';
+                uploadArea.style.background = 'transparent';
+            });
 
-        // Click to upload
-        uploadArea?.addEventListener('click', () => {
-            fileInput?.click();
-        });
+            uploadArea.addEventListener('drop', (e) => {
+                uploadArea.style.borderColor = '#d1d5db';
+                uploadArea.style.background = 'transparent';
+                const files = e.dataTransfer.files;
+                console.log('File Dropped:', files);
+                if (files.length > 0) {
+                    this.handleFileSelect(files[0]);
+                }
+            });
 
-        selectFileBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileInput?.click();
-        });
+            // Click area to upload
+            uploadArea.addEventListener('click', () => fileInput?.click());
+        }
 
-        fileInput?.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                this.handleFileSelect(e.target.files[0]);
-            }
-        });
+        // Button Click
+        if (selectFileBtn) {
+            selectFileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput?.click();
+            });
+        }
 
-        // Navigation buttons
+        // File Input Change
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                console.log('File Input Changed:', e.target.files);
+                if (e.target.files.length > 0) {
+                    this.handleFileSelect(e.target.files[0]);
+                }
+            });
+        }
+
+        // Navigation Buttons
         document.getElementById('csvBackToUploadBtn')?.addEventListener('click', () => this.goToStep(1));
         document.getElementById('csvValidateMappingBtn')?.addEventListener('click', () => this.validateMapping());
         document.getElementById('csvBackToMappingBtn')?.addEventListener('click', () => this.goToStep(2));
         document.getElementById('csvProceedToImportBtn')?.addEventListener('click', () => this.startImport());
         document.getElementById('csvViewResultsBtn')?.addEventListener('click', () => this.viewResults());
-
-        // Close button
         document.getElementById('closeCsvImportModal')?.addEventListener('click', () => this.closeModal());
     }
 
     async handleFileSelect(file) {
-        console.log('📁 File selected:', file.name);
+        console.log('Processing file:', file.name);
 
+        // Relaxed check - allow uppercase CSV or standard
         if (!file.name.toLowerCase().endsWith('.csv')) {
-            this.showMessage('Please select a CSV file.', 'error');
+            console.error('Invalid file type');
+            this.showMessage('Please select a valid .csv file.', 'error');
             return;
         }
 
@@ -129,10 +158,11 @@ class CSVImportModalManager {
         this.uploadedFile = file;
         this.showFileInfo(file);
 
+        // Start the upload flow
         try {
             await this.uploadFile(file);
         } catch (error) {
-            console.error('❌ Upload failed:', error);
+            console.error('Upload failed:', error);
             this.showMessage('Failed to upload file: ' + error.message, 'error');
         }
     }
@@ -142,12 +172,7 @@ class CSVImportModalManager {
         const fileDetails = document.getElementById('csvFileDetails');
 
         if (fileDetails) {
-            fileDetails.innerHTML = `
-                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Name:</strong> ${file.name}</p>
-                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Size:</strong> ${this.formatFileSize(file.size)}</p>
-                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Type:</strong> ${file.type || 'text/csv'}</p>
-                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Last Modified:</strong> ${new Date(file.lastModified).toLocaleString()}</p>
-            `;
+            fileDetails.innerHTML = `<strong>${file.name}</strong> (${this.formatFileSize(file.size)})`;
         }
 
         if (fileInfo) {
@@ -164,21 +189,20 @@ class CSVImportModalManager {
     }
 
     async uploadFile(file) {
-        console.log('📤 Starting file upload');
+        console.log('Uploading file to server...');
+        this.showMessage('Uploading CSV file...', 'success');
 
         const formData = new FormData();
         formData.append('csvFile', file);
 
         try {
-            this.showMessage('Uploading CSV file...', 'success');
-
             const response = await fetch(`${this.apiBase}/upload`, {
                 method: 'POST',
                 body: formData
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Server Error: ${response.status}`);
             }
 
             const result = await response.json();
@@ -200,7 +224,8 @@ class CSVImportModalManager {
             }
 
         } catch (error) {
-            console.error('❌ Upload error:', error);
+            console.error('Upload error:', error);
+            this.goToStep(1); // Go back to start on error
             this.showMessage('Upload failed: ' + error.message, 'error');
         }
     }
@@ -335,7 +360,7 @@ class CSVImportModalManager {
         if (!this.validationResults.hasErrors && !this.validationResults.hasDuplicates) {
             const successItem = document.createElement('div');
             successItem.style.cssText = 'padding: 16px; background: #ecfdf5; border: 1px solid #10b981; border-radius: 6px;';
-            successItem.innerHTML = '<h4 style="margin: 0 0 4px 0; color: #065f46;">✓ All data looks good!</h4><p style="margin: 0; color: #065f46; font-size: 13px;">No validation errors or duplicates found.</p>';
+            successItem.innerHTML = '<h4 style="margin: 0 0 4px 0; color: #065f46;">All data looks good!</h4><p style="margin: 0; color: #065f46; font-size: 13px;">No validation errors or duplicates found.</p>';
             validationResults.appendChild(successItem);
         }
     }
@@ -430,7 +455,7 @@ class CSVImportModalManager {
 
         // Auto-refresh conversation list immediately
         if (typeof window.loadConversations === 'function') {
-            console.log('🔄 Auto-refreshing conversation list...');
+            console.log('Auto-refreshing conversation list...');
             window.loadConversations();
         }
 
@@ -474,19 +499,11 @@ class CSVImportModalManager {
     }
 
     goToStep(step) {
-        // Hide all sections
-        document.getElementById('csvUploadSection').style.display = 'none';
-        document.getElementById('csvMappingSection').style.display = 'none';
-        document.getElementById('csvValidationSection').style.display = 'none';
-        document.getElementById('csvImportSection').style.display = 'none';
-
-        // Show current section
-        const sections = ['csvUploadSection', 'csvMappingSection', 'csvValidationSection', 'csvImportSection'];
-        const currentSection = document.getElementById(sections[step - 1]);
-        if (currentSection) {
-            currentSection.style.display = 'block';
-        }
-
+        // Simple visibility toggler
+        ['csvUploadSection', 'csvMappingSection', 'csvValidationSection', 'csvImportSection'].forEach((id, index) => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = (index + 1 === step) ? 'block' : 'none';
+        });
         this.currentStep = step;
         this.updateStepDisplay();
     }
@@ -503,6 +520,8 @@ class CSVImportModalManager {
                 // Active step
                 stepElement.style.borderColor = '#3b82f6';
                 stepElement.style.background = '#eff6ff';
+                stepElement.style.opacity = '1';
+                stepElement.style.fontWeight = 'bold';
                 if (stepNumber) {
                     stepNumber.style.background = '#3b82f6';
                     stepNumber.style.color = 'white';
@@ -514,6 +533,8 @@ class CSVImportModalManager {
                 // Completed step
                 stepElement.style.borderColor = '#10b981';
                 stepElement.style.background = '#ecfdf5';
+                stepElement.style.opacity = '1';
+                stepElement.style.fontWeight = 'normal';
                 if (stepNumber) {
                     stepNumber.style.background = '#10b981';
                     stepNumber.style.color = 'white';
@@ -525,6 +546,8 @@ class CSVImportModalManager {
                 // Future step
                 stepElement.style.borderColor = 'transparent';
                 stepElement.style.background = '#f9fafb';
+                stepElement.style.opacity = '0.5';
+                stepElement.style.fontWeight = 'normal';
                 if (stepNumber) {
                     stepNumber.style.background = '#9ca3af';
                     stepNumber.style.color = 'white';
@@ -538,26 +561,18 @@ class CSVImportModalManager {
 
     showMessage(message, type) {
         const statusMessages = document.getElementById('csvStatusMessages');
-        if (!statusMessages) return;
+        if (!statusMessages) {
+            console.error('Missing #csvStatusMessages in HTML! Message was:', message);
+            return;
+        }
 
-        const messageElement = document.createElement('div');
-        messageElement.style.cssText = `
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            font-size: 14px;
-            ${type === 'success' ? 'background: #ecfdf5; border: 1px solid #10b981; color: #065f46;' : 'background: #fef2f2; border: 1px solid #ef4444; color: #991b1b;'}
+        statusMessages.innerHTML = `
+            <div style="padding: 10px; margin-bottom: 10px; border-radius: 4px;
+                 background: ${type === 'error' ? '#fee2e2' : '#dcfce7'};
+                 color: ${type === 'error' ? '#991b1b' : '#166534'};">
+                ${message}
+            </div>
         `;
-        messageElement.textContent = message;
-
-        statusMessages.appendChild(messageElement);
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (messageElement.parentNode) {
-                messageElement.parentNode.removeChild(messageElement);
-            }
-        }, 5000);
     }
 }
 
