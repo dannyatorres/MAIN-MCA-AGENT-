@@ -43,29 +43,36 @@ class FCSService {
         console.log('🔄 Initializing Document AI...');
 
         try {
-            // CRITICAL: Force REST transport to avoid gRPC issues on Railway
             process.env.GOOGLE_CLOUD_USE_REST = 'true';
 
-            // Use the JSON key from Railway Variable
+            let credentials;
+
             if (process.env.GOOGLE_CREDENTIALS_JSON) {
-                console.log('🔑 Using inline credentials from GOOGLE_CREDENTIALS_JSON');
-                const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+                let rawEnv = process.env.GOOGLE_CREDENTIALS_JSON.trim();
+
+                // 🛡️ SMART CHECK: If it doesn't start with '{', it's Base64. Decode it.
+                if (!rawEnv.startsWith('{')) {
+                    console.log('🔑 Detected Base64 credentials - Decoding...');
+                    const buffer = Buffer.from(rawEnv, 'base64');
+                    rawEnv = buffer.toString('utf-8');
+                }
+
+                console.log('🔑 Parsing credentials JSON...');
+                credentials = JSON.parse(rawEnv);
 
                 this.documentAI = new DocumentProcessorServiceClient({
                     credentials: credentials,
                     projectId: process.env.GOOGLE_PROJECT_ID,
-                    fallback: 'rest' // Explicitly fallback to REST
+                    fallback: 'rest'
                 });
             } else {
                 throw new Error('Missing GOOGLE_CREDENTIALS_JSON variable');
             }
 
-            // Processor Configuration
             this.projectId = process.env.GOOGLE_PROJECT_ID;
-            this.location = process.env.DOCUMENT_AI_LOCATION || 'us'; // e.g. 'us' or 'eu'
+            this.location = process.env.DOCUMENT_AI_LOCATION || 'us';
             this.processorId = process.env.DOCUMENT_AI_PROCESSOR_ID; 
             
-            // Construct the full resource name
             this.processorName = `projects/${this.projectId}/locations/${this.location}/processors/${this.processorId}`;
 
             this.isDocumentAIInitialized = true;
