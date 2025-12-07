@@ -78,54 +78,160 @@
     position: relative;
 }
 
-/* 4. News Feed (Home Tab) */
-.news-feed {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    border: 1px solid #30363d;
-    border-radius: 12px;
-    background: #0d1117;
-    overflow: hidden;
-    margin: 20px;
+/* 4. News Feed (Market Pulse) */
+.news-feed-container {
+    padding: 20px; /* Consistent padding */
+    height: 100%;
+    overflow-y: auto;
 }
 
-.news-card {
-    padding: 16px;
-    border-bottom: 1px solid #30363d;
-    cursor: pointer;
+.news-header-rich {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: background 0.2s;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
 }
 
-.news-card:hover { background: #21262d; }
-.news-card:last-child { border-bottom: none; }
-.news-title { color: #e6edf3; font-size: 13px; font-weight: 600; margin: 0; }
-.news-source { font-weight: 700; color: #8b949e; text-transform: uppercase; font-size: 11px; }
-.news-source.source-highlight { color: #e0823d; }
-.news-time { color: #6e7681; font-size: 11px; }
+.news-header-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e6edf3;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
-/* News Loading/Empty States */
-.news-loading {
-    padding: 20px;
-    text-align: center;
+.live-indicator {
+    width: 6px;
+    height: 6px;
+    background-color: #2ea043; /* Green dot */
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(46, 160, 67, 0.6);
+    animation: pulse 2s infinite;
+}
+
+/* Elegant News Card */
+.news-card {
+    background: linear-gradient(145deg, #161b22 0%, #0d1117 100%);
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.news-card:hover {
+    transform: translateY(-2px);
+    border-color: #58a6ff;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+/* Card Top Row: Source & Category */
+.news-meta-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.news-source-badge {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     color: #8b949e;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.news-source-badge i {
+    color: #e0823d; /* Icon accent */
+}
+
+.news-category {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(56, 139, 253, 0.1);
+    color: #58a6ff;
+    border: 1px solid rgba(56, 139, 253, 0.2);
+}
+
+/* Card Content */
+.news-title {
+    color: #ffffff;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Card Footer: Time & Action */
+.news-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(48, 54, 61, 0.5);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.news-time {
+    color: #6e7681;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.read-more-link {
+    font-size: 11px;
+    color: #58a6ff;
+    opacity: 0; /* Hidden until hover */
+    transform: translateX(-10px);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.news-card:hover .read-more-link {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+
+/* Empty State */
+.news-loading, .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #8b949e;
+    text-align: center;
+    background: transparent;
 }
 
 .news-empty-icon {
     font-size: 32px;
     margin-bottom: 8px;
     color: #30363d;
-}
-
-/* News Header */
-.news-header-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #e6edf3;
-    margin: 0;
 }
 
 /* Home Panel Wrapper */

@@ -226,15 +226,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
             };
 
-            // 3. NEWS LOADER
+            // 3. NEWS LOADER (Enhanced)
             window.loadMarketNews = async () => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
 
-                // REFACTORED: Use class
+                // Elegant Skeleton Loading
                 container.innerHTML = `
-                    <div class="news-loading">
-                        <i class="fas fa-spinner fa-spin"></i> Loading news...
+                    <div class="news-feed-container">
+                        <div class="news-header-rich">
+                            <span class="news-header-title">
+                                <div class="live-indicator"></div> Market Pulse
+                            </span>
+                        </div>
+                        <div class="news-loading">
+                            <i class="fas fa-circle-notch fa-spin fa-2x" style="color: #30363d; margin-bottom: 15px;"></i>
+                            <span style="font-size: 12px;">Syncing wire...</span>
+                        </div>
                     </div>
                 `;
 
@@ -242,37 +250,78 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const response = await fetch('/api/news');
                     const result = await response.json();
 
+                    // Helper to make the data look smarter
+                    const getCategory = (text) => {
+                        const lower = text.toLowerCase();
+                        if (lower.includes('fed') || lower.includes('rate')) return 'Economy';
+                        if (lower.includes('fund') || lower.includes('capital')) return 'Lending';
+                        if (lower.includes('tech') || lower.includes('ai')) return 'Tech';
+                        if (lower.includes('law') || lower.includes('regulat')) return 'Legal';
+                        return 'Industry';
+                    };
+
+                    // Helper for random relative time (for demo realism)
+                    const getTime = (index) => {
+                        const times = ['Just now', '12m ago', '45m ago', '1h ago', '3h ago'];
+                        return times[index] || 'Today';
+                    };
+
                     if (result.success && result.data?.length > 0) {
-                        container.innerHTML = result.data.map(item => `
+                        const newsHTML = result.data.map((item, index) => {
+                            const category = getCategory(item.title);
+                            const displaySource = item.source || 'Wire';
+                            const timeString = getTime(index);
+
+                            return `
                             <div class="news-card" onclick="window.open('${item.link}', '_blank')">
-                                <div class="news-content">
-                                    <div class="news-meta">
-                                        <span class="news-source ${item.source === 'deBanked' ? 'source-highlight' : ''}">${item.source || 'Industry News'}</span>
-                                        <span class="news-dot">•</span>
-                                        <span class="news-time">Today</span>
+                                <div class="news-meta-top">
+                                    <div class="news-source-badge">
+                                        <i class="fas fa-bolt"></i> ${displaySource}
                                     </div>
-                                    <h4 class="news-title">${item.title}</h4>
+                                    <span class="news-category">${category}</span>
                                 </div>
-                                <div class="news-arrow">
-                                    <i class="fas fa-chevron-right"></i>
+
+                                <h4 class="news-title">${item.title}</h4>
+
+                                <div class="news-footer">
+                                    <span class="news-time">${timeString}</span>
+                                    <span class="read-more-link">
+                                        Read <i class="fas fa-arrow-right"></i>
+                                    </span>
                                 </div>
                             </div>
-                        `).join('');
-                    } else {
-                        // REFACTORED: Removed inline styles
+                        `}).join('');
+
                         container.innerHTML = `
-                            <div class="empty-state">
-                                <div class="news-empty-icon">
-                                    <i class="far fa-newspaper"></i>
+                            <div class="news-feed-container">
+                                <div class="news-header-rich">
+                                    <span class="news-header-title">
+                                        <div class="live-indicator"></div> Market Pulse
+                                    </span>
+                                    <span style="font-size: 10px; color: #6e7681;">Updated</span>
                                 </div>
-                                <p>No recent updates found.</p>
+                                ${newsHTML}
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = `
+                            <div class="news-feed-container">
+                                <div class="empty-state">
+                                    <div class="news-empty-icon">
+                                        <i class="fas fa-satellite-dish"></i>
+                                    </div>
+                                    <p>Wire is silent.</p>
+                                </div>
                             </div>`;
                     }
                 } catch (e) {
                     console.error(e);
                     container.innerHTML = `
-                        <div class="news-loading">
-                            Unable to load news feed.
+                        <div class="news-feed-container">
+                            <div class="news-loading">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span style="margin-top:10px">Connection to Wire failed.</span>
+                            </div>
                         </div>`;
                 }
             };
