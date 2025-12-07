@@ -260,17 +260,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return 'Industry';
                     };
 
-                    // Helper for random relative time (for demo realism)
-                    const getTime = (index) => {
-                        const times = ['Just now', '12m ago', '45m ago', '1h ago', '3h ago'];
-                        return times[index] || 'Today';
+                    // Helper for real relative time from pubDate
+                    const getRelativeTime = (dateString) => {
+                        if (!dateString) return 'Recently';
+                        const now = new Date();
+                        const pubDate = new Date(dateString);
+                        const diffMs = now - pubDate;
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const diffHours = Math.floor(diffMs / 3600000);
+                        const diffDays = Math.floor(diffMs / 86400000);
+
+                        if (diffMins < 1) return 'Just now';
+                        if (diffMins < 60) return `${diffMins}m ago`;
+                        if (diffHours < 24) return `${diffHours}h ago`;
+                        if (diffDays === 1) return 'Yesterday';
+                        if (diffDays < 7) return `${diffDays}d ago`;
+                        return pubDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     };
 
                     if (result.success && result.data?.length > 0) {
-                        const newsHTML = result.data.map((item, index) => {
+                        const newsHTML = result.data.map((item) => {
                             const category = getCategory(item.title);
                             const displaySource = item.source || 'Wire';
-                            const timeString = getTime(index);
+                            const timeString = getRelativeTime(item.pubDate);
 
                             return `
                             <div class="news-card" onclick="window.open('${item.link}', '_blank')">

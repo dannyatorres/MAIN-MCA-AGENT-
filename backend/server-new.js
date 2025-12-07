@@ -179,34 +179,67 @@ app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 
-// --- RSS NEWS FEED ENDPOINT ---
+// --- RSS NEWS FEED ENDPOINT (Enhanced) ---
 app.get('/api/news', async (req, res) => {
-    console.log('📰 News Feed Request Received'); // <--- DEBUG LOG
+    console.log('📰 News Feed Request Received');
     try {
-        const FEED_URL = 'https://news.google.com/rss/search?q=Merchant+Cash+Advance+industry+OR+debanked+when:7d&hl=en-US&gl=US&ceid=US:en';
-        const feed = await parser.parseURL(FEED_URL);
-        const articles = feed.items.slice(0, 5).map(item => {
-            const sourceMatch = item.title.match(/- ([^-]+)$/);
-            const source = sourceMatch ? sourceMatch[1] : 'Industry News';
-            const titleClean = item.title.replace(/- [^-]+$/, '').trim();
+        // 1. Define Multiple Sources for a Richer Feed
+        const sources = [
+            {
+                url: 'https://debanked.com/feed/',
+                tag: 'deBanked',
+                priority: 'high'
+            },
+            {
+                // Google News: Specific MCA Industry terms
+                url: 'https://news.google.com/rss/search?q=Merchant+Cash+Advance+OR+DailyFunder+when:7d&hl=en-US&gl=US&ceid=US:en',
+                tag: 'Industry'
+            },
+            {
+                // Google News: Broader Fintech & Lending Regulation
+                url: 'https://news.google.com/rss/search?q=small+business+lending+regulation+OR+fintech+capital+when:7d&hl=en-US&gl=US&ceid=US:en',
+                tag: 'Macro'
+            }
+        ];
 
-            let type = 'general';
-            if (source.toLowerCase().includes('debanked')) type = 'debanked';
-            if (source.toLowerCase().includes('funder')) type = 'lender';
+        // 2. Fetch all feeds in parallel
+        const feedPromises = sources.map(async (sourceConfig) => {
+            try {
+                const feed = await parser.parseURL(sourceConfig.url);
+                return feed.items.map(item => {
+                    // Cleanup Google News titles which often end with " - Publisher Name"
+                    const cleanTitle = item.title.replace(/- [^-]+$/, '').trim();
 
-            return {
-                title: titleClean,
-                source: source,
-                link: item.link,
-                pubDate: item.pubDate, // <--- Raw date for calculations
-                date: new Date(item.pubDate).toLocaleDateString(), // Keep for display backup
-                type: type
-            };
+                    // Extract publisher if possible
+                    const sourceMatch = item.title.match(/- ([^-]+)$/);
+                    const publisher = sourceMatch ? sourceMatch[1] : sourceConfig.tag;
+
+                    return {
+                        title: cleanTitle,
+                        link: item.link,
+                        pubDate: item.pubDate, // The raw date string
+                        source: publisher,     // The display name (e.g. "Bloomberg", "deBanked")
+                        type: sourceConfig.priority || 'general'
+                    };
+                });
+            } catch (err) {
+                console.error(`⚠️ Error fetching ${sourceConfig.tag}:`, err.message);
+                return []; // Return empty array on failure so others still load
+            }
         });
 
-        res.json({ success: true, data: articles });
+        // 3. Wait for all, flatten array, and sort by Newest First
+        const results = await Promise.all(feedPromises);
+        const allArticles = results.flat();
+
+        // Sort: Newest dates first
+        allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+        // 4. Send top 20 items
+        res.json({ success: true, data: allArticles.slice(0, 20) });
+
     } catch (error) {
-        console.error('RSS Error:', error);
+        console.error('RSS Critical Error:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch news' });
     }
 });
