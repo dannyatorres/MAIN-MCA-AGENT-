@@ -224,23 +224,160 @@ class FCSService {
         await this.initializeOpenAI();
         
         // Prepare the data
-        const allText = extractedData.map(d => `=== ${d.filename} ===\n${d.text.substring(0, 15000)}`).join('\n\n');
+        // Truncate individual files to avoid context limits, but keep enough for analysis
+        const allText = extractedData.map(d => `=== ${d.filename} ===\n${d.text.substring(0, 25000)}`).join('\n\n');
+        const statementCount = extractedData.length;
         
+        // --- UPDATED PROMPT (Your Exact n8n Logic) ---
         const prompt = `
-            You are an expert MCA Underwriter. Analyze these bank statements for: ${businessName}.
-            
-            First, extract the exact business name found in the documents.
-            Output format: EXTRACTED_BUSINESS_NAME: [Name]
-            
-            Then, create a comprehensive File Control Sheet (FCS) following these rules:
-            1. Identify Revenue, Deposits, Negative Days, and Ending Balance for each month.
-            2. Identify any existing MCA positions (Lender Name, Daily/Weekly Amount).
-            3. Calculate the "True Revenue" (excluding transfers/loans).
-            
-            Bank Data:
+            First, carefully identify and extract the actual business name from the bank statements. Look for:
+            1. Business name at the top of statements
+            2. Account holder name fields
+            3. Look for "DBA" or "d/b/a" designations in the statements
+            4. Company names in transaction descriptions
+            5. Any recurring business entity names
+
+            If you find a DBA designation, include it in the extracted name.
+            Examples:
+            - "Danny Torres Inc DBA Project Capital"
+            - "ABC Corp DBA Quick Services"
+            - "John Smith DBA Smith's Auto Repair"
+
+            MULTIPLE ACCOUNTS HANDLING:
+            If the bank statements contain multiple accounts (checking, savings, credit cards, etc.):
+            1. Create Monthly Financial Summary tables for ALL accounts back-to-back at the top
+            Format:
+            CHECKING ACCOUNT ...1234
+            Month Year  Deposits: $amount  Revenue: $amount  Neg Days: #  End Bal: $amount  #Dep: #
+            [rows for checking]
+
+            SAVINGS ACCOUNT ...5678
+            Month Year  Deposits: $amount  Revenue: $amount  Neg Days: #  End Bal: $amount  #Dep: #
+            [rows for savings]
+
+            2. After all tables, provide the analysis sections (Revenue Deductions, Items for Review, MCA Deposits, etc.) for each account separately
+            3. Label each analysis section clearly:
+            === CHECKING ACCOUNT ...1234 ANALYSIS ===
+            1a. Revenue Deductions
+            [deductions for this account]
+            ...
+            === SAVINGS ACCOUNT ...5678 ANALYSIS ===
+            [repeat all sections for next account]
+
+            4. Create a separate summary block for each account at the end
+            If only one account exists, proceed normally without mentioning multiple accounts.
+
+            OUTPUT FORMAT:
+            You MUST start your response with:
+            EXTRACTED_BUSINESS_NAME: [Exact Business Name including DBA if present]
+
+            If you cannot find a clear business name in the statements, use:
+            EXTRACTED_BUSINESS_NAME: ${businessName}
+
+            Then provide the File Control Sheet analysis below.
+
+            You are an expert MCA (Merchant Cash Advance) underwriter specializing in detailed financial analysis. Create a comprehensive File Control Sheet (FCS) for the business identified above covering ${statementCount} months of bank statements.
+
+            Combined Bank Statement Data (${statementCount} statements):
             ${allText}
+
+            Output Workflow
+            - Return a clean File-Control-Sheet (FCS) inside one triple-backtick code block.
+            - DO NOT use any asterisks anywhere in the report - not for emphasis, not for bullet points, not for any formatting
+
+            Underwriting Section Breakdown
+
+            Monthly Financial Summary
+            Use consistent column spacing to ensure headers align vertically:
+            Month Year  Deposits: $amount  Revenue: $amount  Neg Days: #  End Bal: $amount  #Dep: #
+
+            Example with proper column alignment:
+            Jul 2025   Deposits: $10,955   Revenue: $10,955   Neg Days: 6   End Bal: $8,887    #Dep: 3
+            Jun 2025   Deposits: $4,196    Revenue: $4,196    Neg Days: 7   End Bal: -$2,053   #Dep: 12
+            May 2025   Deposits: $7,940    Revenue: $7,940    Neg Days: 0   End Bal: $14       #Dep: 9
+
+            CRITICAL: Each column header (Deposits:, Revenue:, Neg Days:, End Bal:, #Dep:) must start at the same character position on every line. Use spaces to pad shorter values so columns align vertically.
+
+            Negative Days Extraction Rules
+            - A negative day = when account's END-OF-DAY balance is below $0.00
+            - One day = Maximum one negative day count (even if balance goes negative multiple times that day)
+            - Data source priority:
+              1. Use "Daily Balance" or "Summary of Daily Balances" section if available (most reliable)
+              2. If no daily balance section: use the LAST transaction balance of each day
+            - CRITICAL: Report "N/A" when:
+              • Daily balances are unclear or ambiguous
+              • Cannot determine definitive end-of-day balances
+              • Multiple transactions without clear ending balances
+              • Gaps in dates make tracking impossible
+              • Would require making assumptions about balances
+            - Never hallucinate or estimate negative days - use "N/A" rather than guess
+            - Count weekends/holidays as negative if they remain negative throughout
+            - Only count if ending balance < $0.00 (balance of exactly $0.00 is NOT negative)
+
+            True Revenue Rules - SIMPLIFIED DECISION TREE
+            (Use the logic: Exclude MCA/Lender deposits, Exclude explicitly labeled non-revenue, Exclude internal transfers. Include large unlabeled wires in "Items for Review" but count as revenue.)
+
+            ZELLE/PEER-TO-PEER REVENUE SHORTCUT:
+            If Zelle/Venmo/CashApp represents the majority of deposits (>80%):
+            - Count all peer-to-peer deposits as revenue (unless clearly personal/loan related)
+            - DO NOT list each individual Zelle transaction
+            - Instead, add a summary note after Monthly Financial Summary.
+
+            1a. Revenue Deductions
+            IMPORTANT: This section is ONLY for deposits that were EXCLUDED from the revenue calculation.
+            Format - Break down by month for clarity:
+            March 2025:
+            - $10,000 on 3/5 (Zelle Transfer - Owner Name)
+            Always include the exact transaction description/memo in parentheses.
+
+            Items for Review (Large Deposits Included in Revenue)
+            PURPOSE: Flag large, unusual deposits that were INCLUDED in revenue but lack clear business context.
+            Format:
+            October 2025:
+            - $31,525.00 on 10/10 (Wire Transfer Ref Number = 005938) - Included in revenue but could be owner injection/loan proceeds
+
+            MCA Deposits
+            PURPOSE: List all MCA funding deposits found in the statements.
+            Format:
+            - $50,250.00 on 09/17/2025 (Fedwire Credit Via: Bankunited N.A/267090594 B/O: Stage Advance LLC)
+
+            Recurring MCA Payments (CRITICAL - List ALL Active Positions)
+            MANDATORY: You MUST list EVERY active MCA position.
+            Format:
+            Position 1: [Lender Name] - $[amount] [frequency]
+            Last pull: [MM/DD/YY] - Status: [Active / Stopped / Paid off]
+
+            Recent MCA Activity Analysis (Renewal Detection)
+            PURPOSE: Cross-reference MCA deposits with payment patterns.
+            Format for positions WITH payments:
+            - [Lender Name]: $[amount] funded [date] | Payments: $[amount] [frequency] (Last pull: [date]) - [STATUS FLAG]
+              Reason: [Explain why this status was assigned]
+
+            Observations (3–5 concise notes)
+            Focus on cash flow, overdrafts, stacking, and anomalies.
+            DO NOT use asterisks.
+
+            End-of-Report Summary
+            Finish with a compact profile block titled "${statementCount}-Month Summary":
             
-            Output strictly in Markdown. NO asterisks or bolding stars (**).
+            ${statementCount}-Month Summary
+            - Business Name: [Extracted Name]
+            - Position (ASSUME NEXT): e.g. 2 active → Looking for 3rd
+            - Industry: [verify from statements]
+            - Time in Business: [estimate from statements]
+            - Average Deposits: [calculate from ${statementCount} months]
+            - Average True Revenue: [calculate from ${statementCount} months]
+            - Negative Days: [total across included months]
+            - Average Negative Days: [total ÷ ${statementCount}]
+            - Average Number of Deposits: [across included months]
+            - Average Bank Balance: [across included months]
+            - State: (example NY)
+            - Positions: [list all active lender names with payment amounts]
+            - Last MCA Deposit: [Amount] on [Date] from [Lender Name] OR "None found"
+
+            CONSISTENCY CHECK: The positions listed here MUST match EXACTLY what appears in the "Recurring MCA Payments" section.
+            
+            FORMATTING REMINDER: DO NOT USE ASTERISKS ANYWHERE IN THE REPORT.
         `;
 
         console.log('🤖 Sending to OpenAI (GPT-4o)...');
@@ -248,18 +385,17 @@ class FCSService {
         const completion = await this.openai.chat.completions.create({
             model: "gpt-4o",
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.2
+            temperature: 0.1 // Lower temperature for more consistent formatting
         });
 
         const fcsAnalysis = completion.choices[0].message.content;
 
-        // --- 🔍 RESTORED LOGGING HERE ---
+        // --- Log for debugging ---
         console.log('\n=============================');
-        console.log('📊 GENERATED FCS REPORT:');
+        console.log('📄 GENERATED FCS REPORT:');
         console.log('=============================');
         console.log(fcsAnalysis);
         console.log('=============================\n');
-        // --------------------------------
 
         return fcsAnalysis;
     }
