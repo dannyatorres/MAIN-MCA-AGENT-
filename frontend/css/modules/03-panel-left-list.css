@@ -16,21 +16,24 @@
 
 /* 1. Panel Header Reset */
 .left-panel .panel-header {
-    /* 1. THE NEW HEIGHT: 70px */
-    height: 70px;
+    /* CHANGED: Allow height to grow so the Delete button fits */
+    height: auto;
     min-height: 70px;
 
-    /* 2. SQUEEZE THE CONTENT */
-    padding: 8px 12px;      /* Reduced from 12px */
-    gap: 4px;               /* Very tight gap between Title and Search */
+    /* SQUEEZE THE CONTENT */
+    padding: 8px 12px;
+    gap: 4px;
     justify-content: center;
 
-    /* CHANGE: Transparent header matches the Grey container */
+    /* Transparent header matches the Grey container */
     background: transparent;
 
     display: flex;
     flex-direction: column;
     border-bottom: 1px solid rgba(0,0,0,0.05);
+
+    /* Add transition for smoother resizing */
+    transition: min-height 0.2s ease;
 }
 
 /* 2. Row 1: Branding */
