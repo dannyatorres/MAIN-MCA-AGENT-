@@ -10,6 +10,7 @@ class CSVImportModalManager {
     openModal() {
         this.modal = document.getElementById('csvImportModal');
         if (this.modal) {
+            // Remove hidden class to show the main modal container
             this.modal.classList.remove('hidden');
             this.modal.style.display = 'flex';
             this.resetModal();
@@ -33,14 +34,14 @@ class CSVImportModalManager {
         const fileInput = document.getElementById('csvFileInput');
         if (fileInput) fileInput.value = '';
 
-        // Hide file info
-        const fileInfo = document.getElementById('csvFileInfo');
-        if (fileInfo) fileInfo.style.display = 'none';
-
-        // Reset progress
+        // Reset progress bar and status text
         const progressFill = document.getElementById('csvProgressFill');
         if (progressFill) progressFill.style.width = '0%';
 
+        const importStatus = document.getElementById('csvImportStatus');
+        if (importStatus) importStatus.innerHTML = 'Preparing...';
+
+        // Show the first step
         this.goToStep(1);
     }
 
@@ -59,7 +60,7 @@ class CSVImportModalManager {
 
         uploadArea?.addEventListener('dragleave', (e) => {
             e.preventDefault();
-            uploadArea.style.borderColor = '#d1d5db'; // Reset color
+            uploadArea.style.borderColor = '#d1d5db';
             uploadArea.style.background = 'transparent';
         });
 
@@ -97,23 +98,9 @@ class CSVImportModalManager {
         }
 
         this.uploadedFile = file;
-        this.showFileInfo(file);
 
-        // Auto-start upload
+        // Auto-start upload immediately upon selection
         await this.uploadFile(file);
-    }
-
-    showFileInfo(file) {
-        const fileInfo = document.getElementById('csvFileInfo');
-        const fileDetails = document.getElementById('csvFileDetails');
-
-        if (fileDetails) {
-            fileDetails.innerHTML = `
-                <p><strong>Name:</strong> ${file.name}</p>
-                <p><strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
-            `;
-        }
-        if (fileInfo) fileInfo.style.display = 'block';
     }
 
     async uploadFile(file) {
@@ -121,16 +108,16 @@ class CSVImportModalManager {
         formData.append('csvFile', file);
 
         try {
-            // Visual fake steps to show activity
-            this.goToStep(2); // Show "Importing..." screen immediately
+            // 1. Switch UI to Progress View
+            this.goToStep(2);
 
             const importStatus = document.getElementById('csvImportStatus');
             const progressFill = document.getElementById('csvProgressFill');
 
-            if(importStatus) importStatus.innerHTML = "Uploading and Processing...";
+            if(importStatus) importStatus.innerHTML = '<span style="color:#e6edf3">Uploading and Processing...</span>';
             if(progressFill) progressFill.style.width = '30%';
 
-            // Actual API Call
+            // 2. Perform Backend Request
             const response = await fetch(`${this.apiBase}/upload`, {
                 method: 'POST',
                 body: formData
@@ -149,22 +136,24 @@ class CSVImportModalManager {
             // --- SUCCESS HANDLING ---
             if(progressFill) progressFill.style.width = '100%';
 
-            // 1. REFRESH THE LIST (Crucial Step)
+            // 3. REFRESH THE LEAD LIST (Critical Fix)
             if (typeof window.loadConversations === 'function') {
                 console.log('Refreshing conversation list...');
                 window.loadConversations();
             }
 
-            // 2. SHOW SUCCESS UI (Crucial Step)
+            // 4. SHOW SUCCESS CARD (Critical Fix)
             if (importStatus) {
                 importStatus.innerHTML = `
-                    <div class="import-success-card" style="text-align: center; margin-top: 20px;">
-                        <div class="success-icon" style="font-size: 40px; color: #10b981;">✓</div>
-                        <h4 style="color: #e6edf3; margin: 10px 0;">Import Complete!</h4>
-                        <p style="color: #8b949e;">Successfully imported <strong>${result.imported_count}</strong> leads.</p>
-                        ${result.errors && result.errors.length > 0 ? `<p style="color: #ef4444; font-size: 12px;">(Skipped ${result.errors.length} rows due to errors)</p>` : ''}
+                    <div class="import-success-card" style="text-align: center; margin-top: 20px; animation: scaleIn 0.3s ease;">
+                        <div style="width: 50px; height: 50px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
+                            <span style="font-size: 24px; color: white; font-weight: bold;">✓</span>
+                        </div>
+                        <h4 style="color: #e6edf3; margin: 10px 0; font-size: 18px;">Import Complete!</h4>
+                        <p style="color: #8b949e; margin-bottom: 20px;">Successfully imported <strong>${result.imported_count}</strong> leads.</p>
+                        ${result.errors && result.errors.length > 0 ? `<p style="color: #ef4444; font-size: 12px; margin-bottom: 15px;">(${result.errors.length} skipped due to errors)</p>` : ''}
 
-                        <div style="margin-top: 20px;">
+                        <div>
                             <button class="btn btn-primary" onclick="window.csvImportModalManager.closeModal()">Done</button>
                         </div>
                     </div>
@@ -176,11 +165,13 @@ class CSVImportModalManager {
             const importStatus = document.getElementById('csvImportStatus');
             if (importStatus) {
                 importStatus.innerHTML = `
-                    <div class="import-error-card" style="text-align: center; color: #ef4444;">
-                        <div class="error-icon" style="font-size: 30px;">✕</div>
-                        <h4>Import Failed</h4>
-                        <p>${error.message}</p>
-                        <button class="btn btn-secondary" onclick="window.csvImportModalManager.resetModal()" style="margin-top:10px;">Try Again</button>
+                    <div class="import-error-card" style="text-align: center; margin-top: 20px;">
+                        <div style="width: 50px; height: 50px; background: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
+                            <span style="font-size: 24px; color: white; font-weight: bold;">✕</span>
+                        </div>
+                        <h4 style="color: #e6edf3; margin: 10px 0;">Import Failed</h4>
+                        <p style="color: #ef4444;">${error.message}</p>
+                        <button class="btn btn-secondary" onclick="window.csvImportModalManager.resetModal()" style="margin-top: 15px;">Try Again</button>
                     </div>
                 `;
             }
@@ -188,26 +179,41 @@ class CSVImportModalManager {
     }
 
     goToStep(step) {
-        // Simplified Logic:
-        // Step 1: Upload UI
-        // Step 2: "Processing" UI (we map this to your existing HTML structure)
+        // IDs of all possible sections
+        const sections = [
+            'csvUploadSection',
+            'csvMappingSection',
+            'csvValidationSection',
+            'csvImportSection'
+        ];
 
-        const uploadSection = document.getElementById('csvUploadSection');
-        const importSection = document.getElementById('csvImportSection'); // This is the progress bar section
+        // 1. Force HIDE all sections first
+        sections.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.add('hidden'); // Add utility class back
+                el.style.display = 'none';
+            }
+        });
 
-        if (step === 1) {
-            if(uploadSection) uploadSection.style.display = 'block';
-            if(importSection) importSection.style.display = 'none';
-        } else {
-            if(uploadSection) uploadSection.style.display = 'none';
-            if(importSection) importSection.style.display = 'block';
+        // 2. Determine which one to show
+        let targetId = '';
+        if (step === 1) targetId = 'csvUploadSection';
+        else targetId = 'csvImportSection'; // Skip intermediate steps
+
+        // 3. Force SHOW the target section
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) {
+            // CRITICAL: Remove the 'hidden' class because 07-utilities.css uses !important
+            targetEl.classList.remove('hidden');
+            targetEl.style.display = 'block';
         }
 
         this.currentStep = step;
     }
 }
 
-// Global instance
+// Global instance setup
 window.csvImportModalManager = null;
 
 function openCsvImportModal() {
