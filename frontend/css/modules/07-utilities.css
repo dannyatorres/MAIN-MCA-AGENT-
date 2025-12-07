@@ -141,8 +141,15 @@
 
 /* Component-specific utilities */
 .delete-selection-trigger {
-    margin: 10px;
-    width: calc(100% - 20px);
+    /* CHANGED: Only add space on top to separate from search bar */
+    margin-top: 8px;
+    margin-bottom: 0;
+    margin-left: 0;
+    margin-right: 0;
+
+    /* CHANGED: Fill the container width (the header padding handles the sides) */
+    width: 100%;
+
     position: relative;
     z-index: 10;
 }
