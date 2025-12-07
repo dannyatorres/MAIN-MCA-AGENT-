@@ -7,14 +7,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize app when CommandCenter is ready
     const initApp = () => {
         if (!window.commandCenter) return false;
-
         console.log('✅ Main Module: Attaching Logic to CommandCenter');
         return true;
     };
 
-    // Poll for CommandCenter (fixes race condition on slow connections)
+    // Poll for CommandCenter
     let attempts = 0;
-    const maxAttempts = 200; // 10 seconds max (50ms * 200)
+    const maxAttempts = 200;
 
     const appInitInterval = setInterval(() => {
         attempts++;
@@ -27,31 +26,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- B. DEFINE GLOBAL FUNCTIONS ---
 
-            // 1. HEADER RENDERER (Fixed State Logic)
+            // 1. HEADER RENDERER (FIXED: Restores Input Bar)
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
 
-                // --- FIX: RESTORE CHAT UI ELEMENTS ---
-                // We must undo what loadDashboard() did
+                // === CRITICAL FIX: UNHIDE INPUTS WHEN ENTERING CHAT ===
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
-                const messages = document.getElementById('messagesContainer');
 
                 if (centerPanel) centerPanel.classList.remove('dashboard-mode');
-                if (inputs) inputs.classList.remove('hidden');
+                if (inputs) inputs.classList.remove('hidden'); // Show the input bar
                 if (actions) actions.classList.remove('hidden');
-                // --------------------------------------
+                // ======================================================
 
                 if (!header) return;
 
                 const displayTitle = businessName || 'Unknown Business';
                 const initials = displayTitle.substring(0, 2).toUpperCase();
 
-                // Check if CallBar already exists to preserve state (e.g., active timer)
+                // Preserve Call Bar State
                 const existingCallBar = document.getElementById('callBar');
                 const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
-                const currentTimer = existingCallBar ? document.getElementById('callTimer')?.innerText : '00:00';
+                const currentTimer = existingCallBar ? document.getElementById('callTimer').innerText : '00:00';
 
                 header.innerHTML = `
                     <div class="chat-header-rich">
@@ -75,96 +72,74 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div id="callBar" class="call-bar ${isCallActive ? '' : 'hidden'}">
                         <div class="call-bar-info">
                             <span class="call-status">Calling...</span>
-                            <span class="call-timer" id="callTimer">${currentTimer || '00:00'}</span>
+                            <span class="call-timer" id="callTimer">${currentTimer}</span>
                         </div>
                         <div class="call-bar-actions">
-                            <button class="call-control-btn" id="muteBtn" title="Mute">
-                                <i class="fas fa-microphone"></i>
-                            </button>
-                            <button class="call-control-btn end-call" id="endCallBtn" title="End Call">
-                                <i class="fas fa-phone-slash"></i>
-                            </button>
+                            <button class="call-control-btn" id="muteBtn" title="Mute"><i class="fas fa-microphone"></i></button>
+                            <button class="call-control-btn end-call" id="endCallBtn" title="End Call"><i class="fas fa-phone-slash"></i></button>
                         </div>
                     </div>
                 `;
 
-                // Re-attach listeners (Essential because innerHTML destroyed them)
+                // Re-attach listeners
                 const callBtn = document.getElementById('callBtn');
                 const endCallBtn = document.getElementById('endCallBtn');
                 const muteBtn = document.getElementById('muteBtn');
 
                 if (callBtn) {
                     callBtn.addEventListener('click', async () => {
-                        if (!phoneNumber) {
-                            alert('No phone number available for this lead.');
-                            return;
-                        }
+                        if (!phoneNumber) return alert('No phone number available.');
                         if (window.callManager) {
-                            console.log('📞 Starting call to:', phoneNumber);
                             await window.callManager.startCall(phoneNumber, conversationId);
                         } else {
-                            console.log('📞 CallManager not available - demo mode');
                             document.getElementById('callBar')?.classList.remove('hidden');
                             callBtn.classList.add('active');
                         }
                     });
                 }
-
                 if (endCallBtn) {
                     endCallBtn.addEventListener('click', () => {
-                        if (window.callManager) {
-                            window.callManager.endCall();
-                        } else {
+                        if (window.callManager) window.callManager.endCall();
+                        else {
                             document.getElementById('callBar')?.classList.add('hidden');
                             document.getElementById('callBtn')?.classList.remove('active');
                         }
                     });
                 }
-
                 if (muteBtn) {
                     muteBtn.addEventListener('click', () => {
-                        if (window.callManager) {
-                            window.callManager.toggleMute();
-                        } else {
+                        if (window.callManager) window.callManager.toggleMute();
+                        else {
                             muteBtn.classList.toggle('muted');
-                            const icon = muteBtn.querySelector('i');
-                            if (icon) {
-                                icon.classList.toggle('fa-microphone');
-                                icon.classList.toggle('fa-microphone-slash');
-                            }
+                            muteBtn.querySelector('i').classList.toggle('fa-microphone-slash');
                         }
                     });
                 }
             };
 
-            // 2. DASHBOARD LOADER
+            // 2. DASHBOARD LOADER (FIXED: Hides Input Bar Correctly)
             window.loadDashboard = () => {
                 console.log("🏠 Loading Dashboard...");
 
-                // Reset Core Selection
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
                     window.commandCenter.conversationUI.selectedConversation = null;
                 }
 
-                // --- CENTER PANEL RESET ---
                 const centerPanel = document.querySelector('.center-panel');
                 const centerHeader = centerPanel ? centerPanel.querySelector('.panel-header') : null;
                 const messages = document.getElementById('messagesContainer');
+
+                // === CRITICAL FIX: HIDE INPUTS FOR DASHBOARD ===
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
-                if (centerPanel) {
-                    centerPanel.classList.add('dashboard-mode');
-                    // REFACTORED: Removed centerPanel.style.gap = ''
-                }
+                if (centerPanel) centerPanel.classList.add('dashboard-mode');
                 if (centerHeader) centerHeader.innerHTML = '';
-
-                // REFACTORED: Use classes to hide
-                if (inputs) inputs.classList.add('hidden');
+                if (inputs) inputs.classList.add('hidden'); // Hide input bar
                 if (actions) actions.classList.add('hidden');
+                // ===============================================
 
-                // Inject Dashboard Content
                 if (messages) {
                     messages.innerHTML = `
                         <div class="dashboard-container">
@@ -177,11 +152,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <button class="btn btn-secondary dashboard-action-btn" onclick="openLenderManagementModal()">
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
-
                                 <button class="btn btn-secondary dashboard-action-btn">
                                     <i class="fas fa-cog"></i> Settings
                                 </button>
-
                                 <button class="btn btn-secondary dashboard-action-btn">
                                     <i class="fas fa-shield-alt"></i> Admin
                                 </button>
@@ -218,185 +191,108 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                 }
 
-                // --- RIGHT PANEL RESET - REFACTORED ---
+                // Ensure Right Panel is in Home Mode
                 if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
                     window.commandCenter.intelligence.toggleView(false);
                 } else {
-                    // Fallback: Use classes
                     const homePanel = document.getElementById('rightPanelHome');
                     const intelPanel = document.getElementById('rightPanelIntelligence');
                     if (homePanel) homePanel.classList.remove('hidden');
                     if (intelPanel) intelPanel.classList.add('hidden');
                 }
 
-                // Ensure news is loaded
                 if (window.loadMarketNews) window.loadMarketNews();
-
-                // Refresh Stats
                 if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
             };
 
-            // 3. NEWS LOADER (Enhanced)
+            // 3. NEWS LOADER (Keep existing logic)
             window.loadMarketNews = async () => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
 
-                // Elegant Skeleton Loading
+                // Skeleton
                 container.innerHTML = `
                     <div class="news-feed-container">
                         <div class="news-header-rich">
-                            <span class="news-header-title">
-                                <div class="live-indicator"></div> Market Pulse
-                            </span>
+                            <span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>
                         </div>
-                        <div class="news-loading">
-                            <i class="fas fa-circle-notch fa-spin fa-2x" style="color: #30363d; margin-bottom: 15px;"></i>
-                            <span style="font-size: 12px;">Syncing wire...</span>
-                        </div>
-                    </div>
-                `;
+                        <div class="news-loading"><i class="fas fa-circle-notch fa-spin fa-2x" style="color: #30363d;"></i></div>
+                    </div>`;
 
                 try {
                     const response = await fetch('/api/news');
                     const result = await response.json();
 
-                    // Helper to make the data look smarter
-                    const getCategory = (text) => {
-                        const lower = text.toLowerCase();
-                        if (lower.includes('fed') || lower.includes('rate')) return 'Economy';
-                        if (lower.includes('fund') || lower.includes('capital')) return 'Lending';
-                        if (lower.includes('tech') || lower.includes('ai')) return 'Tech';
-                        if (lower.includes('law') || lower.includes('regulat')) return 'Legal';
-                        return 'Industry';
-                    };
-
-                    // Helper for real relative time from pubDate
-                    const getRelativeTime = (dateString) => {
-                        if (!dateString) return 'Recently';
-                        const now = new Date();
-                        const pubDate = new Date(dateString);
-                        const diffMs = now - pubDate;
-                        const diffMins = Math.floor(diffMs / 60000);
-                        const diffHours = Math.floor(diffMs / 3600000);
-                        const diffDays = Math.floor(diffMs / 86400000);
-
-                        if (diffMins < 1) return 'Just now';
-                        if (diffMins < 60) return `${diffMins}m ago`;
-                        if (diffHours < 24) return `${diffHours}h ago`;
-                        if (diffDays === 1) return 'Yesterday';
-                        if (diffDays < 7) return `${diffDays}d ago`;
-                        return pubDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const getTime = (d) => {
+                        if (!d) return 'Recent';
+                        const diff = new Date() - new Date(d);
+                        const days = Math.floor(diff/86400000);
+                        const hours = Math.floor(diff/3600000);
+                        if(days > 0) return `${days}d ago`;
+                        if(hours > 0) return `${hours}h ago`;
+                        return 'Just now';
                     };
 
                     if (result.success && result.data?.length > 0) {
                         const newsHTML = result.data.map((item) => {
-                            const timeString = getRelativeTime(item.pubDate);
-
-                            // Color coding for sources
-                            let badgeClass = 'source-generic';
+                            let badgeClass = '';
                             if (item.source === 'deBanked') badgeClass = 'source-debanked';
                             if (item.source === 'Legal/Regs') badgeClass = 'source-legal';
 
                             return `
                             <div class="news-card" onclick="window.open('${item.link}', '_blank')">
                                 <div class="news-meta-top">
-                                    <div class="news-source-badge ${badgeClass}">
-                                        <i class="fas ${item.icon || 'fa-bolt'}"></i> ${item.source}
-                                    </div>
-                                    <span class="news-time-badge">${timeString}</span>
+                                    <div class="news-source-badge ${badgeClass}"><i class="fas ${item.icon || 'fa-bolt'}"></i> ${item.source}</div>
+                                    <span class="news-time-badge">${getTime(item.pubDate)}</span>
                                 </div>
-
                                 <h4 class="news-title">${item.title}</h4>
-
-                                <div class="news-footer">
-                                    <span class="read-more-link">
-                                        Open Source <i class="fas fa-external-link-alt"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        `}).join('');
+                                <div class="news-footer"><span class="read-more-link">Open Source <i class="fas fa-external-link-alt"></i></span></div>
+                            </div>`;
+                        }).join('');
 
                         container.innerHTML = `
                             <div class="news-feed-container">
                                 <div class="news-header-rich">
-                                    <span class="news-header-title">
-                                        <div class="live-indicator"></div> Market Pulse
-                                    </span>
+                                    <span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>
                                     <span style="font-size: 10px; color: #6e7681;">Updated</span>
                                 </div>
                                 ${newsHTML}
-                            </div>
-                        `;
-                    } else {
-                        container.innerHTML = `
-                            <div class="news-feed-container">
-                                <div class="empty-state">
-                                    <div class="news-empty-icon">
-                                        <i class="fas fa-satellite-dish"></i>
-                                    </div>
-                                    <p>Wire is silent.</p>
-                                </div>
                             </div>`;
+                    } else {
+                        container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire is silent.</p></div></div>';
                     }
                 } catch (e) {
                     console.error(e);
-                    container.innerHTML = `
-                        <div class="news-feed-container">
-                            <div class="news-loading">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span style="margin-top:10px">Connection to Wire failed.</span>
-                            </div>
-                        </div>`;
+                    container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire Offline</p></div></div>';
                 }
             };
 
-            // 4. LENDER MODAL
-            window.openLenderManagementModal = () => {
-                if (window.commandCenter.lenders?.openManagementModal) {
-                     window.commandCenter.lenders.openManagementModal();
-                } else {
-                    alert("Lender Management Module loading...");
-                }
-            };
-
-            // 5. DELETE MODE
+            // 4. OTHER HELPERS
+            window.openLenderManagementModal = () => window.commandCenter.lenders?.openManagementModal();
             window.toggleDeleteMode = () => {
                 const list = document.getElementById('conversationsList');
                 const btn = document.getElementById('toggleDeleteModeBtn');
-                if (!list) return;
-
+                if(!list) return;
                 const isDeleteMode = list.classList.toggle('delete-mode');
+                const confirmBtn = document.getElementById('deleteSelectedBtn');
 
-                if (btn) {
-                    const confirmBtn = document.getElementById('deleteSelectedBtn');
+                if(btn) btn.classList.toggle('active-danger', isDeleteMode);
+                if(confirmBtn) confirmBtn.classList.toggle('hidden', !isDeleteMode);
 
-                    if (isDeleteMode) {
-                        btn.classList.add('active-danger');
-                        // REFACTORED: Use class
-                        if (confirmBtn) confirmBtn.classList.remove('hidden');
-                    } else {
-                        btn.classList.remove('active-danger');
-                        const checkboxes = document.querySelectorAll('.delete-checkbox');
-                        checkboxes.forEach(cb => cb.checked = false);
-
-                        // REFACTORED: Use class
-                        if (confirmBtn) confirmBtn.classList.add('hidden');
-
-                        if (window.commandCenter.conversationUI) {
-                            window.commandCenter.conversationUI.selectedForDeletion.clear();
-                        }
-                    }
+                if(!isDeleteMode) {
+                    document.querySelectorAll('.delete-checkbox').forEach(cb => cb.checked = false);
+                    window.commandCenter.conversationUI?.selectedForDeletion.clear();
                 }
             };
 
-            // --- C. INITIAL LOAD ---
+            // C. INITIAL LOAD
             if (!window.commandCenter.currentConversationId) {
                 window.loadDashboard();
             }
 
         } else if (attempts >= maxAttempts) {
             clearInterval(appInitInterval);
-            console.error('❌ Critical: CommandCenter failed to load after 10 seconds.');
+            console.error('❌ CommandCenter load timeout');
         }
     }, 50);
 });
