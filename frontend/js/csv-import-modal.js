@@ -170,21 +170,7 @@ class CSVImportModalManager {
         formData.append('csvFile', file);
 
         try {
-            // Show progress immediately
-            this.goToStep(2);
             this.showMessage('Uploading CSV file...', 'success');
-
-            // Move to step 3 after a moment
-            setTimeout(() => {
-                this.goToStep(3);
-                this.showMessage('Validating data...', 'success');
-            }, 500);
-
-            // Move to step 4 and start import
-            setTimeout(() => {
-                this.goToStep(4);
-                this.showMessage('Importing data...', 'success');
-            }, 1000);
 
             const response = await fetch(`${this.apiBase}/upload`, {
                 method: 'POST',
@@ -197,84 +183,102 @@ class CSVImportModalManager {
 
             const result = await response.json();
 
-            if (!result.success) {
-                // Show import completed with results
-                const importStatus = document.getElementById('csvImportStatus');
-                if (importStatus) {
-                    importStatus.innerHTML = `
-                        <div style="padding: 16px; background: ${result.imported > 0 ? '#ecfdf5' : '#fef2f2'}; border: 1px solid ${result.imported > 0 ? '#10b981' : '#ef4444'}; border-radius: 6px; color: ${result.imported > 0 ? '#065f46' : '#991b1b'};">
-                            <h4 style="margin: 0 0 8px 0;">${result.imported > 0 ? '✓ Import Completed!' : '✗ Import Had Issues'}</h4>
-                            <p style="margin: 0;">Successfully imported: ${result.imported} out of ${result.total} leads</p>
-                            ${result.errors && result.errors.length > 0 ? `
-                                <details style="margin-top: 12px;">
-                                    <summary style="cursor: pointer; font-weight: 600;">Import Errors (${result.errors.length})</summary>
-                                    <ul style="margin: 8px 0 0 0; padding-left: 20px;">
-                                        ${result.errors.slice(0, 10).map(error => `<li style="margin: 4px 0;">${error}</li>`).join('')}
-                                        ${result.errors.length > 10 ? `<li>... and ${result.errors.length - 10} more errors</li>` : ''}
-                                    </ul>
-                                </details>
-                            ` : ''}
-                        </div>
-                    `;
-                }
+            if (result.success) {
+                // SAVE DATA FOR NEXT STEP
+                this.csvData = {
+                    fileInfo: result.data.fileInfo,
+                    headers: result.data.headers,
+                    preview: result.data.preview
+                };
 
-                // Show view results button
-                const viewResultsBtn = document.getElementById('csvViewResultsBtn');
-                if (viewResultsBtn) {
-                    viewResultsBtn.style.display = 'inline-flex';
-                }
-
-                this.showMessage(`Import completed: ${result.imported}/${result.total} leads imported successfully`, 'success');
-                return;
+                // Auto-progress to mapping
+                this.renderMappingUI();
+                this.goToStep(2);
+                this.showMessage('File uploaded. Please map columns.', 'success');
+            } else {
+                throw new Error(result.message || 'Upload failed');
             }
-
-            console.log('✅ Upload and import successful!');
-
-            // Show import completed successfully
-            const importStatus = document.getElementById('csvImportStatus');
-            if (importStatus) {
-                importStatus.innerHTML = `
-                    <div style="padding: 16px; background: #ecfdf5; border: 1px solid #10b981; border-radius: 6px; color: #065f46;">
-                        <h4 style="margin: 0 0 8px 0;">✓ Import Completed Successfully!</h4>
-                        <p style="margin: 0;">Successfully imported ${result.imported} out of ${result.total} leads.</p>
-                        ${result.errors && result.errors.length > 0 ? `<p style="margin: 8px 0 0 0;">Import had ${result.errors.length} errors that were skipped.</p>` : ''}
-                    </div>
-                `;
-            }
-
-            // Update progress bar to 100%
-            const progressFill = document.getElementById('csvProgressFill');
-            if (progressFill) {
-                progressFill.style.width = '100%';
-            }
-
-            // Show view results button
-            const viewResultsBtn = document.getElementById('csvViewResultsBtn');
-            if (viewResultsBtn) {
-                viewResultsBtn.style.display = 'inline-flex';
-            }
-
-            this.showMessage('CSV import completed successfully!', 'success');
 
         } catch (error) {
             console.error('❌ Upload error:', error);
-
-            // Show error in import status
-            const importStatus = document.getElementById('csvImportStatus');
-            if (importStatus) {
-                importStatus.innerHTML = `
-                    <div style="padding: 16px; background: #fef2f2; border: 1px solid #ef4444; border-radius: 6px; color: #991b1b;">
-                        <h4 style="margin: 0 0 8px 0;">✗ Import Failed</h4>
-                        <p style="margin: 0;">Error: ${error.message}</p>
-                    </div>
-                `;
-            }
-
-            this.showMessage('Import failed: ' + error.message, 'error');
+            this.showMessage('Upload failed: ' + error.message, 'error');
         }
     }
 
+    renderMappingUI() {
+        const container = document.getElementById('csvMappingControls');
+        if (!container || !this.csvData) return;
+
+        // Standard CRM Fields
+        const crmFields = [
+            { value: 'business_name', label: 'Business Name (Required)' },
+            { value: 'first_name', label: 'First Name' },
+            { value: 'last_name', label: 'Last Name' },
+            { value: 'email', label: 'Email' },
+            { value: 'phone', label: 'Phone (Required)' },
+            { value: 'state', label: 'State' },
+            { value: 'monthly_revenue', label: 'Monthly Revenue' },
+            { value: 'industry', label: 'Industry' }
+        ];
+
+        let html = `
+            <div class="mapping-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; font-weight: bold;">
+                <div>CSV Header</div>
+                <div>Preview Data</div>
+                <div>CRM Field</div>
+            </div>
+            <div class="mapping-rows" style="max-height: 300px; overflow-y: auto;">
+        `;
+
+        this.csvData.headers.forEach((header, index) => {
+            // Try to auto-guess the mapping based on name
+            const cleanHeader = header.toLowerCase().replace(/_/g, '').trim();
+            let selectedField = '';
+
+            if (cleanHeader.includes('phone')) selectedField = 'phone';
+            else if (cleanHeader.includes('email')) selectedField = 'email';
+            else if (cleanHeader.includes('business') || cleanHeader.includes('company')) selectedField = 'business_name';
+            else if (cleanHeader.includes('first')) selectedField = 'first_name';
+            else if (cleanHeader.includes('last')) selectedField = 'last_name';
+            else if (cleanHeader.includes('state')) selectedField = 'state';
+
+            const previewVal = (this.csvData.preview[0] && this.csvData.preview[0][index]) || '-';
+
+            html += `
+                <div class="mapping-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+                    <div style="font-weight: 500;">${header}</div>
+                    <div style="color: #666; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${previewVal}</div>
+                    <div>
+                        <select class="map-select form-input" data-csv-header="${header}" style="width: 100%;">
+                            <option value="">-- Ignore --</option>
+                            ${crmFields.map(f => `<option value="${f.value}" ${f.value === selectedField ? 'selected' : ''}>${f.label}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+
     async validateMapping() {
+        // 1. SCRAPE SELECTIONS
+        this.columnMapping = {};
+        document.querySelectorAll('.map-select').forEach(select => {
+            if (select.value) {
+                // Key = CSV Header Name, Value = DB Field Name
+                this.columnMapping[select.dataset.csvHeader] = select.value;
+            }
+        });
+
+        // 2. Validate at least required fields
+        const values = Object.values(this.columnMapping);
+        if (!values.includes('business_name') && !values.includes('phone')) {
+            this.showMessage('You must map at least Business Name or Phone.', 'error');
+            return;
+        }
+
         try {
             const response = await fetch(`${this.apiBase}/mapping`, {
                 method: 'POST',

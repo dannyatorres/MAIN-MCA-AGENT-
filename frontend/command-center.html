@@ -181,6 +181,9 @@
                         <p class="upload-subtitle">Or click to select a file</p>
                         <input type="file" class="hidden" id="csvFileInput" accept=".csv" />
                         <button class="btn btn-primary" id="csvSelectFileBtn">Select File</button>
+                        <a href="/assets/sample-import.csv" class="download-template-link" download onclick="event.stopPropagation();">
+                            <i class="fas fa-download"></i> Download Sample CSV
+                        </a>
                     </div>
                     <div class="csv-file-info hidden" id="csvFileInfo">
                         <h4 class="info-header">File Information</h4>
