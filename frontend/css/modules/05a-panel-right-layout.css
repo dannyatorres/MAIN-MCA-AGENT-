@@ -79,19 +79,19 @@
 }
 
 /* ==========================================================================
-   4. News Feed (Market Pulse) - SCROLL FIX
+   4. News Feed (Market Pulse) - MATCHING LEFT PANEL STYLE
    ========================================================================== */
 
-/* The Parent Wrapper (Handles the scrolling) */
+/* The Parent Wrapper */
 #rightPanelHome {
     flex: 1;
-    overflow-y: auto !important; /* FORCE scroll capability */
+    overflow-y: auto !important;
     overflow-x: hidden;
     display: block;
     position: relative;
-    /* Custom Scrollbar for Webkit */
     scrollbar-width: thin;
     scrollbar-color: #30363d transparent;
+    padding: 0 16px; /* Add padding to match left panel layout */
 }
 
 #rightPanelHome::-webkit-scrollbar {
@@ -102,13 +102,10 @@
     border-radius: 3px;
 }
 
-/* The Content Container (Grows with content) */
+/* The Content Container */
 .news-feed-container {
-    padding: 20px;
-    height: auto; /* Allow growth */
-    min-height: 100%;
-    box-sizing: border-box;
-    padding-bottom: 80px; /* Extra breathing room at bottom */
+    padding-top: 20px;
+    padding-bottom: 80px;
 }
 
 /* Header Styling */
@@ -118,12 +115,12 @@
     align-items: center;
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
-    position: sticky; /* Optional: Keeps header visible */
-    top: -20px;       /* Negative margin offset */
-    background: #0f1115; /* Match background to cover scrolling items */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* Soft border */
+    position: sticky;
+    top: 0;
+    background: #0f1115; /* Match app background */
     z-index: 10;
-    padding-top: 5px;
+    padding-top: 10px;
 }
 
 .news-header-title {
@@ -138,31 +135,41 @@
 }
 
 .live-indicator {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     background-color: #2ea043;
     border-radius: 50%;
-    box-shadow: 0 0 8px rgba(46, 160, 67, 0.6);
+    box-shadow: 0 0 10px rgba(46, 160, 67, 0.8); /* Brighter glow */
     animation: pulse 2s infinite;
 }
 
-/* Elegant News Card */
+/* === THE NEW "FLOATING CARD" STYLE (Matches Left Panel) === */
 .news-card {
-    background: linear-gradient(145deg, #161b22 0%, #0d1117 100%);
-    border: 1px solid #30363d;
-    border-radius: 8px;
+    /* 1. The Signature Gradient */
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+
+    /* 2. The Subtle White Border */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* 3. The Soft Radius */
+    border-radius: 12px;
+
+    /* 4. The Deep Shadow */
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+
     padding: 16px;
     margin-bottom: 12px;
     cursor: pointer;
     position: relative;
-    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .news-card:hover {
     transform: translateY(-2px);
-    border-color: #58a6ff;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    /* Lighter hover state matching Left Panel */
+    background: linear-gradient(180deg, #2d3748 0%, #1c2128 100%);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 
 /* Card Top Row: Source & Category */
@@ -170,67 +177,81 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
+/* Source Badge - Rounded Pill Style */
 .news-source-badge {
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #8b949e;
     display: flex;
     align-items: center;
     gap: 6px;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px; /* Fully rounded pill */
 }
 
-.news-source-badge i { color: #e0823d; }
+/* Specific Source Colors */
+.source-debanked {
+    color: #4ade80 !important; /* Brighter Green */
+    background: rgba(46, 160, 67, 0.15);
+    border: 1px solid rgba(46, 160, 67, 0.2);
+}
 
-.news-category {
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(56, 139, 253, 0.1);
-    color: #58a6ff;
-    border: 1px solid rgba(56, 139, 253, 0.2);
+.source-legal {
+    color: #f87171 !important; /* Soft Red */
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.source-generic {
+    /* Default styling - inherits from .news-source-badge */
+}
+
+/* Time Badge */
+.news-time-badge {
+    font-size: 10px;
+    color: #6e7681;
+    font-weight: 600;
 }
 
 /* Card Content */
 .news-title {
-    color: #ffffff;
+    color: #f0f6fc; /* Bright White */
     font-size: 13px;
     line-height: 1.5;
-    font-weight: 500;
-    margin-bottom: 10px;
+    font-weight: 600; /* Semi-bold */
+    margin-bottom: 12px;
 }
 
 /* Card Footer */
 .news-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end; /* Push link to right */
     align-items: center;
-    border-top: 1px solid rgba(48, 54, 61, 0.5);
-    padding-top: 8px;
-    margin-top: 8px;
-}
-
-.news-time {
-    color: #6e7681;
-    font-size: 11px;
-    font-style: italic;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 10px;
+    margin-top: 4px;
 }
 
 .read-more-link {
     font-size: 11px;
-    color: #58a6ff;
-    opacity: 0;
-    transform: translateX(-10px);
+    color: #3b82f6; /* Blue Accent */
+    font-weight: 600;
+    opacity: 0.7;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .news-card:hover .read-more-link {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(-2px);
 }
 
 @keyframes pulse {
@@ -248,31 +269,6 @@
     padding: 40px 20px;
     color: #8b949e;
     text-align: center;
-}
-
-/* Premium Source Badges */
-.source-debanked {
-    color: #2ea043 !important; /* Green for deBanked */
-    background: rgba(46, 160, 67, 0.1);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.source-legal {
-    color: #f85149 !important; /* Red for Legal Alerts */
-    background: rgba(248, 81, 73, 0.1);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.source-generic {
-    /* Default styling - inherits from .news-source-badge */
-}
-
-.news-time-badge {
-    font-size: 10px;
-    color: #6e7681;
-    font-family: monospace; /* Tech feel */
 }
 
 /* Intelligence Panel Wrapper */
