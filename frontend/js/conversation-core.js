@@ -241,8 +241,16 @@ class ConversationCore {
             console.log('📋 Received conversations:', conversations.length);
 
             this.conversations.clear();
+            // Clear old unread counts to prevent stale badges
+            this.unreadMessages.clear();
+
             conversations.forEach(conv => {
                 this.conversations.set(conv.id, conv);
+
+                // If the server says there are unread messages, save that to our tracker
+                if (conv.unread_count && conv.unread_count > 0) {
+                    this.unreadMessages.set(conv.id, conv.unread_count);
+                }
             });
             console.log('💾 Stored conversations in memory:', this.conversations.size);
 
