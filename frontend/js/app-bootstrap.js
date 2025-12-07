@@ -280,25 +280,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (result.success && result.data?.length > 0) {
                         const newsHTML = result.data.map((item) => {
-                            const category = getCategory(item.title);
-                            const displaySource = item.source || 'Wire';
                             const timeString = getRelativeTime(item.pubDate);
+
+                            // Color coding for sources
+                            let badgeClass = 'source-generic';
+                            if (item.source === 'deBanked') badgeClass = 'source-debanked';
+                            if (item.source === 'Legal/Regs') badgeClass = 'source-legal';
 
                             return `
                             <div class="news-card" onclick="window.open('${item.link}', '_blank')">
                                 <div class="news-meta-top">
-                                    <div class="news-source-badge">
-                                        <i class="fas fa-bolt"></i> ${displaySource}
+                                    <div class="news-source-badge ${badgeClass}">
+                                        <i class="fas ${item.icon || 'fa-bolt'}"></i> ${item.source}
                                     </div>
-                                    <span class="news-category">${category}</span>
+                                    <span class="news-time-badge">${timeString}</span>
                                 </div>
 
                                 <h4 class="news-title">${item.title}</h4>
 
                                 <div class="news-footer">
-                                    <span class="news-time">${timeString}</span>
                                     <span class="read-more-link">
-                                        Read <i class="fas fa-arrow-right"></i>
+                                        Open Source <i class="fas fa-external-link-alt"></i>
                                     </span>
                                 </div>
                             </div>

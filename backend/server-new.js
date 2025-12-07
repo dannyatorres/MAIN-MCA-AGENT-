@@ -179,68 +179,99 @@ app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 
-// --- RSS NEWS FEED ENDPOINT (Enhanced) ---
+// --- RSS NEWS FEED ENDPOINT (MCA SPECIALIZED) ---
 app.get('/api/news', async (req, res) => {
-    console.log('📰 News Feed Request Received');
+    console.log('📰 MCA Wire Request Received');
     try {
-        // 1. Define Multiple Sources for a Richer Feed
+        // 1. Curated List of High-Value MCA Sources
         const sources = [
             {
+                // 🏆 The Holy Grail of MCA News
                 url: 'https://debanked.com/feed/',
                 tag: 'deBanked',
-                priority: 'high'
+                icon: 'fa-university',
+                priority: 1
             },
             {
-                // Google News: Specific MCA Industry terms
-                url: 'https://news.google.com/rss/search?q=Merchant+Cash+Advance+OR+DailyFunder+when:7d&hl=en-US&gl=US&ceid=US:en',
-                tag: 'Industry'
+                // Tech & Ops specific to MCA
+                url: 'https://www.lendsaas.com/category/mca-industry-news/feed/',
+                tag: 'LendSaaS',
+                icon: 'fa-microchip',
+                priority: 2
             },
             {
-                // Google News: Broader Fintech & Lending Regulation
-                url: 'https://news.google.com/rss/search?q=small+business+lending+regulation+OR+fintech+capital+when:7d&hl=en-US&gl=US&ceid=US:en',
-                tag: 'Macro'
+                // Strict Industry Keywords (excludes generic "loans")
+                url: 'https://news.google.com/rss/search?q="Merchant+Cash+Advance"+OR+"Revenue+Based+Financing"+OR+"DailyFunder"+when:7d&hl=en-US&gl=US&ceid=US:en',
+                tag: 'Industry Wire',
+                icon: 'fa-rss',
+                priority: 3
+            },
+            {
+                // Legal & Regulatory Watch (FTC, COJ, SB 1235)
+                url: 'https://news.google.com/rss/search?q="FTC"+AND+"Small+Business+Lending"+OR+"Confession+of+Judgment"+when:14d&hl=en-US&gl=US&ceid=US:en',
+                tag: 'Legal/Regs',
+                icon: 'fa-balance-scale',
+                priority: 4
             }
         ];
 
-        // 2. Fetch all feeds in parallel
+        // 2. Fetch all feeds in parallel with timeout handling
         const feedPromises = sources.map(async (sourceConfig) => {
             try {
-                const feed = await parser.parseURL(sourceConfig.url);
-                return feed.items.map(item => {
-                    // Cleanup Google News titles which often end with " - Publisher Name"
-                    const cleanTitle = item.title.replace(/- [^-]+$/, '').trim();
+                // Set a timeout of 5 seconds per feed to prevent hanging
+                const feed = await Promise.race([
+                    parser.parseURL(sourceConfig.url),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
 
-                    // Extract publisher if possible
-                    const sourceMatch = item.title.match(/- ([^-]+)$/);
-                    const publisher = sourceMatch ? sourceMatch[1] : sourceConfig.tag;
+                return feed.items.map(item => {
+                    // Clean up titles (Remove " - Publisher Name")
+                    const cleanTitle = item.title.replace(/- [^-]+$/, '').trim();
 
                     return {
                         title: cleanTitle,
                         link: item.link,
-                        pubDate: item.pubDate, // The raw date string
-                        source: publisher,     // The display name (e.g. "Bloomberg", "deBanked")
-                        type: sourceConfig.priority || 'general'
+                        pubDate: item.pubDate,
+                        source: sourceConfig.tag,
+                        icon: sourceConfig.icon,
+                        priority: sourceConfig.priority,
+                        // Snippet/Content (if available) for tooltip
+                        snippet: item.contentSnippet || item.content || ''
                     };
                 });
             } catch (err) {
-                console.error(`⚠️ Error fetching ${sourceConfig.tag}:`, err.message);
-                return []; // Return empty array on failure so others still load
+                console.warn(`⚠️ Failed to fetch ${sourceConfig.tag}:`, err.message);
+                return []; // Return empty array so one failure doesn't break the app
             }
         });
 
-        // 3. Wait for all, flatten array, and sort by Newest First
+        // 3. Process Results
         const results = await Promise.all(feedPromises);
-        const allArticles = results.flat();
+        let allArticles = results.flat();
 
-        // Sort: Newest dates first
-        allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        // 4. Smart Sort: Priority first, then Date
+        allArticles.sort((a, b) => {
+            // If priority is different, lower number (higher priority) wins
+            if (a.priority !== b.priority) return a.priority - b.priority;
+            // If priority is same, newest date wins
+            return new Date(b.pubDate) - new Date(a.pubDate);
+        });
 
-        // 4. Send top 20 items
-        res.json({ success: true, data: allArticles.slice(0, 20) });
+        // Remove duplicates based on title (fuzzy match)
+        const seenTitles = new Set();
+        const uniqueArticles = allArticles.filter(item => {
+            const signature = item.title.toLowerCase().substring(0, 20); // First 20 chars
+            if (seenTitles.has(signature)) return false;
+            seenTitles.add(signature);
+            return true;
+        });
+
+        // Send top 25 items
+        res.json({ success: true, data: uniqueArticles.slice(0, 25) });
 
     } catch (error) {
         console.error('RSS Critical Error:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch news' });
+        res.status(500).json({ success: false, message: 'Wire sync failed' });
     }
 });
 

@@ -250,6 +250,31 @@
     text-align: center;
 }
 
+/* Premium Source Badges */
+.source-debanked {
+    color: #2ea043 !important; /* Green for deBanked */
+    background: rgba(46, 160, 67, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.source-legal {
+    color: #f85149 !important; /* Red for Legal Alerts */
+    background: rgba(248, 81, 73, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.source-generic {
+    /* Default styling - inherits from .news-source-badge */
+}
+
+.news-time-badge {
+    font-size: 10px;
+    color: #6e7681;
+    font-family: monospace; /* Tech feel */
+}
+
 /* Intelligence Panel Wrapper */
 #rightPanelIntelligence {
     flex: 1;
