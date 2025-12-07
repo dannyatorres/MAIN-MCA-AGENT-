@@ -143,6 +143,8 @@
 .delete-selection-trigger {
     margin: 10px;
     width: calc(100% - 20px);
+    position: relative;
+    z-index: 10;
 }
 
 .csv-modal-body {
