@@ -1,10 +1,9 @@
 /* ==========================================================================
-   [MODULE: MESSAGING / CENTER PANEL]
-   Refactored to match command-center.html structure.
-   Uses absolute positioning for the "iPhone" floating input style.
+   [MODULE: CENTER PANEL]
+   Unified "Floating Card" Aesthetic (Matches Side Panels)
    ========================================================================== */
 
-/* 1. The Main Container */
+/* 1. Main Container */
 .center-panel {
     flex: 3 1 400px;
     min-width: 350px;
@@ -12,32 +11,24 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    background: #0f1115; /* Match body */
-    /* Remove default border, rely on the gaps/body background */
+    background: #0f1115; /* Deep Onyx */
+    /* Remove the hard border, let the gap define separation */
     border-right: 1px solid rgba(255, 255, 255, 0.05);
     overflow: hidden;
 }
 
-/* ==========================================================================
-   [MODULE: CLEAN HEADER - ALIGNED & SLEEK]
-   Fixed height to match sidebar. High-impact typography.
-   ========================================================================== */
-
+/* 2. Header (Glass Effect) */
 .center-panel .panel-header {
-    /* MATCHING HEIGHT */
     height: 70px;
     min-height: 70px;
-
-    /* 2. Header (Transparent Floating Feel) */
-    background: rgba(22, 27, 34, 0.95); /* Semi-transparent */
+    background: rgba(15, 17, 21, 0.85); /* Semi-transparent */
+    backdrop-filter: blur(12px);         /* Blurs content behind it */
+    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(10px);
-
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0 20px;
-    position: relative;
     z-index: 10;
 }
 
@@ -453,21 +444,21 @@
 
 #messageInputContainer {
     position: absolute;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
+    bottom: 24px;
+    left: 24px;
+    right: 24px;
 
-    /* 3D Floating Glass Card */
-    background: rgba(22, 27, 34, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    /* Glass Effect */
+    background: rgba(22, 27, 34, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 
-    /* The Signature Border */
+    /* Matches Side Panel Borders */
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
 
-    /* The Signature Shadow */
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    /* Deep Shadow for "Floating" feel */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 
     padding: 16px;
     display: flex;
@@ -521,9 +512,9 @@
 
 #messageInput {
     flex: 1;
-    background: #0d1117; /* Darker inset */
+    background: #0d1117; /* Dark Inset */
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
+    border-radius: 12px;
     padding: 12px 16px;
     font-size: 14px;
     font-family: inherit;
@@ -543,6 +534,7 @@
     background: #161b22;
     border-color: #3b82f6;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    outline: none;
 }
 
 .attachment-icon {
@@ -794,21 +786,24 @@
 }
 
 .stat-card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 16px;
+    /* MATCHING LEFT PANEL GRADIENT */
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
+
+    /* MATCHING BORDER & SHADOW */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+
+    border-radius: 12px;
     padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s, border-color 0.2s;
+    transition: transform 0.2s;
 }
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-    border-color: #3b82f6;
+    border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
 .stat-icon {
@@ -841,25 +836,28 @@
 
 /* Goal Section */
 .goal-card {
-    background: #161b22;
-    border: 1px solid #30363d;
+    /* Same gradient physics */
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+
     color: white;
     border-radius: 16px;
     padding: 24px;
     position: relative;
     overflow: hidden;
     margin-bottom: 24px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
 }
 
-/* Cool background accent for the card */
+/* Keep the cool internal shine */
 .goal-card::after {
     content: '';
     position: absolute;
     top: 0; right: 0;
     width: 150px; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05));
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03));
     transform: skewX(-20deg);
+    pointer-events: none;
 }
 
 .goal-header {
@@ -903,9 +901,10 @@
 #messagesContainer {
     display: flex;
     flex-direction: column;
-    gap: 4px; /* Tight grouping */
+    gap: 8px;
     padding: 20px;
-    padding-bottom: 140px;
+    padding-bottom: 140px; /* Space for input deck */
+    background: transparent;
 }
 
 /* 2. The Row (Full Width Container) */
@@ -934,23 +933,25 @@
 .message-content {
     display: block;
     width: fit-content;
-    max-width: 100%;
+    max-width: 75%;
 
-    /* MORE BREATHING ROOM: Increased padding */
-    padding: 10px 18px;
+    /* Comfortable padding */
+    padding: 12px 18px;
 
     /* PREVENT SQUISHY BUBBLES: Minimum width */
     min-width: 48px;
 
     font-size: 15px;
-    line-height: 1.4;
-    border-radius: 20px; /* Slightly rounder to match new padding */
+    line-height: 1.5;
+    border-radius: 18px;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 
     /* BETTER WRAPPING LOGIC */
     text-align: left;
-    white-space: pre-wrap;       /* Preserve Enter keys */
-    word-break: normal;          /* Don't break words like "good" */
-    overflow-wrap: break-word;   /* Only break long strings/URLs */
+    white-space: pre-wrap;
+    word-break: normal;
+    overflow-wrap: break-word;
 }
 
 /* 5. THE PARAGRAPH KILLER (Removes extra size) */
@@ -974,13 +975,13 @@
 }
 
 .message.outbound .message-content {
-    /* Gradient gives it that premium depth */
+    /* Premium Blue Gradient */
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: #ffffff !important;
     border: none;
     border-radius: 18px !important;
     border-bottom-right-radius: 4px !important;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); /* Blue Glow */
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); /* Blue Glow */
 }
 
 /* INBOUND (Lead) -> Left Side */
@@ -993,9 +994,9 @@
 }
 
 .message.inbound .message-content {
-    /* Matches the Left Panel Card Background */
+    /* Matches Side Panel Cards */
     background: #1f2937;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     color: #e6edf3 !important;
     border-radius: 18px !important;
     border-bottom-left-radius: 4px !important;
