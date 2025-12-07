@@ -27,17 +27,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- B. DEFINE GLOBAL FUNCTIONS ---
 
-            // 1. HEADER RENDERER
+            // 1. HEADER RENDERER (Fixed State Logic)
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
 
-                if (!header) return;
-                // Class-based logic (Good)
+                // --- FIX: RESTORE CHAT UI ELEMENTS ---
+                // We must undo what loadDashboard() did
+                const inputs = document.getElementById('messageInputContainer');
+                const actions = document.getElementById('conversationActions');
+                const messages = document.getElementById('messagesContainer');
+
                 if (centerPanel) centerPanel.classList.remove('dashboard-mode');
+                if (inputs) inputs.classList.remove('hidden');
+                if (actions) actions.classList.remove('hidden');
+                // --------------------------------------
+
+                if (!header) return;
 
                 const displayTitle = businessName || 'Unknown Business';
                 const initials = displayTitle.substring(0, 2).toUpperCase();
+
+                // Check if CallBar already exists to preserve state (e.g., active timer)
+                const existingCallBar = document.getElementById('callBar');
+                const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
+                const currentTimer = existingCallBar ? document.getElementById('callTimer')?.innerText : '00:00';
 
                 header.innerHTML = `
                     <div class="chat-header-rich">
@@ -52,15 +66,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                         <div class="chat-header-actions">
-                            <button id="callBtn" class="header-action-btn" title="Call ${phoneNumber || 'No phone'}">
+                            <button id="callBtn" class="header-action-btn ${isCallActive ? 'active' : ''}" title="Call ${phoneNumber || 'No phone'}">
                                 <i class="fas fa-phone"></i>
                             </button>
                         </div>
                     </div>
-                    <div id="callBar" class="call-bar hidden">
+
+                    <div id="callBar" class="call-bar ${isCallActive ? '' : 'hidden'}">
                         <div class="call-bar-info">
                             <span class="call-status">Calling...</span>
-                            <span class="call-timer" id="callTimer">00:00</span>
+                            <span class="call-timer" id="callTimer">${currentTimer || '00:00'}</span>
                         </div>
                         <div class="call-bar-actions">
                             <button class="call-control-btn" id="muteBtn" title="Mute">
@@ -73,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
 
-                // Setup call button click handler with Twilio integration
+                // Re-attach listeners (Essential because innerHTML destroyed them)
                 const callBtn = document.getElementById('callBtn');
                 const endCallBtn = document.getElementById('endCallBtn');
                 const muteBtn = document.getElementById('muteBtn');
@@ -84,13 +99,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                             alert('No phone number available for this lead.');
                             return;
                         }
-
-                        // Use CallManager if available (Twilio)
                         if (window.callManager) {
                             console.log('📞 Starting call to:', phoneNumber);
                             await window.callManager.startCall(phoneNumber, conversationId);
                         } else {
-                            // Fallback: just show UI (demo mode)
                             console.log('📞 CallManager not available - demo mode');
                             document.getElementById('callBar')?.classList.remove('hidden');
                             callBtn.classList.add('active');
@@ -103,7 +115,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (window.callManager) {
                             window.callManager.endCall();
                         } else {
-                            // Fallback: just hide UI
                             document.getElementById('callBar')?.classList.add('hidden');
                             document.getElementById('callBtn')?.classList.remove('active');
                         }
@@ -115,7 +126,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (window.callManager) {
                             window.callManager.toggleMute();
                         } else {
-                            // Fallback: just toggle visuals
                             muteBtn.classList.toggle('muted');
                             const icon = muteBtn.querySelector('i');
                             if (icon) {
