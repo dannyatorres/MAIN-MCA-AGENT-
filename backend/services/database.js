@@ -111,7 +111,62 @@ async function initialize() {
             ON lender_qualifications(conversation_id);
         `);
 
-        console.log('✅ Database schema verified and repaired');
+        // 6. Create job_queue (Required for FCS trigger route)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS job_queue (
+                id SERIAL PRIMARY KEY,
+                job_type VARCHAR(50) NOT NULL,
+                conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+                input_data JSONB,
+                status VARCHAR(50) DEFAULT 'queued',
+                result_data JSONB,
+                created_at TIMESTAMP DEFAULT NOW(),
+                completed_at TIMESTAMP,
+                error_message TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_job_queue_status ON job_queue(status);
+            CREATE INDEX IF NOT EXISTS idx_job_queue_conv ON job_queue(conversation_id);
+        `);
+
+        // 7. Create fcs_analyses (For storing FCS analysis results)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS fcs_analyses (
+                id SERIAL PRIMARY KEY,
+                conversation_id UUID UNIQUE REFERENCES conversations(id) ON DELETE CASCADE,
+                status VARCHAR(50) DEFAULT 'processing',
+                extracted_business_name VARCHAR(255),
+                statement_count INTEGER,
+                fcs_report TEXT,
+                average_deposits NUMERIC,
+                average_revenue NUMERIC,
+                total_negative_days INTEGER,
+                average_negative_days NUMERIC,
+                state VARCHAR(10),
+                industry VARCHAR(100),
+                position_count INTEGER,
+                created_at TIMESTAMP DEFAULT NOW(),
+                completed_at TIMESTAMP,
+                error_message TEXT
+            );
+        `);
+
+        // 8. Create fcs_results (Backwards compatibility for fcs.js routes)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS fcs_results (
+                id SERIAL PRIMARY KEY,
+                conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+                max_funding_amount NUMERIC,
+                recommended_term_months NUMERIC,
+                estimated_payment NUMERIC,
+                factor_rate NUMERIC,
+                risk_tier VARCHAR(10),
+                approval_probability NUMERIC,
+                analysis_notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        console.log('✅ Database schema verified and repaired (Job Queue & FCS tables added)');
     } catch (err) {
         console.warn('⚠️ Schema verification warning (non-fatal):', err.message);
     }
