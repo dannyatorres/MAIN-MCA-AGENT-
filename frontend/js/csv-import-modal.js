@@ -136,13 +136,7 @@ class CSVImportModalManager {
             // --- SUCCESS HANDLING ---
             if(progressFill) progressFill.style.width = '100%';
 
-            // 3. REFRESH THE LEAD LIST (Critical Fix)
-            if (typeof window.loadConversations === 'function') {
-                console.log('Refreshing conversation list...');
-                window.loadConversations();
-            }
-
-            // 4. SHOW SUCCESS CARD (Critical Fix)
+            // 3. SHOW SUCCESS CARD
             if (importStatus) {
                 importStatus.innerHTML = `
                     <div class="import-success-card" style="text-align: center; margin-top: 20px; animation: scaleIn 0.3s ease;">
@@ -154,7 +148,7 @@ class CSVImportModalManager {
                         ${result.errors && result.errors.length > 0 ? `<p style="color: #ef4444; font-size: 12px; margin-bottom: 15px;">(${result.errors.length} skipped due to errors)</p>` : ''}
 
                         <div>
-                            <button class="btn btn-primary" onclick="window.csvImportModalManager.closeModal()">Done</button>
+                            <button class="btn btn-primary" onclick="window.location.reload()">Done</button>
                         </div>
                     </div>
                 `;
