@@ -12,7 +12,7 @@ export const ApiService = {
         const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
         // Matches your server-new.js setup
-        const RAILWAY_BACKEND_URL = 'https://api.mcagent.io';
+        const RAILWAY_BACKEND_URL = '';
 
         this.config.isLocal = isLocalDev;
         this.config.baseUrl = isLocalDev

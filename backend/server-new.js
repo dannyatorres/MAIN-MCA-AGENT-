@@ -1,4 +1,4 @@
-// server-new.js - FINAL CLOUD & SESSION VERSION
+// server-new.js - FINAL ROOT DOMAIN VERSION (mcagent.io)
 
 console.log('Starting MCA Command Center Server...');
 
@@ -6,7 +6,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const session = require('express-session'); // New Session Library
+const session = require('express-session');
 const path = require('path');
 require('dotenv').config();
 
@@ -18,22 +18,21 @@ const parser = new Parser();
 const app = express();
 const server = http.createServer(app);
 
-// --- TRUST PROXY (Required for Cloud/Load Balancers) ---
+// --- TRUST PROXY ---
+// Essential for Railway/Cloud to pass correct IP and Protocol (HTTP/HTTPS)
 app.set('trust proxy', 1);
 
 // --- 1. CLOUD CORS & ORIGIN SETUP ---
-// We define allowed origins dynamically so it works on Localhost AND Cloud
 const getAllowedOrigins = () => {
     const origins = [
         'http://localhost:3000',
-        'http://localhost:8080'
+        'http://localhost:8080',
+        'https://mcagent.io',      // Root Domain
+        'https://www.mcagent.io'   // WWW Subdomain
     ];
-    // Add Railway/Cloud domains if they exist
+    // Add Railway specific domains if they exist
     if (process.env.RAILWAY_PUBLIC_DOMAIN) {
         origins.push(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
-    }
-    if (process.env.RAILWAY_STATIC_URL) {
-        origins.push(`https://${process.env.RAILWAY_STATIC_URL}`);
     }
     return origins;
 };
@@ -42,15 +41,17 @@ const getAllowedOrigins = () => {
 const io = new Server(server, {
     cors: {
         origin: (origin, callback) => {
-            // Allow requests with no origin (mobile apps, curl)
+            // Allow requests with no origin (mobile apps, curl, or same-origin)
             if (!origin) return callback(null, true);
 
             const allowed = getAllowedOrigins();
-            // Check if origin matches our allowed list OR is a railway subdomain
-            if (allowed.includes(origin) || origin.includes('railway.app') || origin.includes('mcagent.io')) {
+            
+            // Allow specific list OR any subdomain ending in mcagent.io
+            // This prevents "fake-mcagent.io" but allows "app.mcagent.io"
+            if (allowed.includes(origin) || origin.endsWith('.mcagent.io') || origin.includes('railway.app')) {
                 callback(null, true);
             } else {
-                console.log('CORS Blocked Socket:', origin);
+                console.warn(`⚠️ CORS Blocked Socket Connection: ${origin}`);
                 callback(new Error('Not allowed by CORS'));
             }
         },
@@ -64,7 +65,7 @@ const io = new Server(server, {
 global.io = io;
 
 io.on('connection', (socket) => {
-    console.log('✅ Client connected:', socket.id);
+    // console.log('✅ Client connected:', socket.id); // Uncomment for debugging
     socket.on('join_conversation', (id) => {
         socket.join(`conversation_${id}`);
     });
@@ -76,7 +77,7 @@ app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
         const allowed = getAllowedOrigins();
-        if (allowed.includes(origin) || origin.includes('railway.app') || origin.includes('mcagent.io')) {
+        if (allowed.includes(origin) || origin.endsWith('.mcagent.io') || origin.includes('railway.app')) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -95,13 +96,17 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Serve Static Files (Frontend)
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// --- 4. SESSION AUTHENTICATION (The Fix) ---
+// --- 4. SESSION AUTHENTICATION ---
 app.use(session({
     secret: process.env.SESSION_SECRET || 'mca-secret-key-change-me',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false, // Changed to false for Railway SSL handoff compatibility
+        // "lax" is better for modern browsers.
+        // If Railway provides HTTPS, "secure" can be true, but false is safer for preventing lockout during transition.
+        secure: false, 
+        httpOnly: true,
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
@@ -115,10 +120,13 @@ app.post('/api/auth/login', (req, res) => {
     if (username === adminUser && password === adminPass) {
         req.session.isAuthenticated = true;
         req.session.user = username;
-        req.session.save();
-        return res.json({ success: true });
+        req.session.save((err) => {
+            if (err) return res.status(500).json({ error: 'Session save failed' });
+            return res.json({ success: true });
+        });
+    } else {
+        return res.status(401).json({ error: 'Invalid credentials' });
     }
-    return res.status(401).json({ error: 'Invalid credentials' });
 });
 
 // LOGOUT Route
@@ -142,24 +150,22 @@ const requireAuth = (req, res, next) => {
     // 1. Always allow public paths
     if (publicPaths.includes(req.path)) return next();
 
-    // 🚀 LOCAL DEV BYPASS: Allow requests with X-Local-Dev header
-    if (req.headers['x-local-dev'] === 'true') {
-        console.log('🔓 Local dev bypass enabled for:', req.path);
-        return next();
-    }
+    // 2. Allow requests with X-Local-Dev header (Dev Bypass)
+    if (req.headers['x-local-dev'] === 'true') return next();
 
-    // 2. Allow if logged in
+    // 3. Allow if logged in
     if (req.session.isAuthenticated) return next();
 
-    // 3. Allow Document Downloads (Optional - keep if needed for external viewing)
+    // 4. Allow Document Downloads
     if (req.path.includes('/documents/view/') || req.path.includes('/download')) return next();
 
-    // 4. Reject API calls
+    // 5. Reject API calls
     if (req.path.startsWith('/api')) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // 5. Redirect browser requests to Login Page
+    // 6. Redirect browser requests to Login Page
+    // Since we are now serving the frontend from the same server, we redirect to root
     res.redirect('/');
 };
 
@@ -175,122 +181,74 @@ app.use('/api/fcs', require('./routes/fcs'));
 app.use('/api/lenders', require('./routes/lenders'));
 app.use('/api/csv-import', require('./routes/csv-import'));
 app.use('/api/lookups', require('./routes/lookups'));
-app.use('/api/n8n', require('./routes/n8n-integration'));
+app.use('/api/n8n', require('./routes/routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 
-// --- RSS NEWS FEED ENDPOINT (MCA SPECIALIZED) ---
+// --- RSS NEWS FEED ENDPOINT ---
 app.get('/api/news', async (req, res) => {
-    console.log('📰 MCA Wire Request Received');
+    // console.log('📰 MCA Wire Request Received'); // Uncomment for debugging
     try {
-        // 1. Curated List of High-Value MCA Sources
         const sources = [
-            {
-                // 🏆 The Holy Grail of MCA News
-                url: 'https://debanked.com/feed/',
-                tag: 'deBanked',
-                icon: 'fa-university',
-                priority: 1
-            },
-            {
-                // Tech & Ops specific to MCA
-                url: 'https://www.lendsaas.com/category/mca-industry-news/feed/',
-                tag: 'LendSaaS',
-                icon: 'fa-microchip',
-                priority: 2
-            },
-            {
-                // Strict Industry Keywords (excludes generic "loans")
-                url: 'https://news.google.com/rss/search?q="Merchant+Cash+Advance"+OR+"Revenue+Based+Financing"+OR+"DailyFunder"+when:7d&hl=en-US&gl=US&ceid=US:en',
-                tag: 'Industry Wire',
-                icon: 'fa-rss',
-                priority: 3
-            },
-            {
-                // Legal & Regulatory Watch (FTC, COJ, SB 1235)
-                url: 'https://news.google.com/rss/search?q="FTC"+AND+"Small+Business+Lending"+OR+"Confession+of+Judgment"+when:14d&hl=en-US&gl=US&ceid=US:en',
-                tag: 'Legal/Regs',
-                icon: 'fa-balance-scale',
-                priority: 4
-            }
+            { url: 'https://debanked.com/feed/', tag: 'deBanked', icon: 'fa-university', priority: 1 },
+            { url: 'https://www.lendsaas.com/category/mca-industry-news/feed/', tag: 'LendSaaS', icon: 'fa-microchip', priority: 2 },
+            { url: 'https://news.google.com/rss/search?q="Merchant+Cash+Advance"+OR+"Revenue+Based+Financing"+when:7d&hl=en-US&gl=US&ceid=US:en', tag: 'Industry', icon: 'fa-rss', priority: 3 },
+            { url: 'https://news.google.com/rss/search?q="FTC"+AND+"Small+Business+Lending"+when:14d&hl=en-US&gl=US&ceid=US:en', tag: 'Legal', icon: 'fa-balance-scale', priority: 4 }
         ];
 
-        // 2. Fetch all feeds in parallel with timeout handling
-        const feedPromises = sources.map(async (sourceConfig) => {
+        const feedPromises = sources.map(async (source) => {
             try {
-                // Set a timeout of 5 seconds per feed to prevent hanging
                 const feed = await Promise.race([
-                    parser.parseURL(sourceConfig.url),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                    parser.parseURL(source.url),
+                    new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), 5000))
                 ]);
-
-                return feed.items.map(item => {
-                    // Clean up titles (Remove " - Publisher Name")
-                    const cleanTitle = item.title.replace(/- [^-]+$/, '').trim();
-
-                    return {
-                        title: cleanTitle,
-                        link: item.link,
-                        pubDate: item.pubDate,
-                        source: sourceConfig.tag,
-                        icon: sourceConfig.icon,
-                        priority: sourceConfig.priority,
-                        // Snippet/Content (if available) for tooltip
-                        snippet: item.contentSnippet || item.content || ''
-                    };
-                });
-            } catch (err) {
-                console.warn(`⚠️ Failed to fetch ${sourceConfig.tag}:`, err.message);
-                return []; // Return empty array so one failure doesn't break the app
-            }
+                return feed.items.map(item => ({
+                    title: item.title.replace(/- [^-]+$/, '').trim(),
+                    link: item.link,
+                    pubDate: item.pubDate,
+                    source: source.tag,
+                    icon: source.icon,
+                    priority: source.priority,
+                    snippet: item.contentSnippet || ''
+                }));
+            } catch (err) { return []; }
         });
 
-        // 3. Process Results
         const results = await Promise.all(feedPromises);
-        let allArticles = results.flat();
-
-        // 4. Smart Sort: Priority first, then Date
-        allArticles.sort((a, b) => {
-            // If priority is different, lower number (higher priority) wins
+        let allArticles = results.flat().sort((a, b) => {
             if (a.priority !== b.priority) return a.priority - b.priority;
-            // If priority is same, newest date wins
             return new Date(b.pubDate) - new Date(a.pubDate);
         });
 
-        // Remove duplicates based on title (fuzzy match)
-        const seenTitles = new Set();
-        const uniqueArticles = allArticles.filter(item => {
-            const signature = item.title.toLowerCase().substring(0, 20); // First 20 chars
-            if (seenTitles.has(signature)) return false;
-            seenTitles.add(signature);
+        // Dedup logic
+        const seen = new Set();
+        const unique = allArticles.filter(item => {
+            const sig = item.title.toLowerCase().substring(0, 20);
+            if (seen.has(sig)) return false;
+            seen.add(sig);
             return true;
         });
 
-        // Send top 25 items
-        res.json({ success: true, data: uniqueArticles.slice(0, 25) });
-
+        res.json({ success: true, data: unique.slice(0, 25) });
     } catch (error) {
-        console.error('RSS Critical Error:', error);
+        console.error('RSS Error:', error);
         res.status(500).json({ success: false, message: 'Wire sync failed' });
     }
 });
 
 // --- 6. FRONTEND ROUTING ---
-// This decides which HTML page to show based on login status
 app.get('*', (req, res) => {
     if (!req.path.startsWith('/api')) {
         if (req.session && req.session.isAuthenticated) {
-            // Logged In? Show the App
             res.sendFile(path.join(__dirname, '../frontend/command-center.html'));
         } else {
-            // Not Logged In? Show Login Page
             res.sendFile(path.join(__dirname, '../frontend/index.html'));
         }
     }
 });
 
 // --- 7. START SERVER ---
-const PORT = process.env.PORT || 3000; // Cloud sets PORT, Local uses 3000
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });

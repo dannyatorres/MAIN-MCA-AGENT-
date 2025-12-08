@@ -12,7 +12,7 @@ class CommandCenter {
         const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
         // Railway backend URL
-        const RAILWAY_BACKEND_URL = 'https://api.mcagent.io';
+        const RAILWAY_BACKEND_URL = '';
 
         this.apiBaseUrl = isLocalDev ? RAILWAY_BACKEND_URL : window.location.origin;
         this.wsUrl = isLocalDev ?

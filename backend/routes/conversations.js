@@ -1215,15 +1215,16 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                     businessData?.customMessage || null
                 ]);
 
-                // 3. PREPARE STREAMS (The Memory Fix)
-                // We create fresh ReadStreams for this specific email.
-                // This streams data from S3 -> Node -> Email Server without buffering RAM.
+                // We map the documents to Streams using the ENV VARIABLE for the bucket
                 const emailAttachments = documentMetadata.map(doc => ({
                     filename: doc.original_filename,
-                    // Create a fresh stream for this email
-                    content: s3.getObject({ Bucket: doc.s3_bucket, Key: doc.s3_key }).createReadStream(),
+                    content: s3.getObject({ 
+                        Bucket: process.env.S3_DOCUMENTS_BUCKET, // <--- THE FIX
+                        Key: doc.s3_key 
+                    }).createReadStream(),
                     contentType: doc.mime_type || 'application/pdf'
                 }));
+                // === THE FIX ENDS HERE ===
 
                 // Send email
                 let emailResult = null;
@@ -1593,6 +1594,28 @@ router.get('/:id/lenders/results', async (req, res) => {
     } catch (error) {
         console.error('❌ Error fetching lender qualifications:', error);
         res.status(500).json({ error: 'Failed to fetch results' });
+    }
+});
+
+// ==========================================
+// 🛠️ PASTE THIS AT THE VERY BOTTOM OF THE FILE
+// ==========================================
+router.get('/fix/schema-patch', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Starting Database Schema Repair...');
+        
+        // This runs the SQL command you couldn't run manually
+        await db.query(`
+            ALTER TABLE lender_qualifications
+            ADD COLUMN IF NOT EXISTS qualification_data JSONB,
+            ADD COLUMN IF NOT EXISTS criteria_used JSONB,
+            ADD COLUMN IF NOT EXISTS qualified_lenders JSONB;
+        `);
+
+        res.json({ success: true, message: 'Database patched! You can now save lenders.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

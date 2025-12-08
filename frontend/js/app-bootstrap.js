@@ -268,7 +268,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             // 4. OTHER HELPERS
-            window.openLenderManagementModal = () => window.commandCenter.lenders?.openManagementModal();
+            window.openLenderManagementModal = () => {
+                // 1. Check if the module is ready
+                if (window.commandCenter && window.commandCenter.lenders) {
+                    window.commandCenter.lenders.openManagementModal();
+                } 
+                // 2. If missing, try to auto-fix it
+                else if (typeof LendersController !== 'undefined') {
+                    console.log("🔄 Auto-initializing LendersController...");
+                    window.commandCenter.lenders = new LendersController(window.commandCenter);
+                    window.commandCenter.lenders.openManagementModal();
+                } 
+                // 3. If completely missing, warn the user
+                else {
+                    console.warn("⚠️ Lenders module not loaded.");
+                    alert("The Lenders system is still initializing. Please wait a moment and try again.");
+                }
+            };
             window.toggleDeleteMode = () => {
                 const list = document.getElementById('conversationsList');
                 const btn = document.getElementById('toggleDeleteModeBtn');
