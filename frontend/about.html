@@ -12,15 +12,14 @@
             --text-main: #ffffff;
             --text-muted: #94a3b8;
             --accent-blue: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.15);
+            --accent-purple: #8b5cf6;
             --border: #30363d;
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--app-bg);
-            /* Subtle radial glow at top */
-            background-image: radial-gradient(circle at 50% 0%, var(--accent-glow) 0%, transparent 50%);
+            background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.1) 0%, transparent 60%);
             color: var(--text-main);
             margin: 0;
             line-height: 1.6;
@@ -62,14 +61,10 @@
             border: 1px solid var(--border);
             padding: 40px;
             border-radius: 12px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
         }
 
-        .feature-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
-            border-color: var(--text-muted);
-        }
+        .feature-card:hover { transform: translateY(-2px); border-color: var(--text-muted); }
 
         .card-number {
             font-family: 'Playfair Display', serif;
@@ -81,43 +76,82 @@
         }
 
         .feature-card h3 { font-size: 24px; margin: 0 0 15px 0; color: white; }
-        
-        .feature-card p {
-            font-size: 15px;
-            color: var(--text-muted);
-            margin: 0;
-            line-height: 1.7;
-        }
+        .feature-card p { font-size: 15px; color: var(--text-muted); margin: 0; line-height: 1.7; }
 
-        /* THE EQUALIZER SECTION (New) */
+        /* THE EQUALIZER SECTION */
         .equalizer-section {
             text-align: center;
-            padding: 60px 20px;
+            padding: 80px 20px;
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
             background: linear-gradient(180deg, rgba(22, 27, 34, 0) 0%, rgba(22, 27, 34, 0.5) 100%);
-            margin-bottom: 80px;
+            margin-bottom: 100px;
         }
-
         .equalizer-section h2 { font-size: 42px; margin-bottom: 20px; color: white; }
-        .equalizer-section p { font-size: 19px; color: var(--text-muted); max-width: 700px; margin: 0 auto; }
+        .equalizer-section p { font-size: 20px; color: var(--text-muted); max-width: 700px; margin: 0 auto; }
 
-        /* FUTURE BANNER */
-        .future-banner {
+        /* --- THE NEW VISION CARD (THE FINALE) --- */
+        .vision-card {
+            background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 80px 40px;
             text-align: center;
-            padding-bottom: 60px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
         }
-        .future-banner h2 {
-            margin: 0 0 20px 0;
+
+        /* The "AI Glow" Top Border */
+        .vision-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), var(--accent-purple), transparent);
+        }
+
+        /* Background radial glow */
+        .vision-glow {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%; height: 70%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .vision-content { position: relative; z-index: 1; }
+
+        .vision-title {
+            font-size: 52px;
+            margin-bottom: 24px;
             color: white;
-            font-size: 32px;
+            font-style: italic;
         }
-        .future-text { color: var(--text-muted); max-width: 600px; margin: 0 auto 20px auto; font-size: 16px; }
-        .tagline { color: var(--accent-blue); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
+
+        .vision-text {
+            font-size: 20px;
+            color: var(--text-muted);
+            max-width: 750px;
+            margin: 0 auto 30px auto;
+            font-weight: 300;
+        }
+
+        .vision-tagline {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
         @media (max-width: 800px) {
             .grid-container { grid-template-columns: 1fr; }
-            .header-section h1 { font-size: 40px; }
+            .header-section h1, .vision-title { font-size: 36px; }
         }
     </style>
 </head>
@@ -125,6 +159,7 @@
 
     <nav class="navbar">
         <a href="index.html" class="nav-brand">
+            <img src="logo.png" alt="MCAgent" class="nav-logo-img">
             MCAgent
         </a>
         <div class="nav-links">
@@ -142,56 +177,49 @@
         </div>
 
         <div class="grid-container">
-            
             <div class="feature-card">
                 <span class="card-number">01</span>
                 <h3>Enforced Competence.</h3>
-                <p>
-                    The workflow <em>is</em> the training. Our guided underwriting logic forces junior reps to adhere to senior-level standards from day one. No ramp-up. No deviations.
-                </p>
+                <p>The workflow <em>is</em> the training. Our guided underwriting logic forces junior reps to adhere to senior-level standards from day one. No ramp-up. No deviations.</p>
             </div>
-
             <div class="feature-card">
                 <span class="card-number">02</span>
                 <h3>Autonomous Processing.</h3>
-                <p>
-                    Replace your entire processing department with AI. Instant data extraction, automated FCS generation, and intelligent file packaging. Zero manual entry. Zero lag time.
-                </p>
+                <p>Replace your entire processing department with AI. Instant data extraction, automated FCS generation, and intelligent file packaging. Zero manual entry. Zero lag time.</p>
             </div>
-
             <div class="feature-card">
                 <span class="card-number">03</span>
                 <h3>Absolute Oversight.</h3>
-                <p>
-                    Unified Voice, SMS, and Email. If it happens in your brokerage, it's recorded, transcribed, and analyzed. Eliminate side-deals and enforce compliance in real-time.
-                </p>
+                <p>Unified Voice, SMS, and Email. If it happens in your brokerage, it's recorded, transcribed, and analyzed. Eliminate side-deals and enforce compliance in real-time.</p>
             </div>
-
             <div class="feature-card">
                 <span class="card-number">04</span>
                 <h3>Algorithmic Placement.</h3>
-                <p>
-                    Stop the "spray and pray." Our pre-qualification engine matches files to exact lender guidelines before submission. Protect your ISO reputation and increase conversion.
-                </p>
+                <p>Stop the "spray and pray." Our pre-qualification engine matches files to exact lender guidelines before submission. Protect your ISO reputation and increase conversion.</p>
             </div>
-
         </div>
 
         <div class="equalizer-section">
             <h2>The Great Equalizer.</h2>
             <p>
                 We grant the solo operator the operational firepower of a top-tier brokerage. 
-                Process volume, enforce compliance, and close deals with the throughput of a 50-person floor—without the payroll.
+                Process volume, enforce compliance, and close deals with the throughput of a 50-person floor--without the payroll.
             </p>
         </div>
 
-        <div class="future-banner">
-            <h2>The Autonomous Future</h2>
-            <p class="future-text">
-                Every action taken on MCAgent today trains the AI model of tomorrow. We are building an agent capable of funding deals end-to-end, with zero human intervention.
-            </p>
-            <p class="tagline">Streamlining today. Automating tomorrow.</p>
+        <div class="vision-card">
+            <div class="vision-glow"></div>
+            <div class="vision-content">
+                <h2 class="vision-title">The Autonomous Future.</h2>
+                <p class="vision-text">
+                    Every action taken on MCAgent today--every call, text, and submission--is training the neural network of tomorrow. 
+                    We are building an agent capable of funding deals end-to-end, with zero human intervention.
+                </p>
+                <p class="vision-tagline">Streamlining today. Automating tomorrow.</p>
+            </div>
         </div>
+
+        <div style="height: 100px;"></div>
 
     </div>
 
