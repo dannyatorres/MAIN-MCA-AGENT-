@@ -499,116 +499,116 @@ class FCSModule {
 
     formatFCSContent(content) {
         if (!content || content.trim() === '') {
-            return '<p style="color: #ef4444; text-align: center; padding: 20px;">No content to display</p>';
+            return '<div style="color: #ef4444; padding: 20px;">No content to display</div>';
         }
 
         try {
-            // Clean up the content
-            let cleanedContent = content
-                .replace(/^\.\.\.\s*$/gm, '')
-                .replace(/^\s*\.\.\.\s*$/gm, '')
-                .replace(/\n{3,}/g, '\n\n')
-                .trim();
-
-            const lines = cleanedContent.split('\n').filter(line => {
-                const trimmed = line.trim();
-                return trimmed !== '' && trimmed !== '...' && trimmed !== '…';
-            });
-
-            let html = '';
+            // 1. Clean up the raw text
+            let lines = content.split('\n').filter(line => line.trim() !== '');
+            let html = '<div class="fcs-styled-report" style="font-family: sans-serif; color: #e6edf3;">';
+            
+            let inTable = false;
 
             for (let i = 0; i < lines.length; i++) {
-                const trimmedLine = lines[i].trim();
+                let line = lines[i].trim();
 
-                // Main section headers (ALL CAPS)
-                if (trimmedLine === trimmedLine.toUpperCase() &&
-                    trimmedLine.length > 3 &&
-                    !trimmedLine.includes(':') &&
-                    trimmedLine.match(/^[A-Z\s_]+$/)) {
-                    html += `
-                        <div style="
-                            color: #3b82f6;
-                            font-size: 15px;
-                            font-weight: 700;
-                            margin: 20px 0 10px 0;
-                            padding-bottom: 4px;
-                            border-bottom: 2px solid #3b82f6;
-                        ">${this.escapeHtml(trimmedLine)}</div>
-                    `;
+                // 2. HEADERS (Blue Text)
+                // Detect lines that are all caps or end with ":" (but aren't data)
+                if ((line === line.toUpperCase() && line.length > 4 && !line.includes('$')) || 
+                    (line.endsWith(':') && !line.includes('$'))) {
+                    
+                    if (inTable) { html += '</tbody></table></div>'; inTable = false; }
+                    
+                    // Special styling for specific headers
+                    if (line.includes('EXTRACTED_BUSINESS_NAME')) {
+                        const name = line.split(':')[1] || '';
+                        html += `
+                            <div style="background: #1f2937; border: 1px solid #374151; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                                <span style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Business Name</span>
+                                <div style="color: #fff; font-size: 18px; font-weight: 700; margin-top: 4px;">${name}</div>
+                            </div>`;
+                        continue;
+                    }
+
+                    html += `<h4 style="color: #3b82f6; margin: 24px 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 8px;">${line.replace(/:/g, '')}</h4>`;
                     continue;
                 }
 
-                // Section headers (ends with colon)
-                if (trimmedLine.endsWith(':') && !trimmedLine.includes('Deposits:')) {
+                // 3. TABLE ROWS (The Magic Part)
+                // Detects lines like: "Aug 2025 Deposits: $10,000..."
+                if (line.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/i) && line.includes('Deposits:')) {
+                    
+                    if (!inTable) {
+                        html += `
+                        <div style="overflow-x: auto; margin-bottom: 20px; border-radius: 8px; border: 1px solid #30363d;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; background: #0d1117;">
+                                <thead style="background: #161b22; color: #8b949e; text-transform: uppercase; font-size: 11px;">
+                                    <tr>
+                                        <th style="padding: 12px;">Month</th>
+                                        <th style="padding: 12px;">Deposits</th>
+                                        <th style="padding: 12px;">Revenue</th>
+                                        <th style="padding: 12px;">Neg Days</th>
+                                        <th style="padding: 12px;">End Bal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                        inTable = true;
+                    }
+
+                    // Parse the row data
+                    const month = line.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/i)?.[0] || 'Date';
+                    const deposits = line.match(/Deposits:\s*(\$[\d,.]+)/i)?.[1] || '-';
+                    const revenue = line.match(/Revenue:\s*(\$[\d,.]+)/i)?.[1] || '-';
+                    const negDays = line.match(/Neg Days:\s*(\d+)/i)?.[1] || '0';
+                    const endBal = line.match(/End Bal:\s*([-$]+[\d,.]+)/i)?.[1] || '-';
+
                     html += `
-                        <div style="
-                            color: #e6edf3;
-                            font-size: 14px;
-                            font-weight: 600;
-                            margin: 16px 0 8px 0;
-                        ">${this.escapeHtml(trimmedLine)}</div>
-                    `;
+                        <tr style="border-bottom: 1px solid #21262d;">
+                            <td style="padding: 12px; font-weight: 600; color: #3b82f6;">${month}</td>
+                            <td style="padding: 12px;">${deposits}</td>
+                            <td style="padding: 12px; font-weight: 600; color: #4ade80;">${revenue}</td>
+                            <td style="padding: 12px; ${parseInt(negDays) > 3 ? 'color: #f87171;' : ''}">${negDays}</td>
+                            <td style="padding: 12px;">${endBal}</td>
+                        </tr>`;
                     continue;
                 }
 
-                // Bullet points
-                if (trimmedLine.match(/^[•\-]\s/) || trimmedLine.match(/^\d+\.\s/)) {
-                    const bulletText = trimmedLine.replace(/^[•\-]\s/, '').replace(/^\d+\.\s/, '');
+                // 4. Close table if we hit a normal line
+                if (inTable) { html += '</tbody></table></div>'; inTable = false; }
+
+                // 5. BULLET POINTS
+                if (line.startsWith('-') || line.startsWith('•')) {
+                    const content = line.replace(/^[-•]\s*/, '');
                     html += `
-                        <div style="
-                            display: flex;
-                            gap: 8px;
-                            margin: 4px 0 4px 16px;
-                            line-height: 1.5;
-                            font-size: 13px;
-                        ">
-                            <span style="color: #3b82f6; font-weight: 600;">•</span>
-                            <span style="color: #c9d1d9;">${this.escapeHtml(bulletText)}</span>
-                        </div>
-                    `;
+                    <div style="display: flex; gap: 10px; margin-bottom: 8px; font-size: 13px; color: #d1d5db;">
+                        <span style="color: #3b82f6;">•</span>
+                        <span>${content}</span>
+                    </div>`;
                     continue;
                 }
 
-                // Key-value pairs
-                if (trimmedLine.includes(':') && !trimmedLine.endsWith(':')) {
-                    const colonIndex = trimmedLine.indexOf(':');
-                    const key = trimmedLine.substring(0, colonIndex).trim();
-                    const value = trimmedLine.substring(colonIndex + 1).trim();
-
+                // 6. KEY-VALUE PAIRS (e.g., "State: NY")
+                if (line.includes(':') && line.length < 50) {
+                    const [key, val] = line.split(':');
                     html += `
-                        <div style="
-                            display: grid;
-                            grid-template-columns: 200px 1fr;
-                            gap: 12px;
-                            padding: 6px 10px;
-                            background: #0d1117;
-                            margin: 3px 0;
-                            border-radius: 4px;
-                            font-size: 13px;
-                        ">
-                            <span style="font-weight: 600; color: #8b949e;">${this.escapeHtml(key)}:</span>
-                            <span style="color: #e6edf3;">${this.escapeHtml(value)}</span>
-                        </div>
-                    `;
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 13px;">
+                        <span style="color: #9ca3af;">${key}</span>
+                        <span style="font-weight: 600; color: #e6edf3;">${val}</span>
+                    </div>`;
                     continue;
                 }
 
-                // Regular text
-                html += `
-                    <div style="
-                        margin: 8px 0;
-                        line-height: 1.5;
-                        color: #c9d1d9;
-                        font-size: 13px;
-                    ">${this.escapeHtml(trimmedLine)}</div>
-                `;
+                // 7. PLAIN TEXT
+                html += `<div style="margin-bottom: 6px; font-size: 13px; line-height: 1.5;">${line}</div>`;
             }
 
+            if (inTable) { html += '</tbody></table></div>'; }
+            html += '</div>';
             return html;
 
         } catch (error) {
-            console.error('Error formatting FCS content:', error);
-            return `<div style="color: #ef4444; padding: 12px;">Error formatting content: ${error.message}</div>`;
+            console.error('Formatting error:', error);
+            return `<pre style="white-space: pre-wrap; color: #e6edf3;">${content}</pre>`; // Fallback to raw text
         }
     }
 
