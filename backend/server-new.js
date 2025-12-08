@@ -181,7 +181,7 @@ app.use('/api/fcs', require('./routes/fcs'));
 app.use('/api/lenders', require('./routes/lenders'));
 app.use('/api/csv-import', require('./routes/csv-import'));
 app.use('/api/lookups', require('./routes/lookups'));
-app.use('/api/n8n', require('./routes/routes/n8n-integration'));
+app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 
