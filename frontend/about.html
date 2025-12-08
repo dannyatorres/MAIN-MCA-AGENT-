@@ -2,156 +2,116 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCAgent - Infrastructure</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Libre+Baskerville:wght@400;700&family=Pinyon+Script&display=swap" rel="stylesheet">
     <style>
-        /* --- ONYX THEME VARIABLES --- */
+        /* --- THEME FROM INDEX.HTML --- */
         :root {
             --app-bg: #0f1115;
-            --card-bg: #161b22;
-            --text-main: #ffffff;
-            --text-muted: #94a3b8;
-            --accent-blue: #3b82f6;
-            --accent-purple: #8b5cf6;
-            --border: #30363d;
+            --card-bg: #161b22; /* Matches Login Card */
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-gold: #d4a853; /* Gold from your script text */
+            --accent-green: #10b981; /* Green from your buttons */
+            --border: rgba(255, 255, 255, 0.08);
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--app-bg);
-            background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.1) 0%, transparent 60%);
+            background-image: radial-gradient(circle at 50% 0%, #161b22 0%, #0f1115 60%);
             color: var(--text-main);
             margin: 0;
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        h1, h2, h3, .nav-brand { font-family: 'Playfair Display', serif; }
+        h1, h2, h3, .nav-brand { font-family: 'Libre Baskerville', serif; }
 
         /* NAVBAR */
         .navbar {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 40px; background-color: rgba(15, 17, 21, 0.85);
-            border-bottom: 1px solid rgba(255,255,255,0.05); position: sticky; top: 0;
-            backdrop-filter: blur(12px); z-index: 1000;
+            padding: 15px 40px; background-color: rgba(22, 27, 34, 0.90);
+            border-bottom: 1px solid var(--border); position: sticky; top: 0;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 1000;
         }
-        .nav-brand { font-size: 24px; font-weight: 700; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 12px; letter-spacing: -0.5px; }
+        .nav-brand { font-size: 24px; font-weight: 700; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 12px; }
         .nav-logo-img { height: 32px; width: auto; }
         .nav-links { display: flex; gap: 30px; }
-        .nav-link { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 14px; transition: color 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
-        .nav-link:hover, .nav-link.active { color: var(--accent-blue); }
+        .nav-link { color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 14px; transition: all 0.2s; }
+        .nav-link:hover, .nav-link.active { color: var(--text-main); }
 
-        /* PAGE CONTENT */
+        /* CONTENT */
         .container { max-width: 1100px; margin: 80px auto; padding: 0 20px; }
 
-        /* HERO HEADER */
         .header-section { text-align: center; margin-bottom: 80px; }
-        .header-section h1 { font-size: 56px; margin-bottom: 15px; line-height: 1.1; font-style: italic; }
+        .header-section h1 { font-size: 52px; margin-bottom: 15px; line-height: 1.1; background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .header-section p { font-size: 20px; color: var(--text-muted); max-width: 600px; margin: 0 auto; font-weight: 400; }
 
-        /* 2x2 GRID LAYOUT */
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 80px;
-        }
-
+        /* GRID */
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 80px; }
+        
         .feature-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border);
-            padding: 40px;
-            border-radius: 12px;
-            transition: transform 0.2s;
+            background-color: var(--card-bg); border: 1px solid var(--border); padding: 40px; border-radius: 16px;
+            transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-
-        .feature-card:hover { transform: translateY(-2px); border-color: var(--text-muted); }
+        .feature-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.2); }
 
         .card-number {
-            font-family: 'Playfair Display', serif;
-            font-size: 42px;
-            color: rgba(255,255,255,0.1);
-            font-weight: 700;
-            display: block;
-            margin-bottom: 15px;
+            font-family: 'Pinyon Script', cursive; /* Using your script font for numbers */
+            font-size: 48px; color: rgba(212, 168, 83, 0.4); /* Gold tint */
+            display: block; margin-bottom: 10px; line-height: 1;
         }
 
-        .feature-card h3 { font-size: 24px; margin: 0 0 15px 0; color: white; }
+        .feature-card h3 { font-size: 22px; margin: 0 0 15px 0; color: #c9d1d9; }
         .feature-card p { font-size: 15px; color: var(--text-muted); margin: 0; line-height: 1.7; }
 
-        /* THE EQUALIZER SECTION */
+        /* EQUALIZER SECTION */
         .equalizer-section {
-            text-align: center;
-            padding: 80px 20px;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
+            text-align: center; padding: 80px 20px;
+            border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
             background: linear-gradient(180deg, rgba(22, 27, 34, 0) 0%, rgba(22, 27, 34, 0.5) 100%);
             margin-bottom: 100px;
         }
-        .equalizer-section h2 { font-size: 42px; margin-bottom: 20px; color: white; }
+        .equalizer-section h2 { font-size: 42px; margin-bottom: 20px; color: #c9d1d9; }
         .equalizer-section p { font-size: 20px; color: var(--text-muted); max-width: 700px; margin: 0 auto; }
 
-        /* --- THE NEW VISION CARD (THE FINALE) --- */
+        /* VISION CARD (Gold/Green Theme) */
         .vision-card {
             background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 80px 40px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--border); border-radius: 24px;
+            padding: 80px 40px; text-align: center; position: relative; overflow: hidden;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5);
         }
-
-        /* The "AI Glow" Top Border */
+        /* Top Glow Border (Gold/Green) */
         .vision-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent-blue), var(--accent-purple), transparent);
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-green), var(--accent-gold), transparent);
         }
-
-        /* Background radial glow */
+        /* Background Glow */
         .vision-glow {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 70%; height: 70%;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
-            z-index: 0;
+            background: radial-gradient(circle, rgba(212, 168, 83, 0.05) 0%, transparent 70%);
             pointer-events: none;
         }
-
         .vision-content { position: relative; z-index: 1; }
-
-        .vision-title {
-            font-size: 52px;
-            margin-bottom: 24px;
-            color: white;
-            font-style: italic;
-        }
-
-        .vision-text {
-            font-size: 20px;
-            color: var(--text-muted);
-            max-width: 750px;
-            margin: 0 auto 30px auto;
-            font-weight: 300;
-        }
-
+        .vision-title { font-size: 52px; margin-bottom: 24px; color: #c9d1d9; }
+        .vision-text { font-size: 20px; color: var(--text-muted); max-width: 750px; margin: 0 auto 30px auto; font-weight: 300; }
         .vision-tagline {
-            font-family: 'Inter', sans-serif;
-            font-weight: 700;
-            font-size: 16px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-family: 'Inter', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 2px; text-transform: uppercase;
+            color: var(--accent-green);
         }
 
-        @media (max-width: 800px) {
+        /* MOBILE FIXES */
+        @media (max-width: 900px) {
+            .navbar { flex-direction: column; gap: 15px; }
+            .nav-links { width: 100%; justify-content: center; }
+            .header-section h1 { font-size: 36px; }
             .grid-container { grid-template-columns: 1fr; }
-            .header-section h1, .vision-title { font-size: 36px; }
+            .vision-title { font-size: 36px; }
+            .vision-card { padding: 40px 20px; }
         }
     </style>
 </head>

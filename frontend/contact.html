@@ -2,30 +2,80 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCAgent - Contact</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* SAME SHARED CSS */
-        :root { --app-bg: #0f1115; --card-bg: #161b22; --text-main: #e6edf3; --text-muted: #8b949e; --accent: #3b82f6; --border: #30363d; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--app-bg); color: var(--text-main); margin: 0; line-height: 1.6; }
+        /* --- ONYX THEME VARIABLES --- */
+        :root {
+            --app-bg: #0f1115;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-green: #10b981;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--app-bg);
+            background-image: radial-gradient(circle at 50% 0%, #161b22 0%, #0f1115 60%);
+            color: var(--text-main);
+            margin: 0;
+            line-height: 1.6;
+        }
 
         h1, h2, h3, .nav-brand { font-family: 'Libre Baskerville', serif; }
 
-        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background-color: rgba(15, 17, 21, 0.95); border-bottom: 1px solid var(--border); position: sticky; top: 0; backdrop-filter: blur(10px); }
+        /* NAVBAR */
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 40px; background-color: rgba(22, 27, 34, 0.90);
+            border-bottom: 1px solid var(--border); position: sticky; top: 0;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 1000;
+        }
         .nav-brand { font-size: 24px; font-weight: 700; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 12px; }
         .nav-logo-img { height: 32px; width: auto; }
         .nav-links { display: flex; gap: 30px; }
-        .nav-link { color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 15px; transition: color 0.2s; }
-        .nav-link:hover, .nav-link.active { color: var(--accent); }
+        .nav-link { color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 14px; transition: all 0.2s; }
+        .nav-link:hover, .nav-link.active { color: var(--text-main); }
 
         .container { max-width: 600px; margin: 80px auto; padding: 0 20px; }
-        .card { background: var(--card-bg); border: 1px solid var(--border); padding: 40px; border-radius: 12px; }
 
-        input, textarea { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; color: white; margin-bottom: 20px; box-sizing: border-box; font-family: inherit; }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        /* FORM CARD */
+        .card {
+            background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+            border: 1px solid var(--border); border-radius: 16px; padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
 
-        .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
+        /* INPUTS */
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--text-main); }
+        
+        input, textarea {
+            width: 100%; padding: 14px; background-color: #0d1117;
+            border: 1px solid var(--border); border-radius: 12px;
+            color: #c9d1d9; margin-bottom: 20px; box-sizing: border-box; font-family: inherit; font-size: 15px;
+            transition: all 0.2s;
+        }
+        input:focus, textarea:focus {
+            outline: none; background: #161b22;
+            border-color: var(--accent-green); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
+
+        /* GREEN BUTTON */
+        .btn {
+            width: 100%; background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            color: white; padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+            font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .btn:hover { transform: translateY(-2px); background: linear-gradient(135deg, #34d399 0%, #059669 100%); }
+
+        /* MOBILE FIX */
+        @media (max-width: 900px) {
+            .navbar { flex-direction: column; gap: 15px; }
+            .nav-links { width: 100%; justify-content: center; }
+        }
     </style>
 </head>
 <body>
@@ -63,6 +113,13 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.getElementById('contactForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Message simulated! (Connect this to your backend if needed)');
+        });
+    </script>
 
 </body>
 </html>
