@@ -5,20 +5,24 @@
     <title>MCAgent - Contact</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        /* PASTE SHARED CSS HERE (or link css file) */
-        /* ... paste shared css ... */
+        /* SAME SHARED CSS */
+        :root { --app-bg: #0f1115; --card-bg: #161b22; --text-main: #e6edf3; --text-muted: #8b949e; --accent: #3b82f6; --border: #30363d; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--app-bg); color: var(--text-main); margin: 0; line-height: 1.6; }
 
-        .form-group { margin-bottom: 20px; }
-        .form-label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
-        .form-input, textarea {
-            width: 100%;
-            padding: 12px;
-            background-color: #0d1117;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: white;
-            font-family: inherit;
-        }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background-color: rgba(15, 17, 21, 0.95); border-bottom: 1px solid var(--border); position: sticky; top: 0; backdrop-filter: blur(10px); }
+        .nav-brand { font-size: 24px; font-weight: 800; color: var(--text-main); text-decoration: none; }
+        .nav-links { display: flex; gap: 30px; }
+        .nav-link { color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 15px; transition: color 0.2s; }
+        .nav-link:hover, .nav-link.active { color: var(--accent); }
+
+        .container { max-width: 600px; margin: 80px auto; padding: 0 20px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border); padding: 40px; border-radius: 12px; }
+
+        input, textarea { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; color: white; margin-bottom: 20px; box-sizing: border-box; font-family: inherit; }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+
+        .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -32,37 +36,27 @@
         </div>
     </nav>
 
-    <div class="page-container">
-        <div class="hero-section">
-            <h1 class="hero-title">Get in Touch</h1>
-            <p class="hero-subtitle">Have questions about enterprise deployment or custom lender integrations?</p>
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 40px;">
+            <h1 style="font-size: 40px; margin-bottom: 10px;">Get in Touch</h1>
+            <p style="color: var(--text-muted);">Have questions about enterprise deployment?</p>
         </div>
 
-        <div class="content-card" style="max-width: 600px; margin: 0 auto;">
+        <div class="card">
             <form id="contactForm">
-                <div class="form-group">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" class="form-input" placeholder="Jane Doe">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email Address</label>
-                    <input type="email" class="form-input" placeholder="jane @example.com">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Message</label>
-                    <textarea rows="5" class="form-input" placeholder="How can we help?"></textarea>
-                </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Send Message</button>
+                <label>Full Name</label>
+                <input type="text" placeholder="Jane Doe">
+
+                <label>Email Address</label>
+                <input type="email" placeholder="jane@example.com">
+
+                <label>Message</label>
+                <textarea rows="5" placeholder="How can we help?"></textarea>
+
+                <button type="submit" class="btn">Send Message</button>
             </form>
         </div>
     </div>
-
-    <script>
-        document.getElementById('contactForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            alert('Message simulated! (Connect this to your backend if needed)');
-        });
-    </script>
 
 </body>
 </html>

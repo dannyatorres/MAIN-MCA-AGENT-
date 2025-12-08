@@ -6,31 +6,134 @@
     <title>MCAgent - Home</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        /* PASTE THE SHARED CSS FROM STEP 1 HERE */
-        /* (Or link to your 01-theme.css) */
-        
-        /* Specific Styles for Login Layout */
-        .login-wrapper {
+        /* --- SHARED ONYX THEME --- */
+        :root {
+            --app-bg: #0f1115;       /* Deep Onyx */
+            --card-bg: #161b22;      /* Midnight Card */
+            --text-main: #e6edf3;    /* Platinum */
+            --text-muted: #8b949e;   /* Gray */
+            --accent: #3b82f6;       /* Blue */
+            --border: #30363d;       /* Dark Border */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--app-bg);
+            color: var(--text-main);
+            margin: 0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* NAVBAR */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background-color: rgba(15, 17, 21, 0.95);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-brand {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links { display: flex; gap: 30px; }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover, .nav-link.active { color: var(--accent); }
+
+        /* BUTTONS */
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+            text-decoration: none;
+        }
+        .btn-primary:hover { transform: translateY(-1px); }
+
+        /* LOGIN SPECIFIC */
+        .page-container {
+            max-width: 1000px;
+            margin: 80px auto;
+            padding: 0 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 80vh;
             gap: 80px;
         }
-        
+
+        .hero-title {
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--text-muted);
+            margin: 0;
+            max-width: 450px;
+        }
+
+        .login-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
         .form-input {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             background-color: #0d1117;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--border);
             border-radius: 6px;
             color: white;
             margin-bottom: 16px;
             font-size: 15px;
+            font-family: inherit;
+            box-sizing: border-box; /* Fixes padding issues */
         }
-        
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
         @media (max-width: 900px) {
-            .login-wrapper { flex-direction: column; gap: 40px; text-align: center; }
+            .page-container { flex-direction: column; text-align: center; gap: 40px; margin-top: 40px; }
+            .hero-subtitle { margin: 0 auto; }
         }
     </style>
 </head>
@@ -45,34 +148,33 @@
         </div>
     </nav>
 
-    <div class="page-container login-wrapper">
-        
+    <div class="page-container">
+
         <div>
-            <h1 class="hero-title" style="text-align: left;">Click. Funded.</h1>
-            <p class="hero-subtitle" style="text-align: left; margin: 0;">
+            <h1 class="hero-title">Click.<br>Funded.</h1>
+            <p class="hero-subtitle">
                 The most advanced AI command center for Merchant Cash Advance professionals.
             </p>
         </div>
 
-        <div class="content-card" style="width: 100%; max-width: 380px;">
-            <h2 style="margin-top: 0; margin-bottom: 24px;">Agent Login</h2>
+        <div class="login-card">
+            <h2 style="margin-top: 0; margin-bottom: 24px; font-size: 24px; color: white;">Agent Login</h2>
             <form id="loginForm">
                 <input type="text" id="username" class="form-input" placeholder="Username" required>
                 <input type="password" id="password" class="form-input" placeholder="Password" required>
                 <button type="submit" class="btn-primary" style="width: 100%;">Sign In</button>
-                <div id="msg" style="color: #ef4444; margin-top: 10px; display: none; text-align: center;"></div>
+                <div id="msg" style="color: #ef4444; margin-top: 15px; display: none; text-align: center; font-size: 14px;"></div>
             </form>
         </div>
 
     </div>
 
     <script>
-        // Keep your original Login Logic
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = document.querySelector('button[type="submit"]');
             const msg = document.getElementById('msg');
-            
+
             btn.innerText = 'Signing In...';
             btn.style.opacity = '0.7';
             msg.style.display = 'none';
@@ -93,7 +195,7 @@
                     throw new Error('Invalid credentials');
                 }
             } catch (err) {
-                msg.textContent = err.message;
+                msg.textContent = err.message || 'Connection failed';
                 msg.style.display = 'block';
                 btn.innerText = 'Sign In';
                 btn.style.opacity = '1';
