@@ -431,70 +431,36 @@ class FCSModule {
     }
 
     displayFCSReport(report) {
-        let fcsResults = document.getElementById('fcsResults');
-        if (!fcsResults) {
-            const container = document.getElementById('intelligenceContent');
-            if (container) {
-                fcsResults = document.createElement('div');
-                fcsResults.id = 'fcsResults';
-                container.appendChild(fcsResults);
-            }
-        }
+         let fcsResults = document.getElementById('fcsResults');
+         
+         if(fcsResults && report.report_content) {
+             // 1. Format the date nicely
+             const dateStr = report.generated_at 
+                ? new Date(report.generated_at).toLocaleString('en-US', { 
+                    month: 'short', day: 'numeric', year: 'numeric', 
+                    hour: 'numeric', minute: '2-digit', hour12: true 
+                  })
+                : 'Just now';
 
-        if (!fcsResults) return;
-
-        // Hide empty state
-        const emptyState = document.querySelector('#intelligenceContent .empty-state');
-        if (emptyState) emptyState.style.display = 'none';
-
-        if (!report || !report.report_content) {
-            fcsResults.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #ef4444;">
-                    <p>FCS Report data is empty</p>
-                </div>
-            `;
-            fcsResults.style.display = 'block';
-            return;
-        }
-
-        // Format date
-        let reportDate = 'Unknown Date';
-        if (report.generated_at) {
-            try {
-                reportDate = new Date(report.generated_at).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch (e) {
-                reportDate = String(report.generated_at);
-            }
-        }
-
-        const processedContent = this.formatFCSContent(report.report_content);
-
-        fcsResults.innerHTML = `
-            <div class="fcs-report" style="width: 100%; max-width: 100%;">
-                <div class="fcs-content" style="
-                    background: #161b22;
-                    border: 1px solid #30363d;
-                    border-radius: 12px;
-                    padding: 20px;
-                    color: #e6edf3;
-                ">
-                    <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #30363d;">
-                        <h3 style="color: #3b82f6; margin: 0 0 8px 0;">FCS Financial Analysis Report</h3>
-                        <p style="color: #8b949e; font-size: 12px; margin: 0;">Generated: ${reportDate}</p>
+             // 2. Clean HTML (No big Title, just subtle date at top right)
+             fcsResults.innerHTML = `
+                <div class="fcs-report-container" style="padding: 20px; color: #e6edf3; font-family: sans-serif;">
+                    
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; border-bottom: 1px solid #30363d; padding-bottom: 10px;">
+                        <span style="font-size: 11px; color: #6b7280; font-family: monospace;">
+                            Generated: ${dateStr}
+                        </span>
                     </div>
-                    ${processedContent}
-                </div>
-            </div>
-        `;
 
-        fcsResults.style.display = 'block';
-        fcsResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    <div class="fcs-content">
+                        ${this.formatFCSContent(report.report_content)}
+                    </div>
+                </div>`;
+             
+             fcsResults.style.display = 'block';
+             fcsResults.style.height = '100%';
+             fcsResults.style.overflowY = 'auto';
+         }
     }
 
     formatFCSContent(content) {
