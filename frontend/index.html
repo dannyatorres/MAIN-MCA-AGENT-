@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCAgent - Home</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Pinyon+Script&display=swap" rel="stylesheet">
     <style>
         /* --- SHARED ONYX THEME --- */
         :root {
             --app-bg: #0f1115;       /* Deep Onyx */
-            --text-main: #e6edf3;    /* Platinum */
+            --text-main: #c9d1d9;    /* Softer Platinum/Silver-Teal */
             --text-muted: #8b949e;   /* Gray */
             --accent: #3b82f6;       /* Blue */
             --border: rgba(255, 255, 255, 0.08); /* Subtle Border */
@@ -68,23 +68,48 @@
 
         .nav-link:hover, .nav-link.active { color: var(--text-main); }
 
-        /* BUTTONS - Matches .message.outbound styling */
+        /* NEW: The Script Logo Style */
+        .hero-brand-script {
+            font-family: 'Pinyon Script', cursive;
+            font-size: 85px;
+            line-height: 1.3;
+            margin-top: 10px;
+            margin-bottom: -5px;
+            padding-top: 0.2em;
+            overflow: visible;
+            position: relative;
+            z-index: 2;
+            /* Gold/Champagne gradient for premium feel */
+            background: linear-gradient(135deg, #f5d78e 0%, #d4a853 50%, #f5d78e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            /* Subtle gold glow */
+            filter: drop-shadow(0 2px 10px rgba(212, 168, 83, 0.3));
+        }
+
+        /* UPDATED: Green "Funded" Button */
+        /* Matches the 'call-bar' green from your internal app */
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
             color: white;
             padding: 14px 24px;
-            border-radius: 12px; /* Softer corners */
-            border: none;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1); /* Subtle rim */
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             text-decoration: none;
             font-family: 'Inter', sans-serif;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); /* Blue Glow */
+
+            /* Green Glow */
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
+
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+            background: linear-gradient(135deg, #34d399 0%, #059669 100%); /* Brighter on hover */
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
         }
 
         /* LOGIN PAGE LAYOUT */
@@ -106,12 +131,13 @@
             justify-content: center;
             align-items: center;
             text-align: center;
+            overflow: visible;
         }
 
         .hero-logo-large {
             height: 360px;
             width: auto;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: block;
             object-fit: contain;
             filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.1));
@@ -120,6 +146,7 @@
         .hero-title {
             font-size: 52px;
             font-weight: 700;
+            margin-top: 5px; /* Closer to MCAgent script */
             margin-bottom: 16px;
             line-height: 1.1;
 
@@ -171,7 +198,7 @@
             background-color: #0d1117;
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 12px; /* Matches chat input */
-            color: var(--text-main);
+            color: #c9d1d9; /* Softer platinum */
             margin-bottom: 16px;
             font-size: 15px;
             font-family: inherit;
@@ -188,6 +215,7 @@
             background: #161b22;
             border-color: var(--accent);
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            color: #c9d1d9;
         }
 
         @keyframes fadeIn {
@@ -225,7 +253,7 @@
         </div>
 
         <div class="login-card">
-            <h2 style="margin-top: 0; margin-bottom: 24px; font-size: 24px; color: white;">Agent Login</h2>
+            <h2 style="margin-top: 0; margin-bottom: 24px; font-size: 24px; color: #c9d1d9;">Agent Login</h2>
             <form id="loginForm">
                 <input type="text" id="username" class="form-input" placeholder="Username" required>
                 <input type="password" id="password" class="form-input" placeholder="Password" required>
