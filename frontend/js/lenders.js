@@ -70,19 +70,15 @@ class LendersModule {
     }
 
     setupGlobalEventListeners() {
-        // Listen for clicks anywhere in the results container
-        // This works even if the HTML inside is replaced 100 times
-        const resultsContainer = document.getElementById('lenderResults');
-
-        if (resultsContainer) {
-            resultsContainer.addEventListener('click', (e) => {
-                // check if the clicked element (or its parent) has our trigger class or ID
-                if (e.target.id === 'sendToLendersBtn' || e.target.closest('#sendToLendersBtn')) {
-                    e.preventDefault();
-                    this.showLenderSubmissionModal();
-                }
-            });
-        }
+        // FIX: Attach to body so the listener survives DOM refreshes
+        document.body.addEventListener('click', (e) => {
+            // Check if the clicked element is (or is inside) the Send button
+            if (e.target.id === 'sendToLendersBtn' || e.target.closest('#sendToLendersBtn')) {
+                e.preventDefault();
+                console.log('📧 Send to Lenders button clicked');
+                this.showLenderSubmissionModal();
+            }
+        });
 
         // Also restore previous results if they exist
         this.restoreCachedResults();
@@ -1289,6 +1285,7 @@ class LendersModule {
 
         // Show modal (use classList)
         modal.classList.remove('hidden');
+        modal.style.display = ''; // <--- ADD THIS LINE (Fixes the stuck hidden state)
         console.log('✅ Modal displayed successfully');
     }
 
