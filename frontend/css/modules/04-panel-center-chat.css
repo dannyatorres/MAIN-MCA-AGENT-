@@ -735,3 +735,34 @@
 .w-58 {
     width: 58%;
 }
+
+/* 1. Phone Button Styling */
+.header-action-btn.phone-btn {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border: 1px solid #30363d;
+    color: #e6edf3; /* White icon */
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+}
+
+.header-action-btn.phone-btn:hover {
+    border-color: #3b82f6; /* Blue border on hover */
+    color: #3b82f6;        /* Blue icon on hover */
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.15); /* Blue glow */
+}
+
+/* 2. Fix the specific white square issue */
+/* If it's an image inside a button, invert it or style the container */
+.header-action-btn img {
+    filter: invert(1) brightness(2); /* Makes black icons white */
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}

@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                         <div class="chat-header-actions">
-                            <button id="callBtn" class="header-action-btn ${isCallActive ? 'active' : ''}" title="Call ${phoneNumber || 'No phone'}">
+                            <button id="callBtn" class="header-action-btn phone-btn ${isCallActive ? 'active' : ''}" title="Call ${phoneNumber || 'No phone'}">
                                 <i class="fas fa-phone"></i>
                             </button>
                         </div>
