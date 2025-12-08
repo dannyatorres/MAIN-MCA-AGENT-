@@ -434,7 +434,6 @@ class FCSModule {
          let fcsResults = document.getElementById('fcsResults');
          
          if(fcsResults && report.report_content) {
-             // 1. Format the date nicely
              const dateStr = report.generated_at 
                 ? new Date(report.generated_at).toLocaleString('en-US', { 
                     month: 'short', day: 'numeric', year: 'numeric', 
@@ -442,18 +441,20 @@ class FCSModule {
                   })
                 : 'Just now';
 
-             // 2. Clean HTML (No big Title, just subtle date at top right)
+             // CLEANUP: Remove ``` markdown artifacts before rendering
+             const cleanContent = report.report_content.replace(/```/g, '').trim();
+
              fcsResults.innerHTML = `
-                <div class="fcs-report-container" style="padding: 20px; color: #e6edf3; font-family: sans-serif;">
+                <div class="fcs-report-container" style="padding: 0 20px 20px 20px; color: #e6edf3; font-family: sans-serif;">
                     
-                    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; border-bottom: 1px solid #30363d; padding-bottom: 10px;">
+                    <div style="display: flex; justify-content: flex-end; padding: 12px 0 8px 0; border-bottom: 1px solid #30363d; margin-bottom: 16px;">
                         <span style="font-size: 11px; color: #6b7280; font-family: monospace;">
                             Generated: ${dateStr}
                         </span>
                     </div>
 
                     <div class="fcs-content">
-                        ${this.formatFCSContent(report.report_content)}
+                        ${this.formatFCSContent(cleanContent)}
                     </div>
                 </div>`;
              
@@ -485,13 +486,13 @@ class FCSModule {
                     
                     if (inTable) { html += '</tbody></table></div>'; inTable = false; }
                     
-                    // Special styling for specific headers
+                    // Inside formatFCSContent loop...
                     if (line.includes('EXTRACTED_BUSINESS_NAME')) {
                         const name = line.split(':')[1] || '';
                         html += `
-                            <div style="background: #1f2937; border: 1px solid #374151; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
-                                <span style="color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Business Name</span>
-                                <div style="color: #fff; font-size: 18px; font-weight: 700; margin-top: 4px;">${name}</div>
+                            <div style="background: #1f2937; border: 1px solid #374151; padding: 12px; border-radius: 8px; margin-top: 0; margin-bottom: 20px;">
+                                <span style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Business Name</span>
+                                <div style="color: #fff; font-size: 18px; font-weight: 700; margin-top: 2px;">${name}</div>
                             </div>`;
                         continue;
                     }
