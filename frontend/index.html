@@ -9,40 +9,41 @@
         /* --- SHARED ONYX THEME --- */
         :root {
             --app-bg: #0f1115;       /* Deep Onyx */
-            --card-bg: #161b22;      /* Midnight Card */
             --text-main: #e6edf3;    /* Platinum */
             --text-muted: #8b949e;   /* Gray */
             --accent: #3b82f6;       /* Blue */
-            --border: #30363d;       /* Dark Border */
+            --border: rgba(255, 255, 255, 0.08); /* Subtle Border */
         }
 
         body {
-            /* Use Inter for regular text (readable), Baskerville for Headings (classy) */
             font-family: 'Inter', sans-serif;
             background-color: var(--app-bg);
             color: var(--text-main);
             margin: 0;
             line-height: 1.6;
             min-height: 100vh;
+            /* subtle radial gradient for depth behind the hero */
+            background-image: radial-gradient(circle at 50% 0%, #161b22 0%, #0f1115 60%);
         }
 
         h1, h2, h3, .nav-brand {
-            /* RESTORED: The classy "Lettering" font */
             font-family: 'Libre Baskerville', serif;
         }
 
-        /* NAVBAR */
+        /* NAVBAR - Matches .panel-header in 04-panel-center-chat.css */
         .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 15px 40px;
-            background-color: rgba(15, 17, 21, 0.95);
+            /* Slightly lighter dark with blur */
+            background-color: rgba(22, 27, 34, 0.85);
             border-bottom: 1px solid var(--border);
             position: sticky;
             top: 0;
             z-index: 1000;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
 
         .nav-brand {
@@ -55,38 +56,36 @@
             gap: 12px;
         }
 
-        /* Small Logo for Navbar */
-        .nav-logo-img {
-            height: 32px;
-            width: auto;
-        }
-
         .nav-links { display: flex; gap: 30px; }
 
         .nav-link {
             color: var(--text-muted);
             text-decoration: none;
             font-weight: 600;
-            font-size: 15px;
-            transition: color 0.2s;
+            font-size: 14px;
+            transition: all 0.2s;
         }
 
-        .nav-link:hover, .nav-link.active { color: var(--accent); }
+        .nav-link:hover, .nav-link.active { color: var(--text-main); }
 
-        /* BUTTONS */
+        /* BUTTONS - Matches .message.outbound styling */
         .btn-primary {
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
+            padding: 14px 24px;
+            border-radius: 12px; /* Softer corners */
             border: none;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.1s;
+            transition: all 0.2s ease;
             text-decoration: none;
-            font-family: 'Inter', sans-serif; /* Buttons stay readable */
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); /* Blue Glow */
         }
-        .btn-primary:hover { transform: translateY(-1px); }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        }
 
         /* LOGIN PAGE LAYOUT */
         .page-container {
@@ -97,59 +96,103 @@
             align-items: center;
             justify-content: center;
             gap: 80px;
+            animation: fadeIn 0.6s ease-out;
         }
 
-        /* The Hero Section (Left Side) */
+        /* HERO SECTION */
+        .hero-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
         .hero-logo-large {
-            height: 80px; /* Adjust size of your logo here */
+            height: 360px;
             width: auto;
             margin-bottom: 20px;
             display: block;
+            object-fit: contain;
+            filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.1));
         }
 
         .hero-title {
-            font-size: 64px; /* Big and Bold */
+            font-size: 52px;
             font-weight: 700;
             margin-bottom: 16px;
-            color: #ffffff;
             line-height: 1.1;
+
+            /* PREMIUM TEXT GRADIENT */
+            background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
         }
 
         .hero-subtitle {
-            font-size: 20px;
+            font-size: 18px;
             color: var(--text-muted);
             margin: 0;
             max-width: 450px;
-            font-family: 'Inter', sans-serif; /* Keep subtitle readable */
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
         }
 
-        /* Login Card (Right Side) */
+        /* LOGIN CARD - Matches .center-panel .stat-card exactly */
         .login-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            /* The Signature Gradient */
+            background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px; /* Match Goal Card */
             padding: 40px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4); /* Deeper shadow */
+            position: relative;
+            overflow: hidden;
         }
 
+        /* Optional Shine Effect from Goal Card */
+        .login-card::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 150px; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03));
+            transform: skewX(-20deg);
+            pointer-events: none;
+        }
+
+        /* INPUTS - Matches #messageInput styling */
         .form-input {
             width: 100%;
             padding: 14px;
             background-color: #0d1117;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px; /* Matches chat input */
+            color: var(--text-main);
             margin-bottom: 16px;
             font-size: 15px;
             font-family: inherit;
             box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        .form-input::placeholder {
+            color: #6e7681;
         }
 
         .form-input:focus {
             outline: none;
+            background: #161b22;
             border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @media (max-width: 900px) {
@@ -162,10 +205,7 @@
 <body>
 
     <nav class="navbar">
-        <a href="index.html" class="nav-brand">
-            <img src="logo.png" alt="MCAgent" class="nav-logo-img">
-            MCAgent
-        </a>
+        <a href="index.html" class="nav-brand">MCAgent</a>
         <div class="nav-links">
             <a href="index.html" class="nav-link active">Home</a>
             <a href="about.html" class="nav-link">About</a>
@@ -175,10 +215,10 @@
 
     <div class="page-container">
 
-        <div>
+        <div class="hero-section">
             <img src="logo.png" alt="MCAgent Logo" class="hero-logo-large">
 
-            <h1 class="hero-title">Click.<br>Funded.</h1>
+            <h1 class="hero-title">Click. Funded.</h1>
             <p class="hero-subtitle">
                 The most advanced AI command center for Merchant Cash Advance professionals.
             </p>
