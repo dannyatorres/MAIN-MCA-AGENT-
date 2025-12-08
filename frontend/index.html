@@ -3,143 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCA Agent - Login</title>
+    <title>MCAgent - Home</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f9fafb;
-            margin: 0;
-            height: 100vh;
+        /* PASTE THE SHARED CSS FROM STEP 1 HERE */
+        /* (Or link to your 01-theme.css) */
+        
+        /* Specific Styles for Login Layout */
+        .login-wrapper {
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        .login-container {
-            display: flex;
-            align-items: center;
+            min-height: 80vh;
             gap: 80px;
-            padding: 20px;
         }
-        .brand-section { text-align: center; }
-        .brand-logo {
-            width: 300px;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-        }
-        .brand-title {
-            font-size: 64px;
-            font-weight: 800;
-            color: #111827;
-            margin: 10px 0 0 0;
-            line-height: 1;
-            letter-spacing: -2px;
-        }
-        .brand-tagline {
-            font-size: 28px;
-            font-weight: 600;
-            color: #374151;
-            margin: 5px 0 0 0;
-        }
-        .login-card {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-            width: 380px;
-        }
-        .login-header { text-align: center; margin-bottom: 30px; }
-        .login-header h2 { margin: 0; font-size: 24px; color: #111827; font-weight: 700; }
-        .form-group { margin-bottom: 20px; }
-        .form-group input {
-            width: 100%;
-            padding: 12px 16px;
-            background-color: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            font-size: 15px;
-            box-sizing: border-box;
-        }
-        .login-btn {
+        
+        .form-input {
             width: 100%;
             padding: 12px;
-            background-color: #1d4ed8;
-            color: white;
-            border: none;
+            background-color: #0d1117;
+            border: 1px solid var(--border-color);
             border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
+            color: white;
+            margin-bottom: 16px;
+            font-size: 15px;
         }
-        .login-btn:hover { background-color: #1e40af; }
-        .error-msg { color: #dc2626; text-align: center; margin-top: 15px; display: none; }
-
-        /* Screen reader only utility */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
-        }
-
+        
         @media (max-width: 900px) {
-            .login-container { flex-direction: column; gap: 40px; }
-            .brand-logo { width: 200px; }
+            .login-wrapper { flex-direction: column; gap: 40px; text-align: center; }
         }
     </style>
 </head>
 <body>
 
-    <div class="login-container">
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">MCAgent</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link active">Home</a>
+            <a href="about.html" class="nav-link">About</a>
+            <a href="contact.html" class="nav-link">Contact</a>
+        </div>
+    </nav>
 
-        <div class="brand-section">
-            <img src="logo.png" alt="MCA Agent Dog" class="brand-logo">
-            <div class="brand-title">MCAgent</div>
-            <div class="brand-tagline">Click. Funded.</div>
+    <div class="page-container login-wrapper">
+        
+        <div>
+            <h1 class="hero-title" style="text-align: left;">Click. Funded.</h1>
+            <p class="hero-subtitle" style="text-align: left; margin: 0;">
+                The most advanced AI command center for Merchant Cash Advance professionals.
+            </p>
         </div>
 
-        <div class="login-card">
-            <div class="login-header">
-                <h2>MCA Agent Login</h2>
-            </div>
+        <div class="content-card" style="width: 100%; max-width: 380px;">
+            <h2 style="margin-top: 0; margin-bottom: 24px;">Agent Login</h2>
             <form id="loginForm">
-                <div class="form-group">
-                    <label for="username" class="sr-only">Username</label>
-                    <input type="text" id="username" name="username" placeholder="Username" required autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label for="password" class="sr-only">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Password" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="login-btn">Sign In</button>
-                <div id="msg" class="error-msg" role="alert"></div>
+                <input type="text" id="username" class="form-input" placeholder="Username" required>
+                <input type="password" id="password" class="form-input" placeholder="Password" required>
+                <button type="submit" class="btn-primary" style="width: 100%;">Sign In</button>
+                <div id="msg" style="color: #ef4444; margin-top: 10px; display: none; text-align: center;"></div>
             </form>
         </div>
 
     </div>
 
     <script>
-        // Event listener moved here (no inline handlers)
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        // Keep your original Login Logic
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            login();
-        });
-
-        async function login() {
+            const btn = document.querySelector('button[type="submit"]');
             const msg = document.getElementById('msg');
-            const btn = document.querySelector('.login-btn');
-
-            // Reset UI
-            msg.style.display = 'none';
-            msg.textContent = '';
+            
             btn.innerText = 'Signing In...';
-            btn.disabled = true;
             btn.style.opacity = '0.7';
+            msg.style.display = 'none';
 
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -152,30 +88,17 @@
                 });
 
                 if (res.ok) {
-                    btn.style.backgroundColor = '#10b981';
-                    btn.innerText = 'Success!';
-                    setTimeout(() => window.location.href = '/command-center.html', 500);
+                    window.location.href = '/command-center.html';
                 } else {
-                    // Handle specific API errors
-                    if (res.status === 401) {
-                        throw new Error('Invalid username or password');
-                    } else if (res.status === 500) {
-                        throw new Error('Server error. Please try again later.');
-                    } else {
-                        throw new Error('An error occurred. Please try again.');
-                    }
+                    throw new Error('Invalid credentials');
                 }
             } catch (err) {
-                msg.textContent = err.message || 'Connection failed';
+                msg.textContent = err.message;
                 msg.style.display = 'block';
-
-                // Reset Button
                 btn.innerText = 'Sign In';
-                btn.disabled = false;
                 btn.style.opacity = '1';
-                btn.style.backgroundColor = '#1d4ed8';
             }
-        }
+        });
     </script>
 </body>
 </html>
