@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>MCAgent - About</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* SAME SHARED CSS */
         :root { --app-bg: #0f1115; --card-bg: #161b22; --text-main: #e6edf3; --text-muted: #8b949e; --accent: #3b82f6; --border: #30363d; }
         body { font-family: 'Inter', sans-serif; background-color: var(--app-bg); color: var(--text-main); margin: 0; line-height: 1.6; }
 
-        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background-color: rgba(15, 17, 21, 0.95); border-bottom: 1px solid var(--border); position: sticky; top: 0; backdrop-filter: blur(10px); }
-        .nav-brand { font-size: 24px; font-weight: 800; color: var(--text-main); text-decoration: none; }
+        h1, h2, h3, .nav-brand { font-family: 'Libre Baskerville', serif; }
+
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background-color: rgba(15, 17, 21, 0.95); border-bottom: 1px solid var(--border); position: sticky; top: 0; backdrop-filter: blur(10px); }
+        .nav-brand { font-size: 24px; font-weight: 700; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 12px; }
+        .nav-logo-img { height: 32px; width: auto; }
         .nav-links { display: flex; gap: 30px; }
         .nav-link { color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 15px; transition: color 0.2s; }
         .nav-link:hover, .nav-link.active { color: var(--accent); }
@@ -19,7 +22,7 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 60px; text-align: left; }
 
         .card { background: var(--card-bg); border: 1px solid var(--border); padding: 30px; border-radius: 12px; }
-        h1 { font-size: 48px; font-weight: 800; margin-bottom: 20px; }
+        h1 { font-size: 48px; font-weight: 700; margin-bottom: 20px; }
         h3 { color: white; margin-top: 0; }
         p { color: var(--text-muted); }
     </style>
@@ -27,7 +30,10 @@
 <body>
 
     <nav class="navbar">
-        <a href="index.html" class="nav-brand">MCAgent</a>
+        <a href="index.html" class="nav-brand">
+            <img src="logo.png" alt="MCAgent" class="nav-logo-img">
+            MCAgent
+        </a>
         <div class="nav-links">
             <a href="index.html" class="nav-link">Home</a>
             <a href="about.html" class="nav-link active">About</a>
@@ -43,11 +49,11 @@
 
         <div class="grid">
             <div class="card">
-                <h3>🚀 Our Mission</h3>
+                <h3>Our Mission</h3>
                 <p>To replace the chaos of spreadsheets and emails with a unified, AI-driven command center. We believe funding should be about relationships, not paperwork.</p>
             </div>
             <div class="card">
-                <h3>🛡️ Security First</h3>
+                <h3>Security First</h3>
                 <p>Your data is your asset. We utilize banking-grade encryption and secure cloud infrastructure to ensure your lead data never falls into the wrong hands.</p>
             </div>
         </div>
