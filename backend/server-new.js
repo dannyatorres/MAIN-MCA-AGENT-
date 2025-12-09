@@ -144,7 +144,8 @@ const requireAuth = (req, res, next) => {
         '/api/news',
         '/api/calling/voice',
         '/api/calling/status',
-        '/api/calling/recording-status'
+        '/api/calling/recording-status',
+        '/api/contact'
     ];
 
     // 1. Always allow public paths
@@ -184,6 +185,28 @@ app.use('/api/lookups', require('./routes/lookups'));
 app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
+
+// --- CONTACT FORM ENDPOINT ---
+app.post('/api/contact', (req, res) => {
+    try {
+        const { name, email, message } = req.body;
+
+        // 1. Log the message to your terminal (Console)
+        console.log('\n==============');
+        console.log('📬 NEW CONTACT INQUIRY');
+        console.log('From:', name);
+        console.log('Email:', email);
+        console.log('Message:', message);
+        console.log('==============\n');
+
+        // 2. (Optional) In the future, save this to your database or send an email here.
+
+        res.json({ success: true, message: 'Inquiry received' });
+    } catch (error) {
+        console.error('Contact Form Error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
 
 // --- RSS NEWS FEED ENDPOINT ---
 app.get('/api/news', async (req, res) => {

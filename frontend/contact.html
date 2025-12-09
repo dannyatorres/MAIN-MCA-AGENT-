@@ -50,7 +50,7 @@
 
         /* INPUTS */
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--text-main); }
-        
+
         input, textarea {
             width: 100%; padding: 14px; background-color: #0d1117;
             border: 1px solid var(--border); border-radius: 12px;
@@ -71,10 +71,13 @@
         }
         .btn:hover { transform: translateY(-2px); background: linear-gradient(135deg, #34d399 0%, #059669 100%); }
 
-        /* MOBILE FIX */
-        @media (max-width: 900px) {
-            .navbar { flex-direction: column; gap: 15px; }
-            .nav-links { width: 100%; justify-content: center; }
+        /* --- MOBILE FIXES --- */
+        @media (max-width: 600px) {
+            .navbar { flex-direction: column; gap: 15px; padding: 15px; }
+            .nav-links { width: 100%; justify-content: center; gap: 20px; }
+            .container { margin: 40px auto; }
+            .card { padding: 25px; }
+            h1 { font-size: 32px !important; }
         }
     </style>
 </head>
@@ -100,24 +103,68 @@
 
         <div class="card">
             <form id="contactForm">
-                <label>Full Name</label>
-                <input type="text" placeholder="Jane Doe">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" placeholder="Jane Doe" required>
 
-                <label>Email Address</label>
-                <input type="email" placeholder="jane@example.com">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="jane@example.com" required>
 
-                <label>Message</label>
-                <textarea rows="5" placeholder="How can we help?"></textarea>
+                <label for="message">Message</label>
+                <textarea id="message" rows="5" placeholder="How can we help?" required></textarea>
 
                 <button type="submit" class="btn">Send Message</button>
+
+                <p id="statusMsg" style="display:none; text-align:center; margin-top:15px; font-size:14px;"></p>
             </form>
         </div>
     </div>
 
     <script>
-        document.getElementById('contactForm').addEventListener('submit', (e) => {
+        document.getElementById('contactForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            alert('Message simulated! (Connect this to your backend if needed)');
+
+            const btn = document.querySelector('.btn');
+            const statusMsg = document.getElementById('statusMsg');
+
+            // UI Loading State
+            const originalText = btn.innerText;
+            btn.innerText = 'Sending...';
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            statusMsg.style.display = 'none';
+
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                message: document.getElementById('message').value
+            };
+
+            try {
+                // Send to Server
+                const res = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    statusMsg.textContent = "Message sent successfully! We'll be in touch.";
+                    statusMsg.style.color = "#10b981"; // Green
+                    document.getElementById('contactForm').reset();
+                } else {
+                    throw new Error(data.message || 'Failed to send');
+                }
+            } catch (err) {
+                statusMsg.textContent = "Error: " + err.message;
+                statusMsg.style.color = "#ef4444"; // Red
+            } finally {
+                statusMsg.style.display = 'block';
+                btn.innerText = originalText;
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
         });
     </script>
 
