@@ -123,23 +123,34 @@ app.post('/api/auth/logout', (req, res) => {
 
 // Auth Middleware (Protects the API)
 const requireAuth = (req, res, next) => {
+    // Log Twilio-related requests to debug auth blocks
+    if (req.path.includes('/calling')) {
+        console.log(`🔒 Auth Check: ${req.method} ${req.path}`);
+    }
+
     const publicPaths = [
         '/api/auth/login',
         '/api/health',
         '/api/messages/webhook/receive',
         '/api/news',
-        '/api/calling/voice',
+        '/api/calling/voice',      // Standard
+        '/api/calling/voice/',     // Trailing slash for Twilio
         '/api/calling/status',
         '/api/calling/recording-status',
-        '/api/contact'  // <--- ADDED: Allowed contact form access
+        '/api/contact'
     ];
 
-    if (publicPaths.includes(req.path)) return next();
+    // Allow exact matches or any calling webhook paths
+    if (publicPaths.includes(req.path) || req.path.startsWith('/api/calling/')) {
+        return next();
+    }
+
     if (req.headers['x-local-dev'] === 'true') return next();
-    if (req.session.isAuthenticated) return next();
+    if (req.session && req.session.isAuthenticated) return next();
     if (req.path.includes('/documents/view/') || req.path.includes('/download')) return next();
 
     if (req.path.startsWith('/api')) {
+        console.warn(`⛔ BLOCKED: ${req.method} ${req.path}`);
         return res.status(401).json({ error: 'Unauthorized' });
     }
 
