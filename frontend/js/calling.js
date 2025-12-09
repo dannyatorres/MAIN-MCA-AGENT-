@@ -40,6 +40,7 @@ class CallManager {
             // Initialize Twilio Device (SDK 2.x API)
             this.device = new Twilio.Device(this.token, {
                 codecPreferences: ['opus', 'pcmu'],
+                fakeLocalDTMF: true,
                 enableRingingState: true
             });
 
@@ -144,6 +145,10 @@ class CallManager {
     endCall() {
         if (this.activeCall) {
             this.activeCall.disconnect();
+        }
+        // Ensure all connections are closed
+        if (this.device) {
+            this.device.disconnectAll();
         }
         this.handleDisconnectUI();
     }

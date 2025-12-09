@@ -90,12 +90,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (callBtn) {
                     callBtn.addEventListener('click', async () => {
                         if (!phoneNumber) return alert('No phone number available.');
-                        if (window.callManager) {
-                            await window.callManager.startCall(phoneNumber, conversationId);
-                        } else {
-                            document.getElementById('callBar')?.classList.remove('hidden');
-                            callBtn.classList.add('active');
+                        if (!window.callManager) {
+                            console.log("⚠️ Call Manager not ready, initializing...");
+                            if (typeof CallManager !== 'undefined') {
+                                window.callManager = new CallManager();
+                            } else {
+                                return alert("Calling system failed to load. Please refresh.");
+                            }
                         }
+                        await window.callManager.startCall(phoneNumber, conversationId);
                     });
                 }
                 if (endCallBtn) {

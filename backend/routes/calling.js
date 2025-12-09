@@ -5,6 +5,7 @@ const twilio = require('twilio');
 const AccessToken = twilio.jwt.AccessToken;
 const VoiceGrant = AccessToken.VoiceGrant;
 const VoiceResponse = twilio.twiml.VoiceResponse;
+const { getDatabase } = require('../services/database');
 
 const normalizePhoneNumber = (value) => {
     const digits = (value || '').replace(/\D/g, '');
@@ -27,7 +28,7 @@ const buildPublicUrl = (req, pathname) => {
 router.get('/token', (req, res) => {
     try {
         // In production, ensure req.session.user exists
-        const identity = req.session?.user || 'agent-generic';
+        const identity = req.session?.user || `agent-${Math.random().toString(36).substring(2, 8)}`;
 
         if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_API_KEY || !process.env.TWILIO_API_SECRET || !process.env.TWILIO_TWIML_APP_SID) {
             console.error('❌ Missing Twilio env vars for token generation');
@@ -78,8 +79,8 @@ router.post('/voice', (req, res) => {
         return res.send(response.toString());
     }
 
-    const statusCallbackUrl = buildPublicUrl(req, '/api/calling/status');
-    const recordingCallbackUrl = buildPublicUrl(req, '/api/calling/recording-status');
+    const statusCallbackUrl = buildPublicUrl(req, `/api/calling/status?conversationId=${conversationId || ''}`);
+    const recordingCallbackUrl = buildPublicUrl(req, `/api/calling/recording-status?conversationId=${conversationId || ''}`);
 
     if (to) {
         // Dialing a real phone number
@@ -103,18 +104,47 @@ router.post('/voice', (req, res) => {
 
 // 3. CALL STATUS WEBHOOK (Track call lifecycle)
 router.post('/status', (req, res) => {
-    const { CallSid, CallStatus, CallDuration, To, From } = req.body;
+    const { CallSid, CallStatus, CallDuration, To, From, RecordingUrl } = req.body;
+    const { conversationId } = req.query;
 
     console.log('📞 Call status update:', {
         sid: CallSid,
         status: CallStatus,
         duration: CallDuration,
         to: To,
-        from: From
+        from: From,
+        conversationId
     });
 
-    // TODO: Update call_logs table with status
-    // This fires for: initiated, ringing, in-progress, completed, busy, no-answer, failed
+    // Persist call result to messages table for history
+    if (conversationId && ['completed', 'no-answer', 'busy', 'failed', 'canceled'].includes((CallStatus || '').toLowerCase())) {
+        try {
+            const db = getDatabase();
+            const summary = `Call ${CallStatus || 'completed'}${CallDuration ? `: ${CallDuration}s` : ''}`;
+            const meta = JSON.stringify({ sid: CallSid, recording: RecordingUrl || null, to: To, from: From });
+
+            db.query(
+                `
+                INSERT INTO messages (
+                    conversation_id,
+                    content,
+                    direction,
+                    message_type,
+                    sent_by,
+                    timestamp,
+                    status,
+                    media_url
+                )
+                VALUES ($1, $2, 'outbound', 'system', 'system', NOW(), $3, $4)
+                `,
+                [conversationId, `${summary} | ${meta}`, CallStatus || 'completed', RecordingUrl || null]
+            ).catch(err => {
+                console.error('❌ Failed to log call status to messages:', err.message);
+            });
+        } catch (err) {
+            console.error('❌ DB error logging call status:', err.message);
+        }
+    }
 
     res.sendStatus(200);
 });
