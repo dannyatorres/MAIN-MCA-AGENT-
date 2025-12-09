@@ -60,11 +60,30 @@ router.get('/token', (req, res) => {
 // 2. VOICE WEBHOOK (Twilio hits this when browser says "Connect")
 router.post('/voice', (req, res) => {
     const response = new VoiceResponse();
-    const { To: toRaw, conversationId } = req.body;
+    const { To: toRaw, From, conversationId } = req.body; // 'To' is dialed party, 'From' is initiator
 
+    const twilioNumber = normalizePhoneNumber(process.env.TWILIO_CALLER_ID);
+    const personalNumber = normalizePhoneNumber(process.env.TWILIO_PERSONAL_NUMBER || '+17187910717'); // replace env default
     const to = normalizePhoneNumber(toRaw);
 
-    console.log('📞 Voice webhook received:', { to: toRaw, normalized: to, conversationId });
+    const statusCallbackUrl = buildPublicUrl(req, `/api/calling/status?conversationId=${conversationId || ''}`);
+    const recordingCallbackUrl = buildPublicUrl(req, `/api/calling/recording-status?conversationId=${conversationId || ''}`);
+
+    console.log('📞 Voice webhook received:', { to: toRaw, normalizedTo: to, from: From, conversationId });
+
+    if (!twilioNumber) {
+        console.error('❌ TWILIO_CALLER_ID not set');
+        response.say('Caller ID is not configured on the server.');
+        res.type('text/xml');
+        return res.send(response.toString());
+    }
+
+    if (!personalNumber) {
+        console.error('❌ TWILIO_PERSONAL_NUMBER not set');
+        response.say('Forwarding number is not configured.');
+        res.type('text/xml');
+        return res.send(response.toString());
+    }
 
     if (!to) {
         response.say('The phone number is invalid.');
@@ -72,30 +91,27 @@ router.post('/voice', (req, res) => {
         return res.send(response.toString());
     }
 
-    if (!process.env.TWILIO_CALLER_ID) {
-        console.error('❌ TWILIO_CALLER_ID not set');
-        response.say('Caller ID is not configured on the server.');
-        res.type('text/xml');
-        return res.send(response.toString());
-    }
-
-    const statusCallbackUrl = buildPublicUrl(req, `/api/calling/status?conversationId=${conversationId || ''}`);
-    const recordingCallbackUrl = buildPublicUrl(req, `/api/calling/recording-status?conversationId=${conversationId || ''}`);
-
-    if (to) {
-        // Dialing a real phone number
+    // Inbound: someone called our Twilio number; forward to personal
+    if (to === twilioNumber) {
+        console.log(`🔀 Inbound call. Forwarding to personal number ${personalNumber}`);
         const dial = response.dial({
-            callerId: process.env.TWILIO_CALLER_ID,
+            callerId: From, // preserve original caller ID
             answerOnBridge: true,
-            record: 'record-from-answer-dual', // Record both sides
+            timeout: 20
+        });
+        dial.number(personalNumber);
+    } else {
+        // Outbound: browser initiated; dial destination with our Twilio caller ID
+        console.log(`📡 Outbound call. Dialing ${to}`);
+        const dial = response.dial({
+            callerId: twilioNumber,
+            answerOnBridge: true,
+            record: 'record-from-answer-dual',
             recordingStatusCallback: recordingCallbackUrl,
-            recordingStatusCallbackEvent: ['completed'],
             statusCallback: statusCallbackUrl,
             statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed']
         });
         dial.number(to);
-    } else {
-        response.say("Invalid number.");
     }
 
     res.type('text/xml');
