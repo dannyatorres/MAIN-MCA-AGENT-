@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // 4. OTHER HELPERS - ROBUST VERSION
+            // 4. OTHER HELPERS
             window.openLenderManagementModal = () => {
                 console.log("🏦 Opening Lender Management...");
 
@@ -278,31 +278,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
-                // 2. Check if lenders module is attached. If not, try to attach it manually.
+                // 2. AUTO-HEAL: If lenders module is missing, manually attach it right now
                 if (!window.commandCenter.lenders) {
                     console.warn("⚠️ Lenders module missing. Attempting lazy load...");
 
                     if (typeof LendersModule !== 'undefined') {
-                        // Manually attach it now
                         window.commandCenter.lenders = new LendersModule(window.commandCenter);
                         console.log("✅ LendersModule manually attached.");
-                    } else if (typeof LendersController !== 'undefined') {
-                        // Fallback for older naming
-                        window.commandCenter.lenders = new LendersController(window.commandCenter);
-                        console.log("✅ LendersController manually attached.");
                     } else {
-                        console.error("❌ Lenders class definition not found. Cannot initialize.");
-                        alert("System is still loading resources. Please try again in 5 seconds.");
+                        console.error("❌ Lenders class definition not found.");
+                        alert("System resources are still loading. Please refresh the page.");
                         return;
                     }
                 }
 
-                // 3. Now run the function
+                // 3. Open the modal
                 if (window.commandCenter.lenders && typeof window.commandCenter.lenders.openManagementModal === 'function') {
                     window.commandCenter.lenders.openManagementModal();
                 } else {
-                    console.error("❌ openManagementModal function missing on lenders module", window.commandCenter.lenders);
-                    alert("Lender module loaded but incomplete. Refresh page.");
+                    alert("Lender module loaded but incomplete. Please refresh.");
                 }
             };
             window.toggleDeleteMode = () => {

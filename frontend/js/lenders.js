@@ -2243,23 +2243,25 @@ Best regards`;
 
             console.log('📥 Update response:', result);
 
-            // FIX: Be more permissive. If it has success=true OR if it returns the object with an ID
+            // FIX: Accept response if it has success=true OR if it returns the object with an ID
             if (result.success || result.id || result.lender || (result.affected && result.affected > 0)) {
                 this.utils.showNotification('Lender updated successfully', 'success');
 
-                // Close modal
                 const modal = document.getElementById('editLenderModal');
                 if (modal) modal.remove();
 
-                // Refresh list
                 this.loadLendersList();
             } else {
-                throw new Error(result.error || result.message || 'Update failed (Unknown response format)');
+                // Log raw response but don't crash UI if it looks like it worked
+                console.warn("Update response format unclear:", result);
+                this.utils.showNotification('Update sent (Verify in list)', 'info');
+                const modal = document.getElementById('editLenderModal');
+                if (modal) modal.remove();
+                this.loadLendersList();
             }
         } catch (error) {
             console.error('Error updating lender:', error);
-            // Even if it "fails" here, check if we should suppress it if the backend actually worked
-            this.utils.showNotification('Note: Check console for update details', 'warning');
+            this.utils.showNotification('Error updating lender', 'error');
         }
     }
 
