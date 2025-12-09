@@ -19,7 +19,6 @@ const app = express();
 const server = http.createServer(app);
 
 // --- TRUST PROXY ---
-// Essential for Railway/Cloud to pass correct IP and Protocol (HTTP/HTTPS)
 app.set('trust proxy', 1);
 
 // --- 1. CLOUD CORS & ORIGIN SETUP ---
@@ -27,10 +26,9 @@ const getAllowedOrigins = () => {
     const origins = [
         'http://localhost:3000',
         'http://localhost:8080',
-        'https://mcagent.io',      // Root Domain
-        'https://www.mcagent.io'   // WWW Subdomain
+        'https://mcagent.io',
+        'https://www.mcagent.io'
     ];
-    // Add Railway specific domains if they exist
     if (process.env.RAILWAY_PUBLIC_DOMAIN) {
         origins.push(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
     }
@@ -41,13 +39,8 @@ const getAllowedOrigins = () => {
 const io = new Server(server, {
     cors: {
         origin: (origin, callback) => {
-            // Allow requests with no origin (mobile apps, curl, or same-origin)
             if (!origin) return callback(null, true);
-
             const allowed = getAllowedOrigins();
-            
-            // Allow specific list OR any subdomain ending in mcagent.io
-            // This prevents "fake-mcagent.io" but allows "app.mcagent.io"
             if (allowed.includes(origin) || origin.endsWith('.mcagent.io') || origin.includes('railway.app')) {
                 callback(null, true);
             } else {
@@ -65,7 +58,6 @@ const io = new Server(server, {
 global.io = io;
 
 io.on('connection', (socket) => {
-    // console.log('✅ Client connected:', socket.id); // Uncomment for debugging
     socket.on('join_conversation', (id) => {
         socket.join(`conversation_${id}`);
     });
@@ -86,14 +78,12 @@ app.use(cors({
     credentials: true
 }));
 
-// Handle JSON and File Uploads
 app.use((req, res, next) => {
     if (req.get('Content-Type')?.includes('multipart/form-data')) return next();
     return express.json({ limit: '50mb' })(req, res, next);
 });
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve Static Files (Frontend)
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // --- 4. SESSION AUTHENTICATION ---
@@ -102,12 +92,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        // "lax" is better for modern browsers.
-        // If Railway provides HTTPS, "secure" can be true, but false is safer for preventing lockout during transition.
         secure: false, 
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        maxAge: 24 * 60 * 60 * 1000 
     }
 }));
 
@@ -145,28 +133,18 @@ const requireAuth = (req, res, next) => {
         '/api/calling/voice',
         '/api/calling/status',
         '/api/calling/recording-status',
-        '/api/contact'
+        '/api/contact'  // <--- ADDED: Allowed contact form access
     ];
 
-    // 1. Always allow public paths
     if (publicPaths.includes(req.path)) return next();
-
-    // 2. Allow requests with X-Local-Dev header (Dev Bypass)
     if (req.headers['x-local-dev'] === 'true') return next();
-
-    // 3. Allow if logged in
     if (req.session.isAuthenticated) return next();
-
-    // 4. Allow Document Downloads
     if (req.path.includes('/documents/view/') || req.path.includes('/download')) return next();
 
-    // 5. Reject API calls
     if (req.path.startsWith('/api')) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // 6. Redirect browser requests to Login Page
-    // Since we are now serving the frontend from the same server, we redirect to root
     res.redirect('/');
 };
 
@@ -186,31 +164,22 @@ app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 
-// --- CONTACT FORM ENDPOINT ---
+// --- CONTACT FORM ROUTE (LOG ONLY) ---
 app.post('/api/contact', (req, res) => {
-    try {
-        const { name, email, message } = req.body;
+    const { name, email, message } = req.body;
 
-        // 1. Log the message to your terminal (Console)
-        console.log('\n==============');
-        console.log('📬 NEW CONTACT INQUIRY');
-        console.log('From:', name);
-        console.log('Email:', email);
-        console.log('Message:', message);
-        console.log('==============\n');
+    console.log('------------------------------------------------');
+    console.log('🔔 NEW WEBSITE INQUIRY (Log Only)');
+    console.log(`👤 Name: ${name}`);
+    console.log(`📧 Email: ${email}`);
+    console.log(`📝 Message: ${message}`);
+    console.log('------------------------------------------------');
 
-        // 2. (Optional) In the future, save this to your database or send an email here.
-
-        res.json({ success: true, message: 'Inquiry received' });
-    } catch (error) {
-        console.error('Contact Form Error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
+    res.json({ success: true, message: 'Received' });
 });
 
 // --- RSS NEWS FEED ENDPOINT ---
 app.get('/api/news', async (req, res) => {
-    // console.log('📰 MCA Wire Request Received'); // Uncomment for debugging
     try {
         const sources = [
             { url: 'https://debanked.com/feed/', tag: 'deBanked', icon: 'fa-university', priority: 1 },
@@ -243,7 +212,6 @@ app.get('/api/news', async (req, res) => {
             return new Date(b.pubDate) - new Date(a.pubDate);
         });
 
-        // Dedup logic
         const seen = new Set();
         const unique = allArticles.filter(item => {
             const sig = item.title.toLowerCase().substring(0, 20);
