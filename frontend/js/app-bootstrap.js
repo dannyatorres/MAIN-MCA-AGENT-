@@ -268,22 +268,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // 4. OTHER HELPERS
+            // 4. OTHER HELPERS - ROBUST VERSION
             window.openLenderManagementModal = () => {
-                // 1. Check if the module is ready
-                if (window.commandCenter && window.commandCenter.lenders) {
+                console.log("🏦 Opening Lender Management...");
+
+                // 1. Ensure commandCenter exists
+                if (!window.commandCenter) {
+                    console.error("❌ Command Center not found!");
+                    return;
+                }
+
+                // 2. Check if lenders module is attached. If not, try to attach it manually.
+                if (!window.commandCenter.lenders) {
+                    console.warn("⚠️ Lenders module missing. Attempting lazy load...");
+
+                    if (typeof LendersModule !== 'undefined') {
+                        // Manually attach it now
+                        window.commandCenter.lenders = new LendersModule(window.commandCenter);
+                        console.log("✅ LendersModule manually attached.");
+                    } else if (typeof LendersController !== 'undefined') {
+                        // Fallback for older naming
+                        window.commandCenter.lenders = new LendersController(window.commandCenter);
+                        console.log("✅ LendersController manually attached.");
+                    } else {
+                        console.error("❌ Lenders class definition not found. Cannot initialize.");
+                        alert("System is still loading resources. Please try again in 5 seconds.");
+                        return;
+                    }
+                }
+
+                // 3. Now run the function
+                if (window.commandCenter.lenders && typeof window.commandCenter.lenders.openManagementModal === 'function') {
                     window.commandCenter.lenders.openManagementModal();
-                } 
-                // 2. If missing, try to auto-fix it
-                else if (typeof LendersController !== 'undefined') {
-                    console.log("🔄 Auto-initializing LendersController...");
-                    window.commandCenter.lenders = new LendersController(window.commandCenter);
-                    window.commandCenter.lenders.openManagementModal();
-                } 
-                // 3. If completely missing, warn the user
-                else {
-                    console.warn("⚠️ Lenders module not loaded.");
-                    alert("The Lenders system is still initializing. Please wait a moment and try again.");
+                } else {
+                    console.error("❌ openManagementModal function missing on lenders module", window.commandCenter.lenders);
+                    alert("Lender module loaded but incomplete. Refresh page.");
                 }
             };
             window.toggleDeleteMode = () => {
