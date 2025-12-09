@@ -4,9 +4,10 @@ import { LeadFormController } from './lead-form-controller.js';
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Main Module: Waiting for CommandCenter...');
 
-    // Initialize app when CommandCenter is ready
+    // Initialize app when CommandCenter is COMPLETELY ready
     const initApp = () => {
-        if (!window.commandCenter) return false;
+        // CHANGE: Check .isInitialized to ensure async modules (like Lenders) are ready
+        if (!window.commandCenter || !window.commandCenter.isInitialized) return false;
         console.log('✅ Main Module: Attaching Logic to CommandCenter');
         return true;
     };

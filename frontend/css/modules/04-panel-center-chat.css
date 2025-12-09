@@ -3,17 +3,23 @@
    Unified "Floating Card" Aesthetic
    ========================================================================== */
 
-/* 1. Main Container */
+/* 1. Main Container - Strict Lockdown */
 .center-panel {
     flex: 3 1 400px;
     min-width: 350px;
+    max-width: 100%; /* Prevent overflow pushing */
     height: 100%;
     position: relative;
     display: flex;
     flex-direction: column;
     background: #0f1115 !important;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
-    overflow: hidden;
+
+    /* CRITICAL: Force hidden overflow on the panel itself */
+    overflow: hidden !important;
+
+    /* Stop layout shifts */
+    transform: translateZ(0);
 }
 
 /* 2. Header (Glass Effect) */
@@ -31,19 +37,29 @@
     z-index: 10;
 }
 
-/* 3. Messages / Dashboard Container */
+/* 3. Messages / Dashboard Container - Internal Scroll Only */
 #messagesContainer {
     position: absolute;
     top: 70px;
     bottom: 0;
     left: 0;
     right: 0;
+
+    /* Vertical scroll only */
     overflow-y: auto;
+    overflow-x: hidden;
+
     padding: 20px;
     padding-bottom: 140px; /* Space for input deck */
+
+    /* Layout stability */
     display: flex;
     flex-direction: column;
     gap: 6px;
+
+    /* Reserve space for scrollbar so content doesn't jump */
+    scrollbar-gutter: stable;
+
     background: transparent;
 }
 
@@ -84,6 +100,7 @@
     padding-bottom: 0;
     display: block;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* ==========================================================================
@@ -94,8 +111,17 @@
     padding: 40px;
     width: 100%;
     max-width: 800px;
-    margin: 0 auto;
+    margin: 0 auto; /* Center horizontal */
+    box-sizing: border-box; /* Include padding in width */
     animation: fadeIn 0.4s ease-out;
+}
+
+/* Ensure nothing inside forces a horizontal scroll */
+.message-content,
+.dashboard-header,
+.stats-grid {
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .dashboard-header {

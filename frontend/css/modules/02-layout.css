@@ -378,6 +378,9 @@
     /* Make sure it takes all available height */
     flex: 1;
     height: 100vh;
+    overflow: hidden !important; /* Prevent outer scroll */
+    width: 100%;
+    box-sizing: border-box;
 
     /* Optional: If you want the cards to touch the bottom edge flush,
        change 'padding-bottom' to 0.
