@@ -6,11 +6,33 @@ const AccessToken = twilio.jwt.AccessToken;
 const VoiceGrant = AccessToken.VoiceGrant;
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
+const normalizePhoneNumber = (value) => {
+    const digits = (value || '').replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.length === 10) return `+1${digits}`;
+    if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+    if (value.startsWith('+')) return value;
+    return `+${digits}`;
+};
+
+const buildPublicUrl = (req, pathname) => {
+    const base =
+        process.env.PUBLIC_API_URL ||
+        process.env.PUBLIC_URL ||
+        `${req.protocol}://${req.get('host')}`;
+    return new URL(pathname, base).toString();
+};
+
 // 1. GET TOKEN (Browser requests this to initialize phone)
 router.get('/token', (req, res) => {
     try {
         // In production, ensure req.session.user exists
         const identity = req.session?.user || 'agent-generic';
+
+        if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_API_KEY || !process.env.TWILIO_API_SECRET || !process.env.TWILIO_TWIML_APP_SID) {
+            console.error('❌ Missing Twilio env vars for token generation');
+            return res.status(500).json({ error: 'Twilio not configured' });
+        }
 
         const voiceGrant = new VoiceGrant({
             outgoingApplicationSid: process.env.TWILIO_TWIML_APP_SID,
@@ -37,20 +59,40 @@ router.get('/token', (req, res) => {
 // 2. VOICE WEBHOOK (Twilio hits this when browser says "Connect")
 router.post('/voice', (req, res) => {
     const response = new VoiceResponse();
-    const { To, conversationId } = req.body;
+    const { To: toRaw, conversationId } = req.body;
 
-    console.log('📞 Voice webhook received:', { To, conversationId });
+    const to = normalizePhoneNumber(toRaw);
 
-    if (To) {
+    console.log('📞 Voice webhook received:', { to: toRaw, normalized: to, conversationId });
+
+    if (!to) {
+        response.say('The phone number is invalid.');
+        res.type('text/xml');
+        return res.send(response.toString());
+    }
+
+    if (!process.env.TWILIO_CALLER_ID) {
+        console.error('❌ TWILIO_CALLER_ID not set');
+        response.say('Caller ID is not configured on the server.');
+        res.type('text/xml');
+        return res.send(response.toString());
+    }
+
+    const statusCallbackUrl = buildPublicUrl(req, '/api/calling/status');
+    const recordingCallbackUrl = buildPublicUrl(req, '/api/calling/recording-status');
+
+    if (to) {
         // Dialing a real phone number
         const dial = response.dial({
             callerId: process.env.TWILIO_CALLER_ID,
             answerOnBridge: true,
             record: 'record-from-answer-dual', // Record both sides
-            recordingStatusCallback: '/api/calling/recording-status',
-            recordingStatusCallbackEvent: ['completed']
+            recordingStatusCallback: recordingCallbackUrl,
+            recordingStatusCallbackEvent: ['completed'],
+            statusCallback: statusCallbackUrl,
+            statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed']
         });
-        dial.number(To);
+        dial.number(to);
     } else {
         response.say("Invalid number.");
     }

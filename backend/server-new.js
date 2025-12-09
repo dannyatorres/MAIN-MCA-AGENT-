@@ -1,5 +1,4 @@
 // server-new.js - FINAL ROOT DOMAIN VERSION (mcagent.io)
-
 console.log('Starting MCA Command Center Server...');
 
 const express = require('express');
@@ -54,7 +53,6 @@ const io = new Server(server, {
     pingInterval: 25000,
     transports: ['websocket', 'polling']
 });
-
 global.io = io;
 
 io.on('connection', (socket) => {
@@ -184,8 +182,8 @@ app.get('/api/news', async (req, res) => {
         const sources = [
             { url: 'https://debanked.com/feed/', tag: 'deBanked', icon: 'fa-university', priority: 1 },
             { url: 'https://www.lendsaas.com/category/mca-industry-news/feed/', tag: 'LendSaaS', icon: 'fa-microchip', priority: 2 },
-            { url: 'https://news.google.com/rss/search?q="Merchant+Cash+Advance"+OR+"Revenue+Based+Financing"+when:7d&hl=en-US&gl=US&ceid=US:en', tag: 'Industry', icon: 'fa-rss', priority: 3 },
-            { url: 'https://news.google.com/rss/search?q="FTC"+AND+"Small+Business+Lending"+when:14d&hl=en-US&gl=US&ceid=US:en', tag: 'Legal', icon: 'fa-balance-scale', priority: 4 }
+            { url: 'https://news.google.com/rss/search?q=\"Merchant+Cash+Advance\"+OR+\"Revenue+Based+Financing\"+when:7d&hl=en-US&gl=US&ceid=US:en', tag: 'Industry', icon: 'fa-rss', priority: 3 },
+            { url: 'https://news.google.com/rss/search?q=\"FTC\"+AND+\"Small+Business+Lending\"+when:14d&hl=en-US&gl=US&ceid=US:en', tag: 'Legal', icon: 'fa-balance-scale', priority: 4 }
         ];
 
         const feedPromises = sources.map(async (source) => {
