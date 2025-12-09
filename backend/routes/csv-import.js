@@ -50,6 +50,12 @@ const cleanDate = (val) => {
     return date.toISOString().split('T')[0];
 };
 
+// Helper: Clean State Code (strips punctuation, enforces 2 chars)
+const cleanStateCode = (val) => {
+    if (!val) return null;
+    return val.toString().replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase();
+};
+
 // Helper: Clean Money
 const cleanMoney = (val) => val ? parseFloat(val.replace(/[^0-9.]/g, '')) : null;
 
@@ -119,7 +125,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     business_name,
                     lead_phone: phone,
                     email: email,
-                    us_state: getFuzzyValue(row, ['State', 'Business State', 'Province']),
+                    us_state: cleanStateCode(getFuzzyValue(row, ['State', 'Business State', 'Province'])),
                     city: getFuzzyValue(row, ['City', 'Business City']),
                     zip: getFuzzyValue(row, ['Zip', 'Zip Code']),
                     address: getFuzzyValue(row, ['Address', 'Business Address']),
