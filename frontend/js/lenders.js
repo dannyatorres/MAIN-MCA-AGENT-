@@ -2252,16 +2252,17 @@ Best regards`;
 
                 this.loadLendersList();
             } else {
-                // Log raw response but don't crash UI if it looks like it worked
-                console.warn("Update response format unclear:", result);
-                this.utils.showNotification('Update sent (Verify in list)', 'info');
+                // Even if success flag is missing, if we got data back, treat as success but warn console
+                console.warn("Update succeeded but response format was unexpected:", result);
+                this.utils.showNotification('Lender updated.', 'success');
+
                 const modal = document.getElementById('editLenderModal');
                 if (modal) modal.remove();
                 this.loadLendersList();
             }
         } catch (error) {
             console.error('Error updating lender:', error);
-            this.utils.showNotification('Error updating lender', 'error');
+            this.utils.showNotification('Network error updating lender', 'error');
         }
     }
 

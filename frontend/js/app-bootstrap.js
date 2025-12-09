@@ -272,31 +272,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.openLenderManagementModal = () => {
                 console.log("🏦 Opening Lender Management...");
 
-                // 1. Ensure commandCenter exists
+                // 1. Safety Check: Ensure commandCenter exists
                 if (!window.commandCenter) {
                     console.error("❌ Command Center not found!");
                     return;
                 }
 
-                // 2. AUTO-HEAL: If lenders module is missing, manually attach it right now
+                // 2. AUTO-FIX: If the lenders module is missing, force-load it right now
                 if (!window.commandCenter.lenders) {
-                    console.warn("⚠️ Lenders module missing. Attempting lazy load...");
+                    console.warn("⚠️ Lenders module was missing. Attempting to force-load...");
 
                     if (typeof LendersModule !== 'undefined') {
                         window.commandCenter.lenders = new LendersModule(window.commandCenter);
-                        console.log("✅ LendersModule manually attached.");
+                        console.log("✅ LendersModule attached successfully.");
                     } else {
-                        console.error("❌ Lenders class definition not found.");
+                        console.error("❌ Critical: LendersModule class is not loaded.");
                         alert("System resources are still loading. Please refresh the page.");
                         return;
                     }
                 }
 
-                // 3. Open the modal
+                // 3. Now it is safe to open
                 if (window.commandCenter.lenders && typeof window.commandCenter.lenders.openManagementModal === 'function') {
                     window.commandCenter.lenders.openManagementModal();
                 } else {
-                    alert("Lender module loaded but incomplete. Please refresh.");
+                    alert("Lender module is loaded but incomplete. Please refresh the page.");
                 }
             };
             window.toggleDeleteMode = () => {
