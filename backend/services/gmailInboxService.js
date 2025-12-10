@@ -91,8 +91,9 @@ class GmailInboxService {
                 searchCriteria.push(['SINCE', since]);
             }
 
+            // We fetch flags only first to be fast
             const initialFetchOptions = {
-                bodies: [],
+                bodies: [], 
                 markSeen: false
             };
 
@@ -111,11 +112,16 @@ class GmailInboxService {
             const recentMessages = allMessages.slice(0, limit);
             const uidsToFetch = recentMessages.map(m => m.attributes.uid);
 
-            console.log(`📥 Downloading content for ${uidsToFetch.length} emails (UIDs: ${uidsToFetch[0]}...${uidsToFetch[uidsToFetch.length-1]})...`);
+            if (uidsToFetch.length === 0) return [];
 
-            // 3. HEAVY LIFT: Fetch full content
-            // FIX: Join the UIDs into a comma-separated string
-            const fetchCriteria = [['UID', uidsToFetch.join(',')]];
+            // Calculate Range (Min:Max)
+            const minUid = Math.min(...uidsToFetch);
+            const maxUid = Math.max(...uidsToFetch);
+            
+            console.log(`📥 Downloading content for range ${minUid}:${maxUid} (${uidsToFetch.length} target emails)...`);
+
+            // 3. HEAVY LIFT: Fetch using RANGE Syntax (More robust than comma lists)
+            const fetchCriteria = [['UID', `${minUid}:${maxUid}`]];
             
             const fullFetchOptions = {
                 bodies: ['HEADER', 'TEXT', ''],
@@ -123,15 +129,21 @@ class GmailInboxService {
                 struct: true
             };
 
-            const fullMessages = await this.connection.search(fetchCriteria, fullFetchOptions);
-            console.log(`📦 Received content for ${fullMessages.length} emails.`);
+            const rawMessages = await this.connection.search(fetchCriteria, fullFetchOptions);
+            
+            // 4. FILTER & PARSE
+            // The range fetch might return emails we didn't ask for (gaps in the range),
+            // so we strictly filter by our 'uidsToFetch' list.
+            const targetUidSet = new Set(uidsToFetch);
+            const validMessages = rawMessages.filter(m => targetUidSet.has(m.attributes.uid));
+            
+            // Sort again by UID descending
+            validMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
 
-            // Sort again because search results might be unordered
-            fullMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
+            console.log(`📦 Received ${rawMessages.length} raw msgs, filtered to ${validMessages.length} targets.`);
 
-            // 4. PARSE
             const emails = [];
-            for (const message of fullMessages) {
+            for (const message of validMessages) {
                 try {
                     const email = await this.parseMessage(message);
                     emails.push(email);
