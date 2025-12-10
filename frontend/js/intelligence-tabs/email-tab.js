@@ -184,77 +184,45 @@ export class EmailTab {
     }
 
     renderEmailViewer() {
-        if (!this.selectedEmail) return '';
+         if (!this.selectedEmail) return '';
+         const email = this.selectedEmail;
+         const { name, address } = this.getSenderInfo(email);
+         const date = new Date(email.date).toLocaleString();
+         
+         const body = email.html || `<div style="white-space:pre-wrap; color:#e6edf3; font-family: sans-serif; line-height: 1.6;">${email.text}</div>`;
 
-        const email = this.selectedEmail;
-        const { name: fromName, address: fromEmail } = this.getSenderInfo(email);
-
-        const date = new Date(email.date || email.timestamp);
-        const formattedDate = date.toLocaleDateString('en-US', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-
-        const bodyContent = email.html 
-            ? email.html 
-            : `<pre style="white-space: pre-wrap; font-family: inherit; margin: 0; color: #e6edf3;">${email.text || ''}</pre>`;
-
-        return `
-            <div class="email-detail" style="display: flex; flex-direction: column; height: 100%;">
-                
-                <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px;">
-                    <button id="backToInboxBtn" style="background: transparent; border: none; color: #3b82f6; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; padding: 4px 8px; border-radius: 4px;">
+         return `
+            <div style="display:flex; flex-direction:column; height:100%; background: #0f1115;">
+                <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); background: #161b22;">
+                    <button id="backToInboxBtn" style="background:transparent; border:none; color:#3b82f6; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px; font-size: 13px;">
                         <i class="fas fa-arrow-left"></i> Back to Inbox
                     </button>
                 </div>
 
-                <div class="email-header" style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
-                        <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #e6edf3; flex: 1;">
-                            ${email.subject || '(No Subject)'}
-                        </h3>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="analyze-email-btn" data-email-id="${email.id}" style="padding: 6px 12px; background: #238636; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">
-                                <i class="fas fa-robot"></i> AI Analyze
-                            </button>
-                            <button class="delete-email-btn" data-email-id="${email.id}" style="padding: 6px 12px; background: #da3633; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
+                <div style="padding: 24px 32px; background: #161b22; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <h2 style="color:#ffffff; font-size:20px; font-weight: 700; margin:0 0 16px 0; line-height: 1.3;">${email.subject}</h2>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); display: flex; align-items: center; justify-content: center; color: black; font-weight: 700; font-size: 18px;">
+                            ${name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div style="color:#e6edf3; font-weight: 600; font-size: 15px;">${name}</div>
+                            <div style="color:#8b949e; font-size: 13px;">${address} <span style="margin: 0 4px;">•</span> ${date}</div>
                         </div>
                     </div>
-
-                    <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 8px;">
-                        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">
-                            ${fromName.charAt(0).toUpperCase()}
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-weight: 600; color: #e6edf3;">${fromName}</div>
-                            <div style="font-size: 14px; color: #8b949e;">${fromEmail}</div>
-                        </div>
-                    </div>
-                    <div style="font-size: 13px; color: #8b949e;">
-                        ${formattedDate}
-                    </div>
-                    
-                    ${email.hasAttachments ? `
-                        <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
-                            <div style="font-weight: 600; color: #c9d1d9; margin-bottom: 8px; font-size: 13px;">
-                                <i class="fas fa-paperclip"></i> Attachments (${email.attachments.length})
-                            </div>
-                            ${email.attachments.map(att => `
-                                <div style="font-size: 13px; color: #8b949e; padding: 4px 0;">
-                                    📎 ${att.filename} (${this.formatFileSize(att.size)})
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
                 </div>
 
-                <div class="email-body" style="flex: 1; padding: 20px; overflow-y: auto; color: #e6edf3;">
-                    ${bodyContent}
+                <div class="email-body-scroll" style="flex:1; overflow-y:auto; padding: 0; background: #0f1115;">
+                    
+                    <div class="email-reading-pane" style="max-width: 700px; margin: 0 auto; padding: 40px 20px; background: transparent;">
+                        <div class="email-content-wrapper">
+                            ${body}
+                        </div>
+                    </div>
+
                 </div>
             </div>
-        `;
+         `;
     }
 
     attachEventListeners() {
