@@ -34,33 +34,47 @@ export class EmailTab {
 
                     <div class="action-group" style="display: flex; gap: 8px; flex-shrink: 0;">
                         
+                        <button id="composeEmailBtn" class="tool-btn primary" title="Compose New Email" 
+                                style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000; box-shadow: 0 0 10px rgba(45, 212, 191, 0.3);">
+                            <i class="fas fa-plus" style="font-weight: 800;"></i>
+                        </button>
+
                         <button id="unreadOnlyBtn" class="tool-btn" title="Show Unread Only"
                                 style="width: 36px; height: 36px; border-radius: 8px; background: #21262d; border: 1px solid #30363d; color: #8b949e; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
                             <i class="fas fa-filter"></i>
                         </button>
 
-                        <button id="refreshEmailBtn" class="tool-btn primary" title="Refresh" 
-                                style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000; box-shadow: 0 0 10px rgba(45, 212, 191, 0.3);">
-                            <i class="fas fa-sync-alt" style="font-weight: 700;"></i>
+                        <button id="refreshEmailBtn" class="tool-btn" title="Refresh" 
+                                style="width: 36px; height: 36px; border-radius: 8px; background: #21262d; border: 1px solid #30363d; color: #8b949e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
                 </div>
 
                 <div class="email-content-area" style="flex: 1; position: relative; overflow: hidden;">
-                    
                     <div id="emailListContainer" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-                        <div id="emailList" class="email-list" style="flex: 1; overflow-y: auto; padding: 0;">
-                            <div style="padding:20px; text-align:center; color:#6b7280;">Loading...</div>
-                        </div>
-                        
+                        <div id="emailList" class="email-list" style="flex: 1; overflow-y: auto; padding: 0;"></div>
                         <div id="loadMoreContainer" style="padding: 16px; text-align: center; display: none;">
-                            <button id="loadMoreBtn" style="padding: 8px 16px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; cursor: pointer; font-size: 13px;">
-                                Load Next 50 Messages
-                            </button>
+                            <button id="loadMoreBtn" style="padding: 8px 16px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; cursor: pointer; font-size: 13px;">Load More</button>
                         </div>
                     </div>
-
                     <div id="emailViewerContainer" style="width: 100%; height: 100%; display: none; flex-direction: column; background: #161b22;"></div>
+                </div>
+
+                <div id="composeModal" style="display: none; position: absolute; bottom: 0; right: 20px; width: 400px; height: 500px; background: #161b22; border: 1px solid #30363d; border-radius: 8px 8px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.5); flex-direction: column; z-index: 1000;">
+                    <div style="padding: 10px 16px; background: #21262d; border-bottom: 1px solid #30363d; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; color: #e6edf3;">New Message</span>
+                        <button id="closeComposeBtn" style="background: none; border: none; color: #8b949e; cursor: pointer;"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; padding: 12px;">
+                        <input type="text" placeholder="To" style="background: transparent; border: none; border-bottom: 1px solid #30363d; padding: 8px 0; color: white; margin-bottom: 8px; outline: none;">
+                        <input type="text" placeholder="Subject" style="background: transparent; border: none; border-bottom: 1px solid #30363d; padding: 8px 0; color: white; margin-bottom: 8px; outline: none;">
+                        <textarea placeholder="Write your message..." style="flex: 1; background: transparent; border: none; color: white; resize: none; outline: none; line-height: 1.5;"></textarea>
+                    </div>
+                    <div style="padding: 12px; border-top: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center;">
+                        <button style="padding: 8px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Send</button>
+                        <button style="background: none; border: none; color: #8b949e; cursor: pointer;"><i class="fas fa-paperclip"></i></button>
+                    </div>
                 </div>
             </div>
         `;
@@ -187,39 +201,57 @@ export class EmailTab {
          if (!this.selectedEmail) return '';
          const email = this.selectedEmail;
          const { name, address } = this.getSenderInfo(email);
-         const date = new Date(email.date).toLocaleString();
+         const date = new Date(email.date || email.timestamp).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
          
          const body = email.html || `<div style="white-space:pre-wrap; color:#e6edf3; font-family: sans-serif; line-height: 1.6;">${email.text}</div>`;
 
          return `
             <div style="display:flex; flex-direction:column; height:100%; background: #0f1115;">
-                <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); background: #161b22;">
-                    <button id="backToInboxBtn" style="background:transparent; border:none; color:#3b82f6; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px; font-size: 13px;">
-                        <i class="fas fa-arrow-left"></i> Back to Inbox
-                    </button>
-                </div>
-
-                <div style="padding: 24px 32px; background: #161b22; border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <h2 style="color:#ffffff; font-size:20px; font-weight: 700; margin:0 0 16px 0; line-height: 1.3;">${email.subject}</h2>
-                    <div style="display: flex; gap: 12px; align-items: center;">
-                        <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); display: flex; align-items: center; justify-content: center; color: black; font-weight: 700; font-size: 18px;">
-                            ${name.charAt(0).toUpperCase()}
+                
+                <div style="flex-shrink: 0; border-bottom:1px solid rgba(255,255,255,0.05); background: #161b22;">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                        <button id="backToInboxBtn" style="background:transparent; border:none; color:#3b82f6; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px; font-size: 13px;">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        
+                        <div style="display: flex; gap: 8px;">
+                            <button title="Reply" style="padding: 6px 12px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; cursor: pointer; font-size: 13px;">
+                                <i class="fas fa-reply"></i> Reply
+                            </button>
+                            <button title="Reply All" style="padding: 6px 12px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; cursor: pointer; font-size: 13px;">
+                                <i class="fas fa-reply-all"></i> Reply All
+                            </button>
+                            <button class="delete-email-btn" data-email-id="${email.id}" title="Delete" style="padding: 6px 12px; background: #da3633; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
-                        <div>
-                            <div style="color:#e6edf3; font-weight: 600; font-size: 15px;">${name}</div>
-                            <div style="color:#8b949e; font-size: 13px;">${address} <span style="margin: 0 4px;">•</span> ${date}</div>
+                    </div>
+
+                    <div style="padding: 12px 16px;">
+                        <h2 style="color:#ffffff; font-size:16px; font-weight: 700; margin:0 0 8px 0; line-height: 1.3;">${email.subject}</h2>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); display: flex; align-items: center; justify-content: center; color: black; font-weight: 700; font-size: 14px;">
+                                    ${name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style="color:#e6edf3; font-weight: 600; font-size: 13px;">${name} <span style="color:#6b7280; font-weight:400;">&lt;${address}&gt;</span></div>
+                                    <div style="color:#8b949e; font-size: 11px;">To: me</div>
+                                </div>
+                            </div>
+                            <div style="color:#6b7280; font-size: 12px;">${date}</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="email-body-scroll" style="flex:1; overflow-y:auto; padding: 0; background: #0f1115;">
-                    
-                    <div class="email-reading-pane" style="max-width: 700px; margin: 0 auto; padding: 40px 20px; background: transparent;">
+                    <div class="email-reading-pane" style="max-width: 700px; margin: 0 auto; padding: 20px; background: transparent;">
                         <div class="email-content-wrapper">
                             ${body}
                         </div>
                     </div>
-
                 </div>
             </div>
          `;
@@ -237,6 +269,17 @@ export class EmailTab {
                 unreadBtn.style.color = isActive ? '#fff' : '#8b949e';
                 this.fetchEmails({ unreadOnly: isActive, query: this.query });
             };
+        }
+
+        // Compose modal
+        const composeBtn = document.getElementById('composeEmailBtn');
+        const modal = document.getElementById('composeModal');
+        const closeBtn = document.getElementById('closeComposeBtn');
+        if (composeBtn && modal) {
+            composeBtn.onclick = () => { modal.style.display = 'flex'; };
+        }
+        if (closeBtn && modal) {
+            closeBtn.onclick = () => { modal.style.display = 'none'; };
         }
 
         const searchInput = document.getElementById('emailSearchInput');
