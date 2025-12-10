@@ -6,6 +6,7 @@ export class EmailTab {
         this.emails = [];
         this.selectedEmail = null;
         this.refreshInterval = null;
+        this.searchTimeout = null; // For debouncing search
     }
 
     render(container) {
@@ -16,68 +17,76 @@ export class EmailTab {
 
     async fetchAndRender() {
         try {
+            // Initial render with loading skeleton or empty state
+            this.container.innerHTML = this.getLayoutHTML();
+            
+            // Fetch real data
             await this.fetchEmails();
-
-            this.container.innerHTML = `
-                <div class="email-container" style="display: flex; flex-direction: column; height: 100%; gap: 12px;">
-                    <!-- Email Toolbar -->
-                    <div class="email-toolbar" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <button id="refreshEmailBtn" class="btn btn-sm" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                                <i class="fas fa-sync-alt"></i> Refresh
-                            </button>
-                            <button id="unreadOnlyBtn" class="btn btn-sm" style="padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;">
-                                Show Unread Only
-                            </button>
-                            <div id="emailCount" style="padding: 6px 12px; background: #f3f4f6; border-radius: 6px; font-size: 14px; color: #6b7280;">
-                                <strong>${this.emails.length}</strong> emails
-                            </div>
-                        </div>
-                        <div style="position: relative;">
-                            <input type="text" id="emailSearchInput" placeholder="Search emails..."
-                                   style="padding: 8px 12px 8px 36px; border: 1px solid #d1d5db; border-radius: 6px; width: 250px; font-size: 14px;">
-                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
-                        </div>
-                    </div>
-
-                    <!-- Email Content Area -->
-                    <div class="email-content-area" style="display: flex; flex: 1; gap: 12px; overflow: hidden;">
-                        <!-- Email List -->
-                        <div class="email-list-container" style="flex: 0 0 400px; display: flex; flex-direction: column; background: white; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
-                            <div class="email-list-header" style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #111827;">
-                                Inbox
-                            </div>
-                            <div id="emailList" class="email-list" style="flex: 1; overflow-y: auto;">
-                                ${this.renderEmailList()}
-                            </div>
-                        </div>
-
-                        <!-- Email Viewer -->
-                        <div class="email-viewer-container" style="flex: 1; background: white; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden; display: flex; flex-direction: column;">
-                            <div id="emailViewer" class="email-viewer" style="flex: 1; overflow-y: auto;">
-                                ${this.renderEmailViewer()}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
 
             this.attachEventListeners();
             this.startAutoRefresh();
 
         } catch (error) {
             console.error('Error rendering Email tab:', error);
-            this.container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">❌</div>
-                    <p>Error loading emails: ${error.message}</p>
-                </div>
-            `;
+            this.renderErrorState(error.message);
         }
     }
 
+    getLayoutHTML() {
+        return `
+            <div class="email-container" style="display: flex; flex-direction: column; height: 100%; gap: 12px;">
+                <div class="email-toolbar" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button id="refreshEmailBtn" class="btn btn-sm" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button id="unreadOnlyBtn" class="btn btn-sm" style="padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;">
+                            Show Unread Only
+                        </button>
+                        <div id="emailCount" style="padding: 6px 12px; background: #f3f4f6; border-radius: 6px; font-size: 14px; color: #6b7280;">
+                            <strong>0</strong> emails
+                        </div>
+                    </div>
+                    <div style="position: relative;">
+                        <input type="text" id="emailSearchInput" placeholder="Search emails..."
+                               style="padding: 8px 12px 8px 36px; border: 1px solid #d1d5db; border-radius: 6px; width: 250px; font-size: 14px;">
+                        <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
+                    </div>
+                </div>
+
+                <div class="email-content-area" style="display: flex; flex: 1; gap: 12px; overflow: hidden;">
+                    <div class="email-list-container" style="flex: 0 0 400px; display: flex; flex-direction: column; background: white; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
+                        <div class="email-list-header" style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #111827;">
+                            Inbox
+                        </div>
+                        <div id="emailList" class="email-list" style="flex: 1; overflow-y: auto;">
+                            <div style="padding: 20px; text-align: center; color: #6b7280;">Loading emails...</div>
+                        </div>
+                    </div>
+
+                    <div class="email-viewer-container" style="flex: 1; background: white; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden; display: flex; flex-direction: column;">
+                        <div id="emailViewer" class="email-viewer" style="flex: 1; overflow-y: auto;">
+                            ${this.renderEmailViewer()}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderErrorState(msg) {
+        if (!this.container) return;
+        this.container.innerHTML = `
+            <div class="empty-state" style="padding: 2rem; text-align: center; color: #ef4444;">
+                <div class="empty-icon" style="font-size: 2rem; margin-bottom: 1rem;">❌</div>
+                <p>Error loading emails: ${msg}</p>
+                <button onclick="window.location.reload()" style="margin-top:1rem; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Retry</button>
+            </div>
+        `;
+    }
+
     renderEmailList() {
-        if (this.emails.length === 0) {
+        if (!this.emails || this.emails.length === 0) {
             return `
                 <div style="padding: 40px; text-align: center; color: #6b7280;">
                     <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
@@ -87,8 +96,15 @@ export class EmailTab {
         }
 
         return this.emails.map(email => {
-            const fromName = email.from?.name || email.from?.email || 'Unknown';
-            const date = new Date(email.date);
+            // Robust check for from name/email
+            let fromName = 'Unknown';
+            if (email.from) {
+                if (typeof email.from === 'string') fromName = email.from;
+                else if (email.from.name) fromName = email.from.name;
+                else if (email.from.email) fromName = email.from.email;
+            }
+            
+            const date = new Date(email.date || email.timestamp);
             const formattedDate = this.formatDate(date);
             const isUnread = email.isUnread;
 
@@ -105,10 +121,10 @@ export class EmailTab {
                         </div>
                     </div>
                     <div style="font-size: 14px; font-weight: ${isUnread ? '600' : '400'}; color: #374151; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        ${email.subject}
+                        ${email.subject || '(No Subject)'}
                     </div>
                     <div style="font-size: 13px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        ${email.snippet}
+                        ${email.snippet || ''}
                     </div>
                     ${email.hasAttachments ? '<div style="margin-top: 4px; font-size: 12px; color: #3b82f6;"><i class="fas fa-paperclip"></i> Has attachments</div>' : ''}
                 </div>
@@ -129,9 +145,15 @@ export class EmailTab {
         }
 
         const email = this.selectedEmail;
-        const fromName = email.from?.name || email.from?.email || 'Unknown';
-        const fromEmail = email.from?.email || '';
-        const date = new Date(email.date);
+        
+        let fromName = 'Unknown';
+        let fromEmail = '';
+        if (email.from) {
+             fromName = email.from.name || email.from.email || 'Unknown';
+             fromEmail = email.from.email || '';
+        }
+
+        const date = new Date(email.date || email.timestamp);
         const formattedDate = date.toLocaleDateString('en-US', {
             weekday: 'long',
             year: 'numeric',
@@ -141,13 +163,17 @@ export class EmailTab {
             minute: '2-digit'
         });
 
+        // Use backend HTML if available, otherwise fallback to text in pre
+        const bodyContent = email.html 
+            ? email.html 
+            : `<pre style="white-space: pre-wrap; font-family: inherit; margin: 0; color: #374151;">${email.text || ''}</pre>`;
+
         return `
             <div class="email-detail" style="display: flex; flex-direction: column; height: 100%;">
-                <!-- Email Header -->
                 <div class="email-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
                         <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827; flex: 1;">
-                            ${email.subject}
+                            ${email.subject || '(No Subject)'}
                         </h3>
                         <div style="display: flex; gap: 8px;">
                             <button class="analyze-email-btn"
@@ -201,119 +227,95 @@ export class EmailTab {
                     ` : ''}
                 </div>
 
-                <!-- Email Body -->
                 <div class="email-body" style="flex: 1; padding: 20px; overflow-y: auto;">
-                    ${email.html ? email.html : `<pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${email.text}</pre>`}
+                    ${bodyContent}
                 </div>
             </div>
         `;
     }
 
-    generateMockEmails() {
-        const now = new Date();
-        return [
-            {
-                id: 1,
-                subject: 'Re: MCA Application for ABC Corp - $150K Request',
-                from: { name: 'Sarah Johnson', email: 'sjohnson@capitalfund.com' },
-                date: new Date(now - 2 * 60 * 60 * 1000),
-                text: 'Hi,\n\nI reviewed the bank statements for ABC Corp. The monthly deposits look strong at $85K average. We can offer $150K at 1.28 factor with 9-month term.\n\nPlease let me know if the client wants to proceed.\n\nBest regards,\nSarah',
-                snippet: 'I reviewed the bank statements for ABC Corp. The monthly deposits look strong at $85K average...',
-                isUnread: true,
-                hasAttachments: false,
-                attachments: []
-            },
-            {
-                id: 2,
-                subject: 'New Lead: Restaurant Equipment Financing',
-                from: { name: 'Michael Chen', email: 'mchen@leadsource.com' },
-                date: new Date(now - 5 * 60 * 60 * 1000),
-                text: 'Hello,\n\nI have a warm lead for you:\n\nBusiness: Downtown Bistro LLC\nOwner: James Martinez\nPhone: (555) 123-4567\nMonthly Revenue: $45,000\nRequesting: $75,000 for new equipment\n\nOwner is ready to submit application.',
-                snippet: 'I have a warm lead for you: Business: Downtown Bistro LLC, Owner: James Martinez...',
-                isUnread: true,
-                hasAttachments: false,
-                attachments: []
-            },
-            {
-                id: 3,
-                subject: 'FCS Report Ready - Project Capital LLC',
-                from: { name: 'Analytics Team', email: 'reports@fcsanalytics.com' },
-                date: new Date(now - 8 * 60 * 60 * 1000),
-                text: 'Your FCS report for Project Capital LLC is ready.\n\nKey Findings:\n- Average Monthly Deposits: $127,000\n- Negative Days: 3\n- NSF Count: 1\n- Recommended Position: $180,000 - $200,000',
-                html: '<p>Your FCS report for <strong>Project Capital LLC</strong> is ready.</p><p><strong>Key Findings:</strong></p><ul><li>Average Monthly Deposits: $127,000</li><li>Negative Days: 3</li><li>NSF Count: 1</li><li>Recommended Position: $180,000 - $200,000</li></ul>',
-                snippet: 'Your FCS report for Project Capital LLC is ready. Key Findings: Average Monthly Deposits: $127,000...',
-                isUnread: false,
-                hasAttachments: true,
-                attachments: [{ filename: 'ProjectCapital_FCS_Report.pdf', size: 245000 }]
-            },
-            {
-                id: 4,
-                subject: 'URGENT: Client wants to close today - Tech Solutions Inc',
-                from: { name: 'Robert Kim', email: 'rkim@fastfunding.com' },
-                date: new Date(now - 3 * 60 * 60 * 1000),
-                text: 'URGENT!\n\nTech Solutions Inc wants to close their $120K position TODAY.\n\nEverything is approved. Just need:\n- Signed contract\n- ACH authorization form\n\nCan you get these signed and returned within 2 hours?',
-                snippet: 'Tech Solutions Inc wants to close their $120K position TODAY. Everything is approved...',
-                isUnread: true,
-                hasAttachments: true,
-                attachments: [
-                    { filename: 'TechSolutions_Contract.pdf', size: 185000 },
-                    { filename: 'ACH_Authorization.pdf', size: 95000 }
-                ]
-            },
-            {
-                id: 5,
-                subject: 'Renewal Opportunity - Happy Donuts (Previous Client)',
-                from: { name: 'Jennifer Lee', email: 'jlee@renewalcapital.com' },
-                date: new Date(now - 6 * 60 * 60 * 1000),
-                text: 'Hi there,\n\nHappy Donuts is eligible for a renewal. They paid off their previous $50K position in 7 months.\n\nCurrent offer: $85K at 1.25 factor, 10-month term\n\nOwner mentioned wanting to expand to a second location.',
-                snippet: 'Happy Donuts is eligible for a renewal. They paid off their previous $50K position in 7 months...',
-                isUnread: true,
-                hasAttachments: false,
-                attachments: []
-            }
-        ];
-    }
+    // --- Data Fetching Logic ---
 
     async fetchEmails(options = {}) {
-        console.log('📧 Using mock email data for demo...');
-        const { unreadOnly = false } = options;
+        const { unreadOnly = false, query = null } = options;
+        
+        // Visual indicator in list
+        const listEl = document.getElementById('emailList');
+        if (listEl) listEl.style.opacity = '0.5';
 
-        let allEmails = this.generateMockEmails();
+        try {
+            let url = '/api/email/list?limit=50';
+            if (unreadOnly) url += '&unreadOnly=true';
+            
+            // If we are searching, switch endpoint
+            if (query) {
+                url = `/api/email/search?q=${encodeURIComponent(query)}`;
+            }
 
-        if (unreadOnly) {
-            allEmails = allEmails.filter(email => email.isUnread);
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.success) {
+                this.emails = data.emails;
+                this.updateEmailList();
+                this.updateEmailCount();
+            } else {
+                console.error('API responded with failure:', data.error);
+                // Optional: show toast notification
+            }
+        } catch (err) {
+            console.error('Network error fetching emails:', err);
+        } finally {
+            if (listEl) listEl.style.opacity = '1';
         }
-
-        this.emails = allEmails;
-        console.log(`✅ Loaded ${this.emails.length} mock emails`);
-        return this.emails;
     }
 
+    // --- Action Handlers ---
+
     async selectEmail(emailId) {
+        // Find email in local state
         const email = this.emails.find(e => e.id == emailId);
         if (email) {
             this.selectedEmail = email;
             this.updateEmailViewer();
             this.attachViewerEventListeners();
+            
+            // Optional: Automatically mark as read on selection?
+            // if (email.isUnread) { this.markAsRead(emailId); }
         }
     }
 
     async markAsRead(emailId) {
-        const email = this.emails.find(e => e.id == emailId);
-        if (email) email.isUnread = false;
-        if (this.selectedEmail && this.selectedEmail.id == emailId) {
-            this.selectedEmail.isUnread = false;
+        // Optimistic Update
+        this.updateLocalReadState(emailId, false);
+
+        try {
+            await fetch(`/api/email/${emailId}/mark-read`, { method: 'POST' });
+        } catch (err) {
+            console.error('Error marking read:', err);
+            // Revert on fail
+            this.updateLocalReadState(emailId, true);
         }
-        this.updateEmailList();
-        this.updateEmailViewer();
-        this.attachViewerEventListeners();
     }
 
     async markAsUnread(emailId) {
+        // Optimistic Update
+        this.updateLocalReadState(emailId, true);
+
+        try {
+            await fetch(`/api/email/${emailId}/mark-unread`, { method: 'POST' });
+        } catch (err) {
+            console.error('Error marking unread:', err);
+            // Revert on fail
+            this.updateLocalReadState(emailId, false);
+        }
+    }
+
+    updateLocalReadState(emailId, isUnread) {
         const email = this.emails.find(e => e.id == emailId);
-        if (email) email.isUnread = true;
+        if (email) email.isUnread = isUnread;
         if (this.selectedEmail && this.selectedEmail.id == emailId) {
-            this.selectedEmail.isUnread = true;
+            this.selectedEmail.isUnread = isUnread;
         }
         this.updateEmailList();
         this.updateEmailViewer();
@@ -323,15 +325,31 @@ export class EmailTab {
     async deleteEmail(emailId) {
         if (!confirm('Are you sure you want to delete this email?')) return;
 
+        // Optimistic UI Removal
+        const previousEmails = [...this.emails];
         this.emails = this.emails.filter(e => e.id != emailId);
+        
         if (this.selectedEmail && this.selectedEmail.id == emailId) {
             this.selectedEmail = null;
         }
+        
         this.updateEmailList();
         this.updateEmailViewer();
         this.updateEmailCount();
+
+        try {
+            await fetch(`/api/email/${emailId}`, { method: 'DELETE' });
+        } catch (err) {
+            console.error('Error deleting email:', err);
+            // Revert
+            this.emails = previousEmails;
+            this.updateEmailList();
+            alert('Failed to delete email');
+        }
     }
 
+    // Client-side AI simulation (keeping this from your code as requested)
+    // Eventually this can point to /api/email/analyze
     async analyzeEmail(emailId) {
         const email = this.emails.find(e => e.id == emailId) || this.selectedEmail;
         if (!email) return;
@@ -352,17 +370,15 @@ export class EmailTab {
         }
     }
 
+    // Logic kept from your file for demo purposes
     generateAnalysis(email) {
-        if (email.subject.includes('URGENT')) {
-            return `📊 SUMMARY\nTime-sensitive email requiring immediate action.\n\n🔑 KEY POINTS\n• Client wants to finalize deal today\n• All approvals in place\n• Pending: signed contract and ACH form\n\n✅ ACTION ITEMS\n1. Contact client immediately\n2. Send documents within 2 hours\n\n⚡ PRIORITY: CRITICAL`;
-        } else if (email.subject.includes('FCS Report')) {
-            return `📊 SUMMARY\nFCS report completed with favorable results.\n\n🔑 KEY POINTS\n• Monthly deposits: $127K\n• Low risk factors\n• Recommended: $180K-$200K\n\n✅ ACTION ITEMS\n1. Review full report\n2. Contact client with options\n\n⚡ PRIORITY: MEDIUM`;
-        } else if (email.subject.includes('New Lead')) {
-            return `📊 SUMMARY\nWarm lead referral for equipment financing.\n\n🔑 KEY POINTS\n• Business: Downtown Bistro LLC\n• Revenue: $45K/month\n• Requesting: $75K\n\n✅ ACTION ITEMS\n1. Call owner today\n2. Qualify and request docs\n\n⚡ PRIORITY: HIGH`;
-        } else if (email.subject.includes('Renewal')) {
-            return `📊 SUMMARY\nRenewal opportunity with excellent payment history.\n\n🔑 KEY POINTS\n• Previous: $50K paid in 7 months\n• New offer: $85K at 1.25 factor\n• Expansion plans\n\n✅ ACTION ITEMS\n1. Contact owner within 24 hours\n2. Fast-track application\n\n⚡ PRIORITY: HIGH`;
+        const subject = (email.subject || '').toUpperCase();
+        if (subject.includes('URGENT')) {
+            return `📊 SUMMARY\nTime-sensitive email requiring immediate action.\n\n🔑 KEY POINTS\n• Client wants to finalize deal today\n• All approvals in place\n• Pending: signed contract\n\n✅ ACTION ITEMS\n1. Contact client immediately\n2. Send documents\n\n⚡ PRIORITY: CRITICAL`;
+        } else if (subject.includes('REPORT') || subject.includes('FCS')) {
+            return `📊 SUMMARY\nFinancial report received.\n\n🔑 KEY POINTS\n• Review attached data\n• Check for negative days/NSF\n\n✅ ACTION ITEMS\n1. Review full report\n2. Update file\n\n⚡ PRIORITY: MEDIUM`;
         }
-        return `📊 SUMMARY\n${email.snippet}\n\n⚡ PRIORITY: MEDIUM`;
+        return `📊 SUMMARY\n${email.snippet || 'General email communication.'}\n\n⚡ PRIORITY: NORMAL`;
     }
 
     showEmailAnalysis(analysis) {
@@ -385,6 +401,8 @@ export class EmailTab {
 
         emailBody.insertAdjacentHTML('afterbegin', analysisHTML);
     }
+
+    // --- UI Utilities ---
 
     updateEmailList() {
         const emailList = document.getElementById('emailList');
@@ -415,8 +433,6 @@ export class EmailTab {
                 refreshBtn.disabled = true;
                 refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
                 await this.fetchEmails();
-                this.updateEmailList();
-                this.updateEmailCount();
                 refreshBtn.disabled = false;
                 refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
             });
@@ -431,17 +447,27 @@ export class EmailTab {
                 unreadOnlyBtn.style.background = showingUnreadOnly ? '#3b82f6' : '#f3f4f6';
                 unreadOnlyBtn.style.color = showingUnreadOnly ? 'white' : '#374151';
                 await this.fetchEmails({ unreadOnly: showingUnreadOnly });
-                this.updateEmailList();
-                this.updateEmailCount();
             });
         }
 
         const searchInput = document.getElementById('emailSearchInput');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => this.searchEmails(e.target.value));
+            searchInput.addEventListener('input', (e) => this.handleSearchInput(e.target.value));
         }
 
         this.attachEmailItemListeners();
+    }
+
+    // Debounce search to avoid spamming IMAP
+    handleSearchInput(query) {
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+            if (!query.trim()) {
+                this.fetchEmails();
+            } else {
+                this.fetchEmails({ query });
+            }
+        }, 600);
     }
 
     attachEmailItemListeners() {
@@ -467,23 +493,8 @@ export class EmailTab {
         });
     }
 
-    searchEmails(query) {
-        if (!query.trim()) {
-            this.emails = this.generateMockEmails();
-        } else {
-            const allEmails = this.generateMockEmails();
-            const q = query.toLowerCase();
-            this.emails = allEmails.filter(email =>
-                email.subject.toLowerCase().includes(q) ||
-                email.from.name.toLowerCase().includes(q) ||
-                email.text.toLowerCase().includes(q)
-            );
-        }
-        this.updateEmailList();
-        this.updateEmailCount();
-    }
-
     formatDate(date) {
+        if (!date) return '';
         const now = new Date();
         const diff = now - date;
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -501,7 +512,15 @@ export class EmailTab {
     }
 
     startAutoRefresh() {
-        console.log('📧 Auto-refresh disabled for mock email data');
+        console.log('📧 Starting auto-refresh (every 2 mins)...');
+        // Refresh every 2 minutes
+        this.refreshInterval = setInterval(() => {
+            // Only refresh if not searching
+            const searchInput = document.getElementById('emailSearchInput');
+            if (!searchInput || !searchInput.value) {
+                this.fetchEmails();
+            }
+        }, 120000);
     }
 
     stopAutoRefresh() {
