@@ -24,23 +24,24 @@ export class EmailTab {
         return `
             <div class="email-container" style="display: flex; flex-direction: column; height: 100%; background: #0f1115;">
                 
-                <div class="email-toolbar unified-toolbar" style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;">
+                <div class="email-toolbar" style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
                     
-                    <div style="flex: 1; position: relative;">
+                    <div style="flex: 1; max-width: 350px; position: relative;">
                         <input type="text" id="emailSearchInput" class="search-field-clean" placeholder="Search emails..." 
                                style="width: 100%; height: 36px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 0 12px 0 36px; color: white; font-size: 13px;">
                         <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6e7681; pointer-events: none;"></i>
                     </div>
 
-                    <div class="action-group" style="display: flex; gap: 6px;">
-                        <button id="refreshEmailBtn" class="tool-btn primary" title="Refresh" 
-                                style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000;">
-                            <i class="fas fa-sync-alt" style="font-weight: bold;"></i>
+                    <div class="action-group" style="display: flex; gap: 8px; flex-shrink: 0;">
+                        
+                        <button id="unreadOnlyBtn" class="tool-btn" title="Show Unread Only"
+                                style="width: 36px; height: 36px; border-radius: 8px; background: #21262d; border: 1px solid #30363d; color: #8b949e; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                            <i class="fas fa-filter"></i>
                         </button>
 
-                        <button id="unreadOnlyBtn" class="tool-btn" title="Show Unread Only"
-                                style="width: 36px; height: 36px; border-radius: 8px; background: #21262d; border: 1px solid transparent; color: #8b949e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-filter"></i>
+                        <button id="refreshEmailBtn" class="tool-btn primary" title="Refresh" 
+                                style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000; box-shadow: 0 0 10px rgba(45, 212, 191, 0.3);">
+                            <i class="fas fa-sync-alt" style="font-weight: 700;"></i>
                         </button>
                     </div>
                 </div>
