@@ -308,3 +308,125 @@
     background-color: #30363d;
     border-radius: 3px;
 }
+/* ==========================================================================
+   [PATCH] Email Tab Dark Theme & Layout Fixes
+   Overriding inline JS styles with !important to force Dark Mode consistency
+   ========================================================================== */
+
+/* 1. Reset & Dark Backgrounds */
+.email-container,
+.email-toolbar,
+.email-list-container,
+.email-viewer-container {
+    background-color: #161b22 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #e6edf3 !important;
+}
+
+/* 2. Fix the Toolbar Inputs */
+.email-toolbar input {
+    background: #0d1117 !important;
+    border: 1px solid #30363d !important;
+    color: #e6edf3 !important;
+}
+.email-toolbar input::placeholder {
+    color: #8b949e !important;
+}
+
+/* 3. Fix the "Inbox" Header */
+.email-list-header {
+    background-color: #161b22 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #e6edf3 !important;
+}
+
+/* 4. Email List Items */
+.email-item {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    color: #8b949e !important;
+}
+
+.email-item:hover {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.email-item.selected {
+    background-color: rgba(56, 139, 253, 0.1) !important;
+    border-left-color: #3b82f6 !important;
+}
+
+.email-item.unread {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: #e6edf3 !important;
+}
+
+/* Force text inside items to handle dark mode */
+.email-item div {
+    color: inherit !important;
+}
+
+/* 5. Email Viewer (The Right Side) */
+.email-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.email-header h3 {
+    color: #e6edf3 !important;
+}
+
+/* Fix the sender avatar circle */
+.email-header .sender-avatar {
+    border: 2px solid #161b22;
+}
+
+/* 6. CRITICAL: Fix Giant Images */
+.email-body {
+    color: #e6edf3 !important;
+    background-color: #161b22 !important;
+    line-height: 1.6;
+}
+
+.email-body img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 8px;
+    display: block;
+    margin: 10px 0;
+}
+
+.email-body pre {
+    color: #e6edf3 !important;
+    white-space: pre-wrap;
+    font-family: inherit;
+}
+
+/* 7. Buttons (Refresh, Analyze, etc) */
+#refreshEmailBtn,
+#unreadOnlyBtn {
+    background-color: #21262d !important;
+    border: 1px solid #30363d !important;
+    color: #c9d1d9 !important;
+}
+
+#refreshEmailBtn:hover,
+#unreadOnlyBtn:hover {
+    background-color: #30363d !important;
+    color: #ffffff !important;
+}
+
+/* 8. Scrollbars */
+.email-list,
+.email-viewer {
+    scrollbar-width: thin;
+    scrollbar-color: #30363d transparent;
+}
+.email-list::-webkit-scrollbar,
+.email-viewer::-webkit-scrollbar {
+    width: 6px;
+}
+.email-list::-webkit-scrollbar-thumb,
+.email-viewer::-webkit-scrollbar-thumb {
+    background-color: #30363d;
+    border-radius: 3px;
+}
