@@ -196,16 +196,12 @@ class GmailInboxService {
     formatAddress(addressObj) {
         if (!addressObj) return null;
 
-        if (Array.isArray(addressObj)) {
-            return addressObj.map(addr => ({
-                name: addr.name || '',
-                email: addr.address || ''
-            }));
-        }
+        const rawValue = addressObj.value || addressObj;
+        const firstSender = Array.isArray(rawValue) ? rawValue[0] : rawValue;
 
         return {
-            name: addressObj.name || '',
-            email: addressObj.address || ''
+            name: firstSender.name || '',
+            email: firstSender.address || ''
         };
     }
 
