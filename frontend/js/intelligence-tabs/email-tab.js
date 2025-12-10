@@ -77,13 +77,7 @@ export class EmailTab {
         if (!this.selectedEmail) return '';
 
         const email = this.selectedEmail;
-        
-        let fromName = 'Unknown';
-        let fromEmail = '';
-        if (email.from) {
-             fromName = email.from.name || email.from.email || 'Unknown';
-             fromEmail = email.from.email || '';
-        }
+        const { name: fromName, address: fromEmail } = this.getSenderInfo(email);
 
         const date = new Date(email.date || email.timestamp);
         const formattedDate = date.toLocaleDateString('en-US', {
@@ -300,7 +294,7 @@ export class EmailTab {
         
         return this.emails.map(email => {
             const isUnread = email.isUnread;
-            const fromName = email.from?.name || email.from?.email || email.from || 'Unknown';
+            const { name: fromName } = this.getSenderInfo(email);
             const dateStr = this.formatDate(new Date(email.date || email.timestamp));
 
             return `
@@ -308,15 +302,15 @@ export class EmailTab {
                      data-email-id="${email.id}"
                      style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s; ${isUnread ? 'background: rgba(255,255,255,0.04); border-left: 3px solid #3b82f6;' : 'border-left: 3px solid transparent;'}">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px;">
-                        <div style="font-weight: ${isUnread ? '600' : '500'}; color: ${isUnread ? '#e6edf3' : '#8b949e'}; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <div style="font-weight: ${isUnread ? '700' : '500'}; color: ${isUnread ? '#e6edf3' : '#8b949e'}; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">
                             ${fromName}
                         </div>
-                        <div style="font-size: 12px; color: #6b7280; white-space: nowrap; margin-left: 8px;">${dateStr}</div>
+                        <div style="font-size: 11px; color: #6b7280; white-space: nowrap; margin-left: 8px; margin-top: 2px;">${dateStr}</div>
                     </div>
-                    <div style="font-size: 14px; font-weight: ${isUnread ? '600' : '400'}; color: #c9d1d9; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div style="font-size: 13px; font-weight: ${isUnread ? '600' : '400'}; color: #c9d1d9; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         ${email.subject || '(No Subject)'}
                     </div>
-                    <div style="font-size: 13px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div style="font-size: 12px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         ${email.snippet || ''}
                     </div>
                 </div>
@@ -392,6 +386,27 @@ export class EmailTab {
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
         return (bytes/(1024*1024)).toFixed(1) + ' MB';
+    }
+
+    // Helper to safely extract sender info
+    getSenderInfo(email) {
+        let name = 'Unknown';
+        let address = '';
+
+        if (email.from) {
+            if (Array.isArray(email.from) && email.from.length > 0) {
+                name = email.from[0].name || email.from[0].email || 'Unknown';
+                address = email.from[0].email || '';
+            } else if (typeof email.from === 'object') {
+                name = email.from.name || email.from.email || 'Unknown';
+                address = email.from.email || '';
+            } else if (typeof email.from === 'string') {
+                name = email.from;
+            }
+        }
+
+        name = name.replace(/"/g, '');
+        return { name, address };
     }
 
     startAutoRefresh() {
