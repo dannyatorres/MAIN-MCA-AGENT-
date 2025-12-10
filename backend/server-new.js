@@ -7,6 +7,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const session = require('express-session');
 const path = require('path');
+const emailRoutes = require('./routes/emailRoutes');
 require('dotenv').config();
 
 // RSS Parser for News Feed
@@ -172,6 +173,7 @@ app.use('/api/lookups', require('./routes/lookups'));
 app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
+app.use('/api/email', emailRoutes);
 
 // --- CONTACT FORM ROUTE (LOG ONLY) ---
 app.post('/api/contact', (req, res) => {
