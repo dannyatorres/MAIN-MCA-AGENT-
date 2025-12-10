@@ -79,7 +79,7 @@ class GmailInboxService {
             await this.connection.openBox(folder);
             console.log(`📧 Fetching email list from ${folder}...`);
 
-            // 1. FAST SEARCH: Get metadata ONLY (no bodies yet)
+            // 1. FAST SEARCH: Get metadata ONLY
             const searchCriteria = [];
             if (unreadOnly) {
                 searchCriteria.push('UNSEEN');
@@ -91,28 +91,32 @@ class GmailInboxService {
                 searchCriteria.push(['SINCE', since]);
             }
 
-            // No bodies initially for speed
             const initialFetchOptions = {
                 bodies: [],
                 markSeen: false
             };
 
             const allMessages = await this.connection.search(searchCriteria, initialFetchOptions);
-            console.log(`📬 Found ${allMessages.length} total messages. Sorting...`);
-
+            
             if (allMessages.length === 0) {
+                console.log('📭 No messages found.');
                 return [];
             }
 
-            // 2. SORT & SLICE: newest first
+            // 2. SORT & SLICE
+            // Sort descending by UID (newest first)
             allMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
+            
+            // Take only the requested limit
             const recentMessages = allMessages.slice(0, limit);
             const uidsToFetch = recentMessages.map(m => m.attributes.uid);
 
-            console.log(`📥 Downloading content for top ${uidsToFetch.length} emails...`);
+            console.log(`📥 Downloading content for ${uidsToFetch.length} emails (UIDs: ${uidsToFetch[0]}...${uidsToFetch[uidsToFetch.length-1]})...`);
 
-            // 3. Fetch full content for the sliced list
-            const fetchCriteria = [['UID', uidsToFetch]];
+            // 3. HEAVY LIFT: Fetch full content
+            // FIX: Join the UIDs into a comma-separated string
+            const fetchCriteria = [['UID', uidsToFetch.join(',')]];
+            
             const fullFetchOptions = {
                 bodies: ['HEADER', 'TEXT', ''],
                 markSeen: false,
@@ -120,18 +124,19 @@ class GmailInboxService {
             };
 
             const fullMessages = await this.connection.search(fetchCriteria, fullFetchOptions);
+            console.log(`📦 Received content for ${fullMessages.length} emails.`);
 
-            // Ensure newest first
+            // Sort again because search results might be unordered
             fullMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
 
-            // 4. Parse
+            // 4. PARSE
             const emails = [];
             for (const message of fullMessages) {
                 try {
                     const email = await this.parseMessage(message);
                     emails.push(email);
                 } catch (parseError) {
-                    console.error('Error parsing message:', parseError.message);
+                    console.error(`❌ Error parsing message UID ${message.attributes.uid}:`, parseError.message);
                 }
             }
 
