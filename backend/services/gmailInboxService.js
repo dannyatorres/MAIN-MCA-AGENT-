@@ -66,7 +66,7 @@ class GmailInboxService {
     async fetchEmails(options = {}) {
         const {
             folder = 'INBOX',
-            limit = 50,
+            limit = 20, // Default to a smaller batch
             unreadOnly = false,
             since = null
         } = options;
@@ -77,11 +77,10 @@ class GmailInboxService {
             }
 
             await this.connection.openBox(folder);
-            console.log(`📧 Fetching emails from ${folder}...`);
+            console.log(`📧 Fetching email list from ${folder}...`);
 
-            // Build search criteria
+            // 1. FAST SEARCH: Get metadata ONLY (no bodies yet)
             const searchCriteria = [];
-
             if (unreadOnly) {
                 searchCriteria.push('UNSEEN');
             } else {
@@ -92,20 +91,42 @@ class GmailInboxService {
                 searchCriteria.push(['SINCE', since]);
             }
 
-            const fetchOptions = {
+            // No bodies initially for speed
+            const initialFetchOptions = {
+                bodies: [],
+                markSeen: false
+            };
+
+            const allMessages = await this.connection.search(searchCriteria, initialFetchOptions);
+            console.log(`📬 Found ${allMessages.length} total messages. Sorting...`);
+
+            if (allMessages.length === 0) {
+                return [];
+            }
+
+            // 2. SORT & SLICE: newest first
+            allMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
+            const recentMessages = allMessages.slice(0, limit);
+            const uidsToFetch = recentMessages.map(m => m.attributes.uid);
+
+            console.log(`📥 Downloading content for top ${uidsToFetch.length} emails...`);
+
+            // 3. Fetch full content for the sliced list
+            const fetchCriteria = [['UID', uidsToFetch]];
+            const fullFetchOptions = {
                 bodies: ['HEADER', 'TEXT', ''],
                 markSeen: false,
                 struct: true
             };
 
-            const messages = await this.connection.search(searchCriteria, fetchOptions);
-            console.log(`📬 Found ${messages.length} messages`);
+            const fullMessages = await this.connection.search(fetchCriteria, fullFetchOptions);
 
-            // Parse and format emails
+            // Ensure newest first
+            fullMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
+
+            // 4. Parse
             const emails = [];
-            const messagesToParse = messages.slice(0, limit);
-
-            for (const message of messagesToParse) {
+            for (const message of fullMessages) {
                 try {
                     const email = await this.parseMessage(message);
                     emails.push(email);
