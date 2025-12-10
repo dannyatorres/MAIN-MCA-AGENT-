@@ -5,72 +5,181 @@ export class EmailTab {
         this.parent = parent;
         this.emails = [];
         this.selectedEmail = null;
-        this.refreshInterval = null;
+        this.offset = 0;
+        this.limit = 50;
+        this.isLoading = false;
         this.searchTimeout = null;
+        this.unreadOnly = false;
+        this.query = null;
     }
 
     render(container) {
-        console.log('📧 Rendering Email tab...');
         this.container = container;
-        this.fetchAndRender();
-    }
-
-    async fetchAndRender() {
-        try {
-            // Initial render
-            this.container.innerHTML = this.getLayoutHTML();
-            
-            // Fetch real data
-            await this.fetchEmails();
-
-            this.attachEventListeners();
-            this.startAutoRefresh();
-
-        } catch (error) {
-            console.error('Error rendering Email tab:', error);
-            this.renderErrorState(error.message);
-        }
+        this.container.innerHTML = this.getLayoutHTML();
+        this.attachEventListeners();
+        this.fetchEmails();
     }
 
     getLayoutHTML() {
-        // NOTE: We use display:none/flex to toggle between List and Viewer
         return `
-            <div class="email-container" style="display: flex; flex-direction: column; height: 100%; gap: 12px; background: #161b22;">
-                <div id="emailToolbar" class="email-toolbar" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #161b22; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <button id="refreshEmailBtn" class="btn btn-sm" style="padding: 8px 16px; background: #21262d; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                        <button id="unreadOnlyBtn" class="btn btn-sm" style="padding: 8px 16px; background: #21262d; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; cursor: pointer;">
-                            Show Unread Only
-                        </button>
-                        <div id="emailCount" style="padding: 6px 12px; background: #21262d; border-radius: 6px; font-size: 14px; color: #8b949e;">
-                            <strong>0</strong> emails
-                        </div>
+            <div class="email-container" style="display: flex; flex-direction: column; height: 100%; background: #0f1115;">
+                
+                <div class="email-toolbar unified-toolbar" style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;">
+                    
+                    <div style="flex: 1; position: relative;">
+                        <input type="text" id="emailSearchInput" class="search-field-clean" placeholder="Search emails..." 
+                               style="width: 100%; height: 36px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 0 12px 0 36px; color: white; font-size: 13px;">
+                        <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6e7681; pointer-events: none;"></i>
                     </div>
-                    <div style="position: relative;">
-                        <input type="text" id="emailSearchInput" placeholder="Search emails..."
-                               style="padding: 8px 12px 8px 36px; background: #0d1117; border: 1px solid #30363d; color: #e6edf3; border-radius: 6px; width: 250px; font-size: 14px;">
-                        <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8b949e;"></i>
+
+                    <div class="action-group" style="display: flex; gap: 6px;">
+                        <button id="refreshEmailBtn" class="tool-btn primary" title="Refresh" 
+                                style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000;">
+                            <i class="fas fa-sync-alt" style="font-weight: bold;"></i>
+                        </button>
+
+                        <button id="unreadOnlyBtn" class="tool-btn" title="Show Unread Only"
+                                style="width: 36px; height: 36px; border-radius: 8px; background: #21262d; border: 1px solid transparent; color: #8b949e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-filter"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div class="email-content-area" style="flex: 1; position: relative; overflow: hidden; background: #161b22; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                <div class="email-content-area" style="flex: 1; position: relative; overflow: hidden;">
                     
                     <div id="emailListContainer" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-                        <div class="email-list-header" style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600; color: #e6edf3; background: #161b22;">
-                            Inbox
+                        <div id="emailList" class="email-list" style="flex: 1; overflow-y: auto; padding: 0;">
+                            <div style="padding:20px; text-align:center; color:#6b7280;">Loading...</div>
                         </div>
-                        <div id="emailList" class="email-list" style="flex: 1; overflow-y: auto;">
-                            <div style="padding: 20px; text-align: center; color: #6b7280;">Loading emails...</div>
+                        
+                        <div id="loadMoreContainer" style="padding: 16px; text-align: center; display: none;">
+                            <button id="loadMoreBtn" style="padding: 8px 16px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; cursor: pointer; font-size: 13px;">
+                                Load Next 50 Messages
+                            </button>
                         </div>
                     </div>
 
-                    <div id="emailViewerContainer" style="width: 100%; height: 100%; display: none; flex-direction: column; background: #161b22;">
-                        </div>
+                    <div id="emailViewerContainer" style="width: 100%; height: 100%; display: none; flex-direction: column; background: #161b22;"></div>
                 </div>
             </div>
         `;
+    }
+
+    async fetchEmails(options = {}) {
+        if (this.isLoading) return;
+        this.isLoading = true;
+
+        const { unreadOnly = this.unreadOnly, query = this.query, isLoadMore = false } = options;
+
+        // Reset on new query or filter
+        if (!isLoadMore) {
+            this.offset = 0;
+            this.unreadOnly = unreadOnly;
+            this.query = query || null;
+            const list = document.getElementById('emailList');
+            if (list && !query) list.innerHTML = '<div style="padding:20px; text-align:center; color:#6b7280;">Loading...</div>';
+        }
+
+        const refreshBtn = document.getElementById('refreshEmailBtn');
+        if (refreshBtn) refreshBtn.querySelector('i').classList.add('fa-spin');
+
+        try {
+            let url = `/api/email/list?limit=${this.limit}&offset=${this.offset}`;
+            if (unreadOnly) url += '&unreadOnly=true';
+            if (query) {
+                url = `/api/email/search?q=${encodeURIComponent(query)}`;
+            }
+
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.success) {
+                if (isLoadMore) {
+                    this.emails = [...this.emails, ...data.emails];
+                } else {
+                    this.emails = data.emails;
+                }
+
+                this.renderEmailList();
+
+                const loadMoreContainer = document.getElementById('loadMoreContainer');
+                if (!query && data.emails.length === this.limit) {
+                    loadMoreContainer.style.display = 'block';
+                } else {
+                    loadMoreContainer.style.display = 'none';
+                }
+            }
+        } catch (err) {
+            console.error('Network error:', err);
+        } finally {
+            this.isLoading = false;
+            if (refreshBtn) refreshBtn.querySelector('i').classList.remove('fa-spin');
+        }
+    }
+
+    loadMore = async () => {
+        if (this.isLoading) return;
+        this.offset += this.limit;
+        const btn = document.getElementById('loadMoreBtn');
+        if (btn) btn.textContent = 'Loading...';
+        await this.fetchEmails({ isLoadMore: true });
+        if (btn) btn.textContent = 'Load Next 50 Messages';
+    };
+
+    renderEmailList() {
+        const listContainer = document.getElementById('emailList');
+        if (!listContainer) return;
+
+        if (!this.emails.length) {
+            listContainer.innerHTML = `<div style="padding:40px; text-align:center; color:#8b949e;">📭 No emails found</div>`;
+            return;
+        }
+
+        listContainer.innerHTML = this.emails.map(email => this.getEmailItemHTML(email)).join('');
+        this.attachEmailItemListeners();
+    }
+
+    getEmailItemHTML(email) {
+        const isUnread = email.isUnread;
+        const { name: fromName } = this.getSenderInfo(email);
+        const dateStr = this.formatDate(new Date(email.date || email.timestamp));
+
+        return `
+            <div class="email-item ${isUnread ? 'unread' : ''}" 
+                 data-email-id="${email.id}"
+                 style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s; background: transparent;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px;">
+                    <div style="font-weight: ${isUnread ? '700' : '600'}; color: ${isUnread ? '#ffffff' : '#e6edf3'}; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">
+                        ${fromName}
+                    </div>
+                    <div style="font-size: 11px; color: #6b7280; white-space: nowrap; margin-left: 8px; margin-top: 2px;">${dateStr}</div>
+                </div>
+                <div style="font-size: 13px; font-weight: ${isUnread ? '600' : '400'}; color: ${isUnread ? '#e6edf3' : '#8b949e'}; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${email.subject || '(No Subject)'}
+                </div>
+                <div style="font-size: 12px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${email.snippet || ''}
+                </div>
+            </div>
+        `;
+    }
+
+    async selectEmail(emailId) {
+        const email = this.emails.find(e => e.id == emailId);
+        if (email) {
+            this.selectedEmail = email;
+            if (email.isUnread) this.markAsRead(emailId);
+            document.getElementById('emailViewerContainer').innerHTML = this.renderEmailViewer();
+            document.getElementById('emailListContainer').style.display = 'none';
+            document.getElementById('emailViewerContainer').style.display = 'flex';
+            this.attachViewerEventListeners();
+        }
+    }
+
+    showInbox() {
+        document.getElementById('emailViewerContainer').style.display = 'none';
+        document.getElementById('emailListContainer').style.display = 'flex';
+        this.selectedEmail = null;
     }
 
     renderEmailViewer() {
@@ -85,7 +194,6 @@ export class EmailTab {
             hour: '2-digit', minute: '2-digit'
         });
 
-        // Safe HTML body or text fallback
         const bodyContent = email.html 
             ? email.html 
             : `<pre style="white-space: pre-wrap; font-family: inherit; margin: 0; color: #e6edf3;">${email.text || ''}</pre>`;
@@ -148,204 +256,33 @@ export class EmailTab {
         `;
     }
 
-    // --- VIEW SWITCHING LOGIC ---
-
-    async selectEmail(emailId) {
-        const email = this.emails.find(e => e.id == emailId);
-        if (email) {
-            this.selectedEmail = email;
-            
-            // 1. Mark as read immediately (optimistic)
-            if (email.isUnread) {
-                this.markAsRead(emailId);
-            }
-
-            // 2. Populate Viewer
-            const viewerContainer = document.getElementById('emailViewerContainer');
-            viewerContainer.innerHTML = this.renderEmailViewer();
-
-            // 3. Switch Views (Hide List, Show Viewer)
-            document.getElementById('emailListContainer').style.display = 'none';
-            // Optional: Hide global toolbar if you want a cleaner look, or keep it.
-            // document.getElementById('emailToolbar').style.display = 'none'; 
-            viewerContainer.style.display = 'flex';
-
-            // 4. Attach Listeners (Back button, etc)
-            this.attachViewerEventListeners();
-        }
-    }
-
-    showInbox() {
-        // Switch Views (Show List, Hide Viewer)
-        document.getElementById('emailViewerContainer').style.display = 'none';
-        document.getElementById('emailListContainer').style.display = 'flex';
-        // document.getElementById('emailToolbar').style.display = 'flex';
-        
-        this.selectedEmail = null;
-    }
-
-    // --- EXISTING FETCH & ACTIONS ---
-
-    async fetchEmails(options = {}) {
-        const { unreadOnly = false, query = null } = options;
-        const listEl = document.getElementById('emailList');
-        if (listEl) listEl.style.opacity = '0.5';
-
-        try {
-            let url = '/api/email/list?limit=50';
-            if (unreadOnly) url += '&unreadOnly=true';
-            if (query) url = `/api/email/search?q=${encodeURIComponent(query)}`;
-
-            const res = await fetch(url);
-            const data = await res.json();
-
-            if (data.success) {
-                this.emails = data.emails;
-                this.updateEmailList();
-                this.updateEmailCount();
-            }
-        } catch (err) {
-            console.error('Network error:', err);
-        } finally {
-            if (listEl) listEl.style.opacity = '1';
-        }
-    }
-
-    // --- ACTION HANDLERS ---
-
-    async markAsRead(emailId) {
-        this.updateLocalReadState(emailId, false);
-        try { await fetch(`/api/email/${emailId}/mark-read`, { method: 'POST' }); } catch (e) {}
-    }
-
-    async markAsUnread(emailId) {
-        this.updateLocalReadState(emailId, true);
-        try { await fetch(`/api/email/${emailId}/mark-unread`, { method: 'POST' }); } catch (e) {}
-    }
-
-    updateLocalReadState(emailId, isUnread) {
-        const email = this.emails.find(e => e.id == emailId);
-        if (email) email.isUnread = isUnread;
-        this.updateEmailList();
-    }
-
-    async deleteEmail(emailId) {
-        if (!confirm('Delete this email?')) return;
-        this.emails = this.emails.filter(e => e.id != emailId);
-        this.showInbox(); // Go back to inbox after delete
-        this.updateEmailList();
-        this.updateEmailCount();
-        try { await fetch(`/api/email/${emailId}`, { method: 'DELETE' }); } catch (e) {}
-    }
-
-    async analyzeEmail(emailId) {
-        const btn = document.querySelector(`.analyze-email-btn[data-email-id="${emailId}"]`);
-        if (!btn) return;
-        
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
-        btn.disabled = true;
-
-        await new Promise(r => setTimeout(r, 1500)); // Mock delay
-        
-        // Show mock analysis
-        const analysis = this.generateAnalysis(this.emails.find(e => e.id == emailId));
-        this.showEmailAnalysis(analysis);
-
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-
-    generateAnalysis(email) {
-        // (Same analysis logic as before)
-        return `📊 SUMMARY\n${email.snippet || 'General communication.'}\n\n⚡ PRIORITY: NORMAL`;
-    }
-
-    showEmailAnalysis(analysis) {
-        const emailBody = document.querySelector('.email-body');
-        if (!emailBody) return;
-        // Insert analysis at top of body
-        const analysisHTML = `
-            <div style="margin-bottom: 20px; padding: 16px; background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border: 1px solid #30363d; border-radius: 8px; color: #e6edf3;">
-                <h4 style="margin: 0 0 12px 0; color: #58a6ff;"><i class="fas fa-robot"></i> AI Analysis</h4>
-                <div style="white-space: pre-wrap; line-height: 1.6; font-size: 13px;">${analysis}</div>
-            </div>
-        `;
-        emailBody.insertAdjacentHTML('afterbegin', analysisHTML);
-    }
-
-    // --- UI UTILS & LISTENERS ---
-
-    updateEmailList() {
-        const emailList = document.getElementById('emailList');
-        if (emailList) {
-            emailList.innerHTML = this.renderEmailList();
-            this.attachEmailItemListeners();
-        }
-    }
-    
-    updateEmailCount() {
-        const el = document.getElementById('emailCount');
-        if (el) el.innerHTML = `<strong>${this.emails.length}</strong> emails`;
-    }
-
-    renderEmailList() {
-        if (!this.emails.length) return `<div style="padding:40px; text-align:center; color:#8b949e;">📭 No emails found</div>`;
-        
-        return this.emails.map(email => {
-            const isUnread = email.isUnread;
-            const { name: fromName } = this.getSenderInfo(email);
-            const dateStr = this.formatDate(new Date(email.date || email.timestamp));
-
-            return `
-                <div class="email-item ${isUnread ? 'unread' : ''}" 
-                     data-email-id="${email.id}"
-                     style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s; ${isUnread ? 'background: rgba(255,255,255,0.04); border-left: 3px solid #3b82f6;' : 'border-left: 3px solid transparent;'}">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px;">
-                        <div style="font-weight: ${isUnread ? '700' : '500'}; color: ${isUnread ? '#e6edf3' : '#8b949e'}; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">
-                            ${fromName}
-                        </div>
-                        <div style="font-size: 11px; color: #6b7280; white-space: nowrap; margin-left: 8px; margin-top: 2px;">${dateStr}</div>
-                    </div>
-                    <div style="font-size: 13px; font-weight: ${isUnread ? '600' : '400'}; color: #c9d1d9; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        ${email.subject || '(No Subject)'}
-                    </div>
-                    <div style="font-size: 12px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        ${email.snippet || ''}
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    renderErrorState(msg) {
-        if(this.container) this.container.innerHTML = `<div style="padding:20px; color:#ef4444; text-align:center;">Error: ${msg}</div>`;
-    }
-
     attachEventListeners() {
-        // Toolbar listeners
         const refreshBtn = document.getElementById('refreshEmailBtn');
-        if (refreshBtn) refreshBtn.onclick = async () => {
-            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            await this.fetchEmails();
-            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
-        };
+        if (refreshBtn) refreshBtn.onclick = () => this.fetchEmails();
 
-        const unreadOnlyBtn = document.getElementById('unreadOnlyBtn');
-        if (unreadOnlyBtn) {
-            let active = false;
-            unreadOnlyBtn.onclick = () => {
-                active = !active;
-                unreadOnlyBtn.style.background = active ? '#1f6feb' : '#21262d';
-                unreadOnlyBtn.style.color = active ? 'white' : '#c9d1d9';
-                this.fetchEmails({ unreadOnly: active });
+        const unreadBtn = document.getElementById('unreadOnlyBtn');
+        if (unreadBtn) {
+            unreadBtn.onclick = () => {
+                const isActive = unreadBtn.classList.toggle('active');
+                unreadBtn.style.background = isActive ? '#3b82f6' : '#21262d';
+                unreadBtn.style.color = isActive ? '#fff' : '#8b949e';
+                this.fetchEmails({ unreadOnly: isActive, query: this.query });
             };
         }
 
         const searchInput = document.getElementById('emailSearchInput');
-        if (searchInput) searchInput.oninput = (e) => this.handleSearchInput(e.target.value);
+        if (searchInput) {
+            searchInput.oninput = (e) => {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    const val = e.target.value;
+                    this.fetchEmails({ query: val || null, unreadOnly: this.unreadOnly });
+                }, 600);
+            };
+        }
 
-        this.attachEmailItemListeners();
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        if (loadMoreBtn) loadMoreBtn.onclick = this.loadMore;
     }
 
     attachEmailItemListeners() {
@@ -355,23 +292,87 @@ export class EmailTab {
     }
 
     attachViewerEventListeners() {
-        // 1. THE BACK BUTTON
         const backBtn = document.getElementById('backToInboxBtn');
         if (backBtn) backBtn.onclick = () => this.showInbox();
 
-        // 2. Action Buttons
-        document.querySelectorAll('.analyze-email-btn').forEach(btn => 
-            btn.onclick = () => this.analyzeEmail(btn.dataset.emailId));
-        
         document.querySelectorAll('.delete-email-btn').forEach(btn => 
             btn.onclick = () => this.deleteEmail(btn.dataset.emailId));
+
+        document.querySelectorAll('.analyze-email-btn').forEach(btn =>
+            btn.onclick = () => this.analyzeEmail(btn.dataset.emailId));
     }
 
-    handleSearchInput(query) {
-        if (this.searchTimeout) clearTimeout(this.searchTimeout);
-        this.searchTimeout = setTimeout(() => {
-            this.fetchEmails(query ? { query } : {});
-        }, 600);
+    // Helper to safely extract sender info
+    getSenderInfo(email) {
+        let name = 'Unknown';
+        let address = '';
+
+        if (email.from) {
+            const raw = email.from.value || email.from;
+            const first = Array.isArray(raw) ? raw[0] : raw;
+            if (first) {
+                name = first.name || first.email || 'Unknown';
+                address = first.email || '';
+            } else if (typeof raw === 'string') {
+                name = raw;
+            }
+        }
+
+        name = name.replace(/"/g, '');
+        return { name, address };
+    }
+
+    async markAsRead(emailId) {
+        try {
+            await fetch(`/api/email/${emailId}/mark-read`, { method: 'POST' });
+            this.updateLocalReadState(emailId, false);
+        } catch (e) {
+            console.error('Error marking read', e);
+        }
+    }
+
+    updateLocalReadState(emailId, isUnread) {
+        const email = this.emails.find(e => e.id == emailId);
+        if (email) email.isUnread = isUnread;
+        this.renderEmailList();
+    }
+
+    async deleteEmail(emailId) {
+        if (!confirm('Delete this email?')) return;
+        this.emails = this.emails.filter(e => e.id != emailId);
+        this.showInbox();
+        this.renderEmailList();
+        const loadMoreContainer = document.getElementById('loadMoreContainer');
+        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+        try {
+            await fetch(`/api/email/${emailId}`, { method: 'DELETE' });
+        } catch (e) {
+            console.error('Error deleting email', e);
+        }
+    }
+
+    async analyzeEmail(emailId) {
+        const btn = document.querySelector(`.analyze-email-btn[data-email-id="${emailId}"]`);
+        if (!btn) return;
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+        btn.disabled = true;
+        await new Promise(r => setTimeout(r, 1200));
+        this.showEmailAnalysis('📊 SUMMARY\nAI analysis placeholder.\n\n⚡ PRIORITY: NORMAL');
+        btn.innerHTML = original;
+        btn.disabled = false;
+    }
+
+    showEmailAnalysis(text) {
+        const emailBody = document.querySelector('.email-body');
+        if (!emailBody) return;
+        const card = `
+            <div style="margin-bottom: 20px; padding: 16px; background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border: 1px solid #30363d; border-radius: 8px; color: #e6edf3;">
+                <h4 style="margin: 0 0 12px 0; color: #58a6ff;"><i class="fas fa-robot"></i> AI Analysis</h4>
+                <div style="white-space: pre-wrap; line-height: 1.6; font-size: 13px;">${text}</div>
+            </div>
+        `;
+        emailBody.insertAdjacentHTML('afterbegin', card);
     }
 
     formatDate(date) {
@@ -381,42 +382,12 @@ export class EmailTab {
         }
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
-    
-    formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-        return (bytes/(1024*1024)).toFixed(1) + ' MB';
-    }
-
-    // Helper to safely extract sender info
-    getSenderInfo(email) {
-        let name = 'Unknown';
-        let address = '';
-
-        if (email.from) {
-            if (Array.isArray(email.from) && email.from.length > 0) {
-                name = email.from[0].name || email.from[0].email || 'Unknown';
-                address = email.from[0].email || '';
-            } else if (typeof email.from === 'object') {
-                name = email.from.name || email.from.email || 'Unknown';
-                address = email.from.email || '';
-            } else if (typeof email.from === 'string') {
-                name = email.from;
-            }
-        }
-
-        name = name.replace(/"/g, '');
-        return { name, address };
-    }
 
     startAutoRefresh() {
-        this.refreshInterval = setInterval(() => {
-            const searchInput = document.getElementById('emailSearchInput');
-            if (!searchInput || !searchInput.value) this.fetchEmails();
-        }, 120000);
+        // optional: refresh on interval
     }
 
     cleanup() {
-        if (this.refreshInterval) clearInterval(this.refreshInterval);
+        // optional cleanup
     }
 }

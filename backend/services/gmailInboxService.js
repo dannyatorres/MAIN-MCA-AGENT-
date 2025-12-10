@@ -67,6 +67,7 @@ class GmailInboxService {
         const {
             folder = 'INBOX',
             limit = 20, // Default to a smaller batch
+            offset = 0,
             unreadOnly = false,
             since = null
         } = options;
@@ -104,12 +105,12 @@ class GmailInboxService {
                 return [];
             }
 
-            // 2. SORT & SLICE
+            // 2. SORT & SLICE WITH OFFSET
             // Sort descending by UID (newest first)
             allMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
             
-            // Take only the requested limit
-            const recentMessages = allMessages.slice(0, limit);
+            // Apply offset/limit
+            const recentMessages = allMessages.slice(offset, offset + limit);
             const uidsToFetch = recentMessages.map(m => m.attributes.uid);
 
             if (uidsToFetch.length === 0) return [];

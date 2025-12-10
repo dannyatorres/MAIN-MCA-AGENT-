@@ -9,9 +9,10 @@ const gmail = new GmailInboxService();
 router.get('/list', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 50;
+        const offset = parseInt(req.query.offset, 10) || 0;
         const unreadOnly = req.query.unreadOnly === 'true';
 
-        const emails = await gmail.fetchEmails({ limit, unreadOnly });
+        const emails = await gmail.fetchEmails({ limit, offset, unreadOnly });
         res.json({ success: true, count: emails.length, emails });
     } catch (error) {
         console.error('API Error fetching emails:', error);
