@@ -26,7 +26,7 @@ export class EmailTab {
                 
                 <div class="email-toolbar" style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
                     
-                    <div style="flex: 1; max-width: 350px; position: relative;">
+                    <div style="flex: 1; max-width: 350px; position: relative; margin-right: 12px;">
                         <input type="text" id="emailSearchInput" class="search-field-clean" placeholder="Search emails..." 
                                style="width: 100%; height: 36px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 0 12px 0 36px; color: white; font-size: 13px;">
                         <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6e7681; pointer-events: none;"></i>
@@ -35,8 +35,8 @@ export class EmailTab {
                     <div class="action-group" style="display: flex; gap: 8px; flex-shrink: 0;">
                         
                         <button id="composeEmailBtn" class="tool-btn primary" title="Compose New Email" 
-                                style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000; box-shadow: 0 0 10px rgba(45, 212, 191, 0.3);">
-                            <i class="fas fa-plus" style="font-weight: 800;"></i>
+                                style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000; box-shadow: 0 0 15px rgba(45, 212, 191, 0.5); transition: transform 0.2s;">
+                            <i class="fas fa-plus" style="font-weight: 800; font-size: 14px;"></i>
                         </button>
 
                         <button id="unreadOnlyBtn" class="tool-btn" title="Show Unread Only"
@@ -55,7 +55,7 @@ export class EmailTab {
                     <div id="emailListContainer" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
                         <div id="emailList" class="email-list" style="flex: 1; overflow-y: auto; padding: 0;"></div>
                         <div id="loadMoreContainer" style="padding: 16px; text-align: center; display: none;">
-                            <button id="loadMoreBtn" style="padding: 8px 16px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; cursor: pointer; font-size: 13px;">Load More</button>
+                            <button id="loadMoreBtn" style="padding: 8px 16px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; cursor: pointer; font-size: 13px;">Load Next 50 Messages</button>
                         </div>
                     </div>
                     <div id="emailViewerContainer" style="width: 100%; height: 100%; display: none; flex-direction: column; background: #161b22;"></div>
