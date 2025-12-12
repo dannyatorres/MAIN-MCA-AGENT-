@@ -7,18 +7,28 @@
 .center-panel {
     flex: 3 1 400px;
     min-width: 350px;
-    max-width: 100%; /* Prevent overflow pushing */
+    max-width: 100%;
     height: 100%;
     position: relative;
     display: flex;
     flex-direction: column;
-    background: #0f1115 !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
 
-    /* CRITICAL: Force hidden overflow on the panel itself */
+    /* --- THE FIX: Floating Card Style --- */
+    /* 1. Gradient Background (Matches Right Panel Cards) */
+    background: linear-gradient(180deg, #161b22 0%, #0d1117 100%) !important;
+
+    /* 2. Glassy Border */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+
+    /* 3. Rounded Corners (Floating Effect) */
+    border-radius: 16px;
+
+    /* 4. Deep Shadow (The "Pop") */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+    /* Stop overflow */
     overflow: hidden !important;
-
-    /* Stop layout shifts */
     transform: translateZ(0);
 }
 
