@@ -284,27 +284,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 4. OTHER HELPERS
             window.openLenderManagementModal = () => {
-                // 1. Check if the module is already attached to the command center
-                if (window.commandCenter && window.commandCenter.lenders) {
-                    window.commandCenter.lenders.openManagementModal();
+                // Initialize Admin Module if missing
+                if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
+                    console.log("🏦 Initializing LenderAdmin...");
+                    window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
                 }
-                // 2. AUTO-FIX: If missing, initialize it manually using the correct class name
-                else if (typeof LendersModule !== 'undefined') {
-                    console.log("🔄 Auto-initializing LendersModule...");
-                    // Ensure we attach it to commandCenter so it persists
-                    window.commandCenter.lenders = new LendersModule(window.commandCenter);
-                    window.commandCenter.lenders.openManagementModal();
-                }
-                // 3. Fallback for older naming (just in case)
-                else if (typeof LendersController !== 'undefined') {
-                    console.log("🔄 Auto-initializing LendersController...");
-                    window.commandCenter.lenders = new LendersController(window.commandCenter);
-                    window.commandCenter.lenders.openManagementModal();
-                }
-                // 4. Critical Failure
-                else {
-                    console.warn("⚠️ Lenders module not loaded.");
-                    alert("The Lenders system is still initializing. Please wait a moment and try again.");
+
+                if (window.commandCenter.lenderAdmin) {
+                    window.commandCenter.lenderAdmin.openManagementModal();
+                } else {
+                    console.error("⚠️ LenderAdmin class not loaded");
                 }
             };
             window.toggleDeleteMode = () => {
