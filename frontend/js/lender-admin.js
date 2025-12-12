@@ -9,7 +9,7 @@ class LenderAdmin {
     // --- Entry Point ---
     openManagementModal() {
         console.log('🏛️ Opening Lender Management Dashboard...');
-
+        
         // 1. Create Modal Container if missing
         let modal = document.getElementById('lenderManagementModal');
         if (!modal) {
@@ -162,51 +162,139 @@ class LenderAdmin {
         await this.parent.apiCall(`/api/lenders/${id}`, { method: 'DELETE' });
         this.loadLendersList();
     }
+    
+    // --- EDITING LENDERS ---
 
-    async editLender(id) {
-        // Fetch details then show edit modal
-        const res = await this.parent.apiCall(`/api/lenders/${id}`);
-        if (res.success) this.showEditModal(res.lender);
+    async editLender(lenderId) {
+        try {
+            // 1. Fetch latest data
+            const result = await this.parent.apiCall(`/api/lenders/${lenderId}`);
+            if (result.success && result.lender) {
+                this.showEditModal(result.lender);
+            } else {
+                throw new Error('Lender data not found');
+            }
+        } catch (error) {
+            console.error('Error fetching lender:', error);
+            alert('Failed to load lender data');
+        }
     }
 
     showEditModal(lender) {
+        // Remove existing modal if open
+        const existing = document.getElementById('editLenderModal');
+        if (existing) existing.remove();
+
+        // Format arrays for display (["A", "B"] -> "A, B")
+        const industriesStr = Array.isArray(lender.industries) ? lender.industries.join(', ') : '';
+        const statesStr = Array.isArray(lender.states) ? lender.states.join(', ') : '';
+
+        // Create Modal HTML
         const modalHtml = `
             <div id="editLenderModal" class="modal" style="display: flex;">
                 <div class="modal-content">
-                    <div class="modal-header"><h3>Edit Lender</h3><button class="modal-close" onclick="this.closest('.modal').remove()">×</button></div>
+                    <div class="modal-header">
+                        <h3>Edit Lender: ${lender.name}</h3>
+                        <button class="modal-close" onclick="document.getElementById('editLenderModal').remove()">×</button>
+                    </div>
                     <div class="modal-body">
-                        <input type="hidden" id="editLenderId" value="${lender.id}">
-                        <div class="form-group"><label>Name *</label><input type="text" id="editLenderName" class="form-input" value="${lender.name}"></div>
-                        <div class="form-group"><label>Email *</label><input type="email" id="editLenderEmail" class="form-input" value="${lender.email || ''}"></div>
-                        <div class="form-group"><label>Min Amount</label><input type="number" id="editLenderMin" class="form-input" value="${lender.min_amount || ''}"></div>
-                        <div class="form-group"><label>Max Amount</label><input type="number" id="editLenderMax" class="form-input" value="${lender.max_amount || ''}"></div>
+                        <div class="form-group">
+                            <label>Lender Name *</label>
+                            <input type="text" id="editLenderName" class="form-input" value="${lender.name || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Email Address *</label>
+                            <input type="email" id="editLenderEmail" class="form-input" value="${lender.email || ''}">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Phone</label>
+                                <input type="text" id="editLenderPhone" class="form-input" value="${lender.phone || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Company</label>
+                                <input type="text" id="editLenderCompany" class="form-input" value="${lender.company || ''}">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Min Amount ($)</label>
+                                <input type="number" id="editLenderMin" class="form-input" value="${lender.min_amount || 0}">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Amount ($)</label>
+                                <input type="number" id="editLenderMax" class="form-input" value="${lender.max_amount || 0}">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Industries (comma-separated)</label>
+                            <input type="text" id="editLenderIndustries" class="form-input" value="${industriesStr}">
+                        </div>
+                        <div class="form-group">
+                            <label>States (comma-separated)</label>
+                            <input type="text" id="editLenderStates" class="form-input" value="${statesStr}">
+                        </div>
+                        <div class="form-group">
+                            <label>Notes</label>
+                            <textarea id="editLenderNotes" class="form-textarea" rows="3">${lender.notes || ''}</textarea>
+                        </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
-                        <button class="btn btn-primary" onclick="window.commandCenter.lenderAdmin.updateLender()">Update</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('editLenderModal').remove()">Cancel</button>
+                        <button class="btn btn-primary" onclick="window.commandCenter.lenderAdmin.updateLender('${lender.id}')">Update Lender</button>
                     </div>
                 </div>
-            </div>`;
+            </div>
+        `;
+
         document.body.insertAdjacentHTML('beforeend', modalHtml);
     }
 
-    async updateLender() {
-        const id = document.getElementById('editLenderId').value;
-        const name = document.getElementById('editLenderName').value;
-        const email = document.getElementById('editLenderEmail').value;
-        const min = document.getElementById('editLenderMin').value;
-        const max = document.getElementById('editLenderMax').value;
+    async updateLender(lenderId) {
+        // 1. Gather Data
+        const name = document.getElementById('editLenderName').value.trim();
+        const email = document.getElementById('editLenderEmail').value.trim();
+        
+        if (!name || !email) {
+            alert('Name and Email are required.');
+            return;
+        }
 
-        if (!name || !email) return alert('Name and Email required');
+        const data = {
+            name: name,
+            email: email,
+            phone: document.getElementById('editLenderPhone').value.trim() || null,
+            company: document.getElementById('editLenderCompany').value.trim() || null,
+            min_amount: parseFloat(document.getElementById('editLenderMin').value) || 0,
+            max_amount: parseFloat(document.getElementById('editLenderMax').value) || 0,
+            industries: document.getElementById('editLenderIndustries').value.split(',').map(s => s.trim()).filter(s => s),
+            states: document.getElementById('editLenderStates').value.split(',').map(s => s.trim().toUpperCase()).filter(s => s),
+            notes: document.getElementById('editLenderNotes').value.trim() || null
+        };
 
-        const result = await this.parent.apiCall(`/api/lenders/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ name, email, min_amount: min, max_amount: max })
-        });
+        try {
+            // 2. Send API Request
+            const result = await this.parent.apiCall(`/api/lenders/${lenderId}`, {
+                method: 'PUT',
+                body: JSON.stringify(data)
+            });
 
-        if (result.success) {
-            document.getElementById('editLenderModal').remove();
-            this.loadLendersList();
+            // 3. Handle Result
+            if (result.success || result.id) {
+                // Success!
+                document.getElementById('editLenderModal').remove();
+                this.loadLendersList(); // Refresh the table
+                
+                // Optional: Show notification if you have utils
+                if (this.parent.utils) {
+                    this.parent.utils.showNotification('Lender updated successfully', 'success');
+                }
+            } else {
+                throw new Error(result.error || 'Update failed');
+            }
+        } catch (error) {
+            console.error('Update error:', error);
+            alert('Failed to update lender');
         }
     }
 }
