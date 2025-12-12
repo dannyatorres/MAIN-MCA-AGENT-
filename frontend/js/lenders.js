@@ -35,7 +35,8 @@ class LendersModule {
             { id: 'lenderState', label: 'Business State', type: 'text', required: true, placeholder: 'Enter business state' },
             { id: 'lenderIndustry', label: 'Industry', type: 'text', required: true, placeholder: 'Enter business industry' },
             { id: 'lenderDepositsPerMonth', label: 'Deposits Per Month', type: 'number', required: false, placeholder: 'Number of deposits' },
-            { id: 'lenderNegativeDays', label: 'Negative Days (Last 90)', type: 'number', required: false, placeholder: 'Days negative' }
+            { id: 'lenderNegativeDays', label: 'Negative Days (Last 90)', type: 'number', required: false, placeholder: 'Days negative' },
+            { id: 'lenderWithholding', label: 'Withholding %', type: 'text', required: false, placeholder: 'Auto-calc from FCS', readonly: true }
         ];
 
         this.lenderFormCheckboxes = [
@@ -702,94 +703,103 @@ class LendersModule {
         return filledCount;
     }
 
-    populateLenderForm() {
+    // Fetch FCS data from backend for autopopulation
+    async fetchFCSData(conversationId) {
+        try {
+            // Call the route that returns the analysis + metrics
+            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs`);
+
+            if (result.success && result.analysis) {
+                return result.analysis;
+            }
+            return null;
+        } catch (error) {
+            console.warn('⚠️ Could not load FCS data for autopopulation:', error);
+            return null;
+        }
+    }
+
+    async populateLenderForm() {
         const conversation = this.parent.getSelectedConversation();
         if (!conversation) return;
 
-        console.log('Auto-filling lender form with conversation data:', conversation);
-
         const conversationId = this.parent.getCurrentConversationId();
-        const cacheKey = `lender_form_data_${conversationId}`;
-        const hasCachedData = localStorage.getItem(cacheKey);
+        console.log('🤖 Auto-filling lender form for:', conversationId);
 
-        if (hasCachedData) {
-            console.log('Cached data exists, skipping auto-population');
-        }
-
-        // Check for cached lender results and reattach event listeners if needed
-        if (conversationId && this.lenderResultsCache.has(conversationId)) {
-            console.log('Found cached lender results, checking if event listeners need reattaching...');
-            const sendButton = document.getElementById('sendToLendersBtn');
-            if (sendButton) {
-                const cachedResults = this.lenderResultsCache.get(conversationId);
-                console.log('Reattaching event listeners for cached lender results');
-                this.reattachResultsEventListeners(cachedResults.data, cachedResults.criteria);
-            }
-        }
-
-        if (hasCachedData) {
-            return;
-        }
-
-        const populateIfEmpty = (fieldId, value) => {
+        // Helper to safely set values
+        const populateField = (fieldId, value, force = false) => {
             const element = document.getElementById(fieldId);
-            if (element && value && !element.value) {
-                element.value = value;
-                return true;
-            }
-            return false;
-        };
-
-        populateIfEmpty('lenderBusinessName', conversation.business_name);
-
-        if (conversation.annual_revenue) {
-            const monthlyRevenue = Math.round(conversation.annual_revenue / 12);
-            populateIfEmpty('lenderRevenue', monthlyRevenue);
-        }
-
-        if (conversation.state && conversation.state !== 'NEW') {
-            populateIfEmpty('lenderState', conversation.state);
-        }
-
-        populateIfEmpty('lenderIndustry', conversation.business_type);
-
-        const startDateEl = document.getElementById('lenderStartDate');
-        const tibDisplay = document.getElementById('lenderTibDisplay');
-        if (startDateEl && conversation.business_start_date && !startDateEl.value) {
-            const date = new Date(conversation.business_start_date);
-            if (!isNaN(date.getTime())) {
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                const day = date.getDate().toString().padStart(2, '0');
-                const year = date.getFullYear();
-                const formattedDate = `${month}/${day}/${year}`;
-                startDateEl.value = formattedDate;
-
-                const today = new Date();
-                const monthsDiff = (today.getFullYear() - date.getFullYear()) * 12 +
-                                 (today.getMonth() - date.getMonth());
-                const tib = Math.max(0, monthsDiff);
-
-                if (tibDisplay && tib > 0) {
-                    const years = Math.floor(tib / 12);
-                    const months = tib % 12;
-
-                    // Simple format: just "5 years, 5 months"
-                    if (years > 0 && months > 0) {
-                        tibDisplay.textContent = `${years} year${years > 1 ? 's' : ''}, ${months} month${months > 1 ? 's' : ''}`;
-                    } else if (years > 0) {
-                        tibDisplay.textContent = `${years} year${years > 1 ? 's' : ''}`;
-                    } else {
-                        tibDisplay.textContent = `${months} month${months > 1 ? 's' : ''}`;
-                    }
-
-                    tibDisplay.classList.remove('hidden');
+            if (element) {
+                // Only fill if empty OR if 'force' is true (FCS data overwrites CRM data)
+                if (force || !element.value) {
+                    element.value = value;
+                    // Trigger change for TIB calculation if needed
+                    if (fieldId === 'lenderStartDate') element.dispatchEvent(new Event('input'));
                 }
             }
+        };
+
+        // 1. FILL FROM CRM (Basic Data)
+        populateField('lenderBusinessName', conversation.business_name);
+        populateField('lenderState', conversation.state);
+        populateField('lenderIndustry', conversation.business_type);
+
+        if (conversation.annual_revenue) {
+            populateField('lenderRevenue', Math.round(conversation.annual_revenue / 12));
         }
 
-        populateIfEmpty('lenderPosition', conversation.funding_amount);
+        // Handle Start Date (CRM)
+        if (conversation.business_start_date) {
+            const date = new Date(conversation.business_start_date);
+            if (!isNaN(date.getTime())) {
+                const formatted = date.toLocaleDateString('en-US', {
+                    month: '2-digit', day: '2-digit', year: 'numeric'
+                });
+                populateField('lenderStartDate', formatted);
+            }
+        }
 
-        console.log('Lender form auto-populated');
+        // 2. FETCH & FILL FROM FCS (High-Accuracy Data)
+        // This runs after the basic fill, so it will "upgrade" the data if FCS exists
+        const fcs = await this.fetchFCSData(conversationId);
+
+        if (fcs) {
+            console.log("✅ FCS Data Found! Upgrading form data...", fcs);
+
+            // Update Business Name (AI usually extracts the exact legal name)
+            if (fcs.businessName) populateField('lenderBusinessName', fcs.businessName, true);
+
+            // Update Revenue (Average True Revenue is better than stated revenue)
+            if (fcs.metrics && fcs.metrics.averageRevenue) {
+                const cleanRev = Math.round(parseFloat(fcs.metrics.averageRevenue));
+                populateField('lenderRevenue', cleanRev, true);
+            }
+
+            // Update Negative Days
+            if (fcs.metrics && fcs.metrics.totalNegativeDays !== undefined) {
+                populateField('lenderNegativeDays', fcs.metrics.totalNegativeDays, true);
+            }
+
+            // ✅ NEW: Update Withholding % (Calculated by Backend)
+            if (fcs.withholding_percentage || (fcs.metrics && fcs.metrics.withholding_percentage)) {
+                 const val = fcs.withholding_percentage || fcs.metrics.withholding_percentage;
+                 populateField('lenderWithholding', val + '%', true);
+
+                 // Visual Alert for High Withholding
+                 if (parseFloat(val) > 40) {
+                     const el = document.getElementById('lenderWithholding');
+                     if(el) el.style.borderColor = '#ef4444'; // Red border warning
+                 }
+            }
+
+            // ✅ NEW: Update Deposit Count
+            if (fcs.average_deposit_count || (fcs.metrics && fcs.metrics.average_deposit_count)) {
+                const count = fcs.average_deposit_count || fcs.metrics.average_deposit_count;
+                populateField('lenderDepositsPerMonth', count, true);
+            }
+        }
+
+        console.log('✨ Lender form auto-population complete');
     }
 
     displayLenderResults(data, criteria) {

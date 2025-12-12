@@ -1392,7 +1392,12 @@ router.get('/:id/fcs', async (req, res) => {
                 status,
                 error_message,
                 created_at,
-                completed_at
+                completed_at,
+                average_daily_balance,
+                average_deposit_count,
+                time_in_business_text,
+                last_mca_deposit_date,
+                withholding_percentage
             FROM fcs_analyses
             WHERE conversation_id = $1
         `, [conversationId]);
@@ -1420,12 +1425,20 @@ router.get('/:id/fcs', async (req, res) => {
                     averageNegativeDays: analysis.average_negative_days,
                     state: analysis.state,
                     industry: analysis.industry,
-                    positionCount: analysis.position_count
+                    positionCount: analysis.position_count,
+                    average_deposit_count: analysis.average_deposit_count,
+                    withholding_percentage: analysis.withholding_percentage,
+                    averageDailyBalance: analysis.average_daily_balance
                 },
                 status: analysis.status,
                 error: analysis.error_message,
                 createdAt: analysis.created_at,
-                completedAt: analysis.completed_at
+                completedAt: analysis.completed_at,
+                average_daily_balance: analysis.average_daily_balance,
+                average_deposit_count: analysis.average_deposit_count,
+                time_in_business_text: analysis.time_in_business_text,
+                last_mca_deposit_date: analysis.last_mca_deposit_date,
+                withholding_percentage: analysis.withholding_percentage
             }
         });
 
