@@ -1667,7 +1667,7 @@ Best regards`;
         console.log('Starting lender submission');
 
         try {
-            // 1. Get Selected Items
+            // 1. GET & PREPARE SELECTED LENDERS
             const selectedLenderCheckboxes = Array.from(document.querySelectorAll('.lender-checkbox:checked'));
             const selectedDocumentIds = Array.from(document.querySelectorAll('.document-checkbox:checked')).map(cb => cb.value);
             const message = document.getElementById('submissionMessage')?.value;
@@ -1693,20 +1693,41 @@ Best regards`;
                 progressBar.style.width = '10%';
             }
 
-            // 3. Prepare Data (Much simpler now - data is already normalized!)
             const selectedLenders = selectedLenderCheckboxes.map(cb => {
-                // Find by name in our CLEAN list
-                const lender = this.qualifiedLenders.find(l => l.name === cb.value);
+                const lenderName = cb.value;
+
+                // Find the original lender object in memory
+                const lender = this.qualifiedLenders?.find(l =>
+                    l['Lender Name'] === lenderName || l.name === lenderName
+                );
 
                 if (!lender) {
-                    console.error(`❌ Could not find lender: ${cb.value}`);
-                    return { name: cb.value, email: null };
+                    console.error(`❌ Fatal Error: Could not find data for lender "${lenderName}"`);
+                    return { name: lenderName, email: null };
+                }
+
+                // 🕵️ DEBUG: Print the raw object to console so we can see the property names
+                console.log(`🔍 Inspecting "${lenderName}" data:`, lender);
+
+                // AGGRESSIVE EMAIL SEARCH: Try every possible variation
+                const foundEmail =
+                    lender.email ||
+                    lender.Email ||
+                    lender['Lender Email'] ||
+                    lender['Lender Email Address'] ||
+                    lender['Email Address'] ||
+                    lender['contact_email'] ||
+                    lender['email_address'] ||
+                    null;
+
+                if (!foundEmail) {
+                    console.error(`⚠️ WARNING: No email found for ${lenderName}. Available keys:`, Object.keys(lender));
                 }
 
                 return {
-                    name: lender.name,
-                    lender_name: lender.lender_name,
-                    email: lender.email // It's guaranteed to be here now (or explicitly null)!
+                    name: lenderName,
+                    lender_name: lenderName,
+                    email: foundEmail ? foundEmail.trim() : null
                 };
             });
 
