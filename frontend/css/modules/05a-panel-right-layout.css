@@ -560,6 +560,7 @@
     justify-content: center;
     box-shadow: 0 0 15px rgba(45, 212, 191, 0.4);
     transition: transform 0.2s, box-shadow 0.2s;
+    margin-left: 16px !important;
 }
 
 .btn-compose-neon:hover {
