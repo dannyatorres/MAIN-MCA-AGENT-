@@ -207,21 +207,60 @@ class FCSService {
             console.log('🤖 Sending to Gemini/OpenAI...');
             const fcsAnalysis = await this.generateFCSAnalysisWithGemini(extractedData, businessName);
 
-            // 5. Parse Metadata
-            const metadata = this.parseFCSMetadata(fcsAnalysis);
+            // 5. Extract All Metrics
+            const averageRevenue = extractMoneyValue(fcsAnalysis, 'Average True Revenue') || extractMoneyValue(fcsAnalysis, 'Revenue');
+            const avgBalance = extractMoneyValue(fcsAnalysis, 'Average Bank Balance');
+            const avgDeposits = extractMoneyValue(fcsAnalysis, 'Average Deposits');
+            const depositCount = extractNumberValue(fcsAnalysis, 'Average Number of Deposits');
+            const negDays = extractNumberValue(fcsAnalysis, 'Negative Days');
+            const avgNegDays = parseFloat(extractStringValue(fcsAnalysis, 'Average Negative Days') || '0');
+            const tibText = extractStringValue(fcsAnalysis, 'Time in Business');
+            const lastMca = extractStringValue(fcsAnalysis, 'Last MCA Deposit');
+            const state = extractStringValue(fcsAnalysis, 'State');
+            const industry = extractStringValue(fcsAnalysis, 'Industry');
 
-            // 6. 🆕 Calculate Withholding using the helper
-            const withholdingPct = calculateWithholding(fcsAnalysis, metadata.averageRevenue);
-            console.log(`🧮 Calculated Withholding: ${withholdingPct}%`);
+            // 6. Calculate Withholding
+            const withholdingPct = calculateWithholding(fcsAnalysis, averageRevenue);
+
+            console.log('📊 Extracted Metrics:', {
+                revenue: averageRevenue,
+                balance: avgBalance,
+                deposits: depositCount,
+                withholding: withholdingPct,
+                negativeDays: negDays
+            });
 
             // 7. Save to Database
             await db.query(`
                 UPDATE fcs_analyses SET
-                    fcs_report = $1, status = 'completed', completed_at = NOW(),
-                    average_revenue = $2, state = $3, industry = $4,
-                    withholding_percentage = $5
-                WHERE id = $6
-            `, [fcsAnalysis, metadata.averageRevenue, metadata.state, metadata.industry, withholdingPct, analysisId]);
+                    fcs_report = $1,
+                    status = 'completed',
+                    average_revenue = $2,
+                    state = $3,
+                    industry = $4,
+                    total_negative_days = $5,
+                    average_negative_days = $6,
+                    average_daily_balance = $7,
+                    average_deposit_count = $8,
+                    time_in_business_text = $9,
+                    last_mca_deposit_date = $10,
+                    withholding_percentage = $11,
+                    completed_at = NOW()
+                WHERE id = $12
+            `, [
+                fcsAnalysis,
+                averageRevenue,
+                state,
+                industry,
+                negDays,
+                avgNegDays,
+                avgBalance,
+                depositCount,
+                tibText,
+                lastMca,
+                withholdingPct,
+                analysisId
+            ]);
 
             console.log(`✅ FCS Complete! Analysis ID: ${analysisId}`);
             return { success: true, analysisId };
@@ -457,6 +496,35 @@ class FCSService {
             industry: ind ? ind[1].trim() : null
         };
     }
+}
+
+/**
+ * 🛠️ HELPER FUNCTIONS FOR EXTRACTION
+ * Based on the format: "Average Bank Balance: $13,589"
+ */
+
+function extractMoneyValue(text, label) {
+    if (!text) return 0;
+    // Regex looks for "Label: $12,345" or "Label: 12,345"
+    const regex = new RegExp(`${label}:\\s*\\$?([\\d,]+\\.?\\d*)`, 'i');
+    const match = text.match(regex);
+    return match ? parseFloat(match[1].replace(/,/g, '')) : 0;
+}
+
+function extractNumberValue(text, label) {
+    if (!text) return 0;
+    // Regex looks for "Label: 11"
+    const regex = new RegExp(`${label}:\\s*([\\d]+)`, 'i');
+    const match = text.match(regex);
+    return match ? parseInt(match[1], 10) : 0;
+}
+
+function extractStringValue(text, label) {
+    if (!text) return null;
+    // Regex looks for "Label: Some Text Value" (captures until newline)
+    const regex = new RegExp(`${label}:\\s*(.+?)(?:\\n|$)`, 'i');
+    const match = text.match(regex);
+    return match ? match[1].trim() : null;
 }
 
 /**
