@@ -28,137 +28,151 @@ class GmailInboxService {
                 port: 993,
                 tls: true,
                 authTimeout: 10000,
-                tlsOptions: {
-                    rejectUnauthorized: false
-                }
+                tlsOptions: { rejectUnauthorized: false }
             }
         };
     }
 
+    /**
+     * Connects to Gmail. If a connection exists, it ends it first.
+     */
     async connect() {
         try {
             if (!this.config.imap.user || !this.config.imap.password) {
                 throw new Error('Gmail credentials not configured. Please set EMAIL_USER and EMAIL_PASSWORD in .env');
             }
 
+            // Force disconnect if we think we have a stale connection
+            if (this.connection) {
+                try { await this.connection.end(); } catch (e) { /* ignore */ }
+                this.connection = null;
+            }
+
             console.log('🔌 Connecting to Gmail IMAP...');
             this.connection = await imaps.connect(this.config);
+            
+            // Handle unexpected closes
+            this.connection.imap.once('close', () => {
+                console.log('⚠️ IMAP connection closed by server.');
+                this.connection = null;
+            });
+
+            this.connection.imap.once('error', (err) => {
+                console.log('⚠️ IMAP connection error:', err.message);
+                this.connection = null;
+            });
+
             console.log('✅ Connected to Gmail successfully');
             return true;
         } catch (error) {
             console.error('❌ Failed to connect to Gmail:', error.message);
+            this.connection = null;
             throw error;
         }
     }
 
-    async disconnect() {
-        if (this.connection) {
-            try {
-                this.connection.end();
-                this.connection = null;
-                console.log('🔌 Disconnected from Gmail');
-            } catch (error) {
-                console.error('Error disconnecting from Gmail:', error.message);
-            }
+    /**
+     * Ensures we have a valid, authenticated connection.
+     */
+    async ensureConnection() {
+        // If no connection object, or the underlying imap state is not 'authenticated'
+        if (!this.connection || this.connection.imap.state !== 'authenticated') {
+            console.log('🔄 Connection lost or not authenticated. Reconnecting...');
+            await this.connect();
         }
     }
 
     async fetchEmails(options = {}) {
-        const {
-            folder = 'INBOX',
-            limit = 20, // Default to a smaller batch
-            offset = 0,
-            unreadOnly = false,
-            since = null
-        } = options;
-
-        try {
-            if (!this.connection) {
-                await this.connect();
-            }
-
+        return this.retryOperation(async () => {
+            await this.ensureConnection();
+            
+            const { folder = 'INBOX', limit = 50, offset = 0, unreadOnly = false, since = null } = options;
+            
             await this.connection.openBox(folder);
-            console.log(`📧 Fetching email list from ${folder}...`);
-
-            // 1. FAST SEARCH: Get metadata ONLY
+            
             const searchCriteria = [];
-            if (unreadOnly) {
-                searchCriteria.push('UNSEEN');
-            } else {
-                searchCriteria.push('ALL');
-            }
+            if (unreadOnly) searchCriteria.push('UNSEEN');
+            else searchCriteria.push('ALL');
+            if (since) searchCriteria.push(['SINCE', since]);
 
-            if (since) {
-                searchCriteria.push(['SINCE', since]);
-            }
-
-            // We fetch flags only first to be fast
-            const initialFetchOptions = {
-                bodies: [], 
-                markSeen: false
-            };
-
+            const initialFetchOptions = { bodies: [], markSeen: false };
             const allMessages = await this.connection.search(searchCriteria, initialFetchOptions);
-            
-            if (allMessages.length === 0) {
-                console.log('📭 No messages found.');
-                return [];
-            }
 
-            // 2. SORT & SLICE WITH OFFSET
-            // Sort descending by UID (newest first)
+            if (allMessages.length === 0) return [];
+
+            // Sort & Pagination
             allMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
-            
-            // Apply offset/limit
             const recentMessages = allMessages.slice(offset, offset + limit);
             const uidsToFetch = recentMessages.map(m => m.attributes.uid);
 
             if (uidsToFetch.length === 0) return [];
 
-            // Calculate Range (Min:Max)
+            // Fetch Content
             const minUid = Math.min(...uidsToFetch);
             const maxUid = Math.max(...uidsToFetch);
             
-            console.log(`📥 Downloading content for range ${minUid}:${maxUid} (${uidsToFetch.length} target emails)...`);
+            if (offset === 0) console.log(`📥 Fetching ${uidsToFetch.length} emails (UIDs ${minUid}-${maxUid})...`);
 
-            // 3. HEAVY LIFT: Fetch using RANGE Syntax (More robust than comma lists)
             const fetchCriteria = [['UID', `${minUid}:${maxUid}`]];
-            
-            const fullFetchOptions = {
-                bodies: ['HEADER', 'TEXT', ''],
-                markSeen: false,
-                struct: true
-            };
+            const fullFetchOptions = { bodies: ['HEADER', 'TEXT', ''], markSeen: false, struct: true };
 
             const rawMessages = await this.connection.search(fetchCriteria, fullFetchOptions);
             
-            // 4. FILTER & PARSE
-            // The range fetch might return emails we didn't ask for (gaps in the range),
-            // so we strictly filter by our 'uidsToFetch' list.
             const targetUidSet = new Set(uidsToFetch);
             const validMessages = rawMessages.filter(m => targetUidSet.has(m.attributes.uid));
-            
-            // Sort again by UID descending
             validMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
-
-            console.log(`📦 Received ${rawMessages.length} raw msgs, filtered to ${validMessages.length} targets.`);
 
             const emails = [];
             for (const message of validMessages) {
                 try {
-                    const email = await this.parseMessage(message);
-                    emails.push(email);
-                } catch (parseError) {
-                    console.error(`❌ Error parsing message UID ${message.attributes.uid}:`, parseError.message);
-                }
+                    emails.push(await this.parseMessage(message));
+                } catch (e) { console.error('Parse error:', e.message); }
             }
-
-            console.log(`✅ Successfully parsed ${emails.length} emails`);
             return emails;
+        });
+    }
 
-        } catch (error) {
-            console.error('Error fetching emails:', error.message);
-            throw error;
+    async searchEmails(query) {
+        return this.retryOperation(async () => {
+            await this.ensureConnection();
+            await this.connection.openBox('INBOX');
+
+            const searchCriteria = [['OR', ['SUBJECT', query], ['FROM', query], ['TO', query], ['TEXT', query]]];
+            const fetchOptions = { bodies: ['HEADER', 'TEXT', ''], markSeen: false, struct: true };
+
+            const messages = await this.connection.search(searchCriteria, fetchOptions);
+            const limitedMessages = messages.slice(0, 50); 
+            
+            const emails = [];
+            for (const message of limitedMessages) {
+                try {
+                    emails.push(await this.parseMessage(message));
+                } catch (e) { console.error('Search parse error:', e.message); }
+            }
+            return emails;
+        });
+    }
+
+    /**
+     * Generic retry wrapper for IMAP operations
+     */
+    async retryOperation(operation, maxRetries = 1) {
+        for (let i = 0; i <= maxRetries; i++) {
+            try {
+                return await operation();
+            } catch (error) {
+                const isAuthError = error.message.includes('Not authenticated') || 
+                                    error.message.includes('closed') || 
+                                    error.message.includes('ended');
+                
+                if (isAuthError && i < maxRetries) {
+                    console.log(`⚠️ IMAP Error: ${error.message}. Retrying (${i + 1}/${maxRetries})...`);
+                    this.connection = null; // Force reset
+                    await new Promise(r => setTimeout(r, 1000)); // Wait 1s
+                    continue;
+                }
+                throw error;
+            }
         }
     }
 
@@ -166,8 +180,8 @@ class GmailInboxService {
         const all = message.parts.find(part => part.which === '');
         const id = message.attributes.uid;
         const idHeader = 'Imap-Id: ' + id + '\r\n';
-
-        const mail = await simpleParser(idHeader + all.body);
+        
+        const mail = await simpleParser(idHeader + (all ? all.body : ''));
 
         return {
             id: id,
@@ -176,188 +190,54 @@ class GmailInboxService {
             subject: mail.subject || '(No Subject)',
             from: this.formatAddress(mail.from),
             to: this.formatAddress(mail.to),
-            cc: this.formatAddress(mail.cc),
             date: mail.date,
             timestamp: mail.date ? new Date(mail.date).getTime() : Date.now(),
             text: mail.text || '',
             html: mail.html || '',
-            snippet: this.createSnippet(mail.text || mail.html || ''),
+            snippet: (mail.text || '').substring(0, 150).replace(/\s+/g, ' ').trim() + '...',
             attachments: mail.attachments ? mail.attachments.map(att => ({
                 filename: att.filename,
                 contentType: att.contentType,
                 size: att.size
             })) : [],
-            flags: message.attributes.flags || [],
-            isUnread: !message.attributes.flags.includes('\\Seen'),
-            hasAttachments: mail.attachments && mail.attachments.length > 0,
-            labels: message.attributes['x-gm-labels'] || []
+            isUnread: !message.attributes.flags.includes('\\Seen')
         };
     }
 
     formatAddress(addressObj) {
-        if (!addressObj) return null;
-
+        if (!addressObj) return { name: 'Unknown', email: '' };
         const rawValue = addressObj.value || addressObj;
         const firstSender = Array.isArray(rawValue) ? rawValue[0] : rawValue;
-
         return {
             name: firstSender.name || '',
             email: firstSender.address || ''
         };
     }
 
-    createSnippet(text, maxLength = 150) {
-        // Remove HTML tags if present
-        const cleanText = text.replace(/<[^>]*>/g, '');
-        // Remove extra whitespace
-        const normalized = cleanText.replace(/\s+/g, ' ').trim();
-        // Truncate
-        return normalized.length > maxLength
-            ? normalized.substring(0, maxLength) + '...'
-            : normalized;
-    }
-
-    async getEmailById(emailId) {
-        try {
-            if (!this.connection) {
-                await this.connect();
-            }
-
-            await this.connection.openBox('INBOX');
-
-            const searchCriteria = [['UID', emailId]];
-            const fetchOptions = {
-                bodies: ['HEADER', 'TEXT', ''],
-                markSeen: false,
-                struct: true
-            };
-
-            const messages = await this.connection.search(searchCriteria, fetchOptions);
-
-            if (messages.length === 0) {
-                throw new Error('Email not found');
-            }
-
-            return await this.parseMessage(messages[0]);
-
-        } catch (error) {
-            console.error('Error fetching email by ID:', error.message);
-            throw error;
-        }
-    }
-
+    // Pass-through methods that also need retry protection
     async markAsRead(emailId) {
-        try {
-            if (!this.connection) {
-                await this.connect();
-            }
-
+        return this.retryOperation(async () => {
+            await this.ensureConnection();
             await this.connection.openBox('INBOX');
             await this.connection.addFlags(emailId, '\\Seen');
-            console.log(`✅ Marked email ${emailId} as read`);
-            return true;
-
-        } catch (error) {
-            console.error('Error marking email as read:', error.message);
-            throw error;
-        }
+        });
     }
 
     async markAsUnread(emailId) {
-        try {
-            if (!this.connection) {
-                await this.connect();
-            }
-
+        return this.retryOperation(async () => {
+            await this.ensureConnection();
             await this.connection.openBox('INBOX');
             await this.connection.delFlags(emailId, '\\Seen');
-            console.log(`✅ Marked email ${emailId} as unread`);
-            return true;
-
-        } catch (error) {
-            console.error('Error marking email as unread:', error.message);
-            throw error;
-        }
+        });
     }
 
     async deleteEmail(emailId) {
-        try {
-            if (!this.connection) {
-                await this.connect();
-            }
-
+        return this.retryOperation(async () => {
+            await this.ensureConnection();
             await this.connection.openBox('INBOX');
             await this.connection.addFlags(emailId, '\\Deleted');
             await this.connection.imap.expunge();
-            console.log(`🗑️ Deleted email ${emailId}`);
-            return true;
-
-        } catch (error) {
-            console.error('Error deleting email:', error.message);
-            throw error;
-        }
-    }
-
-    async searchEmails(query) {
-        try {
-            if (!this.connection) {
-                await this.connect();
-            }
-
-            await this.connection.openBox('INBOX');
-
-            const searchCriteria = [
-                ['OR',
-                    ['SUBJECT', query],
-                    ['FROM', query],
-                    ['TO', query],
-                    ['TEXT', query]
-                ]
-            ];
-
-            const fetchOptions = {
-                bodies: ['HEADER', 'TEXT', ''],
-                markSeen: false,
-                struct: true
-            };
-
-            const messages = await this.connection.search(searchCriteria, fetchOptions);
-            console.log(`🔍 Found ${messages.length} emails matching "${query}"`);
-
-            const emails = [];
-            for (const message of messages) {
-                try {
-                    const email = await this.parseMessage(message);
-                    emails.push(email);
-                } catch (parseError) {
-                    console.error('Error parsing search result:', parseError.message);
-                }
-            }
-
-            return emails;
-
-        } catch (error) {
-            console.error('Error searching emails:', error.message);
-            throw error;
-        }
-    }
-
-    async getUnreadCount() {
-        try {
-            if (!this.connection) {
-                await this.connect();
-            }
-
-            await this.connection.openBox('INBOX');
-            const searchCriteria = ['UNSEEN'];
-            const messages = await this.connection.search(searchCriteria, { bodies: [] });
-
-            return messages.length;
-
-        } catch (error) {
-            console.error('Error getting unread count:', error.message);
-            throw error;
-        }
+        });
     }
 }
 
