@@ -1506,7 +1506,12 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
     try {
         const conversationId = req.params.id;
         const { applicationData, ownerName } = req.body;
-        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || '127.0.0.1';
+
+        // --- CUSTOM: GENERATE RANDOM IP FOR TESTING ---
+        const getRandomIp = () => Array(4).fill(0).map(() => Math.floor(Math.random() * 256)).join('.');
+        const clientIp = getRandomIp();
+        console.log(`🎲 Generated Random IP for PDF: ${clientIp}`);
+        // ----------------------------------------------
 
         const result = await documentService.generateLeadPDF(
             conversationId,

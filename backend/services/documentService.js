@@ -54,14 +54,22 @@ exports.generateLeadPDF = async (conversationId, applicationData, ownerName, cli
         // Owner 2 Signature Data
         const owner2FullName = `${applicationData.owner2FirstName || ''} ${applicationData.owner2LastName || ''}`.trim();
 
+        // LOGIC CHECK: Who is currently signing?
+        // We check if the 'ownerName' passed from the button click matches the owner names
+        const isOwner1Signing = ownerName && ownerName.trim() === owner1FullName;
+        const isOwner2Signing = ownerName && ownerName.trim() === owner2FullName;
+
         // Merge signature data into applicationData
         const dataToMerge = {
             signature_name_1: owner1FullName || ownerName || '',
             timestamp_str_1: fullTimestamp,
             ip_str_1: clientIp,
+
+            // ONLY show Owner 2's signature/timestamp if they are the one currently signing
             signature_name_2: owner2FullName || '',
-            timestamp_str_2: owner2FullName ? fullTimestamp : '',
-            ip_str_2: owner2FullName ? clientIp : '',
+            timestamp_str_2: isOwner2Signing ? fullTimestamp : '', // <--- CHANGED THIS
+            ip_str_2: isOwner2Signing ? clientIp : '',             // <--- CHANGED THIS
+
             signature_date: datePart
         };
 
@@ -194,14 +202,22 @@ exports.generatePopulatedTemplate = (applicationData, ownerName, clientIp) => {
     const owner1FullName = `${applicationData.ownerFirstName || ''} ${applicationData.ownerLastName || ''}`.trim();
     const owner2FullName = `${applicationData.owner2FirstName || ''} ${applicationData.owner2LastName || ''}`.trim();
 
+    // LOGIC CHECK: Who is currently signing?
+    // We check if the 'ownerName' passed from the button click matches the owner names
+    const isOwner1Signing = ownerName && ownerName.trim() === owner1FullName;
+    const isOwner2Signing = ownerName && ownerName.trim() === owner2FullName;
+
     // Merge signature data
     const dataToMerge = {
         signature_name_1: owner1FullName || ownerName || '',
         timestamp_str_1: fullTimestamp,
         ip_str_1: clientIp,
+
+        // ONLY show Owner 2's signature/timestamp if they are the one currently signing
         signature_name_2: owner2FullName || '',
-        timestamp_str_2: owner2FullName ? fullTimestamp : '',
-        ip_str_2: owner2FullName ? clientIp : '',
+        timestamp_str_2: isOwner2Signing ? fullTimestamp : '', // <--- CHANGED THIS
+        ip_str_2: isOwner2Signing ? clientIp : '',             // <--- CHANGED THIS
+
         signature_date: datePart
     };
 
