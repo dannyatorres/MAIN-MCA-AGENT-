@@ -1655,17 +1655,21 @@ Best regards`;
                 progressBar.style.width = '10%';
             }
 
-            // 3. Prepare Data
+            // --- UPDATED MAPPING LOGIC ---
             const selectedLenders = selectedLenderCheckboxes.map(cb => {
                 const lenderName = cb.value;
 
-                // Find the full lender object
+                // 1. Find the raw lender data
                 const lender = this.qualifiedLenders?.find(l =>
                     l['Lender Name'] === lenderName || l.name === lenderName
                 );
 
-                // 🕵️ Debug: Log what we found
-                console.log(`🔍 Mapping Lender: ${lenderName}`, lender);
+                // 🕵️ DEBUG: Print exactly what data we have for this lender
+                if (lender) {
+                    console.log(`🔍 inspecting lender data for ${lenderName}:`, lender);
+                } else {
+                    console.error(`❌ Could not find raw data for lender: ${lenderName}`);
+                }
 
                 const cleanLender = {
                     name: lenderName,
@@ -1674,17 +1678,18 @@ Best regards`;
                 };
 
                 if (lender) {
-                    // Try EVERY possible spelling of email
+                    // 2. Aggressive Email Search (Try every common variation)
                     cleanLender.email =
                         lender.email ||
                         lender.Email ||
                         lender['Lender Email'] ||
+                        lender['Lender Email Address'] ||
                         lender['Email Address'] ||
                         lender['contact_email'] ||
                         lender['email_address'] ||
                         null;
 
-                    // Trim whitespace if it exists
+                    // 3. Clean it up (remove spaces)
                     if (cleanLender.email && typeof cleanLender.email === 'string') {
                         cleanLender.email = cleanLender.email.trim();
                     }
@@ -1692,6 +1697,7 @@ Best regards`;
 
                 return cleanLender;
             });
+            // -----------------------------
 
             const selectedDocuments = selectedDocumentIds.map(docId => {
                 const doc = this.parent.documents?.currentDocuments?.find(d => d.id === docId);
