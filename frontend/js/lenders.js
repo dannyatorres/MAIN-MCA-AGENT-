@@ -843,6 +843,47 @@ class LendersModule {
     displayLenderResults(data, criteria) {
         console.log('=== displayLenderResults called ===');
 
+        // ✅ STEP 1: NORMALIZE THE DATA IMMEDIATELY
+        // We create a "Golden Record" for every lender so we never have to "hunt" again.
+        const cleanQualified = (data.qualified || []).map(lender => {
+            // Find the email using every known variation
+            const rawEmail =
+                lender.email ||
+                lender.Email ||
+                lender['Lender Email'] ||
+                lender['Email Address'] ||
+                lender['contact_email'] ||
+                lender['email_address'];
+
+            return {
+                ...lender, // Keep all original data just in case
+
+                // Enforce standard property names
+                name: lender.name || lender['Lender Name'] || lender.lender || 'Unknown Lender',
+                lender_name: lender.name || lender['Lender Name'] || lender.lender,
+
+                // The most critical fix: Ensure 'email' property ALWAYS exists (or is explicitly null)
+                email: rawEmail ? rawEmail.trim() : null,
+
+                // Normalize Tier for grouping
+                Tier: lender.Tier || lender.tier || 'Unknown'
+            };
+        });
+
+        const cleanNonQualified = (data.nonQualified || []).map(item => ({
+            ...item,
+            lender: item.lender || item.name || item['Lender Name'],
+            blockingRule: item.blockingRule || item.reason || 'Unknown reason'
+        }));
+
+        // ✅ STEP 2: Save the CLEAN data
+        this.qualifiedLenders = cleanQualified;
+        this.lastLenderCriteria = criteria;
+
+        // Update the 'data' object so the rest of the function uses the clean lists
+        data.qualified = cleanQualified;
+        data.nonQualified = cleanNonQualified;
+
         // Save to conversation-specific key
         const conversationId = this.parent.getCurrentConversationId();
         if (conversationId) {
@@ -852,9 +893,6 @@ class LendersModule {
                 timestamp: Date.now()
             }));
         }
-
-        this.qualifiedLenders = data.qualified || [];
-        this.lastLenderCriteria = criteria;
 
         let html = `<div style="padding: 10px;">`;
 
@@ -1655,49 +1693,22 @@ Best regards`;
                 progressBar.style.width = '10%';
             }
 
-            // --- UPDATED MAPPING LOGIC ---
+            // 3. Prepare Data (Much simpler now - data is already normalized!)
             const selectedLenders = selectedLenderCheckboxes.map(cb => {
-                const lenderName = cb.value;
+                // Find by name in our CLEAN list
+                const lender = this.qualifiedLenders.find(l => l.name === cb.value);
 
-                // 1. Find the raw lender data
-                const lender = this.qualifiedLenders?.find(l =>
-                    l['Lender Name'] === lenderName || l.name === lenderName
-                );
-
-                // 🕵️ DEBUG: Print exactly what data we have for this lender
-                if (lender) {
-                    console.log(`🔍 inspecting lender data for ${lenderName}:`, lender);
-                } else {
-                    console.error(`❌ Could not find raw data for lender: ${lenderName}`);
+                if (!lender) {
+                    console.error(`❌ Could not find lender: ${cb.value}`);
+                    return { name: cb.value, email: null };
                 }
 
-                const cleanLender = {
-                    name: lenderName,
-                    lender_name: lenderName,
-                    email: null
+                return {
+                    name: lender.name,
+                    lender_name: lender.lender_name,
+                    email: lender.email // It's guaranteed to be here now (or explicitly null)!
                 };
-
-                if (lender) {
-                    // 2. Aggressive Email Search (Try every common variation)
-                    cleanLender.email =
-                        lender.email ||
-                        lender.Email ||
-                        lender['Lender Email'] ||
-                        lender['Lender Email Address'] ||
-                        lender['Email Address'] ||
-                        lender['contact_email'] ||
-                        lender['email_address'] ||
-                        null;
-
-                    // 3. Clean it up (remove spaces)
-                    if (cleanLender.email && typeof cleanLender.email === 'string') {
-                        cleanLender.email = cleanLender.email.trim();
-                    }
-                }
-
-                return cleanLender;
             });
-            // -----------------------------
 
             const selectedDocuments = selectedDocumentIds.map(docId => {
                 const doc = this.parent.documents?.currentDocuments?.find(d => d.id === docId);
