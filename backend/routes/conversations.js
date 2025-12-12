@@ -1143,6 +1143,9 @@ router.post('/:id/send-to-lenders', async (req, res) => {
 
         console.log(`🚀 FAST-SEND: Processing batch for ${selectedLenders?.length} lenders...`);
 
+        // 🕵️ SPY LOG: See exactly what data arrived
+        console.log('🕵️ PAYLOAD DEBUG:', JSON.stringify(selectedLenders, null, 2));
+
         if (!selectedLenders || selectedLenders.length === 0) {
             return res.status(400).json({ success: false, error: 'No lenders selected' });
         }

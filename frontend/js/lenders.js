@@ -1658,12 +1658,39 @@ Best regards`;
             // 3. Prepare Data
             const selectedLenders = selectedLenderCheckboxes.map(cb => {
                 const lenderName = cb.value;
-                const lender = this.qualifiedLenders?.find(l => l['Lender Name'] === lenderName || l.name === lenderName);
-                return {
+
+                // Find the full lender object
+                const lender = this.qualifiedLenders?.find(l =>
+                    l['Lender Name'] === lenderName || l.name === lenderName
+                );
+
+                // 🕵️ Debug: Log what we found
+                console.log(`🔍 Mapping Lender: ${lenderName}`, lender);
+
+                const cleanLender = {
                     name: lenderName,
                     lender_name: lenderName,
-                    email: lender?.email || lender?.Email || lender?.['Lender Email'] || null
+                    email: null
                 };
+
+                if (lender) {
+                    // Try EVERY possible spelling of email
+                    cleanLender.email =
+                        lender.email ||
+                        lender.Email ||
+                        lender['Lender Email'] ||
+                        lender['Email Address'] ||
+                        lender['contact_email'] ||
+                        lender['email_address'] ||
+                        null;
+
+                    // Trim whitespace if it exists
+                    if (cleanLender.email && typeof cleanLender.email === 'string') {
+                        cleanLender.email = cleanLender.email.trim();
+                    }
+                }
+
+                return cleanLender;
             });
 
             const selectedDocuments = selectedDocumentIds.map(docId => {
