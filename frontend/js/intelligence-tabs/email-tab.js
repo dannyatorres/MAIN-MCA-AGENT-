@@ -288,4 +288,15 @@ export class EmailTab {
         this.renderEmailList();
         try { await fetch(`/api/email/${id}`, { method: 'DELETE' }); } catch(e){}
     }
+
+    formatDate(date) {
+        const now = new Date();
+        if (now.toDateString() === date.toDateString()) {
+            return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+        if (now.getFullYear() === date.getFullYear()) {
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    }
 }
