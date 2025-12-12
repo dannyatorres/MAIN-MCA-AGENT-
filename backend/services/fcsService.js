@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const AWS = require('aws-sdk');
 const { DocumentProcessorServiceClient } = require('@google-cloud/documentai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const OpenAI = require('openai');
 const { PDFDocument } = require('pdf-lib');
 
@@ -23,8 +24,10 @@ class FCSService {
         this.openai = null;
         this.documentAI = null;
         this.isOpenAIInitialized = false;
+        this.isGeminiInitialized = false;
         this.isDocumentAIInitialized = false;
         this.openAIModel = process.env.OPENAI_MODEL || 'gpt-4.1';
+        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-1.5-pro-latest';
     }
 
     async initializeOpenAI() {
@@ -35,6 +38,21 @@ class FCSService {
             this.isOpenAIInitialized = true;
         } catch (error) {
             console.error('❌ OpenAI initialization failed:', error);
+        }
+    }
+
+    async initializeGemini() {
+        if (this.isGeminiInitialized) return;
+        try {
+            if (!process.env.GEMINI_API_KEY) {
+                throw new Error('GEMINI_API_KEY not configured');
+            }
+            this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+            this.isGeminiInitialized = true;
+            console.log(`✅ Gemini initialized (${this.geminiModel})`);
+        } catch (error) {
+            console.error('❌ Gemini initialization failed:', error.message);
+            this.gemini = null;
         }
     }
     
@@ -222,7 +240,8 @@ class FCSService {
     }
 
     async generateFCSAnalysisWithGemini(extractedData, businessName) {
-        await this.initializeOpenAI();
+        await this.initializeGemini();
+        await this.initializeOpenAI(); // fallback if Gemini unavailable
         
         // Prepare the data
         // Truncate individual files to avoid context limits, but keep enough for analysis
@@ -380,6 +399,25 @@ class FCSService {
             
             FORMATTING REMINDER: DO NOT USE ASTERISKS ANYWHERE IN THE REPORT.
         `;
+
+        // Prefer Gemini
+        if (this.gemini) {
+            try {
+                const model = this.gemini.getGenerativeModel({ model: this.geminiModel });
+                const result = await model.generateContent(prompt);
+                const fcsAnalysis =
+                    (result?.response && typeof result.response.text === 'function' && result.response.text()) ||
+                    (result?.response?.candidates || [])
+                        .map(c => (c.content?.parts || []).map(p => p.text || '').join('\n'))
+                        .find(t => t && t.trim());
+                if (fcsAnalysis) {
+                    console.log('🤖 Generated via Gemini');
+                    return fcsAnalysis;
+                }
+            } catch (err) {
+                console.error('Gemini generation failed, falling back to OpenAI:', err.message);
+            }
+        }
 
         console.log('🤖 Sending to OpenAI...');
 
