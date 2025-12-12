@@ -1609,7 +1609,7 @@ router.get('/fix/schema-patch', async (req, res) => {
     try {
         const db = getDatabase();
         console.log('🛠️ Starting Database Schema Repair...');
-        
+
         // This runs the SQL command you couldn't run manually
         await db.query(`
             ALTER TABLE lender_qualifications
@@ -1620,6 +1620,38 @@ router.get('/fix/schema-patch', async (req, res) => {
 
         res.json({ success: true, message: 'Database patched! You can now save lenders.' });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==========================================
+// 🛠️ FCS SCHEMA MIGRATION ROUTE
+// Run this once by visiting: /api/conversations/fix/fcs-schema-update
+// ==========================================
+router.get('/fix/fcs-schema-update', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Starting FCS Schema Update...');
+
+        // Add all missing columns in one go
+        await db.query(`
+            ALTER TABLE fcs_analyses
+            ADD COLUMN IF NOT EXISTS average_daily_balance NUMERIC(12,2),
+            ADD COLUMN IF NOT EXISTS average_deposit_count INTEGER,
+            ADD COLUMN IF NOT EXISTS time_in_business_text VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS last_mca_deposit_date VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS withholding_percentage NUMERIC(5,2);
+        `);
+
+        console.log('✅ FCS Schema Updated Successfully!');
+
+        res.json({
+            success: true,
+            message: 'Database patched! Added columns for: Bank Balance, Deposit Count, TIB, MCA Date, and Withholding.'
+        });
+
+    } catch (error) {
+        console.error('❌ Migration Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
