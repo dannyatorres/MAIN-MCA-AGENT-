@@ -1184,34 +1184,54 @@ router.post('/:id/send-to-lenders', async (req, res) => {
             fileAttachments.push(...results.filter(f => f !== null));
         }
 
-        // --- STEP 2: PARALLEL SUBMISSION ---
+        // --- STEP 2: PARALLEL SUBMISSION (WITH FAIL-SAFE) ---
         const submissionPromises = selectedLenders.map(async (lenderData) => {
             const lenderName = lenderData.name || lenderData.lender_name;
-            const lenderEmail = lenderData.email;
+            let lenderEmail = lenderData.email; // Start with what Frontend sent
             const submissionId = uuidv4();
 
             try {
                 if (!lenderName) throw new Error('Missing lender name');
 
-                // 🚨 THE FIX: Throw error immediately if email is missing
-                if (!lenderEmail || !lenderEmail.includes('@')) {
-                    throw new Error(`No valid email address found for ${lenderName}`);
+                // 2a. Find/Create Lender Record (Quick Lookup)
+                let lenderId = null;
+                const lenderResult = await db.query(
+                    'SELECT id, email FROM lenders WHERE name ILIKE $1 LIMIT 1',
+                    [lenderName]
+                );
+
+                if (lenderResult.rows.length > 0) {
+                    lenderId = lenderResult.rows[0].id;
+
+                    // 🛡️ FAIL-SAFE: If Frontend sent null, use the Database Email
+                    if (!lenderEmail || !lenderEmail.includes('@')) {
+                        console.log(`⚠️ Frontend missing email for ${lenderName}. Using DB email: ${lenderResult.rows[0].email}`);
+                        lenderEmail = lenderResult.rows[0].email;
+                    }
                 }
 
-                // Find/Create Lender Record
-                let lenderId = null;
-                const lenderResult = await db.query('SELECT id FROM lenders WHERE name ILIKE $1 LIMIT 1', [lenderName]);
-                if (lenderResult.rows.length > 0) lenderId = lenderResult.rows[0].id;
+                // 🚨 Final Check: If STILL no email, then we fail
+                if (!lenderEmail || !lenderEmail.includes('@')) {
+                    throw new Error(`No valid email address found for ${lenderName} (checked Payload & Database)`);
+                }
 
+                // 2b. Create DB Record (Mark as 'processing')
                 await db.query(`
                     INSERT INTO lender_submissions (
                         id, conversation_id, lender_id, lender_name, status,
                         submitted_at, custom_message, message, created_at
                     ) VALUES ($1, $2, $3, $4, 'processing', NOW(), $5, $5, NOW())
-                `, [submissionId, conversationId, lenderId, lenderName, businessData?.customMessage]);
+                `, [
+                    submissionId, conversationId, lenderId, lenderName,
+                    businessData?.customMessage || null
+                ]);
 
-                // Send Email
-                const emailResult = await emailService.sendLenderSubmission(lenderEmail, businessData, fileAttachments);
+                // 2c. Send Email
+                const emailResult = await emailService.sendLenderSubmission(
+                    lenderEmail,
+                    businessData,
+                    fileAttachments
+                );
 
                 if (emailResult.success) {
                     await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['sent', submissionId]);
@@ -1222,10 +1242,19 @@ router.post('/:id/send-to-lenders', async (req, res) => {
 
             } catch (error) {
                 console.error(`❌ Failed to send to ${lenderName}:`, error.message);
+
+                // Update DB to show failure if record was created
                 if (submissionId) {
-                    try { await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['failed', submissionId]); } catch(e){}
+                    try {
+                        await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['failed', submissionId]);
+                    } catch (e) { /* Ignore DB error if insert failed */ }
                 }
-                return { status: 'rejected', lenderName, reason: error.message };
+
+                return {
+                    status: 'rejected',
+                    lenderName,
+                    reason: error.message
+                };
             }
         });
 
