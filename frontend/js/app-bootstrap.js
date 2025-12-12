@@ -25,6 +25,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             // --- A. INJECT CONTROLLER ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
+            // ✅ FIX: Force-Initialize Lenders Module for Dashboard Access
+            // This ensures "Manage Lenders" works immediately without opening a conversation first.
+            if (!window.commandCenter.lenders && typeof LendersModule !== 'undefined') {
+                console.log("🏦 Bootstrapping LendersModule for Dashboard...");
+                window.commandCenter.lenders = new LendersModule(window.commandCenter);
+            }
+
             // --- B. DEFINE GLOBAL FUNCTIONS ---
 
             // 1. HEADER RENDERER (FIXED: Restores Input Bar)
