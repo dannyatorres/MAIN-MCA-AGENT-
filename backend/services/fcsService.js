@@ -121,7 +121,20 @@ class FCSService {
                     mimeType: 'application/pdf'
                 },
                 // Use fieldMask to only request text (saves bandwidth/time)
-                fieldMask: { paths: ['text'] } 
+                fieldMask: { paths: ['text'] },
+                // Process options: 30 page limit + imageless mode
+                processOptions: {
+                    individualPageSelector: {
+                        pages: Array.from({ length: 30 }, (_, i) => i + 1)
+                    },
+                    ocrConfig: {
+                        enableImageQualityScores: false,
+                        enableSymbol: false,
+                        enableNativePdfParsing: true,
+                        computeStyleInfo: false
+                    }
+                },
+                skipHumanReview: true
             };
 
             console.log('🚀 Sending request to Document AI (Service Account)...');
