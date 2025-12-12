@@ -25,13 +25,18 @@ class EmailService {
 
     async initializeTransporter() {
         if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-            console.warn('Email credentials not configured. Email functionality will be disabled.');
+            console.warn('Email credentials not configured.');
             return;
         }
 
         try {
+            // ✅ UPDATED: Enable Pooling for Speed
             this.transporter = nodemailer.createTransport({
                 service: 'gmail',
+                pool: true,          // <--- KEEPS CONNECTION OPEN
+                maxConnections: 5,   // <--- SENDS 5 EMAILS AT ONCE
+                maxMessages: 100,
+                rateLimit: 10,       // <--- PREVENTS GMAIL BLOCKING (10/sec)
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASSWORD
@@ -40,7 +45,7 @@ class EmailService {
 
             // Verify connection
             await this.transporter.verify();
-            console.log('Email service initialized successfully');
+            console.log('🚀 High-Speed Email Service Ready (Pooling Enabled)');
         } catch (error) {
             console.error('Failed to initialize email service:', error.message);
             this.transporter = null;
