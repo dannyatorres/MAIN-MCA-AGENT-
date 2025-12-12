@@ -24,6 +24,7 @@ class FCSService {
         this.documentAI = null;
         this.isOpenAIInitialized = false;
         this.isDocumentAIInitialized = false;
+        this.openAIModel = process.env.OPENAI_MODEL || 'gpt-4.1';
     }
 
     async initializeOpenAI() {
@@ -380,10 +381,10 @@ class FCSService {
             FORMATTING REMINDER: DO NOT USE ASTERISKS ANYWHERE IN THE REPORT.
         `;
 
-        console.log('🤖 Sending to OpenAI (GPT-4o)...');
+        console.log('🤖 Sending to OpenAI...');
 
         const completion = await this.openai.chat.completions.create({
-            model: "gpt-4o",
+            model: this.openAIModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.1 // Lower temperature for more consistent formatting
         });
