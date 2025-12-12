@@ -207,14 +207,21 @@ class FCSService {
             console.log('🤖 Sending to Gemini/OpenAI...');
             const fcsAnalysis = await this.generateFCSAnalysisWithGemini(extractedData, businessName);
 
-            // 5. Save
+            // 5. Parse Metadata
             const metadata = this.parseFCSMetadata(fcsAnalysis);
+
+            // 6. 🆕 Calculate Withholding using the helper
+            const withholdingPct = calculateWithholding(fcsAnalysis, metadata.averageRevenue);
+            console.log(`🧮 Calculated Withholding: ${withholdingPct}%`);
+
+            // 7. Save to Database
             await db.query(`
-                UPDATE fcs_analyses SET 
+                UPDATE fcs_analyses SET
                     fcs_report = $1, status = 'completed', completed_at = NOW(),
-                    average_revenue = $2, state = $3, industry = $4
-                WHERE id = $5
-            `, [fcsAnalysis, metadata.averageRevenue, metadata.state, metadata.industry, analysisId]);
+                    average_revenue = $2, state = $3, industry = $4,
+                    withholding_percentage = $5
+                WHERE id = $6
+            `, [fcsAnalysis, metadata.averageRevenue, metadata.state, metadata.industry, withholdingPct, analysisId]);
 
             console.log(`✅ FCS Complete! Analysis ID: ${analysisId}`);
             return { success: true, analysisId };
@@ -450,6 +457,53 @@ class FCSService {
             industry: ind ? ind[1].trim() : null
         };
     }
+}
+
+/**
+ * 🧮 HELPER: Calculate Withholding % from Position Text
+ * Logic:
+ * 1. Find "Positions" section
+ * 2. Extract "$X Daily" or "$Y Weekly"
+ * 3. Convert to Monthly (Daily * 21)
+ * 4. Divide by Revenue
+ */
+function calculateWithholding(fcsReportText, monthlyRevenue) {
+    if (!fcsReportText || !monthlyRevenue || monthlyRevenue === 0) return 0;
+
+    // 1. Find the "Positions" section (stops at next newline or end of string)
+    // Matches: "Positions: OnDeck $500 daily, Forward $200 weekly"
+    const positionsMatch = fcsReportText.match(/Positions:\s*(.+?)(?:\n|$)/i);
+
+    // If no positions found or explicitly says "None", return 0
+    if (!positionsMatch || /none|n\/a/i.test(positionsMatch[1])) return 0;
+
+    const positionsText = positionsMatch[1];
+
+    // 2. Regex to find amounts and frequency
+    // Matches: "$500.00 daily" or "500 weekly"
+    const regex = /(?:[\$])?([\d,]+\.?\d*)\s*(daily|weekly)/gi;
+    const matches = [...positionsText.matchAll(regex)];
+
+    let totalMonthlyPayment = 0;
+
+    matches.forEach(match => {
+        // match[1] = Amount (e.g. "500")
+        // match[2] = Frequency (e.g. "daily")
+        const amount = parseFloat(match[1].replace(/,/g, ''));
+        const frequency = match[2].toLowerCase();
+
+        if (!isNaN(amount) && amount > 0) {
+            // Weekly / 5 = Daily
+            const dailyRate = frequency === 'weekly' ? amount / 5 : amount;
+            // Daily * 21 = Monthly
+            const monthlyPayment = dailyRate * 21;
+
+            totalMonthlyPayment += monthlyPayment;
+        }
+    });
+
+    // 3. Calculate % of Revenue
+    return ((totalMonthlyPayment / monthlyRevenue) * 100).toFixed(2);
 }
 
 module.exports = new FCSService();
