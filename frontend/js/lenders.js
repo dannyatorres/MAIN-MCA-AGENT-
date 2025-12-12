@@ -747,26 +747,25 @@ class LendersModule {
         const populateField = (fieldId, value, force = false) => {
             const element = document.getElementById(fieldId);
             if (element) {
-                // Only fill if empty OR if 'force' is true (FCS data overwrites CRM data)
                 if (force || !element.value) {
                     element.value = value;
-                    // Trigger change for TIB calculation if needed
+                    // Trigger input event for TIB calculation
                     if (fieldId === 'lenderStartDate') element.dispatchEvent(new Event('input'));
                 }
             }
         };
 
-        // 1. FILL FROM CRM (Basic Data)
+        // --- 1. FILL BASIC CRM DATA ---
         populateField('lenderBusinessName', conversation.business_name);
         populateField('lenderState', conversation.state);
-        populateField('lenderIndustry', conversation.business_type);
+        populateField('lenderIndustry', conversation.business_type); // CRM usually calls it business_type
 
         if (conversation.annual_revenue) {
             populateField('lenderRevenue', Math.round(conversation.annual_revenue / 12));
         }
 
-        // Handle Start Date (CRM)
         if (conversation.business_start_date) {
+            // Format date to MM/DD/YYYY
             const date = new Date(conversation.business_start_date);
             if (!isNaN(date.getTime())) {
                 const formatted = date.toLocaleDateString('en-US', {
@@ -776,43 +775,50 @@ class LendersModule {
             }
         }
 
-        // 2. FETCH & FILL FROM FCS (High-Accuracy Data)
-        // This runs after the basic fill, so it will "upgrade" the data if FCS exists
+        // --- 2. FETCH & FILL FCS DATA (The Smart Stuff) ---
         const fcs = await this.fetchFCSData(conversationId);
 
         if (fcs) {
-            console.log("✅ FCS Data Found! Upgrading form data...", fcs);
+            console.log("✅ FCS Data Found! Filling missing fields...", fcs);
 
-            // Update Business Name (AI usually extracts the exact legal name)
+            // 1. Industry & State (Force overwrite if FCS found them)
+            if (fcs.metrics && fcs.metrics.industry) populateField('lenderIndustry', fcs.metrics.industry, true);
+            if (fcs.metrics && fcs.metrics.state) populateField('lenderState', fcs.metrics.state, true);
             if (fcs.businessName) populateField('lenderBusinessName', fcs.businessName, true);
 
-            // Update Revenue (Average True Revenue is better than stated revenue)
-            if (fcs.metrics && fcs.metrics.averageRevenue) {
-                const cleanRev = Math.round(parseFloat(fcs.metrics.averageRevenue));
-                populateField('lenderRevenue', cleanRev, true);
-            }
+            // 2. Financial Metrics
+            if (fcs.metrics && fcs.metrics.averageRevenue) populateField('lenderRevenue', Math.round(fcs.metrics.averageRevenue), true);
+            if (fcs.metrics && fcs.metrics.totalNegativeDays !== undefined) populateField('lenderNegativeDays', fcs.metrics.totalNegativeDays, true);
+            if (fcs.average_deposit_count) populateField('lenderDepositsPerMonth', fcs.average_deposit_count, true);
 
-            // Update Negative Days
-            if (fcs.metrics && fcs.metrics.totalNegativeDays !== undefined) {
-                populateField('lenderNegativeDays', fcs.metrics.totalNegativeDays, true);
-            }
+            // 3. Withholding (New Calculation)
+            if (fcs.withholding_percentage) {
+                 populateField('lenderWithholding', fcs.withholding_percentage + '%', true);
 
-            // ✅ NEW: Update Withholding % (Calculated by Backend)
-            if (fcs.withholding_percentage || (fcs.metrics && fcs.metrics.withholding_percentage)) {
-                 const val = fcs.withholding_percentage || fcs.metrics.withholding_percentage;
-                 populateField('lenderWithholding', val + '%', true);
-
-                 // Visual Alert for High Withholding
-                 if (parseFloat(val) > 40) {
+                 // Visual Warning for High Withholding
+                 if (parseFloat(fcs.withholding_percentage) > 40) {
                      const el = document.getElementById('lenderWithholding');
-                     if(el) el.style.borderColor = '#ef4444'; // Red border warning
+                     if(el) el.style.borderColor = '#ef4444';
                  }
             }
 
-            // ✅ NEW: Update Deposit Count
-            if (fcs.average_deposit_count || (fcs.metrics && fcs.metrics.average_deposit_count)) {
-                const count = fcs.average_deposit_count || fcs.metrics.average_deposit_count;
-                populateField('lenderDepositsPerMonth', count, true);
+            // 4. Current Positions (Extract from Text Report)
+            // We look for the "Positions:" line in the full report
+            if (fcs.report) {
+                // regex: find "Positions: ... (newline)"
+                const positionsMatch = fcs.report.match(/Positions:\s*(.+?)(?:\n|$)/i);
+                if (positionsMatch) {
+                    const positionsList = positionsMatch[1].trim();
+                    if (positionsList.toLowerCase() !== 'none' && positionsList.toLowerCase() !== 'n/a') {
+                        populateField('lenderCurrentPositions', positionsList, true);
+                    }
+                }
+
+                // 5. Additional Notes (Extract Last MCA info)
+                const mcaMatch = fcs.report.match(/Last MCA Deposit:\s*(.+?)(?:\n|$)/i);
+                if (mcaMatch) {
+                    populateField('lenderAdditionalNotes', `Last MCA Deposit: ${mcaMatch[1].trim()}`, true);
+                }
             }
         }
 
