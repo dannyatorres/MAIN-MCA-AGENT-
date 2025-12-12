@@ -153,6 +153,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
 
                             <div class="dashboard-toolbar">
+                                <button class="btn btn-secondary dashboard-action-btn" onclick="window.open('Lead_reformatter.html', '_blank')">
+                                    <i class="fas fa-table"></i> Formatter
+                                </button>
+
                                 <button class="btn btn-secondary dashboard-action-btn" onclick="openLenderManagementModal()">
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
