@@ -138,7 +138,9 @@ const requireAuth = (req, res, next) => {
         '/api/calling/voice/',     // Trailing slash for Twilio
         '/api/calling/status',
         '/api/calling/recording-status',
-        '/api/contact'
+        '/api/contact',
+        '/api/conversations/fix/schema-patch',      // Database migration routes
+        '/api/conversations/fix/fcs-schema-update'  // Database migration routes
     ];
 
     // Allow exact matches or any calling webhook paths
