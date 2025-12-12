@@ -1135,13 +1135,13 @@ router.delete('/:conversationId/documents/:documentId', async (req, res) => {
     }
 });
 
-// Send to lenders - OPTIMIZED (Parallel Sending + Single S3 Download)
+// Send to lenders - STRICT MODE (Fails if no email)
 router.post('/:id/send-to-lenders', async (req, res) => {
     try {
         const { id: conversationId } = req.params;
         const { selectedLenders, businessData, documents } = req.body;
 
-        console.log(`🚀 FAST-SEND: Preparing to send to ${selectedLenders?.length} lenders...`);
+        console.log(`🚀 FAST-SEND: Processing batch for ${selectedLenders?.length} lenders...`);
 
         if (!selectedLenders || selectedLenders.length === 0) {
             return res.status(400).json({ success: false, error: 'No lenders selected' });
@@ -1149,22 +1149,16 @@ router.post('/:id/send-to-lenders', async (req, res) => {
 
         const db = getDatabase();
 
-        // --- STEP 1: PRE-DOWNLOAD DOCUMENTS (Fetch Once, Use Many Times) ---
-        // Instead of streaming from S3 for every single email (slow), we download
-        // the files into memory buffers once.
+        // --- STEP 1: PRE-DOWNLOAD DOCUMENTS ---
         const fileAttachments = [];
-
         if (documents && documents.length > 0) {
             console.log(`📥 Downloading ${documents.length} documents from S3...`);
-
-            // Fetch document metadata first
             const docIds = documents.map(d => d.id);
             const docResult = await db.query(
                 `SELECT * FROM documents WHERE id = ANY($1::uuid[])`,
                 [docIds]
             );
 
-            // Download all files in parallel
             const downloadPromises = docResult.rows.map(async (doc) => {
                 if (!doc.s3_key) return null;
                 try {
@@ -1172,10 +1166,9 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                         Bucket: process.env.S3_DOCUMENTS_BUCKET,
                         Key: doc.s3_key
                     }).promise();
-
                     return {
                         filename: doc.original_filename,
-                        content: s3Obj.Body, // This is a Buffer (Fast)
+                        content: s3Obj.Body,
                         contentType: doc.mime_type || 'application/pdf'
                     };
                 } catch (err) {
@@ -1186,12 +1179,9 @@ router.post('/:id/send-to-lenders', async (req, res) => {
 
             const results = await Promise.all(downloadPromises);
             fileAttachments.push(...results.filter(f => f !== null));
-            console.log(`✅ Cached ${fileAttachments.length} documents in memory.`);
         }
 
         // --- STEP 2: PARALLEL SUBMISSION ---
-        // We use .map() to create an array of promises, then execute them all at once.
-
         const submissionPromises = selectedLenders.map(async (lenderData) => {
             const lenderName = lenderData.name || lenderData.lender_name;
             const lenderEmail = lenderData.email;
@@ -1200,79 +1190,52 @@ router.post('/:id/send-to-lenders', async (req, res) => {
             try {
                 if (!lenderName) throw new Error('Missing lender name');
 
-                // 2a. Find/Create Lender Record (Quick Lookup)
-                let lenderId = null;
-                const lenderResult = await db.query(
-                    'SELECT id FROM lenders WHERE name ILIKE $1 LIMIT 1',
-                    [lenderName]
-                );
-
-                if (lenderResult.rows.length > 0) {
-                    lenderId = lenderResult.rows[0].id;
+                // 🚨 THE FIX: Throw error immediately if email is missing
+                if (!lenderEmail || !lenderEmail.includes('@')) {
+                    throw new Error(`No valid email address found for ${lenderName}`);
                 }
 
-                // 2b. Create DB Record (Mark as 'processing')
+                // Find/Create Lender Record
+                let lenderId = null;
+                const lenderResult = await db.query('SELECT id FROM lenders WHERE name ILIKE $1 LIMIT 1', [lenderName]);
+                if (lenderResult.rows.length > 0) lenderId = lenderResult.rows[0].id;
+
                 await db.query(`
                     INSERT INTO lender_submissions (
                         id, conversation_id, lender_id, lender_name, status,
                         submitted_at, custom_message, message, created_at
                     ) VALUES ($1, $2, $3, $4, 'processing', NOW(), $5, $5, NOW())
-                `, [
-                    submissionId, conversationId, lenderId, lenderName,
-                    businessData?.customMessage || null
-                ]);
+                `, [submissionId, conversationId, lenderId, lenderName, businessData?.customMessage]);
 
-                // 2c. Send Email (If email exists)
-                if (lenderEmail) {
-                    // Send using the Buffers we created in Step 1
-                    const emailResult = await emailService.sendLenderSubmission(
-                        lenderEmail,
-                        businessData,
-                        fileAttachments
-                    );
+                // Send Email
+                const emailResult = await emailService.sendLenderSubmission(lenderEmail, businessData, fileAttachments);
 
-                    if (emailResult.success) {
-                        await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['sent', submissionId]);
-                        return { status: 'fulfilled', lenderName, emailSent: true };
-                    } else {
-                        throw new Error(emailResult.error || 'Email service failed');
-                    }
+                if (emailResult.success) {
+                    await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['sent', submissionId]);
+                    return { status: 'fulfilled', lenderName, emailSent: true };
                 } else {
-                    // No email address - just log it
-                    return { status: 'fulfilled', lenderName, emailSent: false, note: 'No email address' };
+                    throw new Error(emailResult.error || 'Email service failed');
                 }
 
             } catch (error) {
                 console.error(`❌ Failed to send to ${lenderName}:`, error.message);
-
-                // Update DB to show failure
-                await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['failed', submissionId]);
-
-                return {
-                    status: 'rejected',
-                    lenderName,
-                    error: error.message
-                };
+                if (submissionId) {
+                    try { await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['failed', submissionId]); } catch(e){}
+                }
+                return { status: 'rejected', lenderName, reason: error.message };
             }
         });
 
-        // --- STEP 3: WAIT FOR ALL ---
-        // This runs all emails in parallel and waits for the last one to finish
-        const results = await Promise.allSettled(submissionPromises);
+        // --- STEP 3: RESULTS ---
+        const results = await Promise.all(submissionPromises);
 
-        // Process results for frontend
-        const successful = results
-            .filter(r => r.status === 'fulfilled' && r.value.status === 'fulfilled')
-            .map(r => r.value);
-
-        const failed = results
-            .filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.status === 'rejected'))
-            .map(r => r.status === 'rejected' ? { error: r.reason } : r.value);
+        const successful = results.filter(r => r.status === 'fulfilled');
+        const failed = results.filter(r => r.status === 'rejected').map(r => ({
+            lender: r.lenderName,
+            error: r.reason
+        }));
 
         console.log(`🏁 Batch Complete: ${successful.length} sent, ${failed.length} failed.`);
-
-        // Update conversation activity once
-        await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
 
         res.json({
             success: true,
@@ -1280,7 +1243,7 @@ router.post('/:id/send-to-lenders', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Critical Error in Send-To-Lenders:', error);
+        console.error('❌ Critical Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
