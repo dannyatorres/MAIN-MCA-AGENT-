@@ -27,7 +27,7 @@ class FCSService {
         this.isGeminiInitialized = false;
         this.isDocumentAIInitialized = false;
         this.openAIModel = process.env.OPENAI_MODEL || 'gpt-4.1';
-        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash-thinking-exp-1219';
+        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-3-pro-preview-11-2025';
     }
 
     async initializeOpenAI() {
