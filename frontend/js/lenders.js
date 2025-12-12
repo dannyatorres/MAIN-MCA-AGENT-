@@ -320,6 +320,10 @@ class LendersModule {
                     industry: document.getElementById('lenderIndustry').value || '',
                     depositsPerMonth: parseInt(document.getElementById('lenderDepositsPerMonth').value) || 0,
                     negativeDays: parseInt(document.getElementById('lenderNegativeDays').value) || 0,
+
+                    // ✅ ADD THIS: Send withholding to the decision engine
+                    withholding: document.getElementById('lenderWithholding')?.value || null,
+
                     isSoleProp: document.getElementById('lenderSoleProp')?.checked || false,
                     soleProp: document.getElementById('lenderSoleProp')?.checked || false,
                     isNonProfit: document.getElementById('lenderNonProfit')?.checked || false,
@@ -593,6 +597,15 @@ class LendersModule {
                 }
             }
 
+            // ✅ ADD THIS: Withholding Parsing
+            if (/withholding/i.test(line)) {
+                const withMatch = line.match(/withholding[:\s]+([\d.]+%?)/i);
+                if (withMatch) {
+                    data.withholding = withMatch[1];
+                    console.log('Found Withholding:', data.withholding);
+                }
+            }
+
             // FICO Score
             if (/(?:fico|credit)\s*(?:score)?[:\s]+([0-9]+)/i.test(line)) {
                 const match = line.match(/(?:fico|credit)\s*(?:score)?[:\s]+([0-9]+)/i);
@@ -667,6 +680,10 @@ class LendersModule {
             startDate: 'lenderStartDate',
             deposits: 'lenderDepositsPerMonth',
             negativeDays: 'lenderNegativeDays',
+
+            // ✅ ADD THIS MAPPING:
+            withholding: 'lenderWithholding',
+
             notes: 'lenderAdditionalNotes',
             currentPositions: 'lenderCurrentPositions'
         };
