@@ -15,7 +15,11 @@ class ConversationCore {
         this.selectedForDeletion = new Set();
         this.unreadMessages = new Map();
         this.searchTimeout = null;
-        this.currentRenderLimit = 50; // For "Load More" functionality
+        this.currentRenderLimit = Infinity; // render all fetched; use server-side paging
+        this.pageSize = 50;
+        this.paginationOffset = 0;
+        this.hasMoreConversations = true;
+        this.isLoadingMore = false;
 
         this.init();
     }
@@ -203,7 +207,7 @@ class ConversationCore {
             console.log('Loading initial data...');
             this.utils.showLoading();
 
-            await this.loadConversations();
+            await this.loadConversations(true);
             console.log('Conversations loaded');
 
             try {
@@ -232,35 +236,50 @@ class ConversationCore {
         }
     }
 
-    async loadConversations() {
+    async loadConversations(reset = false) {
         try {
-            console.log('🔄 Starting loadConversations()');
-            console.log('🌐 Fetching conversations from:', `${this.apiBaseUrl}/api/conversations`);
+            if (this.isLoadingMore) return;
+            this.isLoadingMore = true;
 
-            const conversations = await this.parent.apiCall('/api/conversations');
+            if (reset) {
+                this.conversations.clear();
+                this.unreadMessages.clear();
+                this.paginationOffset = 0;
+                this.hasMoreConversations = true;
+            }
+
+            if (!this.hasMoreConversations) {
+                this.isLoadingMore = false;
+                return;
+            }
+
+            const url = `/api/conversations?limit=${this.pageSize}&offset=${this.paginationOffset}`;
+            console.log('🌐 Fetching conversations from:', `${this.apiBaseUrl}${url}`);
+
+            const conversations = await this.parent.apiCall(url);
             console.log('📋 Received conversations:', conversations.length);
-
-            this.conversations.clear();
-            // Clear old unread counts to prevent stale badges
-            this.unreadMessages.clear();
 
             conversations.forEach(conv => {
                 this.conversations.set(conv.id, conv);
 
-                // If the server says there are unread messages, save that to our tracker
                 if (conv.unread_count && conv.unread_count > 0) {
                     this.unreadMessages.set(conv.id, conv.unread_count);
                 }
             });
-            console.log('💾 Stored conversations in memory:', this.conversations.size);
 
-            console.log('🎨 About to call renderConversationsList()');
+            this.paginationOffset += conversations.length;
+            if (conversations.length < this.pageSize) {
+                this.hasMoreConversations = false;
+            }
+
             this.renderConversationsList();
-            console.log('✅ loadConversations completed successfully');
+            console.log('✅ loadConversations page completed');
         } catch (error) {
             console.error('❌ Error in loadConversations:', error);
             this.utils.handleError(error, 'Error loading conversations', null, false);
             throw error;
+        } finally {
+            this.isLoadingMore = false;
         }
     }
 
@@ -445,10 +464,7 @@ class ConversationCore {
         // Store for "Load More" functionality
         this._lastFilteredConversations = conversations;
 
-        // 🚀 PERFORMANCE FIX: Render Limit
-        // Only render up to currentRenderLimit items to prevent browser freezing.
-        const visibleConversations = conversations.slice(0, this.currentRenderLimit);
-        const remainingCount = conversations.length - this.currentRenderLimit;
+        const visibleConversations = conversations;
 
         let indicator = '';
         const searchTerm = document.getElementById('searchInput')?.value.trim();
@@ -467,13 +483,13 @@ class ConversationCore {
             this.templates.conversationItem(conv)
         ).join('');
 
-        // Add "Load More" button if items are hidden (fixes Ghost Lead trap)
-        if (remainingCount > 0) {
+        // Add "Load More" button if server has more to fetch
+        if (this.hasMoreConversations) {
             listHtml += `
                 <div class="list-limit-message">
-                    Showing ${this.currentRenderLimit} of ${conversations.length} leads.<br>
+                    Loaded ${conversations.length} leads.<br>
                     <button class="btn-load-more" id="loadMoreBtn">
-                        Load More (${remainingCount} remaining)
+                        Load More Leads
                     </button>
                 </div>
             `;
@@ -512,10 +528,7 @@ class ConversationCore {
         const loadMoreBtn = container.querySelector('#loadMoreBtn');
         if (loadMoreBtn) {
             loadMoreBtn.addEventListener('click', () => {
-                this.currentRenderLimit += 50; // Load 50 more
-                if (this._lastFilteredConversations) {
-                    this.renderFilteredConversations(this._lastFilteredConversations, false);
-                }
+                this.loadConversations(false);
             });
         }
     }
@@ -594,8 +607,8 @@ class ConversationCore {
         const stateFilter = document.getElementById('stateFilter')?.value;
         const searchTerm = document.getElementById('searchInput')?.value.trim();
 
-        // Reset render limit when filter changes (so "Load More" starts fresh)
-        this.currentRenderLimit = 50;
+        // Reset render limit when filter changes (render all fetched)
+        this.currentRenderLimit = Infinity;
 
         if (!searchTerm && !stateFilter) {
             this.renderConversationsList();
@@ -753,7 +766,7 @@ class ConversationCore {
             }
 
             // Reload conversations from server to ensure UI is in sync with database
-            await this.loadConversations();
+            await this.loadConversations(true);
 
             const deletedCount = result.deletedCount || idsToDelete.length;
             this.utils.showNotification(
