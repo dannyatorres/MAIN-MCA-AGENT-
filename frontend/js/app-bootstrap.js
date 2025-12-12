@@ -156,6 +156,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <button class="btn btn-secondary dashboard-action-btn" onclick="openLenderManagementModal()">
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
+                                <a class="btn btn-secondary dashboard-action-btn" href="Lead_reformatter.html" target="_blank" rel="noopener noreferrer">
+                                    <i class="fas fa-edit"></i> Lead Formatter
+                                </a>
                                 <button class="btn btn-secondary dashboard-action-btn">
                                     <i class="fas fa-cog"></i> Settings
                                 </button>
