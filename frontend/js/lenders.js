@@ -119,25 +119,42 @@ class LendersModule {
 
         const modalHtml = `
             <div id="lenderSubmissionModal" class="modal hidden">
-                <div class="modal-content lender-submission-modal">
+                <div class="modal-content lender-submission-modal" style="position: relative; overflow: hidden;">
+
+                    <div id="submissionOverlay" style="
+                        display: none;
+                        position: absolute;
+                        top: 0; left: 0; width: 100%; height: 100%;
+                        background: rgba(255, 255, 255, 0.95);
+                        z-index: 50;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        text-align: center;
+                    ">
+                        <div class="loading-spinner" style="width: 50px; height: 50px; border-width: 4px; border-color: #3b82f6 #e2e8f0 #e2e8f0 #e2e8f0;"></div>
+                        <h3 style="margin-top: 20px; color: #1e293b; font-size: 18px;">Sending Applications...</h3>
+                        <p id="submissionStatusText" style="color: #64748b; margin-top: 8px; font-size: 14px;">Preparing documents...</p>
+                        <div style="margin-top: 20px; width: 200px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                            <div id="submissionProgressBar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+
                     <div class="modal-header">
                         <h3>Send to Lenders</h3>
                         <button id="closeLenderSubmissionModal" class="modal-close">&times;</button>
                     </div>
 
                     <div class="modal-body submission-body">
-
                         <div class="submission-grid">
                             <div class="submission-col">
                                 <div class="submission-col-header">
                                     <span>Select Lenders</span>
                                     <button id="toggleAllLendersBtn" class="btn-link">Deselect All</button>
                                 </div>
-
                                 <div class="submission-search-container">
                                     <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders...">
                                 </div>
-
                                 <div id="lenderSelectionList" class="selection-list custom-scrollbar"></div>
                             </div>
 
@@ -146,11 +163,9 @@ class LendersModule {
                                     <span>Select Documents</span>
                                     <button id="toggleAllDocumentsBtn" class="btn-link">Select All</button>
                                 </div>
-
                                 <div class="submission-search-container" style="visibility: hidden;">
                                     <input type="text" class="submission-search-input">
                                 </div>
-
                                 <div id="submissionDocumentList" class="selection-list custom-scrollbar"></div>
                             </div>
                         </div>
@@ -1614,65 +1629,52 @@ Best regards`;
         console.log('Starting lender submission');
 
         try {
-            // Get selected lenders
+            // 1. Get Selected Items
             const selectedLenderCheckboxes = Array.from(document.querySelectorAll('.lender-checkbox:checked'));
-
-            const selectedLenders = selectedLenderCheckboxes.map(cb => {
-                const lenderName = cb.value;
-                const lender = this.qualifiedLenders?.find(l =>
-                    l['Lender Name'] === lenderName || l.name === lenderName
-                );
-
-                const cleanLender = {
-                    name: lenderName,
-                    lender_name: lenderName,
-                    email: null
-                };
-
-                if (lender) {
-                    // Try multiple property names for email
-                    cleanLender.email = lender.email || lender.Email || lender['Lender Email'] || lender['Email Address'] || null;
-
-                    // If still no email found, log warning
-                    if (!cleanLender.email) {
-                        console.warn(`⚠️ No email found for lender: ${lenderName}. Properties:`, Object.keys(lender));
-                    }
-                }
-
-                return cleanLender;
-            });
-
-            // Get selected documents
-            const selectedDocumentIds = Array.from(document.querySelectorAll('.document-checkbox:checked'))
-                .map(cb => cb.value);
-
-            const selectedDocuments = selectedDocumentIds.map(docId => {
-                const doc = this.parent.documents?.currentDocuments?.find(d => d.id === docId);
-                if (!doc) {
-                    return {
-                        id: docId,
-                        filename: 'unknown.pdf',
-                        name: 'unknown.pdf'
-                    };
-                }
-
-                return {
-                    id: doc.id,
-                    filename: doc.originalFilename || doc.filename || 'document.pdf',
-                    name: doc.originalFilename || doc.filename || 'document.pdf',
-                    s3_url: doc.s3_url || doc.url || null,
-                    file_path: doc.file_path || doc.path || null
-                };
-            });
-
-            // Get message
+            const selectedDocumentIds = Array.from(document.querySelectorAll('.document-checkbox:checked')).map(cb => cb.value);
             const message = document.getElementById('submissionMessage')?.value;
+
+            // Validation
+            if (selectedLenderCheckboxes.length === 0) {
+                this.utils.showNotification('Please select at least one lender', 'warning');
+                return;
+            }
             if (!message?.trim()) {
                 this.utils.showNotification('Please enter a message', 'warning');
                 return;
             }
 
-            // Prepare business data
+            // 2. SHOW OVERLAY & LOCK UI
+            const overlay = document.getElementById('submissionOverlay');
+            const statusText = document.getElementById('submissionStatusText');
+            const progressBar = document.getElementById('submissionProgressBar');
+
+            if (overlay) {
+                overlay.style.display = 'flex';
+                statusText.textContent = `Preparing ${selectedLenderCheckboxes.length} lender applications...`;
+                progressBar.style.width = '10%';
+            }
+
+            // 3. Prepare Data
+            const selectedLenders = selectedLenderCheckboxes.map(cb => {
+                const lenderName = cb.value;
+                const lender = this.qualifiedLenders?.find(l => l['Lender Name'] === lenderName || l.name === lenderName);
+                return {
+                    name: lenderName,
+                    lender_name: lenderName,
+                    email: lender?.email || lender?.Email || lender?.['Lender Email'] || null
+                };
+            });
+
+            const selectedDocuments = selectedDocumentIds.map(docId => {
+                const doc = this.parent.documents?.currentDocuments?.find(d => d.id === docId);
+                return doc ? {
+                    id: doc.id,
+                    filename: doc.originalFilename || doc.filename,
+                    s3_url: doc.s3_url
+                } : { id: docId };
+            });
+
             const conversation = this.parent.getSelectedConversation();
             const businessData = {
                 businessName: conversation?.business_name || 'Unknown Business',
@@ -1682,39 +1684,61 @@ Best regards`;
                 customMessage: message
             };
 
-            // Show loading state
-            const sendText = document.getElementById('sendSubmissionsText');
-            const sendLoading = document.getElementById('sendSubmissionsLoading');
-            if (sendText) sendText.style.display = 'none';
-            if (sendLoading) sendLoading.style.display = 'inline';
+            // 4. Simulate Progress (Psychological Waiting)
+            // Since we can't track real backend progress easily, we fake a "working" bar
+            let progress = 10;
+            const progressInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 10;
+                    if (progressBar) progressBar.style.width = `${progress}%`;
+                    if (statusText) statusText.textContent = `Sending to ${selectedLenders.length} lenders... (${Math.round(progress)}%)`;
+                }
+            }, 800);
 
+            // 5. Send Request
             const conversationId = this.parent.getCurrentConversationId();
-
             const result = await this.parent.apiCall(`/api/conversations/${conversationId}/send-to-lenders`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    selectedLenders: selectedLenders,
-                    businessData: businessData,
+                    selectedLenders,
+                    businessData,
                     documents: selectedDocuments
                 })
             });
 
+            clearInterval(progressInterval);
+
             if (result.success) {
-                const successCount = result.results?.successful?.length || 0;
-                this.utils.showNotification(`Successfully sent to ${successCount} of ${selectedLenders.length} lenders!`, 'success');
-                document.getElementById('lenderSubmissionModal').style.display = 'none';
+                // 6. Success State
+                if (progressBar) progressBar.style.width = '100%';
+                if (statusText) statusText.textContent = '✅ Sent Successfully!';
+
+                // Wait 500ms so user sees "100%", then close
+                setTimeout(() => {
+                    const successCount = result.results?.successful?.length || 0;
+                    this.utils.showNotification(`Successfully sent to ${successCount} lenders!`, 'success');
+
+                    // Hide Overlay
+                    overlay.style.display = 'none';
+                    progressBar.style.width = '0%';
+
+                    // Close Modal
+                    document.getElementById('lenderSubmissionModal').style.display = 'none';
+                    document.getElementById('lenderSubmissionModal').classList.add('hidden');
+                }, 800);
+
             } else {
                 throw new Error(result.error || 'Failed to send submissions');
             }
 
         } catch (error) {
             console.error('Error sending submissions:', error);
+
+            // Hide Overlay on Error
+            const overlay = document.getElementById('submissionOverlay');
+            if (overlay) overlay.style.display = 'none';
+
             this.utils.showNotification('Failed to send: ' + error.message, 'error');
-        } finally {
-            const sendText = document.getElementById('sendSubmissionsText');
-            const sendLoading = document.getElementById('sendSubmissionsLoading');
-            if (sendText) sendText.style.display = 'inline';
-            if (sendLoading) sendLoading.style.display = 'none';
         }
     }
 
