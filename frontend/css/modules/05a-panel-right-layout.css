@@ -484,9 +484,12 @@
 }
 
 .email-search-wrapper {
-    flex: 1;
+    flex: 1 1 auto; /* Allow it to shrink if needed */
+    min-width: 150px; /* Don't let it vanish */
     max-width: 350px;
     position: relative;
+    margin-right: 24px; /* Increased safety gap */
+    z-index: 1; /* Sit on a lower layer */
 }
 
 .email-search-input {
@@ -520,6 +523,9 @@
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
+    position: relative;
+    z-index: 10; /* Force this layer to be above the search bar */
+    padding-left: 5px; /* Tiny buffer */
 }
 
 .btn-email-tool {
