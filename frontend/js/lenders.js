@@ -1845,7 +1845,9 @@ Best regards`;
                             ${renderField('lenderDepositsPerMonth', '', '')}
 
                             ${renderField('lenderNegativeDays', '', '')}
-                            <div></div>
+
+                            ${renderField('lenderWithholding', '', '')}
+
                             <div></div>
                         </div>
 
