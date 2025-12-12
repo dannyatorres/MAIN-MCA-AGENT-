@@ -125,18 +125,63 @@ class LendersModule {
                         display: none;
                         position: absolute;
                         top: 0; left: 0; width: 100%; height: 100%;
-                        background: rgba(255, 255, 255, 0.95);
-                        z-index: 50;
+                        background: rgba(255, 255, 255, 0.7);
+                        backdrop-filter: blur(8px);
+                        -webkit-backdrop-filter: blur(8px);
+                        z-index: 100;
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        text-align: center;
+                        transition: all 0.3s ease;
                     ">
-                        <div class="loading-spinner" style="width: 50px; height: 50px; border-width: 4px; border-color: #3b82f6 #e2e8f0 #e2e8f0 #e2e8f0;"></div>
-                        <h3 style="margin-top: 20px; color: #1e293b; font-size: 18px;">Sending Applications...</h3>
-                        <p id="submissionStatusText" style="color: #64748b; margin-top: 8px; font-size: 14px;">Preparing documents...</p>
-                        <div style="margin-top: 20px; width: 200px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
-                            <div id="submissionProgressBar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s ease;"></div>
+                        <div style="
+                            background: white;
+                            padding: 40px 30px;
+                            border-radius: 20px;
+                            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+                            border: 1px solid #f1f5f9;
+                            text-align: center;
+                            max-width: 320px;
+                            width: 90%;
+                            animation: slideUp 0.3s ease-out;
+                        ">
+                            <div class="loading-spinner" style="
+                                width: 40px; height: 40px;
+                                border: 3px solid #e2e8f0;
+                                border-top-color: #3b82f6;
+                                border-radius: 50%;
+                                margin: 0 auto 20px auto;
+                            "></div>
+
+                            <h3 style="
+                                color: #1e293b;
+                                font-size: 18px;
+                                font-weight: 700;
+                                margin: 0 0 8px 0;
+                            ">Sending Applications</h3>
+
+                            <p id="submissionStatusText" style="
+                                color: #64748b;
+                                font-size: 14px;
+                                margin: 0 0 24px 0;
+                                line-height: 1.5;
+                            ">Preparing files...</p>
+
+                            <div style="
+                                width: 100%;
+                                height: 6px;
+                                background: #f1f5f9;
+                                border-radius: 10px;
+                                overflow: hidden;
+                            ">
+                                <div id="submissionProgressBar" style="
+                                    width: 5%;
+                                    height: 100%;
+                                    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+                                    border-radius: 10px;
+                                    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                                "></div>
+                            </div>
                         </div>
                     </div>
 
@@ -184,6 +229,12 @@ class LendersModule {
                         </button>
                     </div>
                 </div>
+                <style>
+                    @keyframes slideUp {
+                        from { transform: translateY(20px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                </style>
             </div>
         `;
 
