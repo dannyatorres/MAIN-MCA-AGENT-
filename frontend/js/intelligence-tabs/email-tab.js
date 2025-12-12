@@ -24,32 +24,32 @@ export class EmailTab {
         return `
             <div class="email-tab-container">
                 
-                <div class="email-toolbar">
-                    <div class="email-search-wrapper">
-                        <input type="text" id="emailSearchInput" class="email-search-input" placeholder="Search emails...">
-                        <i class="fas fa-search email-search-icon"></i>
-                    </div>
-
-                    <div class="email-action-group">
-                        <button id="composeEmailBtn" class="btn-compose-neon" title="Compose">
-                            <i class="fas fa-plus"></i>
-                        </button>
-
-                        <button id="unreadOnlyBtn" class="btn-email-tool" title="Filter Unread">
-                            <i class="fas fa-filter"></i>
-                        </button>
-
-                        <button id="refreshEmailBtn" class="btn-email-tool" title="Refresh">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
+            <div class="email-toolbar">
+                <div class="email-search-wrapper">
+                    <input type="text" id="emailSearchInput" class="email-search-input" placeholder="Search emails...">
+                    <i class="fas fa-search email-search-icon"></i>
                 </div>
+
+                <div class="email-action-group">
+                    <button id="composeEmailBtn" class="btn-compose-neon" title="Compose">
+                        <i class="fas fa-plus"></i>
+                    </button>
+
+                    <button id="unreadOnlyBtn" class="btn-email-tool" title="Filter Unread">
+                        <i class="fas fa-filter"></i>
+                    </button>
+
+                    <button id="refreshEmailBtn" class="btn-email-tool" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
 
                 <div class="email-content-area">
                     <div id="emailListContainer" class="email-list-wrapper">
                         <div id="emailList" class="email-list-scroll"></div>
                         <div id="loadMoreContainer" style="padding: 16px; text-align: center; display: none;">
-                            <button id="loadMoreBtn" class="btn-email-tool" style="width:auto; padding:0 16px; font-size:12px;">Load Next 50 Messages</button>
+                            <button id="loadMoreBtn" class="btn-email-tool" style="width:auto; padding:0 16px; font-size:12px;">Load More</button>
                         </div>
                     </div>
 
@@ -67,7 +67,7 @@ export class EmailTab {
                         <textarea class="compose-textarea" placeholder="Write your message..."></textarea>
                     </div>
                     <div style="padding:16px; border-top:1px solid #30363d; display:flex; justify-content:space-between;">
-                        <button style="background:#2dd4bf; border:none; border-radius:4px; padding:8px 20px; font-weight:700; cursor:pointer;">Send</button>
+                        <button id="btnSendConfirm" style="background:#2dd4bf; border:none; border-radius:4px; padding:8px 20px; font-weight:700; cursor:pointer;">Send</button>
                         <button style="background:none; border:none; color:#8b949e; cursor:pointer;"><i class="fas fa-paperclip"></i></button>
                     </div>
                 </div>
@@ -108,8 +108,8 @@ export class EmailTab {
                            <i class="fas fa-arrow-left"></i> Back
                        </button>
                        <div style="display:flex; gap:8px;">
-                           <button class="btn-email-tool" style="width:32px; height:32px;"><i class="fas fa-reply"></i></button>
-                           <button class="btn-email-tool" style="width:32px; height:32px;"><i class="fas fa-reply-all"></i></button>
+                           <button class="btn-email-tool" id="btnReply" style="width:32px; height:32px;"><i class="fas fa-reply"></i></button>
+                           <button class="btn-email-tool" id="btnReplyAll" style="width:32px; height:32px;"><i class="fas fa-reply-all"></i></button>
                            <button class="btn-email-tool delete-email-btn" data-email-id="${email.id}" style="width:32px; height:32px; color:#f85149;"><i class="fas fa-trash"></i></button>
                        </div>
                    </div>
@@ -136,7 +136,7 @@ export class EmailTab {
         `;
     }
 
-    // --- LOGIC (Unchanged) ---
+    // --- LOGIC (Unchanged + Send/Reply additions) ---
 
     async fetchEmails(options = {}) {
         if (this.isLoading) return;
@@ -241,6 +241,9 @@ export class EmailTab {
         if (compose) compose.onclick = () => { modal.style.display = 'flex'; };
         if (close) close.onclick = () => { modal.style.display = 'none'; };
 
+        const sendBtn = document.getElementById('btnSendConfirm');
+        if (sendBtn) sendBtn.onclick = () => this.sendEmail();
+
         const search = document.getElementById('emailSearchInput');
         if (search) search.oninput = (e) => {
             clearTimeout(this.searchTimeout);
@@ -258,8 +261,79 @@ export class EmailTab {
 
     attachViewerEventListeners() {
         document.getElementById('backToInboxBtn').onclick = () => this.showInbox();
+
+        const replyBtn = document.getElementById('btnReply');
+        if (replyBtn) replyBtn.onclick = () => this.replyToEmail('reply');
+        const replyAllBtn = document.getElementById('btnReplyAll');
+        if (replyAllBtn) replyAllBtn.onclick = () => this.replyToEmail('replyAll');
+
         document.querySelectorAll('.delete-email-btn').forEach(btn => 
             btn.onclick = () => this.deleteEmail(btn.dataset.emailId));
+    }
+
+    async sendEmail() {
+        const toInput = document.querySelector('.compose-input[placeholder="To"]');
+        const subjectInput = document.querySelector('.compose-input[placeholder="Subject"]');
+        const bodyInput = document.querySelector('.compose-textarea');
+        const sendBtn = document.getElementById('btnSendConfirm');
+
+        const to = toInput.value.trim();
+        const subject = subjectInput.value.trim();
+        const body = bodyInput.value.trim();
+
+        if (!to || !body) {
+            alert('Please fill in the "To" and "Message" fields.');
+            return;
+        }
+
+        const originalText = sendBtn.innerText;
+        sendBtn.innerText = 'Sending...';
+        sendBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/email/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ to, subject, body })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                document.getElementById('composeModal').style.display = 'none';
+                toInput.value = '';
+                subjectInput.value = '';
+                bodyInput.value = '';
+                alert('Email sent successfully!');
+            } else {
+                alert('Failed to send: ' + data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Network error sending email.');
+        } finally {
+            sendBtn.innerText = originalText;
+            sendBtn.disabled = false;
+        }
+    }
+
+    replyToEmail(type = 'reply') {
+        if (!this.selectedEmail) return;
+
+        const email = this.selectedEmail;
+        const { address } = this.getSenderInfo(email);
+        
+        const toInput = document.querySelector('.compose-input[placeholder="To"]');
+        toInput.value = address;
+
+        const subjectInput = document.querySelector('.compose-input[placeholder="Subject"]');
+        let newSubject = email.subject || '';
+        if (!newSubject.toLowerCase().startsWith('re:')) {
+            newSubject = `Re: ${newSubject}`;
+        }
+        subjectInput.value = newSubject;
+
+        document.getElementById('composeModal').style.display = 'flex';
+        document.querySelector('.compose-textarea').focus();
     }
 
     getSenderInfo(email) {
@@ -270,14 +344,14 @@ export class EmailTab {
             if (first) { name = first.name || first.email || 'Unknown'; address = first.email || ''; }
             else if (typeof raw === 'string') name = raw;
         }
-        return { name: name.replace(/\"/g, ''), address };
+        return { name: name.replace(/"/g, ''), address };
     }
 
     async markAsRead(id) {
         try { await fetch(`/api/email/${id}/mark-read`, { method: 'POST' }); } catch(e){}
         const email = this.emails.find(e => e.id == id);
         if(email) email.isUnread = false;
-        const el = document.querySelector(`.email-item[data-email-id=\"${id}\"]`);
+        const el = document.querySelector(`.email-item[data-email-id="${id}"]`);
         if(el) el.classList.remove('unread');
     }
 

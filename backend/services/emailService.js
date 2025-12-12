@@ -327,6 +327,29 @@ This email was sent from MCA Command Center automated system.
             return { success: false, error: error.message };
         }
     }
+
+    // Generic email sender for compose/reply flows
+    async sendEmail({ to, subject, html, text }) {
+        try {
+            if (!this.transporter) {
+                await this.initializeTransporter();
+            }
+
+            const info = await this.transporter.sendMail({
+                from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+                to,
+                subject,
+                html: html || text,
+                text: text || ''
+            });
+
+            console.log(`✅ Email sent: ${info.messageId}`);
+            return { success: true, messageId: info.messageId };
+        } catch (error) {
+            console.error('❌ Error sending email:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = EmailService;

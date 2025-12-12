@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const GmailInboxService = require('../services/gmailInboxService');
+const EmailService = require('../services/emailService');
 
-// Instantiate the service once. It will handle reconnections internally.
+// Instantiate services
 const gmail = new GmailInboxService();
+const emailSender = new EmailService();
 
 // GET /api/email/list - Fetch emails (supports ?limit=20&unreadOnly=true)
 router.get('/list', async (req, res) => {
@@ -79,6 +81,29 @@ router.get('/unread-count', async (req, res) => {
         res.json({ success: true, count });
     } catch (error) {
         console.error('API Error getting unread count:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/email/send - Send a new email
+router.post('/send', async (req, res) => {
+    try {
+        const { to, subject, body } = req.body;
+        
+        if (!to || !body) {
+            return res.status(400).json({ success: false, error: 'Missing "to" or "body" fields' });
+        }
+
+        await emailSender.sendEmail({
+            to,
+            subject,
+            html: body,
+            text: body.replace(/<[^>]*>?/gm, '')
+        });
+
+        res.json({ success: true, message: 'Email sent successfully' });
+    } catch (error) {
+        console.error('API Send Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
