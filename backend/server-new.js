@@ -176,6 +176,7 @@ app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 app.use('/api/email', emailRoutes);
+app.use('/api/agent', require('./routes/agent')); // AI Agent for Dispatcher
 
 // --- CONTACT FORM ROUTE (LOG ONLY) ---
 app.post('/api/contact', (req, res) => {
