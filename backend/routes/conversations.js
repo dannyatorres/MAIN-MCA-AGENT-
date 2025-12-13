@@ -1668,4 +1668,45 @@ router.get('/fix/fcs-schema-update', async (req, res) => {
     }
 });
 
+// ==========================================
+// 🤖 AI DISPATCHER TOOLS
+// ==========================================
+
+// Reset a lead so the AI Dispatcher picks it up immediately
+router.post('/:id/reset-ai', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDatabase();
+
+        console.log(`🤖 RESETTING LEAD ${id} FOR AI DISPATCHER...`);
+
+        // 1. Reset state to 'NEW'
+        // 2. Set last_activity to 20 mins ago (so the 5-min buffer passes)
+        // 3. Ensure priority is high so it's grabbed first
+        const result = await db.query(`
+            UPDATE conversations
+            SET state = 'NEW',
+                current_step = 'initial_contact',
+                last_activity = NOW() - INTERVAL '20 minutes',
+                priority = 1
+            WHERE id = $1
+            RETURNING *
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: "Lead not found" });
+        }
+
+        res.json({
+            success: true,
+            message: "Lead reset! Dispatcher will grab it in <15 mins (or on restart).",
+            lead: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error("❌ Reset Error:", err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

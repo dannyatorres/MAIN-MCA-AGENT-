@@ -517,4 +517,127 @@ router.post('/chat/:conversationId/messages', async (req, res) => {
     }
 });
 
+// ==========================================
+// 🤖 AI AGENT - DISPATCHER ENDPOINT
+// ==========================================
+
+// Process lead with AI Agent (called by the Dispatcher)
+router.post('/process-lead', async (req, res) => {
+    try {
+        const { conversation_id, system_instruction } = req.body;
+
+        if (!conversation_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing conversation_id'
+            });
+        }
+
+        console.log(`🤖 [DISPATCHER] Processing lead ${conversation_id}...`);
+
+        // Import the AI Agent service
+        const { runAgentForLead } = require('../services/aiAgent');
+
+        // Run the AI Logic
+        const result = await runAgentForLead(
+            conversation_id,
+            system_instruction || 'You are an AI assistant helping with MCA lead follow-up. Analyze the conversation and provide appropriate responses.'
+        );
+
+        // If AI generated a reply, we need to send it via Twilio
+        if (result.reply) {
+            const db = getDatabase();
+
+            // Get conversation details to get phone number
+            const convResult = await db.query(
+                'SELECT lead_phone, business_name FROM conversations WHERE id = $1',
+                [conversation_id]
+            );
+
+            if (convResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Conversation not found'
+                });
+            }
+
+            const { lead_phone, business_name } = convResult.rows[0];
+
+            // Insert message into database
+            const messageResult = await db.query(`
+                INSERT INTO messages (
+                    conversation_id, content, direction, message_type,
+                    sent_by, timestamp, status
+                )
+                VALUES ($1, $2, 'outbound', 'sms', 'ai_agent', NOW(), 'pending')
+                RETURNING *
+            `, [conversation_id, result.reply]);
+
+            const newMessage = messageResult.rows[0];
+
+            // SEND VIA TWILIO
+            try {
+                if (!lead_phone) {
+                    throw new Error('No phone number found for this conversation');
+                }
+
+                console.log(`📞 Sending AI-generated message to ${lead_phone}...`);
+
+                if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+                    console.error('❌ Twilio credentials not configured!');
+                    await db.query('UPDATE messages SET status = $1 WHERE id = $2', ['failed', newMessage.id]);
+                } else {
+                    const twilio = require('twilio');
+                    const twilioClient = twilio(
+                        process.env.TWILIO_ACCOUNT_SID,
+                        process.env.TWILIO_AUTH_TOKEN
+                    );
+
+                    // Send SMS via Twilio
+                    const twilioMessage = await twilioClient.messages.create({
+                        body: result.reply,
+                        from: process.env.TWILIO_PHONE_NUMBER,
+                        to: lead_phone
+                    });
+
+                    console.log(`✅ AI message sent! SID: ${twilioMessage.sid}`);
+
+                    await db.query(
+                        'UPDATE messages SET status = $1, twilio_sid = $2 WHERE id = $3',
+                        ['sent', twilioMessage.sid, newMessage.id]
+                    );
+
+                    // Update conversation last_activity
+                    await db.query(
+                        'UPDATE conversations SET last_activity = NOW() WHERE id = $1',
+                        [conversation_id]
+                    );
+
+                    // Emit WebSocket event if available
+                    if (global.io) {
+                        global.io.emit('new_message', {
+                            conversation_id: conversation_id,
+                            message: newMessage
+                        });
+                    }
+                }
+            } catch (twilioError) {
+                console.error('❌ Twilio error:', twilioError.message);
+                await db.query('UPDATE messages SET status = $1 WHERE id = $2', ['failed', newMessage.id]);
+            }
+        }
+
+        console.log(`✅ [DISPATCHER] Lead ${conversation_id} processed successfully`);
+
+        res.json(result);
+
+    } catch (error) {
+        console.error('❌ AI Agent Process Error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

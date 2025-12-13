@@ -256,6 +256,42 @@ class CommandCenter {
             }
         };
 
+        // Reset lead for AI Dispatcher
+        window.resetSelectedLead = async () => {
+            // 1. Get the current ID from your existing system
+            const currentId = window.conversationUI?.currentConversationId;
+
+            if (!currentId) {
+                alert("⚠️ Please select a conversation first.");
+                return;
+            }
+
+            if (!confirm("🤖 Reset this lead for the AI Agent?\n\nThis will mark it as 'NEW' and trick the system into thinking it arrived 20 mins ago.")) {
+                return;
+            }
+
+            try {
+                // 2. Call the new API endpoint
+                const response = await window.commandCenter.apiCall(`/api/conversations/${currentId}/reset-ai`, {
+                    method: 'POST'
+                });
+
+                if (response.success) {
+                    alert("✅ Lead Reset! The AI Dispatcher will pick this up on the next run.");
+
+                    // 3. Refresh the list to see the status change to 'NEW'
+                    if (window.conversationUI) {
+                        window.conversationUI.loadConversations();
+                    }
+                } else {
+                    alert("❌ Error: " + response.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Failed to connect to server.");
+            }
+        };
+
         console.log('✅ Global references and Modal functions exposed');
     }
 
