@@ -53,6 +53,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // --- A. INJECT CONTROLLER ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
+            // ENABLE MANAGE LENDERS BUTTON
+            const btn = document.getElementById('manageLendersBtn');
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('disabled');
+                btn.onclick = openLenderManagementModal;
+            }
+
             // --- B. DEFINE GLOBAL FUNCTIONS ---
 
             // 1. HEADER RENDERER
@@ -181,7 +189,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <button class="btn btn-secondary dashboard-action-btn" onclick="window.open('/lead_reformatter.html', '_blank')">
                                     <i class="fas fa-table"></i> Formatter
                                 </button>
-                                <button class="btn btn-secondary dashboard-action-btn" onclick="openLenderManagementModal()">
+                                <button
+                                    id="manageLendersBtn"
+                                    class="btn btn-secondary dashboard-action-btn disabled"
+                                    disabled
+                                >
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
                                 <button class="btn btn-secondary dashboard-action-btn">
