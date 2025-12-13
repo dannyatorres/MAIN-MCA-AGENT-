@@ -1,50 +1,70 @@
 // js/app-bootstrap.js
 import { LeadFormController } from './lead-form-controller.js';
 
-// --- GLOBAL HANDLER (The Fix) ---
-// Robust: gates on readiness, lazy-loads admin, then opens
+// --- GLOBAL HANDLER: Open Lender Management ---
 window.openLenderManagementModal = () => {
-    console.log("🏦 Manage Lenders clicked...");
+    console.log("🏦 [DEBUG] openLenderManagementModal triggered.");
 
-    // 1. Check if Command Center exists
+    // 1. Check Core System
     if (!window.commandCenter) {
-        console.warn("⏳ System initializing...");
+        console.error("❌ [DEBUG] window.commandCenter is missing!");
+        alert("System error: Command Center core not found.");
+        return;
+    }
+    
+    if (!window.commandCenter.isInitialized) {
+        console.warn("⏳ [DEBUG] System still initializing... please wait.");
         return;
     }
 
-    // 2. Lazy Load LenderAdmin if missing
+    // 2. Check/Load Lender Admin
     if (!window.commandCenter.lenderAdmin) {
+        console.log("🔍 [DEBUG] LenderAdmin instance missing. Attempting lazy load...");
+        
         if (typeof LenderAdmin !== 'undefined') {
-            console.log("🏦 Initializing LenderAdmin...");
             try {
                 window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
-            } catch (e) {
-                console.error("❌ Failed to construct LenderAdmin:", e);
-                alert("Error loading Lender Admin. Please refresh.");
+                console.log("✅ [DEBUG] LenderAdmin instantiated successfully.");
+            } catch (err) {
+                console.error("❌ [DEBUG] Failed to instantiate LenderAdmin:", err);
+                alert("Error initializing Lender Admin. Check console.");
                 return;
             }
         } else {
-            alert("⚠️ Lender Admin module not loaded yet. Please refresh.");
+            console.error("❌ [DEBUG] 'LenderAdmin' class is undefined. Script not loaded?");
+            alert("Critical Error: LenderAdmin script is missing.");
             return;
         }
     }
 
-    // 3. Open it
-    window.commandCenter.lenderAdmin.openManagementModal();
+    // 3. Open Modal
+    console.log("🚀 [DEBUG] Calling lenderAdmin.openManagementModal()...");
+    try {
+        window.commandCenter.lenderAdmin.openManagementModal();
+    } catch (e) {
+        console.error("❌ [DEBUG] Error executing openManagementModal:", e);
+    }
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Main Module: Waiting for CommandCenter...');
+    console.log('🚀 [DEBUG] Main Module: DOM Loaded. Waiting for CommandCenter...');
 
-    // --- EVENT DELEGATION (The Magic) ---
+    // --- EVENT DELEGATION (The "Silent Fail" Fix) ---
+    // This catches the click at the document level, so it works even if the button was just re-rendered.
     document.addEventListener('click', (e) => {
+        // Check if the clicked element (or its parent) is the manage button
         const btn = e.target.closest('#manageLendersBtn');
+        
         if (btn) {
-            e.preventDefault();
+            console.log("🖱️ [DEBUG] Click detected on #manageLendersBtn");
+            e.preventDefault(); // Stop any default link behavior
+            
             if (btn.classList.contains('disabled') || btn.disabled) {
-                console.log('🚫 Manage Lenders button is currently disabled');
+                console.warn("🚫 [DEBUG] Click ignored: Button is disabled.");
                 return;
             }
+
+            // Execute the function
             window.openLenderManagementModal();
         }
     });
@@ -63,26 +83,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (initApp()) {
             clearInterval(appInitInterval);
-            console.log('✅ Main Module: System Ready');
+            console.log('✅ [DEBUG] Main Module: CommandCenter is READY.');
 
-            // 1. Inject Controllers
+            // --- A. INJECT CONTROLLERS ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
-            // 2. Pre-load Lender Admin (optional speed-up)
-            if (typeof LenderAdmin !== 'undefined' && !window.commandCenter.lenderAdmin) {
+            // Pre-load Lender Admin (Optional, makes first click faster)
+            if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
+                console.log("🏦 [DEBUG] Pre-loading LenderAdmin...");
                 window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
             }
 
-            // Helper to enable Manage Lenders button after renders
-            const updateDashboardButton = () => {
-                const btn = document.getElementById('manageLendersBtn');
-                if (btn) {
-                    btn.disabled = false;
-                    btn.classList.remove('disabled');
-                }
-            };
-
-            // --- GLOBAL FUNCTIONS ---
+            // --- B. DEFINE GLOBAL FUNCTIONS ---
 
             // 1. HEADER RENDERER
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
@@ -138,7 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
 
-                // Re-attach listeners
+                // Re-attach specific listeners (Call bar, etc)
+                // Note: Manage Lenders is NOT here, it is in Dashboard
                 const callBtn = document.getElementById('callBtn');
                 const endCallBtn = document.getElementById('endCallBtn');
                 const muteBtn = document.getElementById('muteBtn');
@@ -147,11 +160,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     callBtn.addEventListener('click', async () => {
                         if (!phoneNumber) return alert('No phone number available.');
                         if (!window.callManager) {
-                            if (typeof CallManager !== 'undefined') {
-                                window.callManager = new CallManager();
-                            } else {
-                                return alert("Calling system failed to load.");
-                            }
+                            if (typeof CallManager !== 'undefined') window.callManager = new CallManager();
+                            else return alert("Calling system failed to load.");
                         }
                         await window.callManager.startCall(phoneNumber, conversationId);
                     });
@@ -178,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 2. DASHBOARD LOADER
             window.loadDashboard = () => {
-                console.log("🏠 Loading Dashboard...");
+                console.log("🏠 [DEBUG] Loading Dashboard...");
 
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
@@ -199,6 +209,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (actions) actions.classList.add('hidden');
 
                 if (messages) {
+                    // NOTE: Removed 'disabled' attribute from button below because
+                    // we are now gated by the robust click handler above.
                     messages.innerHTML = `
                         <div class="dashboard-container">
                             <div class="dashboard-header">
@@ -210,13 +222,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <button class="btn btn-secondary dashboard-action-btn" onclick="window.open('/lead_reformatter.html', '_blank')">
                                     <i class="fas fa-table"></i> Formatter
                                 </button>
-                                <button
-                                    id="manageLendersBtn"
-                                    class="btn btn-secondary dashboard-action-btn disabled"
-                                    disabled
-                                >
+                                
+                                <button id="manageLendersBtn" class="btn btn-secondary dashboard-action-btn">
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
+                                
                                 <button class="btn btn-secondary dashboard-action-btn">
                                     <i class="fas fa-cog"></i> Settings
                                 </button>
@@ -237,15 +247,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             <div class="stats-grid">
                                 <div class="stat-card">
-                                    <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                                    <div class="stat-icon"><i class="fas fal_fire"></i></div>
                                     <div class="stat-value" id="activeCount">-</div>
                                     <div class="stat-label">Active Leads</div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-icon"><i class="fas fa-spinner"></i></div>
                                     <div class="stat-value" id="processingCount">-</div>
-                                    <div class="stat-label">Processing
-                                    </div>
+                                    <div class="stat-label">Processing</div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
@@ -269,9 +278,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (window.loadMarketNews) window.loadMarketNews();
                 if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
-
-                // Re-enable button after render
-                updateDashboardButton();
             };
 
             // 3. NEWS LOADER
@@ -352,9 +358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // Initial button enable
-            updateDashboardButton();
-
             // C. INITIAL LOAD
             if (!window.commandCenter.currentConversationId) {
                 window.loadDashboard();
@@ -362,7 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         } else if (attempts >= maxAttempts) {
             clearInterval(appInitInterval);
-            console.error('❌ CommandCenter load timeout');
+            console.error('❌ [DEBUG] CommandCenter load timeout (200 attempts)');
         }
     }, 50);
 });
