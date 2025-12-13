@@ -1,52 +1,60 @@
 // js/app-bootstrap.js
 import { LeadFormController } from './lead-form-controller.js';
 
-// ✅ FIX: Define this IMMEDIATELY
+// --- GLOBAL HANDLER (The Fix) ---
+// Robust: gates on readiness, lazy-loads admin, then opens
 window.openLenderManagementModal = () => {
     console.log("🏦 Manage Lenders clicked...");
 
-    // 1. HARD GATE: Check if the core system is actually ready
-    if (!window.commandCenter || !window.commandCenter.isInitialized) {
-        console.warn("⏳ System still initializing...");
-
-        // OPTIONAL: Add a visual toast here if you have one, or just a log
-        // window.commandCenter?.utils?.showNotification("System loading... please wait.", "warning");
-
-        return; // Stop here so we don't crash
+    // 1. Check if Command Center exists
+    if (!window.commandCenter) {
+        console.warn("⏳ System initializing...");
+        return;
     }
 
-    // 2. LAZY LOAD: If LenderAdmin isn't attached yet, attach it now
-    if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
-        console.log("🏦 Booting up LenderAdmin (Lazy Load)...");
-        try {
-            window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
-        } catch (e) {
-            console.error("❌ Failed to construct LenderAdmin:", e);
-            alert("Error loading Lender Admin. Please refresh.");
+    // 2. Lazy Load LenderAdmin if missing
+    if (!window.commandCenter.lenderAdmin) {
+        if (typeof LenderAdmin !== 'undefined') {
+            console.log("🏦 Initializing LenderAdmin...");
+            try {
+                window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
+            } catch (e) {
+                console.error("❌ Failed to construct LenderAdmin:", e);
+                alert("Error loading Lender Admin. Please refresh.");
+                return;
+            }
+        } else {
+            alert("⚠️ Lender Admin module not loaded yet. Please refresh.");
             return;
         }
     }
 
-    // 3. EXECUTE: Open the modal
-    if (window.commandCenter.lenderAdmin) {
-        window.commandCenter.lenderAdmin.openManagementModal();
-    } else {
-        console.error("⚠️ LenderAdmin class missing. Check script tags.");
-    }
+    // 3. Open it
+    window.commandCenter.lenderAdmin.openManagementModal();
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Main Module: Waiting for CommandCenter...');
 
-    // Initialize app when CommandCenter is COMPLETELY ready
+    // --- EVENT DELEGATION (The Magic) ---
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#manageLendersBtn');
+        if (btn) {
+            e.preventDefault();
+            if (btn.classList.contains('disabled') || btn.disabled) {
+                console.log('🚫 Manage Lenders button is currently disabled');
+                return;
+            }
+            window.openLenderManagementModal();
+        }
+    });
+
+    // --- INITIALIZATION LOOP ---
     const initApp = () => {
-        // Check .isInitialized to ensure async modules (like Lenders) are ready
         if (!window.commandCenter || !window.commandCenter.isInitialized) return false;
-        console.log('✅ Main Module: Attaching Logic to CommandCenter');
         return true;
     };
 
-    // Poll for CommandCenter
     let attempts = 0;
     const maxAttempts = 200;
 
@@ -55,24 +63,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (initApp()) {
             clearInterval(appInitInterval);
+            console.log('✅ Main Module: System Ready');
 
-            // --- A. INJECT CONTROLLER ---
+            // 1. Inject Controllers
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
-            // ✅ PRE-LOAD LENDER ADMIN (So it's ready before they click)
-            if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
+            // 2. Pre-load Lender Admin (optional speed-up)
+            if (typeof LenderAdmin !== 'undefined' && !window.commandCenter.lenderAdmin) {
                 window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
             }
 
-            // ENABLE MANAGE LENDERS BUTTON
-            const btn = document.getElementById('manageLendersBtn');
-            if (btn) {
-                btn.disabled = false;
-                btn.classList.remove('disabled');
-                btn.onclick = openLenderManagementModal;
-            }
+            // Helper to enable Manage Lenders button after renders
+            const updateDashboardButton = () => {
+                const btn = document.getElementById('manageLendersBtn');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('disabled');
+                }
+            };
 
-            // --- B. DEFINE GLOBAL FUNCTIONS ---
+            // --- GLOBAL FUNCTIONS ---
 
             // 1. HEADER RENDERER
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
@@ -84,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const actions = document.getElementById('conversationActions');
 
                 if (centerPanel) centerPanel.classList.remove('dashboard-mode');
-                if (inputs) inputs.classList.remove('hidden'); 
+                if (inputs) inputs.classList.remove('hidden');
                 if (actions) actions.classList.remove('hidden');
 
                 if (!header) return;
@@ -234,7 +244,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <div class="stat-card">
                                     <div class="stat-icon"><i class="fas fa-spinner"></i></div>
                                     <div class="stat-value" id="processingCount">-</div>
-                                    <div class="stat-label">Processing</div>
+                                    <div class="stat-label">Processing
+                                    </div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
@@ -258,6 +269,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (window.loadMarketNews) window.loadMarketNews();
                 if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
+
+                // Re-enable button after render
+                updateDashboardButton();
             };
 
             // 3. NEWS LOADER
@@ -337,6 +351,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.commandCenter.conversationUI?.selectedForDeletion.clear();
                 }
             };
+
+            // Initial button enable
+            updateDashboardButton();
 
             // C. INITIAL LOAD
             if (!window.commandCenter.currentConversationId) {
