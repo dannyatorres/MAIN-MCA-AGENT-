@@ -56,7 +56,12 @@ router.post('/trigger', async (req, res) => {
         }
     }
 
-    res.json({ success: true, action: result.shouldReply ? "sent_message" : "status_update_only" });
+    // UPDATE THE RESPONSE TO INCLUDE THE REPLY
+    res.json({
+        success: true,
+        action: result.shouldReply ? "sent_message" : "status_update_only",
+        ai_reply: result.content || "No reply generated (Status update or silence)"
+    });
 });
 
 module.exports = router;
