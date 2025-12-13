@@ -140,7 +140,10 @@ const requireAuth = (req, res, next) => {
         '/api/calling/recording-status',
         '/api/contact',
         '/api/conversations/fix/schema-patch',      // Database migration routes
-        '/api/conversations/fix/fcs-schema-update'  // Database migration routes
+        '/api/conversations/fix/fcs-schema-update', // Database migration routes
+        '/api/agent/trigger',       // Dispatcher AI Agent endpoint
+        '/api/dispatcher/find-leads', // Dispatcher lead finder
+        '/api/dispatcher/mark-processed' // Dispatcher update endpoint
     ];
 
     // Allow exact matches or any calling webhook paths
@@ -177,6 +180,7 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 app.use('/api/email', emailRoutes);
 app.use('/api/agent', require('./routes/agent')); // AI Agent for Dispatcher
+app.use('/api/dispatcher', require('./routes/dispatcher')); // Dispatcher utilities
 
 // --- CONTACT FORM ROUTE (LOG ONLY) ---
 app.post('/api/contact', (req, res) => {
