@@ -1,12 +1,40 @@
 // js/app-bootstrap.js
 import { LeadFormController } from './lead-form-controller.js';
 
+// ✅ FIX: Define this IMMEDIATELY so the button works instantly
+// We move this OUTSIDE the DOMContentLoaded/Init loop so it exists as soon as the file parses.
+window.openLenderManagementModal = () => {
+    console.log("🏦 Manage Lenders clicked...");
+
+    // 1. Safety Check: Is commandCenter ready?
+    if (!window.commandCenter) {
+        console.warn("⚠️ Command Center object not found yet.");
+        alert("System is still initializing. Please wait 1 second.");
+        return;
+    }
+
+    // 2. Lazy-Load the Admin Module if it's missing
+    // We check if the 'LenderAdmin' class (from lender-admin.js) is loaded
+    if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
+        console.log("🏦 Booting up LenderAdmin (Lazy Load)...");
+        window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
+    }
+
+    // 3. Open the Modal
+    if (window.commandCenter.lenderAdmin) {
+        window.commandCenter.lenderAdmin.openManagementModal();
+    } else {
+        console.error("⚠️ LenderAdmin class definition missing. Script tag order correct?");
+        alert("Lender Admin module failed to load.");
+    }
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Main Module: Waiting for CommandCenter...');
 
     // Initialize app when CommandCenter is COMPLETELY ready
     const initApp = () => {
-        // CHANGE: Check .isInitialized to ensure async modules (like Lenders) are ready
+        // Check .isInitialized to ensure async modules (like Lenders) are ready
         if (!window.commandCenter || !window.commandCenter.isInitialized) return false;
         console.log('✅ Main Module: Attaching Logic to CommandCenter');
         return true;
@@ -25,28 +53,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             // --- A. INJECT CONTROLLER ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
-            // ✅ FIX: Force-Initialize Lenders Module for Dashboard Access
-            // This ensures "Manage Lenders" works immediately without opening a conversation first.
-            if (!window.commandCenter.lenders && typeof LendersModule !== 'undefined') {
-                console.log("🏦 Bootstrapping LendersModule for Dashboard...");
-                window.commandCenter.lenders = new LendersModule(window.commandCenter);
-            }
-
             // --- B. DEFINE GLOBAL FUNCTIONS ---
 
-            // 1. HEADER RENDERER (FIXED: Restores Input Bar)
+            // 1. HEADER RENDERER
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
 
-                // === CRITICAL FIX: UNHIDE INPUTS WHEN ENTERING CHAT ===
+                // UNHIDE INPUTS WHEN ENTERING CHAT
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
                 if (centerPanel) centerPanel.classList.remove('dashboard-mode');
-                if (inputs) inputs.classList.remove('hidden'); // Show the input bar
+                if (inputs) inputs.classList.remove('hidden'); 
                 if (actions) actions.classList.remove('hidden');
-                // ======================================================
 
                 if (!header) return;
 
@@ -98,11 +118,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     callBtn.addEventListener('click', async () => {
                         if (!phoneNumber) return alert('No phone number available.');
                         if (!window.callManager) {
-                            console.log("⚠️ Call Manager not ready, initializing...");
                             if (typeof CallManager !== 'undefined') {
                                 window.callManager = new CallManager();
                             } else {
-                                return alert("Calling system failed to load. Please refresh.");
+                                return alert("Calling system failed to load.");
                             }
                         }
                         await window.callManager.startCall(phoneNumber, conversationId);
@@ -128,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // 2. DASHBOARD LOADER (FIXED: Hides Input Bar Correctly)
+            // 2. DASHBOARD LOADER
             window.loadDashboard = () => {
                 console.log("🏠 Loading Dashboard...");
 
@@ -141,15 +160,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const centerHeader = centerPanel ? centerPanel.querySelector('.panel-header') : null;
                 const messages = document.getElementById('messagesContainer');
 
-                // === CRITICAL FIX: HIDE INPUTS FOR DASHBOARD ===
+                // HIDE INPUTS FOR DASHBOARD
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
                 if (centerPanel) centerPanel.classList.add('dashboard-mode');
                 if (centerHeader) centerHeader.innerHTML = '';
-                if (inputs) inputs.classList.add('hidden'); // Hide input bar
+                if (inputs) inputs.classList.add('hidden');
                 if (actions) actions.classList.add('hidden');
-                // ===============================================
 
                 if (messages) {
                     messages.innerHTML = `
@@ -163,7 +181,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <button class="btn btn-secondary dashboard-action-btn" onclick="window.open('/lead_reformatter.html', '_blank')">
                                     <i class="fas fa-table"></i> Formatter
                                 </button>
-
                                 <button class="btn btn-secondary dashboard-action-btn" onclick="openLenderManagementModal()">
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
@@ -220,12 +237,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
             };
 
-            // 3. NEWS LOADER (Keep existing logic)
+            // 3. NEWS LOADER
             window.loadMarketNews = async () => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
 
-                // Skeleton
                 container.innerHTML = `
                     <div class="news-feed-container">
                         <div class="news-header-rich">
@@ -283,19 +299,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             // 4. OTHER HELPERS
-            window.openLenderManagementModal = () => {
-                // Initialize Admin Module if missing
-                if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
-                    console.log("🏦 Initializing LenderAdmin...");
-                    window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
-                }
-
-                if (window.commandCenter.lenderAdmin) {
-                    window.commandCenter.lenderAdmin.openManagementModal();
-                } else {
-                    console.error("⚠️ LenderAdmin class not loaded");
-                }
-            };
             window.toggleDeleteMode = () => {
                 const list = document.getElementById('conversationsList');
                 const btn = document.getElementById('toggleDeleteModeBtn');
