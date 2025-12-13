@@ -1,31 +1,37 @@
 // js/app-bootstrap.js
 import { LeadFormController } from './lead-form-controller.js';
 
-// ✅ FIX: Define this IMMEDIATELY so the button works instantly
-// We move this OUTSIDE the DOMContentLoaded/Init loop so it exists as soon as the file parses.
+// ✅ FIX: Define this IMMEDIATELY
 window.openLenderManagementModal = () => {
     console.log("🏦 Manage Lenders clicked...");
 
-    // 1. Safety Check: Is commandCenter ready?
-    if (!window.commandCenter) {
-        console.warn("⚠️ Command Center object not found yet.");
-        alert("System is still initializing. Please wait 1 second.");
-        return;
+    // 1. HARD GATE: Check if the core system is actually ready
+    if (!window.commandCenter || !window.commandCenter.isInitialized) {
+        console.warn("⏳ System still initializing...");
+
+        // OPTIONAL: Add a visual toast here if you have one, or just a log
+        // window.commandCenter?.utils?.showNotification("System loading... please wait.", "warning");
+
+        return; // Stop here so we don't crash
     }
 
-    // 2. Lazy-Load the Admin Module if it's missing
-    // We check if the 'LenderAdmin' class (from lender-admin.js) is loaded
+    // 2. LAZY LOAD: If LenderAdmin isn't attached yet, attach it now
     if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
         console.log("🏦 Booting up LenderAdmin (Lazy Load)...");
-        window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
+        try {
+            window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
+        } catch (e) {
+            console.error("❌ Failed to construct LenderAdmin:", e);
+            alert("Error loading Lender Admin. Please refresh.");
+            return;
+        }
     }
 
-    // 3. Open the Modal
+    // 3. EXECUTE: Open the modal
     if (window.commandCenter.lenderAdmin) {
         window.commandCenter.lenderAdmin.openManagementModal();
     } else {
-        console.error("⚠️ LenderAdmin class definition missing. Script tag order correct?");
-        alert("Lender Admin module failed to load.");
+        console.error("⚠️ LenderAdmin class missing. Check script tags.");
     }
 };
 
@@ -52,6 +58,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- A. INJECT CONTROLLER ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
+
+            // ✅ PRE-LOAD LENDER ADMIN (So it's ready before they click)
+            if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
+                window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
+            }
 
             // ENABLE MANAGE LENDERS BUTTON
             const btn = document.getElementById('manageLendersBtn');
