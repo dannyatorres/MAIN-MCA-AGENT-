@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
+const { processLeadWithAI } = require('../services/aiService'); // <--- ADD THIS
 const multer = require('multer');
 const AWS = require('aws-sdk');
 const path = require('path');
@@ -213,14 +214,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-// Webhook for Incoming Messages
+// Webhook for Incoming Messages (UPDATED WITH AI AUTO-REPLY)
 router.post('/webhook/receive', async (req, res) => {
     try {
         const { From, Body, MessageSid, MediaUrl0 } = req.body;
         const db = getDatabase();
 
-        console.log('📥 Webhook:', { From, Body, HasMedia: !!MediaUrl0 });
+        console.log('📥 Webhook Inbound:', { From, Body });
 
+        // 1. Find the Conversation
         const cleanPhone = From.replace(/\D/g, '');
         const searchPhone = (cleanPhone.length === 11 && cleanPhone.startsWith('1'))
             ? cleanPhone.substring(1)
@@ -236,6 +238,7 @@ router.post('/webhook/receive', async (req, res) => {
         if (convResult.rows.length === 0) return res.status(200).send('No conversation found');
         const conversation = convResult.rows[0];
 
+        // 2. Save User's Message to DB
         const msgResult = await db.query(`
             INSERT INTO messages (
                 conversation_id, content, direction, message_type,
@@ -253,6 +256,7 @@ router.post('/webhook/receive', async (req, res) => {
 
         const newMessage = msgResult.rows[0];
 
+        // 3. Update Conversation & Notify Frontend
         await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversation.id]);
 
         if (global.io) {
@@ -263,12 +267,62 @@ router.post('/webhook/receive', async (req, res) => {
             });
         }
 
+        // --- 🤖 AI AUTO-REPLY START ---
+        // Acknowledge Twilio FIRST so it doesn't timeout while AI thinks
         res.set('Content-Type', 'text/xml');
         res.send('<Response></Response>');
 
+        // Run AI Logic in Background
+        (async () => {
+            try {
+                console.log(`🤖 AI thinking for ${conversation.business_name}...`);
+                
+                const aiResult = await processLeadWithAI(conversation.id, "The user just replied. Read the history and respond naturally.");
+
+                if (aiResult.shouldReply && aiResult.content) {
+                    console.log(`🗣️ AI generating reply: "${aiResult.content}"`);
+
+                    // A. Insert AI Reply to DB
+                    const aiMsgResult = await db.query(`
+                        INSERT INTO messages (conversation_id, content, direction, message_type, sent_by, status, timestamp)
+                        VALUES ($1, $2, 'outbound', 'sms', 'ai', 'pending', NOW())
+                        RETURNING *
+                    `, [conversation.id, aiResult.content]);
+                    
+                    const aiMessage = aiMsgResult.rows[0];
+
+                    // B. Send via Twilio
+                    const twilio = require('twilio');
+                    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+                    
+                    const sentMsg = await client.messages.create({
+                        body: aiResult.content,
+                        from: process.env.TWILIO_PHONE_NUMBER,
+                        to: From
+                    });
+
+                    // C. Mark Sent in DB
+                    await db.query("UPDATE messages SET status = 'sent', twilio_sid = $1 WHERE id = $2", [sentMsg.sid, aiMessage.id]);
+
+                    // D. Notify Frontend of AI Reply
+                    if (global.io) {
+                        global.io.emit('new_message', {
+                            conversation_id: conversation.id,
+                            message: { ...aiMessage, status: 'sent', twilio_sid: sentMsg.sid }
+                        });
+                    }
+                } else {
+                    console.log('🤫 AI decided not to reply.');
+                }
+            } catch (err) {
+                console.error("❌ AI Auto-Reply Failed:", err);
+            }
+        })();
+        // --- 🤖 AI AUTO-REPLY END ---
+
     } catch (error) {
         console.error('Webhook Error:', error);
-        res.status(500).send(error.message);
+        if (!res.headersSent) res.status(500).send(error.message);
     }
 });
 
