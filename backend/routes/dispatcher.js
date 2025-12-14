@@ -30,14 +30,16 @@ router.get('/find-leads', async (req, res) => {
             WHERE
                 c.state NOT IN ('DEAD', 'ARCHIVED', 'FUNDED')
                 AND (
-                    -- CASE 1: Brand New Leads (Touched > 5 mins ago to let import finish)
+                    -- Case 1: NEW leads (Process after 5 minutes)
                     (c.state = 'NEW' AND c.last_activity < NOW() - INTERVAL '5 minutes')
                     OR
-                    -- CASE 2: Stale Follow-ups (We texted last, > 24 hours ago)
-                    (last_msg.direction = 'outbound' AND last_msg.timestamp < NOW() - INTERVAL '24 hours')
+                    -- Case 2: STALE leads (Process if no reply for 24h AND we haven't checked in 1 hour)
+                    (
+                        last_msg.direction = 'outbound' 
+                        AND last_msg.timestamp < NOW() - INTERVAL '24 hours'
+                        AND c.last_activity < NOW() - INTERVAL '1 hour'
+                    )
                 )
-                -- SAFETY: Don't pick up anyone we checked in the last hour
-                AND c.last_activity < NOW() - INTERVAL '1 hour'
             LIMIT $1
         `;
 
