@@ -76,11 +76,15 @@ async function syncDriveFiles(conversationId, businessName) {
         let pageCount = 0;
 
         do {
+            // UPDATED QUERY: Allow folders OR shortcuts
+            const query = `'${FOLDER_ID}' in parents and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed = false`;
+
             const res = await drive.files.list({
-                q: `'${FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-                fields: 'nextPageToken, files(id, name)', // Get ID and Name
-                pageSize: 1000,                           // Max allowed per page
-                pageToken: pageToken,                     // Current page marker
+                q: query,
+                // IMPORTANT: Request 'shortcutDetails' to get the target ID
+                fields: 'nextPageToken, files(id, name, mimeType, shortcutDetails)', 
+                pageSize: 1000,
+                pageToken: pageToken,
             });
 
             if (res.data.files && res.data.files.length > 0) {
@@ -130,6 +134,14 @@ async function syncDriveFiles(conversationId, businessName) {
         }
 
         const targetFolder = folders.find(f => f.name === matchedName);
+
+        // 🛠️ HANDLE SHORTCUTS
+        if (targetFolder.mimeType === 'application/vnd.google-apps.shortcut') {
+            console.log(`🔗 Resolving Shortcut: "${targetFolder.name}" points to ID: ${targetFolder.shortcutDetails.targetId}`);
+            // Swap the shortcut's ID for the REAL folder ID
+            targetFolder.id = targetFolder.shortcutDetails.targetId;
+        }
+
         console.log(`✅ MATCH FOUND: "${businessName}" -> Folder: "${matchedName}" (ID: ${targetFolder.id})`);
 
         // C. LIST FILES IN TARGET FOLDER
