@@ -334,18 +334,21 @@ This email was sent from MCA Command Center automated system.
     }
 
     // Generic email sender for compose/reply flows
-    async sendEmail({ to, subject, html, text }) {
+    async sendEmail({ to, subject, html, text, attachments }) {
         try {
             if (!this.transporter) {
                 await this.initializeTransporter();
             }
+
+            console.log(`📧 Sending email to ${to} with ${attachments ? attachments.length : 0} attachments`);
 
             const info = await this.transporter.sendMail({
                 from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
                 to,
                 subject,
                 html: html || text,
-                text: text || ''
+                text: text || '',
+                attachments: attachments || []
             });
 
             console.log(`✅ Email sent: ${info.messageId}`);
