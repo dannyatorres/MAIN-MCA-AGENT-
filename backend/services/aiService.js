@@ -3,6 +3,7 @@ const { getDatabase } = require('./database');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+const { syncDriveFiles } = require('./driveService'); // <--- Import it
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -17,6 +18,21 @@ function loadPrompt(filename) {
 }
 
 const TOOLS = [
+    {
+        type: "function",
+        function: {
+            name: "update_lead_email",
+            description: "Saves the user's email address and updates their status.",
+            parameters: {
+                type: "object",
+                properties: {
+                    email: { type: "string", description: "The email address provided by the user." },
+                    status: { type: "string", enum: ["FCS_QUEUE", "INTERESTED"], description: "Move to FCS Queue" }
+                },
+                required: ["email"]
+            }
+        }
+    },
     {
         type: "function",
         function: {
@@ -52,7 +68,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             
             // B. Lead Details (Revenue, Funding Amount, etc.)
             db.query(`
-                SELECT business_name, us_state, 
+                SELECT c.business_name, c.us_state, c.first_name,
                        ld.annual_revenue, ld.funding_amount, ld.business_type, ld.business_start_date
                 FROM conversations c
                 LEFT JOIN lead_details ld ON c.id = ld.conversation_id
@@ -117,7 +133,14 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             });
         } else {
             console.log("🆕 Strategy: Cold Outreach");
-            messages.push({ role: "system", content: loadPrompt('strategy_new.md') });
+            // Load the template
+            let strategy = loadPrompt('strategy_new.md');
+
+            // Inject Real Name (Get this from your leadRes query earlier)
+            const firstName = leadRes.rows[0]?.first_name || "there";
+            strategy = strategy.replace('{{first_name}}', firstName);
+
+            messages.push({ role: "system", content: strategy });
             messages.push({ role: "system", content: `TRIGGER: ${systemInstruction}` });
         }
 
@@ -138,6 +161,28 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     const args = JSON.parse(tool.function.arguments);
                     await db.query("UPDATE conversations SET state = $1 WHERE id = $2", [args.status, conversationId]);
                     if (args.status === 'DEAD') return { shouldReply: false };
+                }
+                if (tool.function.name === 'update_lead_email') {
+                    const args = JSON.parse(tool.function.arguments);
+                    
+                    // 1. Save Email
+                    await db.query(`UPDATE conversations SET email = $1, state = 'FCS_QUEUE' WHERE id = $2`, 
+                        [args.email, conversationId]);
+
+                    // 2. TRIGGER DRIVE SYNC (Fire and Forget)
+                    // We don't await this because it might take 30 seconds to download files.
+                    // Let the AI reply to the user immediately while the files download in background.
+                    
+                    // Fetch business name first
+                    const convData = await db.query("SELECT business_name FROM conversations WHERE id = $1", [conversationId]);
+                    const bizName = convData.rows[0]?.business_name;
+
+                    if (bizName) {
+                        console.log("🚀 Triggering Background Drive Sync...");
+                        syncDriveFiles(conversationId, bizName)
+                            .then(res => console.log("Background Sync Result:", res))
+                            .catch(err => console.error("Background Sync Failed:", err));
+                    }
                 }
             }
         }
