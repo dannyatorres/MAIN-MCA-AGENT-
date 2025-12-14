@@ -19,17 +19,33 @@ const s3 = new AWS.S3({
     region: process.env.AWS_REGION || 'us-east-1'
 });
 
-// 2. AUTHENTICATION
-// We point directly to the variable seen in your screenshot: GOOGLE_CREDENTIALS_JSON
+// 2. AUTHENTICATION (Smart Parsing: JSON or Base64)
 let credentials;
 try {
-    if (!process.env.GOOGLE_CREDENTIALS_JSON) {
+    const rawVar = process.env.GOOGLE_CREDENTIALS_JSON;
+    
+    if (!rawVar) {
         throw new Error("Missing GOOGLE_CREDENTIALS_JSON in environment variables.");
     }
-    credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+
+    let jsonString = rawVar;
+
+    // CHECK: Is this Base64? (Simple regex check)
+    // If it starts with 'ey' (common for Base64 JSON) and doesn't start with '{'
+    if (!rawVar.trim().startsWith('{')) {
+        console.log("🔐 Detected Base64 credentials. Decoding...");
+        jsonString = Buffer.from(rawVar, 'base64').toString('utf8');
+    }
+
+    credentials = JSON.parse(jsonString);
+    console.log("✅ Google Credentials loaded successfully.");
+
 } catch (err) {
-    console.error("❌ Google Auth Error: Could not parse 'GOOGLE_CREDENTIALS_JSON'. Check your Railway variable formatting.", err.message);
-    // Don't crash the whole server, just log it. The sync function will fail gracefully if called.
+    console.error("❌ Google Auth Error:", err.message);
+    // Log the first 5 chars so you can debug what it's trying to parse (without leaking keys)
+    if (process.env.GOOGLE_CREDENTIALS_JSON) {
+        console.error("   DEBUG: Variable starts with:", process.env.GOOGLE_CREDENTIALS_JSON.substring(0, 5) + "...");
+    }
     credentials = null;
 }
 
