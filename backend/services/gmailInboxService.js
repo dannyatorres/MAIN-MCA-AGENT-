@@ -50,24 +50,37 @@ class GmailInboxService {
 
             console.log('🔌 Connecting to Gmail IMAP...');
             this.connection = await imaps.connect(this.config);
-            
-            // Handle unexpected closes
+
+            // --- 🛡️ CRITICAL FIX STARTS HERE ---
+
+            // 1. CATCH THE SOCKET ERROR (The one crashing your server)
+            // The library re-emits socket errors on the main object. We MUST catch them.
+            this.connection.on('error', (err) => {
+                console.log('⚠️ IMAP Connection Error (Handled):', err.message);
+                // Silently reset connection so we can reconnect later
+                this.connection = null;
+            });
+
+            // 2. Handle underlying Protocol errors
             this.connection.imap.once('close', () => {
                 console.log('⚠️ IMAP connection closed by server.');
                 this.connection = null;
             });
 
             this.connection.imap.once('error', (err) => {
-                console.log('⚠️ IMAP connection error:', err.message);
+                console.log('⚠️ IMAP internal error:', err.message);
                 this.connection = null;
             });
+
+            // --- CRITICAL FIX ENDS HERE ---
 
             console.log('✅ Connected to Gmail successfully');
             return true;
         } catch (error) {
             console.error('❌ Failed to connect to Gmail:', error.message);
             this.connection = null;
-            throw error;
+            // Return false instead of throwing so the app stays alive
+            return false;
         }
     }
 
