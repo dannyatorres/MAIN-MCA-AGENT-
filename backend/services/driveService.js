@@ -19,20 +19,18 @@ const s3 = new AWS.S3({
     region: process.env.AWS_REGION || 'us-east-1'
 });
 
-// 2. AUTHENTICATION (Railway + Local Support)
+// 2. AUTHENTICATION
+// We point directly to the variable seen in your screenshot: GOOGLE_CREDENTIALS_JSON
 let credentials;
 try {
-    // 👇 UPDATED: Check for your specific variable name found in the screenshot
-    const jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_CREDENTIALS_JSON;
-    
-    if (jsonString) {
-        credentials = JSON.parse(jsonString);
-    } else {
-        // Fallback: Try reading from local file (Best for Local Testing)
-        credentials = JSON.parse(fs.readFileSync(path.join(__dirname, '../google-service-account.json')));
+    if (!process.env.GOOGLE_CREDENTIALS_JSON) {
+        throw new Error("Missing GOOGLE_CREDENTIALS_JSON in environment variables.");
     }
+    credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
 } catch (err) {
-    console.error("❌ Google Auth Error: Could not find credentials. Checked 'GOOGLE_CREDENTIALS_JSON' and local file.");
+    console.error("❌ Google Auth Error: Could not parse 'GOOGLE_CREDENTIALS_JSON'. Check your Railway variable formatting.", err.message);
+    // Don't crash the whole server, just log it. The sync function will fail gracefully if called.
+    credentials = null;
 }
 
 const auth = new google.auth.GoogleAuth({
