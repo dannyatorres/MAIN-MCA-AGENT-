@@ -22,15 +22,17 @@ const s3 = new AWS.S3({
 // 2. AUTHENTICATION (Railway + Local Support)
 let credentials;
 try {
-    // Try reading from Environment Variable (Best for Railway)
-    credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-} catch (e) {
-    // Fallback: Try reading from local file (Best for Local Testing)
-    try {
+    // 👇 UPDATED: Check for your specific variable name found in the screenshot
+    const jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_CREDENTIALS_JSON;
+    
+    if (jsonString) {
+        credentials = JSON.parse(jsonString);
+    } else {
+        // Fallback: Try reading from local file (Best for Local Testing)
         credentials = JSON.parse(fs.readFileSync(path.join(__dirname, '../google-service-account.json')));
-    } catch (err) {
-        console.error("❌ Google Auth Error: Could not find credentials in Env or File.");
     }
+} catch (err) {
+    console.error("❌ Google Auth Error: Could not find credentials. Checked 'GOOGLE_CREDENTIALS_JSON' and local file.");
 }
 
 const auth = new google.auth.GoogleAuth({
