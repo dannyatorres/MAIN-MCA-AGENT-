@@ -30,10 +30,10 @@ router.get('/find-leads', async (req, res) => {
             WHERE
                 c.state NOT IN ('DEAD', 'ARCHIVED', 'FUNDED')
                 AND (
-                    -- Case 1: NEW leads (Process after 5 minutes)
+                    -- RULE 1: If NEW, wait just 5 minutes
                     (c.state = 'NEW' AND c.last_activity < NOW() - INTERVAL '5 minutes')
                     OR
-                    -- Case 2: STALE leads (Process if no reply for 24h AND we haven't checked in 1 hour)
+                    -- RULE 2: If STALE, wait 24h for reply AND wait 1h between checks
                     (
                         last_msg.direction = 'outbound' 
                         AND last_msg.timestamp < NOW() - INTERVAL '24 hours'
