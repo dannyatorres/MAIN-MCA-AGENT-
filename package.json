@@ -1,6 +1,9 @@
 {
   "name": "mca-command-center",
   "version": "1.0.1",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "description": "MCA Command Center - Unified SMS automation, FCS processing, and lender qualification system",
   "main": "backend/server-new.js",
   "scripts": {
