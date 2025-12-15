@@ -56,126 +56,100 @@ const auth = new google.auth.GoogleAuth({
 const drive = google.drive({ version: 'v3', auth });
 
 /**
- * THE MASTER FUNCTION
- * 1. Scans ALL folders (handling pagination)
- * 2. Uses AI to find the best match for the business name
- * 3. Downloads files & uploads to S3
+ * THE UPGRADED MASTER FUNCTION
+ * 1. Scans folders
+ * 2. Uses AI to fuzzy match (e.g. "Project Capital" -> "Project")
+ * 3. "Peeks" inside to ensure valid files exist
  */
 async function syncDriveFiles(conversationId, businessName) {
     const db = getDatabase();
     console.log(`📂 Starting Drive Sync for: "${businessName}"...`);
 
-    // --- HELPER: Extract ID from URL if needed ---
+    // Helper: Clean ID
     function extractFolderId(input) {
         if (!input) return null;
-        // Regex looks for the ID after '/folders/'
         const match = input.match(/\/folders\/([a-zA-Z0-9-_]+)/);
-        return match ? match[1] : input; // If no URL found, assume it's already an ID
+        return match ? match[1] : input;
     }
 
     try {
-        if (!FOLDER_ID) {
-            throw new Error("Missing GDRIVE_PARENT_FOLDER_ID in environment variables.");
-        }
+        if (!FOLDER_ID) throw new Error("Missing GDRIVE_PARENT_FOLDER_ID");
 
-        // 1. CLEAN THE ID (Fixes the crash)
         const cleanFolderId = extractFolderId(FOLDER_ID);
-        console.log(`🔍 Using Drive Folder ID: ${cleanFolderId}`);
+        console.log(`🔍 Master Drive ID: ${cleanFolderId}`);
 
-        // A. LIST ALL FOLDERS (With Pagination Loop)
+        // A. LIST ALL SUB-FOLDERS
         let folders = [];
         let pageToken = null;
-        let pageCount = 0;
 
         do {
-            // UPDATED QUERY: Uses cleanFolderId instead of the raw URL
-            const query = `'${cleanFolderId}' in parents and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed = false`;
-
             const res = await drive.files.list({
-                q: query,
-                // IMPORTANT: Request 'shortcutDetails' to get the target ID
-                fields: 'nextPageToken, files(id, name, mimeType, shortcutDetails)',
+                q: `'${cleanFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+                fields: 'nextPageToken, files(id, name)',
                 pageSize: 1000,
                 pageToken: pageToken,
             });
-
-            if (res.data.files && res.data.files.length > 0) {
-                folders = folders.concat(res.data.files);
-            }
-
-            pageToken = res.data.nextPageToken; // Set up next loop
-            pageCount++;
-            if (pageCount % 5 === 0) console.log(`...scanned ${folders.length} folders so far...`);
-
-        } while (pageToken); // Keep going until no pages left
+            if (res.data.files) folders = folders.concat(res.data.files);
+            pageToken = res.data.nextPageToken;
+        } while (pageToken);
 
         if (folders.length === 0) {
-            console.log("❌ No folders found in the Master Drive Folder.");
-            return { success: false, error: "Drive empty" };
+            console.log("❌ No sub-folders found. (Did you share the Master Folder with the Service Account email?)");
+            return { success: false, error: "Master folder appears empty (Permissions?)" };
         }
 
-        console.log(`📚 Indexing complete. Found ${folders.length} total folders.`);
+        console.log(`📚 Found ${folders.length} candidate folders. Asking AI to match "${businessName}"...`);
 
-        // B. AI FUZZY MATCHING
+        // B. AI MATCHING (The Brain)
         const prompt = `
-            I have a business lead named: "${businessName}".
-
-            Here is a list of folder names from Google Drive:
+            I have a business named: "${businessName}".
+            Here are the Google Drive folders:
             ${JSON.stringify(folders.map(f => f.name))}
 
-            TASK: Identify the folder that belongs to this business.
-            RULES:
-            - "Project Capital LLC" matches "Project".
-            - "Danny Torres" matches "Danny T".
-            - Return ONLY the exact folder name string.
-            - If there is no reasonable match, return "NO_MATCH".
+            Rules:
+            1. Find the folder that best matches the business name.
+            2. "Project Capital LLC" matches "Project".
+            3. "Danny Torres" matches "Danny T".
+            4. Return ONLY the exact folder name. If no match, return "NO_MATCH".
         `;
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4-turbo",
             messages: [{ role: "system", content: prompt }],
-            temperature: 0 // Strict logic
+            temperature: 0
         });
 
         const matchedName = completion.choices[0].message.content.trim().replace(/['"]/g, "");
 
         if (matchedName === "NO_MATCH") {
-            console.log(`⚠️ AI could not find a matching folder for "${businessName}"`);
+            console.log(`⚠️ AI could not link "${businessName}" to any folder.`);
             return { success: false, error: "No matching folder found" };
         }
 
         const targetFolder = folders.find(f => f.name === matchedName);
+        console.log(`✅ AI Match: "${businessName}" -> Folder: "${matchedName}" (${targetFolder.id})`);
 
-        // 🛠️ HANDLE SHORTCUTS
-        if (targetFolder.mimeType === 'application/vnd.google-apps.shortcut') {
-            console.log(`🔗 Resolving Shortcut: "${targetFolder.name}" points to ID: ${targetFolder.shortcutDetails.targetId}`);
-            targetFolder.id = targetFolder.shortcutDetails.targetId;
-        }
-
-        console.log(`✅ MATCH FOUND: "${businessName}" -> Folder: "${matchedName}" (ID: ${targetFolder.id})`);
-
-        // C. LIST FILES IN TARGET FOLDER
+        // C. PEEK INSIDE (Verify Content)
         const fileRes = await drive.files.list({
             q: `'${targetFolder.id}' in parents and trashed = false`,
-            fields: 'files(id, name, mimeType)',
+            fields: 'files(id, name, mimeType, size)',
         });
 
-        const files = fileRes.data.files;
-        if (!files || files.length === 0) {
-            console.log("⚠️ Folder found, but it is empty.");
+        const files = fileRes.data.files || [];
+        
+        // Filter for useful files (PDFs, Images)
+        const usefulFiles = files.filter(f => !f.mimeType.includes('folder'));
+
+        if (usefulFiles.length === 0) {
+            console.log(`⚠️ Folder "${matchedName}" exists but is empty.`);
             return { success: true, count: 0, message: "Folder empty" };
         }
 
-        console.log(`📄 Found ${files.length} files. Starting transfer...`);
+        console.log(`👀 Peek successful: Found ${usefulFiles.length} files. Downloading...`);
 
-        // D. DOWNLOAD & UPLOAD TO S3
+        // D. DOWNLOAD & SYNC LOGIC (Standard S3 Upload)
         let uploadedCount = 0;
-
-        for (const file of files) {
-            if (file.mimeType.includes('folder')) continue;
-
-            console.log(`⬇️ Processing: ${file.name}`);
-
+        for (const file of usefulFiles) {
             try {
                 const driveStream = await drive.files.get(
                     { fileId: file.id, alt: 'media' },
@@ -200,21 +174,20 @@ async function syncDriveFiles(conversationId, businessName) {
                 `, [conversationId, s3Key, file.name, file.mimeType]);
 
                 uploadedCount++;
-
             } catch (err) {
-                console.error(`❌ Failed to upload ${file.name}:`, err.message);
+                console.error(`Skipping file ${file.name}: ${err.message}`);
             }
         }
 
         if (uploadedCount > 0) {
+            // Update status so frontend knows to show "FCS Ready"
             await db.query("UPDATE conversations SET state = 'FCS_READY' WHERE id = $1", [conversationId]);
-            console.log(`🎉 Success! Synced ${uploadedCount} documents. Lead is FCS_READY.`);
         }
 
         return { success: true, count: uploadedCount };
 
     } catch (err) {
-        console.error("❌ Drive Sync System Error:", err);
+        console.error("❌ Drive Sync Error:", err.message);
         return { success: false, error: err.message };
     }
 }
