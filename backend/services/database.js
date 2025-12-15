@@ -188,4 +188,23 @@ function getDatabase() {
         pool = new Pool({
             connectionString: process.env.DATABASE_URL,
             ssl: { rejectUnauthorized: false },
-            client_encoding: 'UT
+            client_encoding: 'UTF8'F8'
+        });
+
+        pool.on('error', (err) => {
+            console.error('❌ Unexpected database error:', err);
+        });
+
+        console.log('✅ Database connection pool created');
+    }
+
+    return pool;  // Return the pool directly, NOT a promise
+}
+
+// Call initialize on module load
+initialize().catch(err => console.error('Failed to initialize database:', err));
+
+module.exports = {
+    getDatabase,
+    initialize
+};

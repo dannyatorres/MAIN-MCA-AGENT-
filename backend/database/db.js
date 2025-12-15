@@ -784,4 +784,7 @@ module.exports = {
     async deleteDocument(documentId) { return this.getInstance().deleteDocument(documentId); },
     async saveLeadDetails(conversationId, leadDetailsData) { return this.getInstance().saveLeadDetails(conversationId, leadDetailsData); },
     async getLeadDetails(conversationId) { return this.getInstance().getLeadDetails(conversationId); },
-    async updateLeadDetails(conversationId, updateData) { return this.getInstance().updateLeadDetails(c
+    async updateLeadDetails(conversationId, updateData) { return this.getInstance().updateLeadDetails(conversationId, updateData); },
+    async healthCheck() { return this.getInstance().healthCheck(); },
+    async ensureDocumentsTable() { return this.getInstance().ensureDocumentsTable(); }
+};
