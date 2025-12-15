@@ -17,18 +17,72 @@ if (require('fs').existsSync(rootPath)) {
     require('dotenv').config();
 }
 
+// 🛡️ HELPER: Smartly decodes Base64 variables or returns raw text
+const getEnvVar = (key) => {
+    const value = process.env[key];
+    if (!value) return null;
+
+    // 1. If it looks like a raw Refresh Token (starts with 1//), return it raw
+    if (value.startsWith('1//')) return value.trim();
+
+    // 2. If it looks like a raw Client ID (ends with .com), return it raw
+    if (value.endsWith('.com')) return value.trim();
+
+    // 3. Otherwise, try to auto-detect Base64
+    try {
+        const decoded = Buffer.from(value, 'base64').toString('utf8');
+        if (/^[\x20-\x7E]*$/.test(decoded)) {
+            return decoded.trim();
+        }
+        return value.trim();
+    } catch (e) {
+        return value.trim();
+    }
+};
+
+
 class GmailInboxService {
     constructor() {
         this.connection = null;
-        this.isFetching = false; // 🔒 LOCK VARIABLE (The Traffic Light)
+        this.isFetching = false;
+
+        // Use the helper to get clean credentials
+        const user = getEnvVar('EMAIL_USER');
+        const clientId = getEnvVar('GMAIL_CLIENT_ID');
+        const clientSecret = getEnvVar('GMAIL_CLIENT_SECRET');
+        const refreshToken = getEnvVar('GMAIL_REFRESH_TOKEN');
+
+        // 🚨 CRITICAL: Check for all OAuth components
+        if (!user || !clientId || !clientSecret || !refreshToken) {
+            console.error('❌ IMAP Connection Failed: OAuth credentials missing.');
+            this.config = null; // Prevent connection attempts
+            return;
+        }
+
+        // ✅ Use OAuth2 for IMAP (Gmail requires this over password)
         this.config = {
             imap: {
-                user: process.env.EMAIL_USER,
-                password: process.env.EMAIL_PASSWORD,
+                user: user,
+                xoauth2: { // ⬅️ THIS IS THE CRITICAL CHANGE
+                    user: user,
+                    clientId: clientId,
+                    clientSecret: clientSecret,
+                    refreshToken: refreshToken
+                },
                 host: 'imap.gmail.com',
                 port: 993,
                 tls: true,
                 authTimeout: 10000,
+                // Gmail requires this if we use the same scope for IMAP/SMTP
+                // If you get an error here, you might need to revert this to the basic object
+                auth: { 
+                    xoauth2: { 
+                        user: user,
+                        clientId: clientId,
+                        clientSecret: clientSecret,
+                        refreshToken: refreshToken
+                    }
+                },
                 tlsOptions: { rejectUnauthorized: false }
             }
         };
@@ -39,7 +93,7 @@ class GmailInboxService {
      */
     async connect() {
         try {
-            if (!this.config.imap.user || !this.config.imap.password) {
+            if (!this.config || !this.config.imap.user) {
                 throw new Error('Gmail credentials not configured.');
             }
 
@@ -209,13 +263,12 @@ class GmailInboxService {
             timestamp: mail.date ? new Date(mail.date).getTime() : Date.now(),
             text: mail.text || '',
             html: mail.html || '',
-            snippet: (mail.text || '').substring(0, 150).replace(/\s+/g, ' ').trim() + '...',
-            attachments: mail.attachments ? mail.attachments.map(att => ({
+            snippet: (mail.text || '').substring(0, 150).replace(/\s+/g, ' ').trim() + '...',            attachments: mail.attachments ? mail.attachments.map(att => ({
                 filename: att.filename,
                 contentType: att.contentType,
                 size: att.size
             })) : [],
-            isUnread: !message.attributes.flags.includes('\\Seen')
+            isUnread: !message.attributes.flags.includes('\Seen')
         };
     }
 
@@ -234,7 +287,7 @@ class GmailInboxService {
         return this.retryOperation(async () => {
             await this.ensureConnection();
             await this.connection.openBox('INBOX');
-            await this.connection.addFlags(emailId, '\\Seen');
+            await this.connection.addFlags(emailId, '\Seen');
         });
     }
 
@@ -242,7 +295,7 @@ class GmailInboxService {
         return this.retryOperation(async () => {
             await this.ensureConnection();
             await this.connection.openBox('INBOX');
-            await this.connection.delFlags(emailId, '\\Seen');
+            await this.connection.delFlags(emailId, '\Seen');
         });
     }
 
@@ -250,7 +303,7 @@ class GmailInboxService {
         return this.retryOperation(async () => {
             await this.ensureConnection();
             await this.connection.openBox('INBOX');
-            await this.connection.addFlags(emailId, '\\Deleted');
+            await this.connection.addFlags(emailId, '\Deleted');
             await this.connection.imap.expunge();
         });
     }
