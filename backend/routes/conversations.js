@@ -126,40 +126,138 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new conversation
+// Create new conversation (FULL DATA VERSION)
 router.post('/', async (req, res) => {
     try {
-        const conversationData = req.body;
+        const data = req.body;
         const db = getDatabase();
 
-        // FIXED: Changed priority default from 'medium' to 1 (Integer) to fix DB error
-        const result = await db.query(`
+        console.log('📝 Creating new lead with FULL details...');
+
+        // --- 1. SANITIZATION (Clean up the inputs) ---
+        // Clean Phone Numbers (Remove () - space)
+        ['lead_phone', 'cell_phone', 'owner_phone', 'owner2_phone'].forEach(k => {
+            if (data[k]) data[k] = data[k].replace(/\D/g, '');
+        });
+
+        // Clean Currency (Remove $ ,)
+        ['annualRevenue', 'monthlyRevenue', 'requestedAmount', 'funding_amount'].forEach(k => {
+            if (data[k]) data[k] = String(data[k]).replace(/[^0-9.]/g, '');
+        });
+
+        // --- 2. SMART NAME EXTRACTION ---
+        // Try to find the name in any field the frontend might send
+        let firstName = data.first_name || data.owner_name || data.ownerFirstName || data.contact_name || null;
+        let lastName = data.last_name || data.ownerLastName || null;
+
+        // Split "Dan Torres" if needed
+        if (firstName && firstName.includes(' ') && !lastName) {
+            const parts = firstName.split(' ');
+            firstName = parts[0];
+            lastName = parts.slice(1).join(' ');
+        }
+
+        // --- 3. INSERT INTO CONVERSATIONS (Basic Info) ---
+        const convResult = await db.query(`
             INSERT INTO conversations (
                 business_name, lead_phone, email, us_state,
-                address, current_step, priority
+                address, city, zip,
+                first_name, last_name,
+                lead_source, notes,
+                current_step, priority
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING *
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'initial_contact', $12)
+            RETURNING id, business_name, first_name
         `, [
-            conversationData.business_name,
-            conversationData.lead_phone,
-            conversationData.email,
-            conversationData.us_state,
-            conversationData.business_address,
-            'initial_contact',
-            // Fix: Send a number (1) instead of a string ("medium")
-            conversationData.priority ? parseInt(conversationData.priority) : 1
+            data.business_name,
+            data.lead_phone,
+            data.email,
+            data.us_state,
+            data.business_address || data.address,
+            data.business_city || data.city,
+            data.business_zip || data.zip,
+            firstName,
+            lastName,
+            data.lead_source || 'Manual Entry',
+            data.notes || '',
+            data.priority ? parseInt(data.priority) : 1
         ]);
 
-        console.log(`✅ New conversation created: ${result.rows[0].id}`);
+        const newId = convResult.rows[0].id;
+        console.log(`✅ Step 1: Conversation created: ${newId} (Name: ${firstName})`);
 
+        // --- 4. INSERT INTO LEAD_DETAILS (The Deep Data) ---
+        // This saves SSN, Revenue, and OWNER 2 info
+        await db.query(`
+            INSERT INTO lead_details (
+                conversation_id,
+
+                -- Business Details
+                tax_id_encrypted, business_start_date, business_type,
+                annual_revenue, funding_amount,
+
+                -- Owner 1 Details
+                ssn_encrypted, date_of_birth,
+                owner_ownership_percent, owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
+
+                -- Owner 2 Details
+                owner2_first_name, owner2_last_name,
+                owner2_email, owner2_phone,
+                owner2_ssn, owner2_dob,
+                owner2_ownership_percent,
+                owner2_address, owner2_city, owner2_state, owner2_zip,
+
+                created_at
+            )
+            VALUES (
+                $1,
+                $2, $3, $4, $5, $6,
+                $7, $8, $9, $10, $11, $12, $13,
+                $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24,
+                NOW()
+            )
+        `, [
+            newId,
+            // Business
+            data.tax_id || data.federalTaxId,
+            data.business_start_date || data.businessStartDate,
+            data.business_type || data.industryType,
+            data.annual_revenue || data.annualRevenue,
+            data.funding_amount || data.requestedAmount,
+
+            // Owner 1
+            data.ssn || data.ownerSSN,
+            data.date_of_birth || data.ownerDOB,
+            data.ownership_percent || data.ownershipPercent,
+            data.owner_home_address || data.ownerHomeAddress,
+            data.owner_home_city || data.ownerHomeCity,
+            data.owner_home_state || data.ownerHomeState,
+            data.owner_home_zip || data.ownerHomeZip,
+
+            // Owner 2 (The stuff you were missing!)
+            data.owner2_first_name || data.owner2FirstName,
+            data.owner2_last_name || data.owner2LastName,
+            data.owner2_email || data.owner2Email,
+            data.owner2_phone || data.owner2Phone,
+            data.owner2_ssn || data.owner2SSN,
+            data.owner2_dob || data.owner2DOB,
+            data.owner2_ownership_percent || data.owner2OwnershipPercent,
+            data.owner2_address || data.owner2HomeAddress,
+            data.owner2_city || data.owner2HomeCity,
+            data.owner2_state || data.owner2HomeState,
+            data.owner2_zip || data.owner2HomeZip
+        ]);
+
+        console.log(`✅ Step 2: Lead Details (including Owner 2) saved for ${newId}`);
+
+        // --- 5. RETURN SUCCESS ---
         res.json({
             success: true,
-            conversation: result.rows[0]
+            conversation: { ...convResult.rows[0], id: newId }
         });
 
     } catch (error) {
-        console.error('Error creating conversation:', error);
+        console.error('❌ Error creating conversation:', error);
         res.status(500).json({
             success: false,
             error: error.message
