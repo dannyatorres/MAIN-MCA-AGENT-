@@ -24,32 +24,38 @@ class EmailService {
     }
 
     async initializeTransporter() {
-        // Check for OAuth credentials
-        if (!process.env.EMAIL_USER || !process.env.GMAIL_CLIENT_ID || !process.env.GMAIL_REFRESH_TOKEN) {
-            console.warn('❌ Email OAuth credentials missing. Check .env file.');
+        // Check for OAuth credentials OR Password (supports both now)
+        const hasOAuth = process.env.GMAIL_CLIENT_ID && process.env.GMAIL_REFRESH_TOKEN;
+        const hasPassword = process.env.EMAIL_PASSWORD;
+
+        if (!process.env.EMAIL_USER || (!hasOAuth && !hasPassword)) {
+            console.warn('❌ Email credentials missing. Check .env file.');
             return;
         }
 
         try {
-            // ✅ UPDATED: OAuth2 Configuration with High-Speed Pooling
+            const authConfig = hasOAuth ? {
+                type: 'OAuth2',
+                user: process.env.EMAIL_USER,
+                clientId: process.env.GMAIL_CLIENT_ID,
+                clientSecret: process.env.GMAIL_CLIENT_SECRET,
+                refreshToken: process.env.GMAIL_REFRESH_TOKEN
+            } : {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+            };
+
+            // ✅ UPDATED: Configuration
             this.transporter = nodemailer.createTransport({
                 service: 'gmail',
-                pool: true,          // Keeps connection open
-                maxConnections: 5,   // Sends 5 emails at once
-                maxMessages: 100,
-                rateLimit: 10,       // Prevents blocking
-                auth: {
-                    type: 'OAuth2',  // <--- THE MAGIC SWITCH
-                    user: process.env.EMAIL_USER,
-                    clientId: process.env.GMAIL_CLIENT_ID,
-                    clientSecret: process.env.GMAIL_CLIENT_SECRET,
-                    refreshToken: process.env.GMAIL_REFRESH_TOKEN
-                }
+                pool: true,
+                maxConnections: 5,
+                auth: authConfig
             });
 
             // Verify connection
             await this.transporter.verify();
-            console.log('🚀 High-Speed Email Service Ready (OAuth2 Mode)');
+            console.log('🚀 High-Speed Email Service Ready (OAuth2 Active)');
         } catch (error) {
             console.error('❌ Failed to initialize email service:', error.message);
             this.transporter = null;
