@@ -30,6 +30,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
     const db = getDatabase();
     console.log(`🧠 AI Agent waking up for Lead ID: ${conversationId}`);
 
+    // 1. LOG THE INSTRUCTION (The Rules)
+    console.log("🧠 [DEBUG] SYSTEM INSTRUCTION:", systemInstruction);
+
     try {
         // 1. GET HISTORY (Context)
         const history = await db.query(`
@@ -70,7 +73,10 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             messages.push({ role: "system", content: systemInstruction });
         }
 
-        // 3. CONSULT OPENAI
+        // 2. LOG THE HISTORY (What the AI sees)
+        console.log("📜 [DEBUG] CHAT HISTORY SENT TO AI:", JSON.stringify(messages, null, 2));
+
+        // 3. CALL OPENAI
         const completion = await openai.chat.completions.create({
             model: "gpt-4-turbo",
             messages: messages,
@@ -80,7 +86,13 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         const aiMsg = completion.choices[0].message;
 
-        // 4. EXECUTE TOOLS
+        // 4. LOG THE RESULT (The raw thought)
+        console.log("💡 [DEBUG] RAW AI REPLY:", aiMsg.content);
+        if (aiMsg.tool_calls) {
+            console.log("🔧 [DEBUG] TOOL CALLS:", JSON.stringify(aiMsg.tool_calls, null, 2));
+        }
+
+        // 5. EXECUTE TOOLS
         if (aiMsg.tool_calls) {
             for (const tool of aiMsg.tool_calls) {
                 if (tool.function.name === 'update_lead_status') {
@@ -92,7 +104,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
         }
 
-        // 5. RETURN REPLY
+        // 6. RETURN REPLY
         if (aiMsg.content) {
             return { shouldReply: true, content: aiMsg.content };
         }
