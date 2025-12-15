@@ -6,6 +6,9 @@ const path = require('path');
 const stream = require('stream');
 require('dotenv').config();
 
+// IMPORT THE FCS SERVICE
+const fcsService = require('./fcsService');
+
 // CONFIGURATION
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 const FOLDER_ID = process.env.GDRIVE_PARENT_FOLDER_ID;
@@ -121,7 +124,7 @@ async function syncDriveFiles(conversationId, businessName) {
 
         console.log(`👀 Peek successful: Found ${usefulFiles.length} files. Downloading...`);
 
-        // D. DOWNLOAD & SAVE (Fixed DB Insert)
+        // D. DOWNLOAD & SAVE
         let uploadedCount = 0;
         for (const file of usefulFiles) {
             try {
@@ -143,8 +146,7 @@ async function syncDriveFiles(conversationId, businessName) {
                     ContentType: file.mimeType || 'application/pdf'
                 }).promise();
 
-                // 2. Insert into DB (✅ FIXED: Added filename and file_size)
-                // We use 'file.size' from Google Drive. If missing, default to 0.
+                // 2. Insert into DB (with Filename!)
                 const fileSize = file.size ? parseInt(file.size) : 0;
                 
                 await db.query(`
@@ -172,6 +174,15 @@ async function syncDriveFiles(conversationId, businessName) {
         if (uploadedCount > 0) {
             await db.query("UPDATE conversations SET state = 'FCS_READY' WHERE id = $1", [conversationId]);
             console.log(`🎉 Success! Synced ${uploadedCount} documents. Lead is FCS_READY.`);
+
+            // --- ⚡ AUTO-TRIGGER FCS ANALYSIS ---
+            console.log("⚡ Auto-Triggering Financial Analysis (FCS)...");
+            try {
+                await fcsService.generateAndSaveFCS(conversationId, businessName, db);
+                console.log("✅ Auto-FCS Completed Successfully.");
+            } catch (fcsErr) {
+                console.error("⚠️ Auto-FCS Trigger Failed:", fcsErr.message);
+            }
         }
 
         return { success: true, count: uploadedCount };
