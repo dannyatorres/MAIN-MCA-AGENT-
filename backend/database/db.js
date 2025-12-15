@@ -632,6 +632,24 @@ class Database {
     // Lead Details operations
     async saveLeadDetails(conversationId, leadDetailsData) {
         try {
+            // ---------------------------------------------------------
+            // 🛠️ AUTO-FIX: Ensure columns exist before saving
+            // This runs instantly and silently adds missing columns if needed.
+            // ---------------------------------------------------------
+            try {
+                await this.query(`
+                    ALTER TABLE lead_details
+                    ADD COLUMN IF NOT EXISTS owner_home_address TEXT,
+                    ADD COLUMN IF NOT EXISTS owner_city VARCHAR(100),
+                    ADD COLUMN IF NOT EXISTS owner_state VARCHAR(50),
+                    ADD COLUMN IF NOT EXISTS owner_zip VARCHAR(20),
+                    ADD COLUMN IF NOT EXISTS owner_ownership_percent DECIMAL(5,2);
+                `);
+            } catch (ignored) {
+                // If this fails for any reason, we just ignore it and try to save anyway
+            }
+            // ---------------------------------------------------------
+
             const result = await this.query(`
                 INSERT INTO lead_details (
                     conversation_id,
