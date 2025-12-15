@@ -632,7 +632,6 @@ class Database {
     // Lead Details operations
     async saveLeadDetails(conversationId, leadDetailsData) {
         try {
-
             const result = await this.query(`
                 INSERT INTO lead_details (
                     conversation_id,
@@ -647,9 +646,17 @@ class Database {
                     date_of_birth,
                     tax_id_encrypted,
                     ssn_encrypted,
+                    -- NEW FIELDS BELOW --
                     owner_ownership_percent,
+                    owner_home_address,
+                    owner_city,
+                    owner_state,
+                    owner_zip,
                     created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                    $13, $14, $15, $16, $17, $18
+                )
                 RETURNING *
             `, [
                 conversationId,
@@ -664,12 +671,18 @@ class Database {
                 leadDetailsData.date_of_birth || null,
                 leadDetailsData.tax_id || null,
                 leadDetailsData.ssn || null,
+                // MATCHING NEW FIELDS
                 leadDetailsData.owner_ownership_percent || null,
+                leadDetailsData.owner_home_address || null,
+                leadDetailsData.owner_city || null,
+                leadDetailsData.owner_state || null,
+                leadDetailsData.owner_zip || null,
                 'csv_import'
             ]);
 
             return result.rows[0];
         } catch (error) {
+            console.error("❌ Error saving lead details:", error);
             throw error;
         }
     }
