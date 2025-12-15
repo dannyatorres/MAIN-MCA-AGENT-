@@ -45,13 +45,20 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 2. CONSTRUCT THE CONTEXT
         const messages = [];
 
-        // A. The "Persona" (Always first)
-        messages.push({
-            role: "system",
-            content: "You are Alex, a helpful funding specialist for MC Agent. Keep texts short (under 160 chars), friendly, and direct. Do not use 'Dear' or formal salutations. Your goal is to get them to apply for funding."
-        });
+        // A. The "Persona" (Base setting)
+        // If no specific instruction is passed, default to a helpful assistant.
+        // Otherwise, rely entirely on the systemInstruction below.
+        if (!systemInstruction) {
+            messages.push({
+                role: "system",
+                content: "You are a helpful assistant."
+            });
+        } else {
+            // 1. Always add the Specific Strategy FIRST (Dan Torres)
+            messages.push({ role: "system", content: systemInstruction });
+        }
 
-        // B. Add the History
+        // 2. Then add the History
         if (history.rows.length > 0) {
             history.rows.forEach(msg => {
                 messages.push({
@@ -60,17 +67,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 });
             });
 
-            // 🧠 SMART FIX: If history exists, override the "New Lead" instruction
-            // This prevents the AI from saying "Hi, I'm Alex" to someone you've already talked to.
-            console.log("📜 History detected. Switching to 'Contextual Reply' mode.");
+            // Add a reminder to look at the history
             messages.push({
                 role: "system",
-                content: "SYSTEM NOTE: The user has not replied recently. Read the conversation history above and send a relevant, natural follow-up message. Do NOT re-introduce yourself if you have already spoken."
+                content: "SYSTEM NOTE: The user has replied previously. Read the history above. Do NOT re-introduce yourself."
             });
-        } else {
-            // C. No History? Use the Dispatcher's original instruction (e.g., "Send Intro")
-            console.log("🆕 No history found. Using 'New Lead' instruction.");
-            messages.push({ role: "system", content: systemInstruction });
         }
 
         // 2. LOG THE HISTORY (What the AI sees)
