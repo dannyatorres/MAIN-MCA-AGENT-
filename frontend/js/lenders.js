@@ -1693,19 +1693,12 @@ class LendersModule {
 
         if (!messageField || !conversation) return;
 
-        const businessName = conversation.business_name || 'N/A';
-        const requestedAmount = conversation.requested_amount || conversation.funding_amount || 'N/A';
-        const formattedAmount = requestedAmount !== 'N/A' ? `${parseInt(requestedAmount).toLocaleString()}` : 'N/A';
+        const businessName = conversation.business_name || 'the client';
 
+        // ✅ SIMPLIFIED TEMPLATE: No data list, just the business name
         const message = `Hello,
 
-Please find attached the funding application and supporting documents for our mutual client.
-
-Business Name: ${businessName}
-Requested Amount: ${formattedAmount}
-Industry: ${conversation.industry_type || conversation.business_type || 'N/A'}
-Time in Business: ${conversation.years_in_business || 'N/A'} years
-Monthly Revenue: ${conversation.monthly_revenue ? `${parseInt(conversation.monthly_revenue).toLocaleString()}` : 'N/A'}
+Please find attached the funding application and supporting documents for ${businessName}.
 
 Please review and let me know if you need any additional information.
 
