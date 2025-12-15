@@ -14,33 +14,21 @@ class Database {
 
         console.log('🔗 Initializing database connection...');
 
-        // Create PostgreSQL connection pool with SSL for AWS RDS
-        const connectionConfig = {
-            host: process.env.DB_HOST,
-            port: process.env.DB_PORT || 5432,
-            database: process.env.DB_NAME,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            ssl: process.env.DB_SSL === 'true' ? {
-                rejectUnauthorized: false // Required for AWS RDS
-            } : false,
-            // Connection pool settings - reduced timeouts to prevent hanging
-            max: 10, // Maximum number of clients in the pool
-            idleTimeoutMillis: 10000, // 10 seconds
-            connectionTimeoutMillis: 5000, // 5 seconds timeout
-            acquireTimeoutMillis: 5000, // 5 seconds to acquire connection
-            statement_timeout: 10000, // 10 seconds for statements
-            query_timeout: 10000, // 10 seconds for queries
-        };
+        let sslConfig = false;
+        // Prioritize PGSSLMODE for explicit control over SSL verification
+        if (process.env.PGSSLMODE === 'disable' || process.env.PGSSLMODE === 'no-verify') {
+            sslConfig = { rejectUnauthorized: false };
+        } else if (process.env.DB_SSL === 'true' || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require'))) {
+            // Otherwise, rely on DB_SSL or sslmode in DATABASE_URL
+            sslConfig = { rejectUnauthorized: false };
+        }
 
         // Support DATABASE_URL format as well
         if (process.env.DATABASE_URL) {
             console.log('📎 Using DATABASE_URL connection string');
             this.pool = new Pool({
                 connectionString: process.env.DATABASE_URL,
-                ssl: process.env.DB_SSL === 'true' ? {
-                    rejectUnauthorized: false
-                } : false,
+                ssl: sslConfig, // Apply dynamic sslConfig
                 max: 10,
                 idleTimeoutMillis: 10000,
                 connectionTimeoutMillis: 5000, // 5 seconds timeout
@@ -50,7 +38,20 @@ class Database {
             });
         } else {
             console.log('📎 Using individual DB config parameters');
-            this.pool = new Pool(connectionConfig);
+            this.pool = new Pool({ // Re-use the same sslConfig for consistency
+                host: process.env.DB_HOST,
+                port: process.env.DB_PORT || 5432,
+                database: process.env.DB_NAME,
+                user: process.env.DB_USER,
+                password: process.env.DB_PASSWORD,
+                ssl: sslConfig,
+                max: 10,
+                idleTimeoutMillis: 10000,
+                connectionTimeoutMillis: 5000, // 5 seconds timeout
+                acquireTimeoutMillis: 5000, // 5 seconds to acquire connection
+                statement_timeout: 10000, // 10 seconds for statements
+                query_timeout: 10000, // 10 seconds for queries
+            });
         }
 
         // Handle connection errors gracefully
