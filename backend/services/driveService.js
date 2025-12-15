@@ -65,10 +65,22 @@ async function syncDriveFiles(conversationId, businessName) {
     const db = getDatabase();
     console.log(`📂 Starting Drive Sync for: "${businessName}"...`);
 
+    // --- HELPER: Extract ID from URL if needed ---
+    function extractFolderId(input) {
+        if (!input) return null;
+        // Regex looks for the ID after '/folders/'
+        const match = input.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+        return match ? match[1] : input; // If no URL found, assume it's already an ID
+    }
+
     try {
         if (!FOLDER_ID) {
             throw new Error("Missing GDRIVE_PARENT_FOLDER_ID in environment variables.");
         }
+
+        // 1. CLEAN THE ID (Fixes the crash)
+        const cleanFolderId = extractFolderId(FOLDER_ID);
+        console.log(`🔍 Using Drive Folder ID: ${cleanFolderId}`);
 
         // A. LIST ALL FOLDERS (With Pagination Loop)
         let folders = [];
@@ -76,13 +88,13 @@ async function syncDriveFiles(conversationId, businessName) {
         let pageCount = 0;
 
         do {
-            // UPDATED QUERY: Allow folders OR shortcuts
-            const query = `'${FOLDER_ID}' in parents and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed = false`;
+            // UPDATED QUERY: Uses cleanFolderId instead of the raw URL
+            const query = `'${cleanFolderId}' in parents and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.shortcut') and trashed = false`;
 
             const res = await drive.files.list({
                 q: query,
                 // IMPORTANT: Request 'shortcutDetails' to get the target ID
-                fields: 'nextPageToken, files(id, name, mimeType, shortcutDetails)', 
+                fields: 'nextPageToken, files(id, name, mimeType, shortcutDetails)',
                 pageSize: 1000,
                 pageToken: pageToken,
             });
@@ -105,13 +117,12 @@ async function syncDriveFiles(conversationId, businessName) {
         console.log(`📚 Indexing complete. Found ${folders.length} total folders.`);
 
         // B. AI FUZZY MATCHING
-        // We send the folder names to GPT-4 to find the best match
         const prompt = `
             I have a business lead named: "${businessName}".
-            
+
             Here is a list of folder names from Google Drive:
             ${JSON.stringify(folders.map(f => f.name))}
-            
+
             TASK: Identify the folder that belongs to this business.
             RULES:
             - "Project Capital LLC" matches "Project".
@@ -138,7 +149,6 @@ async function syncDriveFiles(conversationId, businessName) {
         // 🛠️ HANDLE SHORTCUTS
         if (targetFolder.mimeType === 'application/vnd.google-apps.shortcut') {
             console.log(`🔗 Resolving Shortcut: "${targetFolder.name}" points to ID: ${targetFolder.shortcutDetails.targetId}`);
-            // Swap the shortcut's ID for the REAL folder ID
             targetFolder.id = targetFolder.shortcutDetails.targetId;
         }
 
@@ -162,25 +172,21 @@ async function syncDriveFiles(conversationId, businessName) {
         let uploadedCount = 0;
 
         for (const file of files) {
-            // Skip sub-folders (we only want actual documents)
             if (file.mimeType.includes('folder')) continue;
 
             console.log(`⬇️ Processing: ${file.name}`);
 
             try {
-                // 1. Create Stream from Google
                 const driveStream = await drive.files.get(
                     { fileId: file.id, alt: 'media' },
                     { responseType: 'stream' }
                 );
 
-                // 2. Pass-through to S3
                 const pass = new stream.PassThrough();
                 driveStream.data.pipe(pass);
 
-                // 3. Upload to S3
                 const s3Key = `documents/${conversationId}/${Date.now()}_${file.name.replace(/\s/g, '_')}`;
-                
+
                 await s3.upload({
                     Bucket: process.env.S3_DOCUMENTS_BUCKET,
                     Key: s3Key,
@@ -188,7 +194,6 @@ async function syncDriveFiles(conversationId, businessName) {
                     ContentType: file.mimeType || 'application/pdf'
                 }).promise();
 
-                // 4. Save Record to Database
                 await db.query(`
                     INSERT INTO documents (conversation_id, s3_key, original_filename, mime_type, created_at)
                     VALUES ($1, $2, $3, $4, NOW())
@@ -201,7 +206,6 @@ async function syncDriveFiles(conversationId, businessName) {
             }
         }
 
-        // E. UPDATE LEAD STATUS
         if (uploadedCount > 0) {
             await db.query("UPDATE conversations SET state = 'FCS_READY' WHERE id = $1", [conversationId]);
             console.log(`🎉 Success! Synced ${uploadedCount} documents. Lead is FCS_READY.`);
