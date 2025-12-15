@@ -56,30 +56,27 @@ class EmailService {
         const clientId = getEnvVar('GMAIL_CLIENT_ID');
         const clientSecret = getEnvVar('GMAIL_CLIENT_SECRET');
         const refreshToken = getEnvVar('GMAIL_REFRESH_TOKEN');
-        const pass = getEnvVar('EMAIL_PASSWORD'); // Fallback for old method
 
-        // Check for OAuth credentials OR Password
-        const hasOAuth = clientId && refreshToken;
-        const hasPassword = pass;
-
-        if (!user || (!hasOAuth && !hasPassword)) {
-            console.warn('❌ Email credentials missing. Check .env file.');
+        // --- 🚨 Check ONLY for OAuth Credentials 🚨 ---
+        if (!user || !clientId || !clientSecret || !refreshToken) {
+            console.error('❌ FATAL ERROR: OAuth credentials missing.');
+            console.error('   Please ensure EMAIL_USER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET,');
+            console.error('   and GMAIL_REFRESH_TOKEN are all set correctly (Base64 is fine).');
+            this.transporter = null;
             return;
         }
 
         try {
-            const authConfig = hasOAuth ? {
+            // Configuration is strictly OAuth2
+            const authConfig = {
                 type: 'OAuth2',
                 user: user,
                 clientId: clientId,
                 clientSecret: clientSecret,
                 refreshToken: refreshToken
-            } : {
-                user: user,
-                pass: pass
             };
 
-            // ✅ UPDATED: Configuration with High-Speed Pooling
+            // ✅ Configuration with High-Speed Pooling
             this.transporter = nodemailer.createTransport({
                 service: 'gmail',
                 pool: true,
@@ -90,9 +87,10 @@ class EmailService {
 
             // Verify connection
             await this.transporter.verify();
-            console.log('🚀 High-Speed Email Service Ready (Secure Base64/Raw Mode)');
+            console.log('🚀 High-Speed Email Service Ready (OAuth2 ONLY Mode)');
         } catch (error) {
             console.error('❌ Failed to initialize email service:', error.message);
+            // This will now catch "Invalid Grant" or similar errors if the token is bad
             this.transporter = null;
         }
     }
