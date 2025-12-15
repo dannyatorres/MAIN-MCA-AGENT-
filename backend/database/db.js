@@ -632,7 +632,7 @@ class Database {
     // Lead Details operations
     async saveLeadDetails(conversationId, leadDetailsData) {
         try {
-            
+
             const result = await this.query(`
                 INSERT INTO lead_details (
                     conversation_id,
@@ -647,8 +647,9 @@ class Database {
                     date_of_birth,
                     tax_id_encrypted,
                     ssn_encrypted,
+                    owner_ownership_percent,
                     created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                 RETURNING *
             `, [
                 conversationId,
@@ -663,9 +664,10 @@ class Database {
                 leadDetailsData.date_of_birth || null,
                 leadDetailsData.tax_id || null,
                 leadDetailsData.ssn || null,
+                leadDetailsData.owner_ownership_percent || null,
                 'csv_import'
             ]);
-            
+
             return result.rows[0];
         } catch (error) {
             throw error;
