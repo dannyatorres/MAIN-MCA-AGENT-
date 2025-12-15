@@ -28,13 +28,39 @@ const TOOLS = [
 
 async function processLeadWithAI(conversationId, systemInstruction) {
     const db = getDatabase();
-    console.log(`🧠 AI Agent waking up for Lead ID: ${conversationId}`);
-
-    // 1. LOG THE INSTRUCTION (The Rules)
-    console.log("🧠 [DEBUG] SYSTEM INSTRUCTION:", systemInstruction);
+    console.log(`🧠 Processing Lead ID: ${conversationId}`);
 
     try {
-        // 1. GET HISTORY (Context)
+        // 1. GET LEAD DETAILS (Fetching Name for the Template)
+        // We try to find a real person's name first.
+        const leadRes = await db.query(
+            "SELECT first_name, business_name FROM conversations WHERE id = $1",
+            [conversationId]
+        );
+
+        const lead = leadRes.rows[0];
+        // Logic: Use First Name ("Belinda") -> fallback to Business ("JMS Global") -> fallback to "there"
+        const nameToUse = lead?.first_name || lead?.business_name || "there";
+
+        // 2. CHECK: IS THIS THE "HOOK"? (The Template Strategy)
+        // If the instruction mentions the 'Underwriter Hook', we SKIP OpenAI.
+        if (systemInstruction.includes("Underwriter Hook")) {
+            console.log(`⚡ TEMPLATE MODE: Sending Dan Torres Script to ${nameToUse}`);
+
+            // --- 📝 YOUR EXACT SCRIPT IS HERE 📝 ---
+            const exactTemplate = `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
+            // ---------------------------------------
+
+            return { shouldReply: true, content: exactTemplate };
+        }
+
+        // ============================================================
+        // 🤖 AI MODE (Only used for replies/conversations)
+        // ============================================================
+
+        console.log("🤖 AI MODE: Generating smart reply...");
+
+        // 1. Get History
         const history = await db.query(`
             SELECT direction, content FROM messages
             WHERE conversation_id = $1
@@ -42,42 +68,23 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             LIMIT 20
         `, [conversationId]);
 
-        // 2. CONSTRUCT THE CONTEXT
         const messages = [];
 
-        // A. The "Persona" (Base setting)
-        // If no specific instruction is passed, default to a helpful assistant.
-        // Otherwise, rely entirely on the systemInstruction below.
-        if (!systemInstruction) {
+        // 2. Add System Instruction
+        messages.push({
+            role: "system",
+            content: `${systemInstruction} \n\nIMPORTANT: Keep it short (under 160 chars). You are chatting via SMS.`
+        });
+
+        // 3. Add Conversation History
+        history.rows.forEach(msg => {
             messages.push({
-                role: "system",
-                content: "You are a helpful assistant."
+                role: msg.direction === 'outbound' ? 'assistant' : 'user',
+                content: msg.content
             });
-        } else {
-            // 1. Always add the Specific Strategy FIRST (Dan Torres)
-            messages.push({ role: "system", content: systemInstruction });
-        }
+        });
 
-        // 2. Then add the History
-        if (history.rows.length > 0) {
-            history.rows.forEach(msg => {
-                messages.push({
-                    role: msg.direction === 'outbound' ? 'assistant' : 'user',
-                    content: msg.content
-                });
-            });
-
-            // Add a reminder to look at the history
-            messages.push({
-                role: "system",
-                content: "SYSTEM NOTE: The user has replied previously. Read the history above. Do NOT re-introduce yourself."
-            });
-        }
-
-        // 2. LOG THE HISTORY (What the AI sees)
-        console.log("📜 [DEBUG] CHAT HISTORY SENT TO AI:", JSON.stringify(messages, null, 2));
-
-        // 3. CALL OPENAI
+        // 4. Call OpenAI (Only for replies)
         const completion = await openai.chat.completions.create({
             model: "gpt-4-turbo",
             messages: messages,
@@ -87,25 +94,19 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         const aiMsg = completion.choices[0].message;
 
-        // 4. LOG THE RESULT (The raw thought)
-        console.log("💡 [DEBUG] RAW AI REPLY:", aiMsg.content);
-        if (aiMsg.tool_calls) {
-            console.log("🔧 [DEBUG] TOOL CALLS:", JSON.stringify(aiMsg.tool_calls, null, 2));
-        }
-
-        // 5. EXECUTE TOOLS
+        // Handle Tool Calls (Status Updates)
         if (aiMsg.tool_calls) {
             for (const tool of aiMsg.tool_calls) {
                 if (tool.function.name === 'update_lead_status') {
                     const args = JSON.parse(tool.function.arguments);
-                    console.log(`🔄 AI Moving Lead ${conversationId} -> ${args.status}`);
+                    console.log(`🔄 AI Moving Lead -> ${args.status}`);
                     await db.query("UPDATE conversations SET state = $1 WHERE id = $2", [args.status, conversationId]);
                     if (args.status === 'DEAD') return { shouldReply: false };
                 }
             }
         }
 
-        // 6. RETURN REPLY
+        // Handle Text Reply
         if (aiMsg.content) {
             return { shouldReply: true, content: aiMsg.content };
         }
@@ -113,7 +114,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         return { shouldReply: false };
 
     } catch (err) {
-        console.error("🔥 AI Service Error:", err);
+        console.error("🔥 Service Error:", err);
         return { error: err.message };
     }
 }
