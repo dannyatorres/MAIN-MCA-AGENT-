@@ -4,12 +4,11 @@ const AWS = require('aws-sdk');
 const { getDatabase } = require('./database');
 const path = require('path');
 const stream = require('stream');
-const fs = require('fs');
 require('dotenv').config();
 
-// 1. CONFIGURATION
+// CONFIGURATION
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
-const FOLDER_ID = process.env.GDRIVE_PARENT_FOLDER_ID; // This pulls your '1fjB...' ID from Railway
+const FOLDER_ID = process.env.GDRIVE_PARENT_FOLDER_ID;
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // S3 Setup
@@ -19,33 +18,19 @@ const s3 = new AWS.S3({
     region: process.env.AWS_REGION || 'us-east-1'
 });
 
-// 2. AUTHENTICATION (Smart Parsing: JSON or Base64)
+// AUTHENTICATION
 let credentials;
 try {
     const rawVar = process.env.GOOGLE_CREDENTIALS_JSON;
+    if (!rawVar) throw new Error("Missing GOOGLE_CREDENTIALS_JSON");
     
-    if (!rawVar) {
-        throw new Error("Missing GOOGLE_CREDENTIALS_JSON in environment variables.");
-    }
-
     let jsonString = rawVar;
-
-    // CHECK: Is this Base64? (Simple regex check)
-    // If it starts with 'ey' (common for Base64 JSON) and doesn't start with '{'
     if (!rawVar.trim().startsWith('{')) {
-        console.log("🔐 Detected Base64 credentials. Decoding...");
         jsonString = Buffer.from(rawVar, 'base64').toString('utf8');
     }
-
     credentials = JSON.parse(jsonString);
-    console.log("✅ Google Credentials loaded successfully.");
-
 } catch (err) {
     console.error("❌ Google Auth Error:", err.message);
-    // Log the first 5 chars so you can debug what it's trying to parse (without leaking keys)
-    if (process.env.GOOGLE_CREDENTIALS_JSON) {
-        console.error("   DEBUG: Variable starts with:", process.env.GOOGLE_CREDENTIALS_JSON.substring(0, 5) + "...");
-    }
     credentials = null;
 }
 
@@ -55,17 +40,10 @@ const auth = new google.auth.GoogleAuth({
 });
 const drive = google.drive({ version: 'v3', auth });
 
-/**
- * THE UPGRADED MASTER FUNCTION
- * 1. Scans folders
- * 2. Uses AI to fuzzy match (e.g. "Project Capital" -> "Project")
- * 3. "Peeks" inside to ensure valid files exist
- */
 async function syncDriveFiles(conversationId, businessName) {
     const db = getDatabase();
     console.log(`📂 Starting Drive Sync for: "${businessName}"...`);
 
-    // Helper: Clean ID
     function extractFolderId(input) {
         if (!input) return null;
         const match = input.match(/\/folders\/([a-zA-Z0-9-_]+)/);
@@ -76,7 +54,6 @@ async function syncDriveFiles(conversationId, businessName) {
         if (!FOLDER_ID) throw new Error("Missing GDRIVE_PARENT_FOLDER_ID");
 
         const cleanFolderId = extractFolderId(FOLDER_ID);
-        console.log(`🔍 Master Drive ID: ${cleanFolderId}`);
 
         // A. LIST ALL SUB-FOLDERS
         let folders = [];
@@ -94,13 +71,13 @@ async function syncDriveFiles(conversationId, businessName) {
         } while (pageToken);
 
         if (folders.length === 0) {
-            console.log("❌ No sub-folders found. (Did you share the Master Folder with the Service Account email?)");
-            return { success: false, error: "Master folder appears empty (Permissions?)" };
+            console.log("❌ No sub-folders found.");
+            return { success: false, error: "Master folder appears empty" };
         }
 
         console.log(`📚 Found ${folders.length} candidate folders. Asking AI to match "${businessName}"...`);
 
-        // B. AI MATCHING (The Brain)
+        // B. AI MATCHING
         const prompt = `
             I have a business named: "${businessName}".
             Here are the Google Drive folders:
@@ -108,9 +85,8 @@ async function syncDriveFiles(conversationId, businessName) {
 
             Rules:
             1. Find the folder that best matches the business name.
-            2. "Project Capital LLC" matches "Project".
-            3. "Danny Torres" matches "Danny T".
-            4. Return ONLY the exact folder name. If no match, return "NO_MATCH".
+            2. Fuzzy match is okay (e.g. "Project Capital LLC" -> "Project").
+            3. Return ONLY the exact folder name. If no match, return "NO_MATCH".
         `;
 
         const completion = await openai.chat.completions.create({
@@ -129,15 +105,13 @@ async function syncDriveFiles(conversationId, businessName) {
         const targetFolder = folders.find(f => f.name === matchedName);
         console.log(`✅ AI Match: "${businessName}" -> Folder: "${matchedName}" (${targetFolder.id})`);
 
-        // C. PEEK INSIDE (Verify Content)
+        // C. PEEK INSIDE
         const fileRes = await drive.files.list({
             q: `'${targetFolder.id}' in parents and trashed = false`,
             fields: 'files(id, name, mimeType, size)',
         });
 
         const files = fileRes.data.files || [];
-        
-        // Filter for useful files (PDFs, Images)
         const usefulFiles = files.filter(f => !f.mimeType.includes('folder'));
 
         if (usefulFiles.length === 0) {
@@ -147,7 +121,7 @@ async function syncDriveFiles(conversationId, businessName) {
 
         console.log(`👀 Peek successful: Found ${usefulFiles.length} files. Downloading...`);
 
-        // D. DOWNLOAD & SYNC LOGIC (Standard S3 Upload)
+        // D. DOWNLOAD & SAVE (Fixed DB Insert)
         let uploadedCount = 0;
         for (const file of usefulFiles) {
             try {
@@ -161,6 +135,7 @@ async function syncDriveFiles(conversationId, businessName) {
 
                 const s3Key = `documents/${conversationId}/${Date.now()}_${file.name.replace(/\s/g, '_')}`;
 
+                // 1. Upload to S3
                 await s3.upload({
                     Bucket: process.env.S3_DOCUMENTS_BUCKET,
                     Key: s3Key,
@@ -168,20 +143,35 @@ async function syncDriveFiles(conversationId, businessName) {
                     ContentType: file.mimeType || 'application/pdf'
                 }).promise();
 
+                // 2. Insert into DB (✅ FIXED: Added filename and file_size)
+                // We use 'file.size' from Google Drive. If missing, default to 0.
+                const fileSize = file.size ? parseInt(file.size) : 0;
+                
                 await db.query(`
-                    INSERT INTO documents (conversation_id, s3_key, original_filename, mime_type, created_at)
-                    VALUES ($1, $2, $3, $4, NOW())
-                `, [conversationId, s3Key, file.name, file.mimeType]);
+                    INSERT INTO documents (
+                        conversation_id, 
+                        s3_key, 
+                        filename, 
+                        original_filename, 
+                        mime_type, 
+                        file_size,
+                        document_type,
+                        created_at
+                    )
+                    VALUES ($1, $2, $3, $3, $4, $5, 'Bank Statement', NOW())
+                `, [conversationId, s3Key, file.name, file.mimeType, fileSize]);
 
                 uploadedCount++;
+                console.log(`✅ Saved: ${file.name}`);
+
             } catch (err) {
-                console.error(`Skipping file ${file.name}: ${err.message}`);
+                console.error(`❌ Failed to save ${file.name}:`, err.message);
             }
         }
 
         if (uploadedCount > 0) {
-            // Update status so frontend knows to show "FCS Ready"
             await db.query("UPDATE conversations SET state = 'FCS_READY' WHERE id = $1", [conversationId]);
+            console.log(`🎉 Success! Synced ${uploadedCount} documents. Lead is FCS_READY.`);
         }
 
         return { success: true, count: uploadedCount };
