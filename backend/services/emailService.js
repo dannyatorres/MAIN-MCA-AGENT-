@@ -17,6 +17,33 @@ if (require('fs').existsSync(rootPath)) {
     require('dotenv').config(); // Default behavior
 }
 
+// 🛡️ HELPER: Smartly decodes Base64 variables or returns raw text
+const getEnvVar = (key) => {
+    const value = process.env[key];
+    if (!value) return null;
+
+    // 1. If it looks like a raw Refresh Token (starts with 1//), return it raw
+    if (value.startsWith('1//')) return value.trim();
+
+    // 2. If it looks like a raw Client ID (ends with .com), return it raw
+    if (value.endsWith('.com')) return value.trim();
+
+    // 3. Otherwise, try to auto-detect Base64
+    try {
+        // Try to decode
+        const decoded = Buffer.from(value, 'base64').toString('utf8');
+
+        // Validation: If decoded string looks like clean text (no weird symbols), use it
+        // This regex checks for standard printable characters
+        if (/^[\x20-\x7E]*$/.test(decoded)) {
+            return decoded.trim();
+        }
+        return value.trim(); // Fallback to raw if decode looked weird
+    } catch (e) {
+        return value.trim();
+    }
+};
+
 class EmailService {
     constructor() {
         this.transporter = null;
@@ -24,11 +51,18 @@ class EmailService {
     }
 
     async initializeTransporter() {
-        // Check for OAuth credentials OR Password (supports both now)
-        const hasOAuth = process.env.GMAIL_CLIENT_ID && process.env.GMAIL_REFRESH_TOKEN;
-        const hasPassword = process.env.EMAIL_PASSWORD;
+        // Use the helper to get clean credentials
+        const user = getEnvVar('EMAIL_USER');
+        const clientId = getEnvVar('GMAIL_CLIENT_ID');
+        const clientSecret = getEnvVar('GMAIL_CLIENT_SECRET');
+        const refreshToken = getEnvVar('GMAIL_REFRESH_TOKEN');
+        const pass = getEnvVar('EMAIL_PASSWORD'); // Fallback for old method
 
-        if (!process.env.EMAIL_USER || (!hasOAuth && !hasPassword)) {
+        // Check for OAuth credentials OR Password
+        const hasOAuth = clientId && refreshToken;
+        const hasPassword = pass;
+
+        if (!user || (!hasOAuth && !hasPassword)) {
             console.warn('❌ Email credentials missing. Check .env file.');
             return;
         }
@@ -36,26 +70,27 @@ class EmailService {
         try {
             const authConfig = hasOAuth ? {
                 type: 'OAuth2',
-                user: process.env.EMAIL_USER,
-                clientId: process.env.GMAIL_CLIENT_ID,
-                clientSecret: process.env.GMAIL_CLIENT_SECRET,
-                refreshToken: process.env.GMAIL_REFRESH_TOKEN
+                user: user,
+                clientId: clientId,
+                clientSecret: clientSecret,
+                refreshToken: refreshToken
             } : {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
+                user: user,
+                pass: pass
             };
 
-            // ✅ UPDATED: Configuration
+            // ✅ UPDATED: Configuration with High-Speed Pooling
             this.transporter = nodemailer.createTransport({
                 service: 'gmail',
                 pool: true,
                 maxConnections: 5,
+                rateLimit: 10,
                 auth: authConfig
             });
 
             // Verify connection
             await this.transporter.verify();
-            console.log('🚀 High-Speed Email Service Ready (OAuth2 Active)');
+            console.log('🚀 High-Speed Email Service Ready (Secure Base64/Raw Mode)');
         } catch (error) {
             console.error('❌ Failed to initialize email service:', error.message);
             this.transporter = null;
@@ -68,11 +103,11 @@ class EmailService {
         }
 
         const subject = `New MCA Application - ${businessData.businessName}`;
-        
+
         // Process documents - they can either be file buffers (new format) or URLs (old format)
         const validAttachments = [];
         const invalidDocuments = [];
-        
+
         for (const doc of documents) {
             // Debug log each document being processed
             console.log('📎 Processing document for attachment:', {
@@ -82,7 +117,7 @@ class EmailService {
                 hasContent: !!doc.content,
                 hasPath: !!(doc.s3_url || doc.file_path || doc.path || doc.url)
             });
-            
+
             // New format: Document with actual file buffer content
             if (doc.content) {
                 validAttachments.push({
@@ -95,14 +130,14 @@ class EmailService {
             // Old format: Document with path/URL to fetch
             else if (doc.s3_url || doc.file_path || doc.path || doc.url) {
                 const docPath = doc.s3_url || doc.file_path || doc.path || doc.url;
-                
+
                 // Check if it's a test/mock URL that doesn't exist
                 if (docPath.includes('example-bucket') || docPath.includes('/local/docs/')) {
                     console.warn(`⚠️ Skipping mock/test document: ${docPath}`);
                     invalidDocuments.push(doc);
                     continue;
                 }
-                
+
                 // Add to valid attachments (Nodemailer will fetch the file)
                 validAttachments.push({
                     filename: doc.filename || doc.name || doc.originalFilename || 'document.pdf',
@@ -115,14 +150,14 @@ class EmailService {
                 invalidDocuments.push(doc);
             }
         }
-        
+
         console.log(`📎 Valid attachments: ${validAttachments.length}, Invalid: ${invalidDocuments.length}`);
-        
+
         const htmlContent = this.generateLenderEmailHtml(businessData, documents);
         const textContent = this.generateLenderEmailText(businessData, documents);
 
         const mailOptions = {
-            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+            from: process.env.EMAIL_FROM || getEnvVar('EMAIL_USER'),
             to: lenderEmail,
             subject: subject,
             text: textContent,
@@ -133,12 +168,12 @@ class EmailService {
         try {
             const result = await this.transporter.sendMail(mailOptions);
             console.log(`Email sent successfully to ${lenderEmail}:`, result.messageId);
-            
+
             let warningMessage = '';
             if (invalidDocuments.length > 0) {
                 warningMessage = ` (${invalidDocuments.length} documents skipped due to invalid paths)`;
             }
-            
+
             return {
                 success: true,
                 messageId: result.messageId,
@@ -148,16 +183,16 @@ class EmailService {
             };
         } catch (error) {
             console.error(`Failed to send email to ${lenderEmail}:`, error);
-            
+
             // If it's an attachment-related error, try sending without attachments
             if (error.message.includes('Invalid status code') && validAttachments.length > 0) {
                 console.warn(`🔄 Retrying email without attachments due to attachment error`);
-                
+
                 const fallbackMailOptions = {
                     ...mailOptions,
                     attachments: []
                 };
-                
+
                 try {
                     const fallbackResult = await this.transporter.sendMail(fallbackMailOptions);
                     console.log(`Email sent successfully WITHOUT attachments to ${lenderEmail}:`, fallbackResult.messageId);
@@ -173,13 +208,13 @@ class EmailService {
                     throw new Error(`Email delivery failed even without attachments: ${fallbackError.message}`);
                 }
             }
-            
+
             throw new Error(`Email delivery failed: ${error.message}`);
         }
     }
 
     generateLenderEmailHtml(businessData, documents) {
-        const documentsHtml = documents.length > 0 
+        const documentsHtml = documents.length > 0
             ? `
                 <h3>Attached Documents:</h3>
                 <ul>
@@ -208,12 +243,12 @@ class EmailService {
                 <div class="header">
                     <h1>New MCA Application Submission</h1>
                 </div>
-                
+
                 <div class="content">
                     <p>Dear Lender,</p>
-                    
+
                     <p>We have a new Merchant Cash Advance application that matches your lending criteria. Please find the business details below:</p>
-                    
+
                     <div class="business-info">
                         <h2>Business Information</h2>
                         <div class="info-row">
@@ -249,15 +284,15 @@ class EmailService {
                             <span>${businessData.negativeDays !== undefined ? businessData.negativeDays : 'N/A'}</span>
                         </div>
                     </div>
-                    
+
                     ${documentsHtml}
-                    
+
                     <p>This application has been pre-qualified based on your lending criteria. Please review the attached documentation and let us know if you would like to proceed with an offer.</p>
-                    
+
                     <p>Best regards,<br>
                     <strong>MCA Command Center</strong></p>
                 </div>
-                
+
                 <div class="footer">
                     <p>This email was sent from MCA Command Center automated system.</p>
                 </div>
@@ -267,7 +302,7 @@ class EmailService {
     }
 
     generateLenderEmailText(businessData, documents) {
-        const documentsText = documents.length > 0 
+        const documentsText = documents.length > 0
             ? `\nAttached Documents:\n${documents.map(doc => `- ${doc.filename || doc.name || 'Document'} (${doc.type || doc.mimeType || 'PDF'})`).join('\n')}\n`
             : '\nNo documents attached\n';
 
@@ -353,7 +388,7 @@ This email was sent from MCA Command Center automated system.
             console.log(`📧 Sending email to ${to} with ${attachments ? attachments.length : 0} attachments`);
 
             const info = await this.transporter.sendMail({
-                from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+                from: process.env.EMAIL_FROM || getEnvVar('EMAIL_USER'),
                 to,
                 subject,
                 html: html || text,
