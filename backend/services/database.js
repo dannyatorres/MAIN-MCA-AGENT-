@@ -111,6 +111,15 @@ async function initialize() {
             ON lender_qualifications(conversation_id);
         `);
 
+        // Ensure lender_qualifications has all expected columns (self-heal older tables)
+        await pool.query(`
+            ALTER TABLE lender_qualifications
+            ADD COLUMN IF NOT EXISTS qualification_data JSONB,
+            ADD COLUMN IF NOT EXISTS criteria_used JSONB,
+            ADD COLUMN IF NOT EXISTS qualified_lenders JSONB,
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        `);
+
         // 6. Create job_queue (Required for FCS trigger route)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS job_queue (

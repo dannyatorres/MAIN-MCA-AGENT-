@@ -98,6 +98,29 @@ app.use(session({
     }
 }));
 
+// --- 🚨 TEMPORARY DB FIX (START) 🚨 ---
+app.get('/api/fix-lender-data', async (req, res) => {
+    try {
+        // Use the shared DB pool
+        const { getDatabase } = require('./services/database');
+        const db = getDatabase();
+
+        console.log('🔧 Attempting to add qualification_data column...');
+
+        await db.query(`
+            ALTER TABLE lender_qualifications 
+            ADD COLUMN IF NOT EXISTS qualification_data JSONB;
+        `);
+
+        console.log('✅ DB Fix Successful');
+        res.send('<h1 style="color:green">✅ SUCCESS: Column Added!</h1>');
+    } catch (err) {
+        console.error('❌ DB Fix Failed:', err);
+        res.status(500).send(`<h1>❌ ERROR</h1><p>${err.message}</p>`);
+    }
+});
+// --- 🚨 TEMPORARY DB FIX (END) 🚨 ---
+
 // LOGIN Route
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
