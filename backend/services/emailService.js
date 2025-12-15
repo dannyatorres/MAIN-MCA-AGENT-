@@ -24,30 +24,34 @@ class EmailService {
     }
 
     async initializeTransporter() {
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-            console.warn('Email credentials not configured.');
+        // Check for OAuth credentials
+        if (!process.env.EMAIL_USER || !process.env.GMAIL_CLIENT_ID || !process.env.GMAIL_REFRESH_TOKEN) {
+            console.warn('❌ Email OAuth credentials missing. Check .env file.');
             return;
         }
 
         try {
-            // ✅ UPDATED: Enable Pooling for Speed
+            // ✅ UPDATED: OAuth2 Configuration with High-Speed Pooling
             this.transporter = nodemailer.createTransport({
                 service: 'gmail',
-                pool: true,          // <--- KEEPS CONNECTION OPEN
-                maxConnections: 5,   // <--- SENDS 5 EMAILS AT ONCE
+                pool: true,          // Keeps connection open
+                maxConnections: 5,   // Sends 5 emails at once
                 maxMessages: 100,
-                rateLimit: 10,       // <--- PREVENTS GMAIL BLOCKING (10/sec)
+                rateLimit: 10,       // Prevents blocking
                 auth: {
+                    type: 'OAuth2',  // <--- THE MAGIC SWITCH
                     user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASSWORD
+                    clientId: process.env.GMAIL_CLIENT_ID,
+                    clientSecret: process.env.GMAIL_CLIENT_SECRET,
+                    refreshToken: process.env.GMAIL_REFRESH_TOKEN
                 }
             });
 
             // Verify connection
             await this.transporter.verify();
-            console.log('🚀 High-Speed Email Service Ready (Pooling Enabled)');
+            console.log('🚀 High-Speed Email Service Ready (OAuth2 Mode)');
         } catch (error) {
-            console.error('Failed to initialize email service:', error.message);
+            console.error('❌ Failed to initialize email service:', error.message);
             this.transporter = null;
         }
     }
