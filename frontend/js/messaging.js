@@ -171,6 +171,9 @@ class MessagingModule {
             return;
         }
 
+        // ✅ Clear red/green badges immediately when opening
+        this.removeConversationBadge(convId);
+
         try {
             console.log(`📨 Loading messages for conversation: ${convId}`);
             const data = await this.parent.apiCall(`/api/conversations/${convId}/messages`);
@@ -552,12 +555,18 @@ class MessagingModule {
         const conversationItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
 
         if (conversationItem) {
+            // 1. Remove RED Unread Badge
             const badge = conversationItem.querySelector('.conversation-badge');
-            if (badge) {
-                badge.remove();
-            }
+            if (badge) badge.remove();
 
-            // Clear unread count
+            // 2. Remove GREEN Offer Badge
+            const offerBadge = conversationItem.querySelector('.offer-badge');
+            if (offerBadge) offerBadge.remove();
+
+            // 3. Remove "unread" visual styling
+            conversationItem.classList.remove('unread');
+
+            // 4. Clear data attributes
             delete conversationItem.dataset.unreadCount;
         }
     }
