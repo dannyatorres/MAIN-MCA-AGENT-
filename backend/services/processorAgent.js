@@ -12,7 +12,9 @@ const gmail = new GmailInboxService();
 
 // ⚡ SETTINGS
 const CHECK_INTERVAL = 2 * 60 * 1000; // Check every 2 minutes
-const KEYWORDS_REGEX = /(Offer|Decline|Stipulations|Submission|Funding|Approval|Re:|Fwd:)/i;
+
+// 🟢 UPDATE: Added "Test" and "Check" so your manual emails get through
+const KEYWORDS_REGEX = /(Offer|Decline|Stipulations|Submission|Funding|Approval|Re:|Fwd:|Test|Check)/i;
 
 // 🟢 LOAD PROMPT HELPER
 function getSystemPrompt() {
@@ -21,7 +23,6 @@ function getSystemPrompt() {
         return fs.readFileSync(promptPath, 'utf8');
     } catch (err) {
         console.error('❌ Could not load prompt file:', err.message);
-        // Fallback in case file is missing
         return `You are an expert MCA underwriter assistant. Analyze this email and return JSON with business_name, lender, category, offer_amount, etc.`;
     }
 }
@@ -69,27 +70,47 @@ async function runCheck() {
     console.log(`🔍 [Processor] Starting check at ${new Date().toLocaleTimeString()}...`);
 
     try {
-        const recentEmails = await gmail.fetchEmails({ limit: 50 });
+        // 🟢 Optimized to 15 emails (fast but deep enough)
+        const recentEmails = await gmail.fetchEmails({ limit: 15 });
 
         if (!recentEmails || recentEmails.length === 0) {
-             console.log('   💤 [Processor] No emails found. Going back to sleep.');
+             console.log('   💤 [Processor] Inbox is empty or connection failed.');
              return;
         }
 
         const newEmails = [];
-        for (const email of recentEmails) {
-            if (!KEYWORDS_REGEX.test(email.subject || "")) continue;
 
+        // 🟢 NEW LOGIC: Log EVERYTHING so you know it was seen
+        console.log(`   📬 Fetched ${recentEmails.length} emails. Scanning headers...`);
+
+        for (const email of recentEmails) {
+            const subject = email.subject || "(No Subject)";
+
+            // 1. Check Database Duplicates
             const exists = await db.query('SELECT 1 FROM processed_emails WHERE message_id = $1', [email.id]);
-            if (exists.rows.length === 0) newEmails.push(email);
+            if (exists.rows.length > 0) {
+                // Uncomment this if you want to see even the old ones
+                // console.log(`      ⏭️  Skipped (Old): "${subject}"`);
+                continue;
+            }
+
+            // 2. Check Keywords
+            if (!KEYWORDS_REGEX.test(subject)) {
+                console.log(`      ⛔ Skipped (No Keyword): "${subject}"`);
+                continue;
+            }
+
+            // If we get here, it's valid!
+            console.log(`      ✨ VALID CANDIDATE: "${subject}"`);
+            newEmails.push(email);
         }
 
         if (newEmails.length === 0) {
-            console.log('   🗑️ [Processor] All emails were either irrelevant or already processed.');
+            console.log('   🗑️ [Processor] No NEW actionable emails found this cycle.');
             return;
         }
 
-        console.log(`   ✨ [Processor] Found ${newEmails.length} NEW relevant emails to analyze.`);
+        console.log(`   🚀 Processing ${newEmails.length} new emails...`);
 
         for (const email of newEmails) {
             await processEmail(email, db);
@@ -110,14 +131,13 @@ async function processEmail(email, db) {
 
     console.log(`   🤖 [AI] Analyzing email: "${email.subject}"...`);
 
-    // --- 🧠 LOAD EXTERNAL PROMPT ---
     const systemPrompt = getSystemPrompt();
 
     const extraction = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{
             role: "system",
-            content: systemPrompt // 🟢 Uses the .md file content
+            content: systemPrompt
         }, {
             role: "user",
             content: `Sender: "${email.from.name}" <${email.from.email}>\nSubject: "${email.subject}"\nBody Snippet: "${email.snippet}"`
@@ -125,14 +145,13 @@ async function processEmail(email, db) {
         response_format: { type: "json_object" }
     });
 
-    // 🟢 NEW: Extract and Log Token Usage
     const usage = extraction.usage;
-    console.log(`   🎟️ [Tokens] Total: ${usage.total_tokens} | Prompt: ${usage.prompt_tokens} | Output: ${usage.completion_tokens}`);
+    console.log(`      🎟️ [Tokens] Used: ${usage.total_tokens}`);
 
     const data = JSON.parse(extraction.choices[0].message.content);
 
     if (!data.business_name) {
-        console.log(`   ⚠️ [AI] Could not identify merchant name. Skipping.`);
+        console.log(`      ⚠️ [AI] Could not identify merchant name. Skipping.`);
         return;
     }
 
@@ -154,13 +173,12 @@ async function processEmail(email, db) {
     }
 
     if (!bestMatchId) {
-        console.log(`   ⚠️ [AI] No matching lead found for: "${data.business_name}"`);
+        console.log(`      ⚠️ [AI] No matching lead found for: "${data.business_name}"`);
         return;
     }
 
-    console.log(`   ✅ MATCH: "${data.business_name}" -> Lead ${bestMatchId} (${data.category})`);
+    console.log(`      ✅ MATCH: "${data.business_name}" -> Lead ${bestMatchId} (${data.category})`);
 
-    // --- SAVE TO DATABASE ---
     const submissionCheck = await db.query(`
         SELECT id FROM lender_submissions
         WHERE conversation_id = $1 AND lender_name ILIKE $2
@@ -225,17 +243,17 @@ async function processEmail(email, db) {
 
     const systemNote = `📩 **INBOX UPDATE (${data.lender}):** ${data.summary}`;
 
-    // 🟢 FIXED: Write to AI Chat (Assistant) instead of SMS (Messages)
+    // 🟢 Write to AI Chat (Assistant)
     try {
         await db.query(`
             INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
             VALUES ($1, 'assistant', $2, NOW())
         `, [bestMatchId, systemNote]);
     } catch (err) {
-        console.error('   ⚠️ [AI] Failed to log to assistant history:', err.message);
+        console.error('      ⚠️ [AI] Failed to log to assistant history:', err.message);
     }
 
-    console.log(`   ✅ [Database] Saved results for: "${email.subject}"`);
+    console.log(`      ✅ [Database] Saved results for: "${email.subject}"`);
 }
 
 module.exports = { startProcessor };
