@@ -71,28 +71,22 @@ const generateResponse = async (query, context) => {
                 const fcs = context.fcs;
                 systemPrompt += `\n\n=== 🏦 BANK ANALYSIS (FCS) ===`;
                 
-                // 1. Core Financials (Use CORRECT Schema Names)
+                // 1. Core Financials (Specific Metrics)
                 systemPrompt += `\nMonthly Revenue: $${fcs.average_revenue || '0'}`;
                 systemPrompt += `\nAvg Daily Balance (ADB): $${fcs.average_daily_balance || '0'}`;
                 systemPrompt += `\nAvg Deposit Count: ${fcs.average_deposit_count || '0'}`;
                 systemPrompt += `\nAvg Deposit Volume: $${fcs.average_deposits || '0'}`;
-                
-                // 2. Risk Factors
                 systemPrompt += `\nNegative Days: ${fcs.total_negative_days || '0'}`;
                 systemPrompt += `\nRecency (Statement Count): ${fcs.statement_count || '0'} Months`;
-                
-                // 3. Stacking / Positions
                 systemPrompt += `\nExisting Positions: ${fcs.position_count || '0'}`;
                 systemPrompt += `\nLast MCA Date: ${fcs.last_mca_deposit_date || 'None Detected'}`;
-                
-                // 4. Business Health
                 systemPrompt += `\nTime in Business: ${fcs.time_in_business_text || 'Unknown'}`;
-                
-                // 5. The "Full" Report (Limit length to prevent token overflow)
-                // This 'fcs_report' column usually contains the raw text summary from the parser
+
+                // 2. 🟢 THE FULL RAW REPORT (UNLEASHED)
+                // We inject the ENTIRE text blob so the AI can read specific notes, 
+                // fraud alerts, and nuanced details from the parser.
                 if (fcs.fcs_report) {
-                    // Take the first 500 chars which usually has the summary lines
-                    systemPrompt += `\n\n-- RAW ANALYST SUMMARY --\n${fcs.fcs_report.substring(0, 500)}...`;
+                    systemPrompt += `\n\n--- 📄 FULL ANALYST REPORT ---\n${fcs.fcs_report}`;
                 }
 
             } else {
@@ -131,13 +125,28 @@ const generateResponse = async (query, context) => {
 
         messages.push({ role: "user", content: query });
 
+        // 4. Call OpenAI
+        console.log('   🧠 [AI Service] Sending request to OpenAI...');
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: messages,
             temperature: 0.7
         });
 
-        return { success: true, response: completion.choices[0].message.content };
+        // 🟢 NEW: Token Logging
+        const usage = completion.usage;
+        if (usage) {
+            console.log(`      🎟️ [AI Service] Token Usage:`);
+            console.log(`          - Input (Context): ${usage.prompt_tokens}`);
+            console.log(`          - Output (Answer): ${usage.completion_tokens}`);
+            console.log(`          - Total Cost:      ${usage.total_tokens} tokens`);
+        }
+
+        return { 
+            success: true, 
+            response: completion.choices[0].message.content,
+            usage: usage
+        };
 
     } catch (error) {
         return { success: false, error: error.message };
