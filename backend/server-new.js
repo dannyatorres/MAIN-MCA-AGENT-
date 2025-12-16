@@ -20,35 +20,30 @@ const app = express();
 const server = http.createServer(app);
 
 // =========================================================
-// 🛠️ EMERGENCY REPAIR ROUTE (Run via Browser)
-// URL: https://mcagent.io/api/fix/repair-processor
+// 🕵️ TROJAN HORSE: Schema Inspector
+// URL: https://mcagent.io/api/fix/show-schema
 // =========================================================
-app.get('/api/fix/repair-processor', async (req, res) => {
+app.get('/api/fix/show-schema', async (req, res) => {
     try {
         const db = getDatabase();
-        console.log('🛠️ Starting Manual Processor Repair...');
+        console.log('🕵️ Inspecting Database Schema...');
 
-        // 1. Add the missing column (Fixes the "column does not exist" crash)
-        await db.query(`
-            ALTER TABLE lender_submissions
-            ADD COLUMN IF NOT EXISTS raw_email_body TEXT;
+        const result = await db.query(`
+            SELECT table_name, column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name IN ('lead_details', 'fcs_analyses')
+            ORDER BY table_name, ordinal_position;
         `);
-        console.log('✅ Column raw_email_body added.');
 
-        // 2. Reset memory for the last 5 emails (Forces retry of the crashed one)
-        await db.query(`
-            DELETE FROM processed_emails 
-            WHERE ctid IN (
-                SELECT ctid FROM processed_emails 
-                ORDER BY ctid DESC 
-                LIMIT 5
-            );
-        `);
-        console.log('✅ Memory reset for last 5 emails.');
+        const schema = {};
+        result.rows.forEach(row => {
+            if (!schema[row.table_name]) schema[row.table_name] = [];
+            schema[row.table_name].push(`${row.column_name} (${row.data_type})`);
+        });
 
-        res.json({ success: true, message: 'Database Patched! Processor will retry in 2 minutes.' });
+        res.json({ success: true, schema });
+
     } catch (error) {
-        console.error('❌ Repair Failed:', error);
         res.status(500).json({ error: error.message });
     }
 });
