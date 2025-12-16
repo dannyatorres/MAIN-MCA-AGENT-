@@ -535,7 +535,16 @@ export class LeadFormController {
 
                     if(res.success) {
                         document.getElementById('leadModalWrapper').remove();
-                        if (this.parent.conversationUI) this.parent.conversationUI.loadConversations();
+
+                        // 🟢 FIX: Force the list to refresh immediately
+                        console.log('🔄 Refreshing lead list...');
+                        if (this.parent.conversationUI && typeof this.parent.conversationUI.loadConversations === 'function') {
+                            await this.parent.conversationUI.loadConversations();
+                        } else if (window.conversationUI && window.conversationUI.conversationUI) {
+                            // Fallback: Use global reference if 'this.parent' is missing
+                            await window.conversationUI.conversationUI.loadConversations();
+                        }
+
                         this.parent.utils.showNotification('Lead created successfully!', 'success');
                     }
                 } else {
