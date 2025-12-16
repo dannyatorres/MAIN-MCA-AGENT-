@@ -162,11 +162,6 @@ class GmailInboxService {
      * 🛡️ EMERGENCY SHIELDED FETCH
      */
     async fetchEmails(options = {}) {
-        // --- ADD THIS LINE TO DISABLE FETCHING ---
-        console.log('🚫 Fetching is currently disabled via code.');
-        return [];
-        // -----------------------------------------
-
         // 1. GLOBAL STATIC BLOCK (The "Nuclear" Option)
         // This variable is attached to the class itself, so it persists
         // even if new instances of the service are created.
