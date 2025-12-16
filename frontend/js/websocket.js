@@ -131,40 +131,53 @@ class WebSocketManager {
             }
         });
 
-        // 5. Offer / Lead List Refresh (FIXED SYNTAX)
-        this.socket.on('refresh_lead_list', (data) => {
+        // 5. Offer / Lead List Refresh (OPTIMIZED)
+        this.socket.on('refresh_lead_list', async (data) => {
             console.log('⚡ WebSocket: refresh_lead_list', data);
             
-            // A. Smart Instant Update (No Reload)
-            if (data && data.conversationId) {
-                const listContainer = document.getElementById('conversationsList');
-                const row = document.querySelector(`.conversation-item[data-conversation-id="${data.conversationId}"]`);
+            const listContainer = document.getElementById('conversationsList');
+            if (!listContainer || !data.conversationId) return;
+
+            // Try to find the existing conversation row
+            const existingRow = document.querySelector(`.conversation-item[data-conversation-id="${data.conversationId}"]`);
+
+            if (existingRow) {
+                // SCENARIO A: It's already in the list. Update it instantly.
+                console.log('⚡ Updating existing row for offer...');
                 
-                if (row && listContainer) {
-                    // 1. Add Green Badge if missing
-                    const nameEl = row.querySelector('.business-name');
-                    if (nameEl && !nameEl.innerHTML.includes('OFFER')) {
-                        const badge = document.createElement('span');
-                        badge.style.cssText = "background:rgba(0,255,136,0.1); border:1px solid #00ff88; color:#00ff88; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:6px; font-weight:bold;";
-                        badge.innerText = "OFFER";
-                        nameEl.appendChild(badge);
+                // 1. Add Badge if missing
+                this.addOfferBadge(existingRow);
+
+                // 2. Move to Top
+                listContainer.prepend(existingRow); 
+
+                // 3. Flash Effect
+                this.flashRow(existingRow);
+
+            } else {
+                // SCENARIO B: It's a NEW lead not in the list.
+                console.log('⚡ Fetching new lead to inject...');
+                
+                try {
+                    const newConvData = await this.app.apiCall(`/api/conversations/${data.conversationId}`);
+                    
+                    if (newConvData && this.app.templates && this.app.templates.conversationListItem) {
+                        const html = this.app.templates.conversationListItem(newConvData);
+                        listContainer.insertAdjacentHTML('afterbegin', html);
+                        
+                        const newRow = document.querySelector(`.conversation-item[data-conversation-id="${data.conversationId}"]`);
+                        if (newRow) {
+                            this.addOfferBadge(newRow);
+                            this.flashRow(newRow);
+                            newRow.classList.add('unread'); 
+                        }
+                    } else {
+                        if (this.app.conversationUI) this.app.conversationUI.loadConversations();
                     }
-
-                    // 2. Move to Top
-                    row.remove();
-                    listContainer.prepend(row);
-
-                    // 3. Flash Effect
-                    row.style.transition = "background-color 0.5s";
-                    row.style.backgroundColor = "rgba(0, 255, 136, 0.1)";
-                    setTimeout(() => { row.style.backgroundColor = ""; }, 1000);
-                } else {
-                    // Row not found? Reload just to be safe.
+                } catch (error) {
+                    console.error('Error injecting new lead:', error);
                     if (this.app.conversationUI) this.app.conversationUI.loadConversations();
                 }
-            } else {
-                // Fallback: Full reload
-                if (this.app.conversationUI) this.app.conversationUI.loadConversations();
             }
         });
     }
@@ -173,6 +186,30 @@ class WebSocketManager {
         if (this.socket && this.socket.connected) {
             this.socket.emit('join_conversation', conversationId);
         }
+    }
+
+    // Helper: Add the green OFFER badge safely
+    addOfferBadge(rowElement) {
+        const nameEl = rowElement.querySelector('.business-name');
+        if (nameEl) {
+            if (!nameEl.querySelector('.offer-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'offer-badge';
+                badge.style.cssText = "background:rgba(0,255,136,0.1); border:1px solid #00ff88; color:#00ff88; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:6px; font-weight:bold;";
+                badge.innerText = "OFFER";
+                nameEl.appendChild(badge);
+            }
+        }
+    }
+
+    // Helper: Flash animation
+    flashRow(rowElement) {
+        rowElement.style.transition = "background-color 0.5s ease";
+        const originalBg = rowElement.style.backgroundColor;
+        rowElement.style.backgroundColor = "rgba(0, 255, 136, 0.2)";
+        setTimeout(() => { 
+            rowElement.style.backgroundColor = originalBg || ""; 
+        }, 1000);
     }
 
     // Helper to manually refresh data
