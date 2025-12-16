@@ -488,8 +488,14 @@ class MessagingModule {
 
         messageElement.classList.add('deleting');
 
+        // --- FIX STARTS HERE ---
+        // Strip the suffix (e.g., ":1") if it exists to get the pure UUID
+        // This fixes the 404 error caused by sending "uuid:1" to the backend
+        const cleanMessageId = messageId.includes(':') ? messageId.split(':')[0] : messageId;
+        // --- FIX ENDS HERE ---
+
         try {
-            await this.parent.apiCall(`/api/conversations/${conversationId}/messages/${messageId}`, {
+            await this.parent.apiCall(`/api/conversations/${conversationId}/messages/${cleanMessageId}`, {
                 method: 'DELETE'
             });
 
@@ -506,6 +512,15 @@ class MessagingModule {
             this.utils.showNotification('Message deleted', 'success');
         } catch (error) {
             console.error('Delete message error:', error);
+            
+            // OPTIONAL: If the error is 404, the message is likely already gone. 
+            // You might want to remove it from the UI anyway instead of showing an error.
+            if (error.message && error.message.includes('404')) {
+                console.warn('Message not found on server (404), removing from UI locally.');
+                messageElement.remove();
+                return;
+            }
+
             messageElement.classList.remove('deleting');
             this.utils.showNotification(`Failed to delete message: ${error.message}`, 'error');
         }
