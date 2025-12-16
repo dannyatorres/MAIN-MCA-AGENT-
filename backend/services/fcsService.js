@@ -26,7 +26,7 @@ class FCSService {
         this.isDocumentAIInitialized = false;
 
         // Gemini Configuration
-        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
     }
 
     async initializeGemini() {
