@@ -135,9 +135,17 @@ router.post('/', async (req, res) => {
         console.log('📝 Creating new lead with FULL details...');
 
         // --- 1. SANITIZATION (Clean up the inputs) ---
+
+        // 🔴 FIX: Convert Empty Strings to NULL (Prevents "invalid input syntax for type date")
+        Object.keys(data).forEach(key => {
+            if (data[key] === '') data[key] = null;
+        });
+
         // Clean Phone Numbers (Remove () - space)
         ['lead_phone', 'cell_phone', 'owner_phone', 'owner2_phone'].forEach(k => {
-            if (data[k]) data[k] = data[k].replace(/\D/g, '');
+            if (data[k] && typeof data[k] === 'string') {
+                data[k] = data[k].replace(/\D/g, '');
+            }
         });
 
         // Clean Currency (Remove $ ,)
@@ -219,33 +227,33 @@ router.post('/', async (req, res) => {
         `, [
             newId,
             // Business
-            data.tax_id || data.federalTaxId,
-            data.business_start_date || data.businessStartDate,
-            data.business_type || data.industryType,
-            data.annual_revenue || data.annualRevenue,
-            data.funding_amount || data.requestedAmount,
+            data.tax_id || data.federalTaxId || null,
+            data.business_start_date || data.businessStartDate || null, // 👈 This is where the fix helps
+            data.business_type || data.industryType || null,
+            data.annual_revenue || data.annualRevenue || null,
+            data.funding_amount || data.requestedAmount || null,
 
             // Owner 1
-            data.ssn || data.ownerSSN,
-            data.date_of_birth || data.ownerDOB,
-            data.ownership_percent || data.ownershipPercent,
-            data.owner_home_address || data.ownerHomeAddress,
-            data.owner_home_city || data.ownerHomeCity,
-            data.owner_home_state || data.ownerHomeState,
-            data.owner_home_zip || data.ownerHomeZip,
+            data.ssn || data.ownerSSN || null,
+            data.date_of_birth || data.ownerDOB || null, // 👈 And here
+            data.ownership_percent || data.ownershipPercent || null,
+            data.owner_home_address || data.ownerHomeAddress || null,
+            data.owner_home_city || data.ownerHomeCity || null,
+            data.owner_home_state || data.ownerHomeState || null,
+            data.owner_home_zip || data.ownerHomeZip || null,
 
-            // Owner 2 (The stuff you were missing!)
-            data.owner2_first_name || data.owner2FirstName,
-            data.owner2_last_name || data.owner2LastName,
-            data.owner2_email || data.owner2Email,
-            data.owner2_phone || data.owner2Phone,
-            data.owner2_ssn || data.owner2SSN,
-            data.owner2_dob || data.owner2DOB,
-            data.owner2_ownership_percent || data.owner2OwnershipPercent,
-            data.owner2_address || data.owner2HomeAddress,
-            data.owner2_city || data.owner2HomeCity,
-            data.owner2_state || data.owner2HomeState,
-            data.owner2_zip || data.owner2HomeZip
+            // Owner 2
+            data.owner2_first_name || data.owner2FirstName || null,
+            data.owner2_last_name || data.owner2LastName || null,
+            data.owner2_email || data.owner2Email || null,
+            data.owner2_phone || data.owner2Phone || null,
+            data.owner2_ssn || data.owner2SSN || null,
+            data.owner2_dob || data.owner2DOB || null, // 👈 And here
+            data.owner2_ownership_percent || data.owner2OwnershipPercent || null,
+            data.owner2_address || data.owner2HomeAddress || null,
+            data.owner2_city || data.owner2HomeCity || null,
+            data.owner2_state || data.owner2HomeState || null,
+            data.owner2_zip || data.owner2HomeZip || null
         ]);
 
         console.log(`✅ Step 2: Lead Details (including Owner 2) saved for ${newId}`);
