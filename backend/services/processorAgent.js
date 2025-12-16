@@ -227,13 +227,22 @@ async function processEmail(email, db) {
     }
 
     if (data.category === 'OFFER') {
+        // ✅ Keep the Green Badge Logic
         await db.query(`UPDATE conversations SET has_offer = TRUE, last_activity = NOW() WHERE id = $1`, [bestMatchId]);
         if (global.io) global.io.emit('refresh_lead_list');
     }
 
-    const systemNote = `📩 **INBOX (${data.lender}):** ${data.summary}`;
-    // Using 'inbound' so it works even if the constraint wasn't updated
-    await db.query(`INSERT INTO messages (conversation_id, direction, content, timestamp) VALUES ($1, 'inbound', $2, NOW())`, [bestMatchId, systemNote]);
+    const systemNote = `📩 **INBOX UPDATE (${data.lender}):** ${data.summary}`;
+
+    // 🔴 REMOVED: Writing to SMS 'messages' table
+    // await db.query(`INSERT INTO messages (conversation_id, direction, content, timestamp) VALUES ($1, 'inbound', $2, NOW())`, [bestMatchId, systemNote]);
+
+    // 🟢 ADDED: Write to 'ai_chat_messages' table (Assistant Panel)
+    // We use role='assistant' so it looks like the AI is notifying you inside the helper window.
+    await db.query(`
+        INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
+        VALUES ($1, 'assistant', $2, NOW())
+    `, [bestMatchId, systemNote]);
 
     console.log(`   ✅ [Database] Saved results for: "${email.subject}"`);
 }
