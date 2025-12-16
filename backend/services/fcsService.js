@@ -268,7 +268,7 @@ class FCSService {
         }
     }
 
-    // 🧹 NEW: Removes markdown code blocks and specific artifacts
+    // 🧹 CLEANER: Removes markdown, artifacts, AND extra vertical space
     cleanGeminiOutput(text) {
         if (!text) return '';
 
@@ -280,9 +280,15 @@ class FCSService {
         // 2. Remove the specific "text" label if it appears alone at start
         clean = clean.replace(/^text\s*$/im, '');
 
-        // 3. Remove the echoed header instructions (The white stuff)
-        // Matches "Month Year Deposits: ... #Dep: #" and removes it
+        // 3. Remove the echoed header instructions
         clean = clean.replace(/Month Year\s+Deposits:.*#Dep:\s*#/gi, '');
+
+        // 4. ⚡ TOP TRIM: Forcefully remove ALL whitespace from the very start
+        // This kills the giant gap at the top
+        clean = clean.replace(/^\s+/, '');
+
+        // 5. GAP CRUSHER: Replace 3+ newlines with just 2 (Standardizes spacing elsewhere)
+        clean = clean.replace(/\n{3,}/g, '\n\n');
 
         return clean.trim();
     }

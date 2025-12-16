@@ -815,3 +815,23 @@
 .fcs-section {
     overflow: hidden !important;
 }
+
+/* ==========================================================================
+   [FIX] FCS Zero-Gap Layout
+   ========================================================================== */
+
+#fcsContent pre,
+.fcs-report-container pre,
+.intelligence-content pre {
+    margin-top: 0 !important;      /* Kill top margin */
+    padding-top: 10px !important;  /* Minimal top padding */
+    white-space: pre-wrap !important;
+    font-family: 'Menlo', 'Monaco', monospace !important;
+    line-height: 1.35 !important;  /* Tighter lines */
+}
+
+/* Ensure the parent container doesn't have extra padding */
+#fcsContent {
+    display: flex;
+    flex-direction: column;
+}
