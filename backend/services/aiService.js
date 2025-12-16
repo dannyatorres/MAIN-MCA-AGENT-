@@ -93,20 +93,43 @@ const generateResponse = async (query, context) => {
                 systemPrompt += `\n\n(No Bank Analysis/FCS available yet)`;
             }
 
-            // 🟢 3. LENDER OFFERS (With Email Body Context)
-             if (context.lender_submissions && context.lender_submissions.length > 0) {
+            // C. Lender Offers
+            if (context.lender_submissions && context.lender_submissions.length > 0) {
                 systemPrompt += `\n\n=== 💰 LENDER OFFERS ===`;
                 context.lender_submissions.forEach(sub => {
-                    systemPrompt += `\n- Lender: ${sub.lender_name} | Status: ${sub.status}`;
-                    if(sub.offer_amount) systemPrompt += ` | Offer: $${sub.offer_amount}`;
-                    // Inject the email snippet so AI knows the "nuance"
-                    if(sub.raw_email_body) systemPrompt += `\n  (Context: "${sub.raw_email_body.substring(0, 200)}...")`;
+                    // 1. Basic Info
+                    systemPrompt += `\n- Lender: ${sub.lender_name}`;
+                    systemPrompt += ` | Status: ${sub.status}`;
+                    if (sub.offer_amount) systemPrompt += ` | Amount: $${sub.offer_amount}`;
+
+                    // 2. 🟢 EXTRACT DETAILS (The "Days" & "Factor" Fix)
+                    if (sub.offer_details) {
+                        const d = sub.offer_details;
+                        
+                        // Explicitly look for common terms
+                        if (d.term || d.days || d.length) systemPrompt += ` | Term: ${d.term || d.days || d.length}`;
+                        if (d.factor || d.factor_rate || d.buy_rate) systemPrompt += ` | Factor: ${d.factor || d.factor_rate || d.buy_rate}`;
+                        if (d.payment || d.daily_payment || d.weekly_payment) systemPrompt += ` | Pmt: ${d.payment || d.daily_payment || d.weekly_payment}`;
+                        if (d.position) systemPrompt += ` | Position: ${d.position}`;
+                        
+                        // Safety: If we missed anything specific, check for other keys (excluding big arrays)
+                        Object.keys(d).forEach(key => {
+                            if (!['history', 'raw_body', 'term', 'days', 'factor', 'payment'].includes(key) && typeof d[key] !== 'object') {
+                                systemPrompt += ` | ${key}: ${d[key]}`;
+                            }
+                        });
+                    }
+
+                    // 3. Raw Context (The Fallback)
+                    if (sub.raw_email_body) {
+                        systemPrompt += `\n  (Email Snippet: "${sub.raw_email_body.substring(0, 300).replace(/\s+/g, ' ')}...")`;
+                    }
                     
-                    // Inject history if exists
+                    // 4. History (Latest Update)
                     if (sub.offer_details && sub.offer_details.history) {
                          const history = sub.offer_details.history;
                          const lastLog = history[history.length - 1];
-                         if(lastLog) systemPrompt += `\n  (Latest Update: ${lastLog.summary})`;
+                         if (lastLog) systemPrompt += `\n  (Latest Note: ${lastLog.summary})`;
                     }
                 });
             }
