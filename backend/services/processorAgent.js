@@ -125,6 +125,10 @@ async function processEmail(email, db) {
         response_format: { type: "json_object" }
     });
 
+    // 🟢 NEW: Extract and Log Token Usage
+    const usage = extraction.usage;
+    console.log(`   🎟️ [Tokens] Total: ${usage.total_tokens} | Prompt: ${usage.prompt_tokens} | Output: ${usage.completion_tokens}`);
+
     const data = JSON.parse(extraction.choices[0].message.content);
 
     if (!data.business_name) {
