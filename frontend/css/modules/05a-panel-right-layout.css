@@ -784,3 +784,35 @@
     outline: none;
     margin-top: 8px;
 }
+
+/* ==========================================================================
+   [FIX] FCS Report Styling
+   Makes the raw text report look like a professional dashboard card
+   ========================================================================== */
+
+/* Target the pre-formatted text blocks where the report lives */
+#fcsContent pre,
+.fcs-report-container,
+.intelligence-content pre {
+    background-color: #0d1117 !important; /* Dark card background */
+    border: 1px solid #30363d !important; /* Subtle border */
+    border-radius: 8px !important;        /* Rounded corners */
+    padding: 20px !important;             /* Breathing room */
+
+    /* Typography */
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace !important; /* Keeps tables aligned */
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+    color: #e6edf3 !important;            /* Light gray text */
+
+    /* Layout */
+    white-space: pre-wrap !important;     /* Wraps text so it doesn't scroll sideways unnecessarily */
+    overflow-x: auto !important;          /* Adds scrollbar only if tables are super wide */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important; /* nice shadow depth */
+}
+
+/* Optional: Hide the literal word "text" if it appears in its own specific block */
+/* (This only works if your frontend wraps the language label in a specific class) */
+.language-text {
+    display: none !important;
+}
