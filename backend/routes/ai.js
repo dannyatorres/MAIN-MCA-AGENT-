@@ -23,6 +23,8 @@ router.post('/chat', async (req, res) => {
 
     try {
         const { conversationId, query, includeContext = true } = req.body;
+        const db = getDatabase();
+        let conversationContext = null;
 
         if (!query) {
             return res.status(400).json({ success: false, error: 'Query is required' });
@@ -30,13 +32,9 @@ router.post('/chat', async (req, res) => {
 
         console.log(`🤖 [AI CHAT] Processing for ID: ${conversationId}`);
 
-        const db = getDatabase();
-        let conversationContext = null;
-
-        // Build comprehensive context
         if (conversationId && includeContext) {
 
-            // 1. Get Conversation Data
+            // 1. Basic Lead Info
             const convResult = await db.query(`
                 SELECT c.*, ld.*
                 FROM conversations c
@@ -47,55 +45,68 @@ router.post('/chat', async (req, res) => {
             if (convResult.rows.length > 0) {
                 const conversation = convResult.rows[0];
 
-                // 2. Get Messages
-                const messagesResult = await db.query(`
+                // 2. SMS History (Existing)
+                const smsResult = await db.query(`
                     SELECT content, direction, timestamp, sent_by
                     FROM messages
                     WHERE conversation_id = $1
-                    ORDER BY timestamp DESC
-                    LIMIT 20
+                    ORDER BY timestamp DESC LIMIT 15
                 `, [conversationId]);
 
-                // 3. Get Lender Submissions (ROBUST VERSION)
-                // We do NOT join the 'lenders' table anymore. We just trust the submissions table.
+                // 3. Lender Offers (Existing)
                 let lenderResult = { rows: [] };
                 try {
                     lenderResult = await db.query(`
-                        SELECT
-                            lender_name,
-                            status,
-                            offer_amount,
-                            decline_reason,
-                            raw_email_body,
-                            created_at as date
+                        SELECT lender_name, status, offer_amount, decline_reason, raw_email_body, offer_details
                         FROM lender_submissions
-                        WHERE conversation_id = $1
-                        ORDER BY created_at DESC
+                        WHERE conversation_id = $1 ORDER BY created_at DESC
                     `, [conversationId]);
-                } catch (err) {
-                    console.warn('⚠️ Could not fetch lender submissions (table might be missing):', err.message);
-                }
+                } catch (e) { console.log('Lender fetch error', e.message); }
 
-                // 4. Build Context Object
+                // 🟢 4. FETCH FCS / BANK ANALYSIS (NEW)
+                let fcsResult = { rows: [] };
+                try {
+                    fcsResult = await db.query(`
+                        SELECT * FROM fcs_analyses 
+                        WHERE conversation_id = $1 
+                        ORDER BY created_at DESC LIMIT 1
+                    `, [conversationId]);
+                } catch (e) { console.log('FCS fetch error', e.message); }
+
+                // 🟢 5. FETCH AI CHAT HISTORY (NEW)
+                let historyResult = { rows: [] };
+                try {
+                    historyResult = await db.query(`
+                        SELECT role, content 
+                        FROM ai_chat_messages 
+                        WHERE conversation_id = $1 
+                        ORDER BY created_at DESC LIMIT 10
+                    `, [conversationId]);
+                } catch (e) { console.log('History fetch error', e.message); }
+
+                // 6. Pack it all up
                 conversationContext = {
                     business_name: conversation.business_name,
+                    first_name: conversation.first_name,
+                    last_name: conversation.last_name,
+                    business_type: conversation.business_type,
+                    credit_score: conversation.credit_score,
                     monthly_revenue: conversation.monthly_revenue,
-                    credit_range: conversation.credit_score,
                     funding_amount: conversation.requested_amount,
-                    recent_messages: messagesResult.rows,
-                    lender_submissions: lenderResult.rows // Raw data, even if messy
+                    annual_revenue: conversation.annual_revenue,
+                    us_state: conversation.us_state,
+                    recent_messages: smsResult.rows,
+                    lender_submissions: lenderResult.rows,
+                    fcs: fcsResult.rows[0] || null,
+                    chat_history: historyResult.rows.reverse()
                 };
-
-                console.log(`📊 Context Built: found ${lenderResult.rows.length} offers/declines.`);
             }
         }
 
-        // Call AI Service
         const result = await aiService.generateResponse(query, conversationContext);
 
-        // Log & Respond
+        // Save the User/AI interaction to DB so memory builds up
         if(result.success) {
-            // Optional: Save history to DB
             try {
                 await db.query(`
                     INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)

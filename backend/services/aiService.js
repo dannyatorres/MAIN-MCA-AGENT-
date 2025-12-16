@@ -23,94 +23,84 @@ const getConfiguration = () => ({
  * Generates a response from OpenAI based on the user query and conversation context.
  */
 const generateResponse = async (query, context) => {
-    // 1. Safety Check
-    if (!isConfigured()) {
-        console.warn('⚠️ OpenAI API Key is missing or invalid.');
-        return {
-            success: false,
-            error: 'AI Service is not configured. Please add OPENAI_API_KEY to your .env file.'
-        };
-    }
+    if (!isConfigured()) return { success: false, error: 'AI Key Missing' };
 
     try {
-        // 2. Build the "System Brain" (The Prompt)
-        let systemPrompt = `You are an expert Merchant Cash Advance (MCA) underwriter assistant.
-Your goal is to help the broker (user) close deals, analyze offers, and communicate with merchants.
+        let systemPrompt = `You are an expert MCA underwriter assistant. 
+        Your goal is to help the broker close deals.
+        
+        DATA SOURCE INSTRUCTIONS:
+        - If asked about "Bank Analysis" or "FCS", use the BANK ANALYSIS section.
+        - If asked about "Offers", use the LENDER OFFERS section.
+        - If asked about "Credit" or "Owner", use the BUSINESS DETAILS section.
+        - If asked about context, recall the CHAT HISTORY.
+        `;
 
-CRITICAL INSTRUCTIONS:
-- Lenders often reply with short, informal emails (e.g., "10k 70 days" or "Declined due to balances").
-- You must interpret these informal notes clearly for the user.
-- If the lender name is unknown or generic, just refer to them as "a lender".
-- Be concise, professional, and data-driven.`;
-
-        // 3. Inject the Database Data
         if (context) {
-            systemPrompt += `\n\n=== CURRENT DEAL DETAILS ===`;
-            if (context.business_name) systemPrompt += `\nBusiness: ${context.business_name}`;
-            if (context.monthly_revenue) systemPrompt += `\nRevenue: ${context.monthly_revenue}`;
-            if (context.credit_range) systemPrompt += `\nFICO: ${context.credit_range}`;
-            if (context.funding_amount) systemPrompt += `\nRequested: ${context.funding_amount}`;
+            // 🟢 1. FULL LEAD DETAILS (Added Credit, Industry, Owner, etc.)
+            systemPrompt += `\n\n=== 🏢 BUSINESS & OWNER DETAILS ===`;
+            systemPrompt += `\nBusiness Name: ${context.business_name || 'Unknown'}`;
+            systemPrompt += `\nOwner Name: ${context.first_name || ''} ${context.last_name || ''}`.trim();
+            systemPrompt += `\nIndustry: ${context.business_type || 'Unknown'}`;
+            systemPrompt += `\nCredit Score: ${context.credit_score || 'N/A'}`;
+            systemPrompt += `\nMonthly Revenue: ${context.monthly_revenue || context.annual_revenue ? (context.annual_revenue/12).toFixed(0) : 'N/A'}`;
+            systemPrompt += `\nRequested Amount: ${context.funding_amount || 'N/A'}`;
+            systemPrompt += `\nState: ${context.us_state || 'N/A'}`;
 
-            // --- INJECT THE OFFERS (Even the messy ones) ---
-            if (context.lender_submissions && context.lender_submissions.length > 0) {
-                systemPrompt += `\n\n=== 💰 LENDER ACTIVITY (Database Records) ===`;
-                context.lender_submissions.forEach(sub => {
-                    // Handle "Unknown" or missing names gracefully
-                    const lenderName = sub.lender_name || "Unknown Lender";
-
-                    systemPrompt += `\n-------------------`;
-                    systemPrompt += `\nLender: ${lenderName}`;
-                    systemPrompt += `\nStatus: ${sub.status}`;
-
-                    // If we have an offer amount, show it. If not, check if the "raw email" had clues.
-                    if (sub.offer_amount) {
-                        systemPrompt += `\nOffer Details: ${sub.offer_amount}`;
-                    } else if (sub.raw_email_body) {
-                        // Sometimes the offer is buried in the body if parsing failed
-                        systemPrompt += `\n(Note from Email: "${sub.raw_email_body.substring(0, 100)}...")`;
-                    }
-
-                    if (sub.decline_reason) systemPrompt += `\nReason: ${sub.decline_reason}`;
-                    systemPrompt += `\nDate: ${sub.date}`;
-                });
+            // 🟢 2. FCS DATA (Bank Analysis)
+            if (context.fcs) {
+                const fcs = context.fcs;
+                systemPrompt += `\n\n=== 🏦 BANK ANALYSIS (FCS) ===`;
+                systemPrompt += `\nAvg Daily Balance: ${fcs.average_daily_balance || 'N/A'}`;
+                systemPrompt += `\nAvg Deposit Count: ${fcs.average_deposit_count || 'N/A'}`;
+                systemPrompt += `\nNegative Days: ${fcs.total_negative_days || '0'}`;
+                systemPrompt += `\nNSFs: ${fcs.total_nsfs || '0'}`;
+                systemPrompt += `\nRecency: ${fcs.statement_months || 'N/A'}`;
             } else {
-                 systemPrompt += `\n\n(No lender activity recorded in database yet)`;
+                systemPrompt += `\n\n(No Bank Analysis/FCS available yet)`;
             }
 
-            // --- INJECT CHAT HISTORY ---
-            if (context.recent_messages && context.recent_messages.length > 0) {
-                 systemPrompt += `\n\n=== RECENT SMS HISTORY (Last 10 msgs) ===`;
-                 // Reverse to show chronological order
-                 const history = [...context.recent_messages].reverse();
-                 history.forEach(msg => {
-                    const sender = msg.direction === 'outbound' ? 'Broker (Us)' : 'Merchant (Lead)';
-                    systemPrompt += `\n${sender}: "${msg.content}"`;
-                 });
+            // 🟢 3. LENDER OFFERS (With Email Body Context)
+             if (context.lender_submissions && context.lender_submissions.length > 0) {
+                systemPrompt += `\n\n=== 💰 LENDER OFFERS ===`;
+                context.lender_submissions.forEach(sub => {
+                    systemPrompt += `\n- Lender: ${sub.lender_name} | Status: ${sub.status}`;
+                    if(sub.offer_amount) systemPrompt += ` | Offer: $${sub.offer_amount}`;
+                    // Inject the email snippet so AI knows the "nuance"
+                    if(sub.raw_email_body) systemPrompt += `\n  (Context: "${sub.raw_email_body.substring(0, 200)}...")`;
+                    
+                    // Inject history if exists
+                    if (sub.offer_details && sub.offer_details.history) {
+                         const history = sub.offer_details.history;
+                         const lastLog = history[history.length - 1];
+                         if(lastLog) systemPrompt += `\n  (Latest Update: ${lastLog.summary})`;
+                    }
+                });
             }
         }
 
-        console.log('🤖 Sending prompt to OpenAI...');
+        // 🟢 4. CHAT HISTORY (Memory)
+        const messages = [{ role: "system", content: systemPrompt }];
+        
+        if (context && context.chat_history) {
+            context.chat_history.forEach(msg => {
+                if (['user', 'assistant'].includes(msg.role)) {
+                    messages.push({ role: msg.role, content: msg.content });
+                }
+            });
+        }
 
-        // 4. Call OpenAI
+        messages.push({ role: "user", content: query });
+
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: query }
-            ],
-            temperature: 0.7,
-            max_tokens: 600,
+            messages: messages,
+            temperature: 0.7
         });
 
-        // 5. Return Result
-        return {
-            success: true,
-            response: completion.choices[0].message.content,
-            usage: completion.usage
-        };
+        return { success: true, response: completion.choices[0].message.content };
 
     } catch (error) {
-        console.error("❌ OpenAI API Error:", error.message);
         return { success: false, error: error.message };
     }
 };
