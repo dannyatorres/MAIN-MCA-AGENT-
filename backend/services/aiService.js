@@ -1,5 +1,7 @@
 // services/aiService.js - OpenAI Integration Service
 const OpenAI = require('openai');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 // Initialize OpenAI
@@ -19,6 +21,18 @@ const getConfiguration = () => ({
     temperature: 0.7
 });
 
+// 🟢 NEW: Helper to load the Markdown prompt
+function getSystemPrompt() {
+    try {
+        const promptPath = path.join(__dirname, '../prompts/chat-assistant.md');
+        return fs.readFileSync(promptPath, 'utf8');
+    } catch (err) {
+        console.error('❌ Could not load chat prompt:', err.message);
+        // Fallback if file is missing
+        return `You are an expert MCA underwriter assistant. Use the provided context to answer questions.`;
+    }
+}
+
 /**
  * Generates a response from OpenAI based on the user query and conversation context.
  */
@@ -26,15 +40,8 @@ const generateResponse = async (query, context) => {
     if (!isConfigured()) return { success: false, error: 'AI Key Missing' };
 
     try {
-        let systemPrompt = `You are an expert MCA underwriter assistant. 
-        Your goal is to help the broker close deals.
-        
-        DATA SOURCE INSTRUCTIONS:
-        - If asked about "Bank Analysis" or "FCS", use the BANK ANALYSIS section.
-        - If asked about "Offers", use the LENDER OFFERS section.
-        - If asked about "Credit" or "Owner", use the BUSINESS DETAILS section.
-        - If asked about context, recall the CHAT HISTORY.
-        `;
+        // 1. Load Base Instructions from MD File
+        let systemPrompt = getSystemPrompt();
 
         if (context) {
             // 🟢 1. FULL LEAD DETAILS (Added Credit, Industry, Owner, etc.)
@@ -43,7 +50,8 @@ const generateResponse = async (query, context) => {
             systemPrompt += `\nOwner Name: ${context.first_name || ''} ${context.last_name || ''}`.trim();
             systemPrompt += `\nIndustry: ${context.business_type || 'Unknown'}`;
             systemPrompt += `\nCredit Score: ${context.credit_score || 'N/A'}`;
-            systemPrompt += `\nMonthly Revenue: ${context.monthly_revenue || context.annual_revenue ? (context.annual_revenue/12).toFixed(0) : 'N/A'}`;
+            const monthlyRevenue = context.monthly_revenue || (context.annual_revenue ? (context.annual_revenue / 12).toFixed(0) : null);
+            systemPrompt += `\nMonthly Revenue: ${monthlyRevenue || 'N/A'}`;
             systemPrompt += `\nRequested Amount: ${context.funding_amount || 'N/A'}`;
             systemPrompt += `\nState: ${context.us_state || 'N/A'}`;
 
