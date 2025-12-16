@@ -194,30 +194,26 @@ router.post('/', async (req, res) => {
         console.log('📝 Creating new lead with FULL details...');
 
         // --- 1. SANITIZATION (Clean up the inputs) ---
-
-        // 🔴 FIX: Convert Empty Strings to NULL (Prevents "invalid input syntax for type date")
         Object.keys(data).forEach(key => {
             if (data[key] === '') data[key] = null;
         });
 
-        // Clean Phone Numbers (Remove () - space)
+        // Clean Phone Numbers
         ['lead_phone', 'cell_phone', 'owner_phone', 'owner2_phone'].forEach(k => {
             if (data[k] && typeof data[k] === 'string') {
                 data[k] = data[k].replace(/\D/g, '');
             }
         });
 
-        // Clean Currency (Remove $ ,)
+        // Clean Currency
         ['annualRevenue', 'monthlyRevenue', 'requestedAmount', 'funding_amount'].forEach(k => {
             if (data[k]) data[k] = String(data[k]).replace(/[^0-9.]/g, '');
         });
 
         // --- 2. SMART NAME EXTRACTION ---
-        // Try to find the name in any field the frontend might send
         let firstName = data.first_name || data.owner_name || data.ownerFirstName || data.contact_name || null;
         let lastName = data.last_name || data.ownerLastName || null;
 
-        // Split "Dan Torres" if needed
         if (firstName && firstName.includes(' ') && !lastName) {
             const parts = firstName.split(' ');
             firstName = parts[0];
@@ -225,8 +221,6 @@ router.post('/', async (req, res) => {
         }
 
         // --- 3. CHECK FOR DUPLICATES & INSERT/UPDATE ---
-
-        // First, check if this phone number already exists
         const existingCheck = await db.query(
             'SELECT id FROM conversations WHERE lead_phone = $1',
             [data.lead_phone]
@@ -236,7 +230,7 @@ router.post('/', async (req, res) => {
         let isUpdate = false;
 
         if (existingCheck.rows.length > 0) {
-            // DUPLICATE FOUND: Update the existing record instead
+            // DUPLICATE FOUND: Update existing
             newId = existingCheck.rows[0].id;
             isUpdate = true;
             console.log(`⚠️ Lead exists (${newId}). Updating instead of creating.`);
@@ -258,7 +252,7 @@ router.post('/', async (req, res) => {
             ]);
         } else {
             // NEW RECORD: Insert normally
-            const convResult = await db.query(`
+            const insertResult = await db.query(`
                 INSERT INTO conversations (
                     business_name, lead_phone, email, us_state,
                     address, city, zip,
@@ -282,66 +276,51 @@ router.post('/', async (req, res) => {
                 data.notes || '',
                 data.priority ? parseInt(data.priority) : 1
             ]);
-            newId = convResult.rows[0].id;
+            newId = insertResult.rows[0].id;
         }
 
         console.log(`✅ Step 1: Conversation ${isUpdate ? 'updated' : 'created'}: ${newId}`);
 
-        // --- 4. INSERT INTO LEAD_DETAILS (The Deep Data) ---
-        // This saves SSN, Revenue, and OWNER 2 info
+        // --- 4. INSERT INTO LEAD_DETAILS ---
         await db.query(`
             INSERT INTO lead_details (
                 conversation_id,
-
-                -- Business Details
                 tax_id_encrypted, business_start_date, business_type,
                 annual_revenue, funding_amount,
-
-                -- Owner 1 Details
                 ssn_encrypted, date_of_birth,
                 owner_ownership_percent, owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
-
-                -- Owner 2 Details
                 owner2_first_name, owner2_last_name,
                 owner2_email, owner2_phone,
                 owner2_ssn, owner2_dob,
                 owner2_ownership_percent,
                 owner2_address, owner2_city, owner2_state, owner2_zip,
-
                 created_at
             )
             VALUES (
-                $1,
-                $2, $3, $4, $5, $6,
-                $7, $8, $9, $10, $11, $12, $13,
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
                 $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24,
                 NOW()
             )
         `, [
             newId,
-            // Business
             data.tax_id || data.federalTaxId || null,
-            data.business_start_date || data.businessStartDate || null, // 👈 This is where the fix helps
+            data.business_start_date || data.businessStartDate || null,
             data.business_type || data.industryType || null,
             data.annual_revenue || data.annualRevenue || null,
             data.funding_amount || data.requestedAmount || null,
-
-            // Owner 1
             data.ssn || data.ownerSSN || null,
-            data.date_of_birth || data.ownerDOB || null, // 👈 And here
-            data.ownership_percent || data.ownershipPercent || null,
+            data.date_of_birth || data.ownerDOB || null,
+            data.ownership_percent || data.ownerPercent || data.ownershipPercent || null,
             data.owner_home_address || data.ownerHomeAddress || null,
             data.owner_home_city || data.ownerHomeCity || null,
             data.owner_home_state || data.ownerHomeState || null,
             data.owner_home_zip || data.ownerHomeZip || null,
-
-            // Owner 2
             data.owner2_first_name || data.owner2FirstName || null,
             data.owner2_last_name || data.owner2LastName || null,
             data.owner2_email || data.owner2Email || null,
             data.owner2_phone || data.owner2Phone || null,
             data.owner2_ssn || data.owner2SSN || null,
-            data.owner2_dob || data.owner2DOB || null, // 👈 And here
+            data.owner2_dob || data.owner2DOB || null,
             data.owner2_ownership_percent || data.owner2OwnershipPercent || null,
             data.owner2_address || data.owner2HomeAddress || null,
             data.owner2_city || data.owner2HomeCity || null,
@@ -349,12 +328,14 @@ router.post('/', async (req, res) => {
             data.owner2_zip || data.owner2HomeZip || null
         ]);
 
-        console.log(`✅ Step 2: Lead Details (including Owner 2) saved for ${newId}`);
+        console.log(`✅ Step 2: Lead Details saved for ${newId}`);
 
-        // --- 5. RETURN SUCCESS ---
+        // --- 5. RETURN SUCCESS (FIXED) ---
+        const finalConversation = await db.query('SELECT * FROM conversations WHERE id = $1', [newId]);
+
         res.json({
             success: true,
-            conversation: { ...convResult.rows[0], id: newId }
+            conversation: finalConversation.rows[0]
         });
 
     } catch (error) {
