@@ -2,7 +2,7 @@
 const GmailInboxService = require('./gmailInboxService');
 const { getDatabase } = require('./database');
 const { OpenAI } = require('openai');
-const { v4: uuidv4 } = require('uuid'); // Need this to create IDs for new lenders
+const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -10,7 +10,7 @@ const gmail = new GmailInboxService();
 
 // ⚡ SETTINGS
 const CHECK_INTERVAL = 2 * 60 * 1000; // Check every 2 minutes
-const SEARCH_QUERY = 'subject:(Offer OR Decline OR Stipulations OR Submission OR Funding OR Approval) is:unread';
+const KEYWORDS_REGEX = /(Offer|Decline|Stipulations|Submission|Funding|Approval)/i;
 
 // 🛠️ HELPER: Standardize Name
 function normalizeName(name) {
@@ -42,30 +42,65 @@ function getSimilarity(s1, s2) {
 }
 
 async function startProcessor() {
-    console.log('👩‍💼 Processor Agent: Online (Scorecard Mode)...');
+    console.log('👩‍💼 Processor Agent: Online (Ledger Mode)...');
     setInterval(runCheck, CHECK_INTERVAL);
     runCheck();
 }
 
 async function runCheck() {
+    const db = getDatabase();
     try {
-        const emails = await gmail.searchEmails(SEARCH_QUERY);
-        if (!emails || emails.length === 0) return;
+        // 1. FETCH RECENT EMAILS (Read AND Unread)
+        // We look at the last 50 emails. The DB prevents duplicates, so this is safe.
+        const recentEmails = await gmail.fetchEmails({ limit: 50 });
 
-        console.log(`📨 Processor: Found ${emails.length} emails to analyze.`);
+        if (!recentEmails || recentEmails.length === 0) return;
 
-        for (const email of emails) {
-            await processEmail(email);
+        // 2. FILTER: Keyword + LEDGER CHECK
+        const newEmails = [];
+
+        for (const email of recentEmails) {
+            // A. Keyword Check (Fastest)
+            if (!KEYWORDS_REGEX.test(email.subject || "")) continue;
+
+            // B. Database Ledger Check (The Safety Valve)
+            // We check if this specific Message ID is already in our table
+            const exists = await db.query(
+                'SELECT 1 FROM processed_emails WHERE message_id = $1',
+                [email.id]
+            );
+
+            if (exists.rows.length === 0) {
+                newEmails.push(email);
+            }
+        }
+
+        if (newEmails.length === 0) {
+            // console.log(`💤 Checked ${recentEmails.length} emails. No new deal updates.`);
+            return;
+        }
+
+        console.log(`📨 Processor: found ${newEmails.length} NEW relevant emails.`);
+
+        for (const email of newEmails) {
+            await processEmail(email, db); // Pass DB to save connection time
         }
     } catch (err) {
         console.error('❌ Processor Loop Error:', err.message);
     }
 }
 
-async function processEmail(email) {
-    const db = getDatabase();
+async function processEmail(email, db) {
+    // 🛡️ DOUBLE CHECK (Concurrency Safety)
+    try {
+        await db.query('INSERT INTO processed_emails (message_id) VALUES ($1)', [email.id]);
+    } catch (err) {
+        // If insert fails (duplicate key), it means another thread just processed it. Skip.
+        return;
+    }
 
-    // 1. ASK AI TO EXTRACT STRUCTURED DATA
+    // --- FROM HERE, IT IS EXACTLY THE SAME AS BEFORE ---
+
     const extraction = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{
@@ -100,8 +135,8 @@ async function processEmail(email) {
 
     if (!data.business_name) return;
 
-    // 2. FUZZY MATCH LEAD
     const emailNameClean = normalizeName(data.business_name);
+
     const candidates = await db.query(`
         SELECT id, business_name FROM conversations
         WHERE lower(business_name) LIKE $1
@@ -119,22 +154,16 @@ async function processEmail(email) {
         }
     }
 
-    if (!bestMatchId) {
-        // console.log(`Skipping: "${data.business_name}" not in CRM.`);
-        return;
-    }
+    if (!bestMatchId) return;
 
     console.log(`✅ MATCH: "${data.business_name}" -> Lead ${bestMatchId} (${data.category})`);
 
-    // 3. UPDATE THE SCORECARD (Lender Submissions)
-    // First, try to find an existing submission for this lender
     const submissionCheck = await db.query(`
         SELECT id FROM lender_submissions
         WHERE conversation_id = $1 AND lender_name ILIKE $2
     `, [bestMatchId, `%${data.lender}%`]);
 
     if (submissionCheck.rows.length > 0) {
-        // UPDATE Existing
         await db.query(`
             UPDATE lender_submissions
             SET status = $1,
@@ -144,48 +173,24 @@ async function processEmail(email) {
                 decline_reason = COALESCE($5, decline_reason),
                 last_response_at = NOW()
             WHERE id = $6
-        `, [
-            data.category,
-            data.offer_amount,
-            data.factor_rate,
-            data.term_months,
-            data.decline_reason,
-            submissionCheck.rows[0].id
-        ]);
+        `, [data.category, data.offer_amount, data.factor_rate, data.term_months, data.decline_reason, submissionCheck.rows[0].id]);
     } else {
-        // INSERT New (Unsolicited Offer)
         await db.query(`
             INSERT INTO lender_submissions (
                 id, conversation_id, lender_name, status,
                 offer_amount, factor_rate, term_months, decline_reason,
                 submitted_at, last_response_at, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), NOW())
-        `, [
-            uuidv4(),
-            bestMatchId,
-            data.lender || 'Unknown Lender',
-            data.category,
-            data.offer_amount,
-            data.factor_rate,
-            data.term_months,
-            data.decline_reason
-        ]);
+        `, [uuidv4(), bestMatchId, data.lender || 'Unknown Lender', data.category, data.offer_amount, data.factor_rate, data.term_months, data.decline_reason]);
     }
 
-    // 4. TRIGGER THE GREEN BUTTON (If Offer)
     if (data.category === 'OFFER') {
         await db.query(`UPDATE conversations SET has_offer = TRUE, last_activity = NOW() WHERE id = $1`, [bestMatchId]);
-
-        // Shout to Frontend
         if (global.io) global.io.emit('refresh_lead_list');
     }
 
-    // 5. SAVE CHAT LOG
     const systemNote = `📩 **INBOX UPDATE:** ${data.lender} - ${data.category}\n${data.summary}`;
     await db.query(`INSERT INTO messages (conversation_id, direction, content, timestamp) VALUES ($1, 'system', $2, NOW())`, [bestMatchId, systemNote]);
-
-    // Mark as read
-    // await gmail.markAsRead(email.id);
 }
 
 module.exports = { startProcessor };
