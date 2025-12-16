@@ -1,5 +1,6 @@
 // js/ai-assistant.js
 // REFACTORED: Combined Controller (Logic) + View (Render)
+// FEATURES: Smart Welcome (Auto-detects offers on load)
 
 class AIAssistant {
     constructor(parent) {
@@ -17,13 +18,9 @@ class AIAssistant {
     }
 
     // ============================================================
-    // 1. VIEW / RENDER LOGIC (Moved from ai-tab.js)
+    // 1. VIEW / RENDER LOGIC
     // ============================================================
 
-    /**
-     * Called by IntelligenceManager when the AI tab is clicked
-     * @param {HTMLElement} container - The DOM element to render into
-     */
     render(container) {
         console.log('🤖 Rendering AI Assistant Interface');
         const conversation = this.parent.getSelectedConversation();
@@ -76,9 +73,8 @@ class AIAssistant {
     initializeAIChat() {
         const conversationId = this.parent.getCurrentConversationId();
 
-        // Prevent double-init (safe-guard against app-core.js redundant calls)
+        // Prevent double-init
         if (this.currentConversationId === conversationId && this.isInitialized) {
-            console.log('AI already initialized for this ID');
             return;
         }
 
@@ -87,11 +83,7 @@ class AIAssistant {
 
         console.log('⚡ Initializing AI Logic for ID:', conversationId);
 
-        // 1. Bind Events to the elements we just rendered
         this.setupEventHandlers();
-
-        // 2. Load Context & History
-        this.loadAIContext();
         this.loadChatHistory();
     }
 
@@ -99,10 +91,7 @@ class AIAssistant {
         const chatInput = document.getElementById('aiChatInput');
         const sendButton = document.getElementById('aiChatSend');
 
-        if (!chatInput || !sendButton) {
-            console.error('❌ AI UI Elements not found during binding');
-            return;
-        }
+        if (!chatInput || !sendButton) return;
 
         // Auto-resize textarea
         chatInput.addEventListener('input', (e) => {
@@ -141,7 +130,7 @@ class AIAssistant {
         // UI Updates
         input.value = '';
         input.style.height = 'auto';
-        this.addMessageToChat('user', message, false); // Optimistic UI update
+        this.addMessageToChat('user', message, false);
         this.showTypingIndicator();
 
         try {
@@ -157,7 +146,7 @@ class AIAssistant {
             this.hideTypingIndicator();
 
             if (data.success && (data.response || data.fallback)) {
-                this.addMessageToChat('assistant', data.response || data.fallback, false);
+                this.addMessageToChat('assistant', data.response || data.fallback, true); // Save response to DB
             } else {
                 throw new Error(data.error || 'Unknown error');
             }
@@ -183,13 +172,8 @@ class AIAssistant {
         messageRow.appendChild(messageBubble);
         messagesContainer.appendChild(messageRow);
 
-        // FIX: Only scroll if requested. This prevents stuttering during history load.
         if (scrollToBottom) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-
-        if (saveToDatabase) {
-            this.saveMessageToDatabase(role, content);
         }
     }
 
@@ -225,7 +209,7 @@ class AIAssistant {
     }
 
     // ============================================================
-    // 4. DATA LOADING
+    // 4. DATA LOADING (SMART HISTORY)
     // ============================================================
 
     async loadChatHistory() {
@@ -236,64 +220,67 @@ class AIAssistant {
         try {
             const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
 
-            // 1. Use visibility hidden instead of opacity (prevents layout flashing)
             messagesContainer.style.visibility = 'hidden';
-
-            // 2. CRITICAL: Force 'auto' scroll behavior to prevent the "scrolling" animation
             messagesContainer.style.scrollBehavior = 'auto';
-
-            // Clear "Connecting..." message
             messagesContainer.innerHTML = '';
 
             if (data.messages && data.messages.length > 0) {
-                // Add messages WITHOUT scrolling (pass false as 4th arg)
+                // If history exists, just show it
                 data.messages.forEach(msg => {
                     this.addMessageToChat(msg.role, msg.content, false, false);
                 });
-
-                // 3. Snap to bottom instantly
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
             } else {
-                this.showWelcomeMessage();
+                // 🧠 SMART START: If no history, trigger Auto-Analysis
+                this.triggerSmartIntro();
             }
 
-            // 4. Force a "Reflow". Accessing offsetHeight forces the browser to
-            // calculate the layout (and the scroll position) BEFORE it paints the screen.
             const forceLayout = messagesContainer.offsetHeight;
-
-            // 5. Make visible again
             messagesContainer.style.visibility = 'visible';
-
-            // 6. Re-enable smooth scrolling for future messages (UX polish)
-            // We use a slight timeout to ensure the initial load is completely done
-            setTimeout(() => {
-                messagesContainer.style.scrollBehavior = 'smooth';
-            }, 100);
+            setTimeout(() => { messagesContainer.style.scrollBehavior = 'smooth'; }, 100);
 
         } catch (error) {
             console.log('Error loading history:', error);
             messagesContainer.innerHTML = '';
-            messagesContainer.style.visibility = 'visible'; // Ensure visible on error
-            this.showWelcomeMessage();
+            messagesContainer.style.visibility = 'visible';
+            this.addMessageToChat('assistant', "I'm ready. (History load failed)", false);
         }
     }
 
-    showWelcomeMessage() {
-        const conversation = this.parent.getSelectedConversation();
-        const businessName = conversation?.business_name || 'this lead';
-        this.addMessageToChat('assistant', `Hi! I'm ready to help with **${businessName}**.`, false);
-    }
-
-    async saveMessageToDatabase(role, content) {
+    // 🔥 THIS IS THE NEW FEATURE
+    // Automatically asks the backend: "What is going on?"
+    async triggerSmartIntro() {
         const conversationId = this.parent.getCurrentConversationId();
-        this.parent.apiCall(`/api/ai/chat/${conversationId}/messages`, {
-            method: 'POST',
-            body: JSON.stringify({ role, content })
-        }).catch(err => console.warn('Failed to save msg', err));
-    }
+        const messagesContainer = document.getElementById('aiChatMessages');
+        if (!messagesContainer) return;
 
-    async loadAIContext() {
-        // (Keep your existing FCS loading logic here if you wish)
+        // Show typing immediately
+        this.showTypingIndicator();
+        messagesContainer.style.visibility = 'visible';
+
+        try {
+            // We send a "Hidden" query that the user didn't type
+            const data = await this.parent.apiCall('/api/ai/chat', {
+                method: 'POST',
+                body: JSON.stringify({
+                    query: "Analyze the database for this conversation. If there are any offers (even messy ones like '10k 70 days'), tell me immediately. If no offers, just summarize the deal status.",
+                    conversationId: conversationId,
+                    includeContext: true
+                })
+            });
+
+            this.hideTypingIndicator();
+
+            if (data.success && data.response) {
+                // Display the AI's "Auto-Analysis"
+                this.addMessageToChat('assistant', data.response, true);
+            } else {
+                this.addMessageToChat('assistant', "Hi! I'm ready to help. (Auto-analysis unavailable)", false);
+            }
+
+        } catch (e) {
+            this.hideTypingIndicator();
+            this.addMessageToChat('assistant', "Hi! I'm ready to help.", false);
+        }
     }
 }
