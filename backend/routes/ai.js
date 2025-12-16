@@ -161,11 +161,16 @@ router.post('/chat', async (req, res) => {
                     console.log('📊 FCS table lookup error:', err.message);
                 }
 
-                // Get lender submissions (with error handling)
+                // Get lender submissions (FIXED TO INCLUDE OFFER AMOUNT)
                 let lenderResult = { rows: [] };
                 try {
                     lenderResult = await db.query(`
-                        SELECT l.name as lender_name, ls.status, ls.submitted_at as date
+                        SELECT
+                            l.name as lender_name,
+                            ls.status,
+                            ls.offer_amount,
+                            ls.decline_reason,
+                            ls.submitted_at as date
                         FROM lender_submissions ls
                         JOIN lenders l ON ls.lender_id = l.id
                         WHERE ls.conversation_id = $1
@@ -190,7 +195,7 @@ router.post('/chat', async (req, res) => {
                     credit_range: conversation.credit_score,
                     has_application: !!conversation.application_completed,
                     documents_count: docsResult.rows.length,
-                    bank_statements_count: 0, // Will be calculated from actual filenames if needed
+                    bank_statements_count: 0,
                     has_tax_returns: false,
                     has_id: false,
                     has_voided_check: false,
@@ -209,7 +214,7 @@ router.post('/chat', async (req, res) => {
                     })),
                     outbound_message_count: parseInt(outboundCountResult.rows[0].count) || 0,
                     last_outbound_time: lastOutboundResult.rows[0]?.last_time || null,
-                    lender_submissions: lenderResult.rows,
+                    lender_submissions: lenderResult.rows, // Now includes offer_amount
                     days_in_pipeline: conversation.created_at ?
                         Math.floor((Date.now() - new Date(conversation.created_at)) / (1000 * 60 * 60 * 24)) : 0
                 };
@@ -217,6 +222,7 @@ router.post('/chat', async (req, res) => {
                 console.log('✅ Context built:', {
                     messages: conversationContext.recent_messages.length,
                     documents: docsResult.rows.length,
+                    offers_found: lenderResult.rows.length,
                     has_fcs: conversationContext.has_fcs,
                     outbound_count: conversationContext.outbound_message_count
                 });
