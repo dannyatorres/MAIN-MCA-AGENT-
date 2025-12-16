@@ -159,9 +159,23 @@ class GmailInboxService {
     }
 
     /**
-     * 🛡️ FIXED FETCH: Prevents Infinite Loops with 'isFetching' Lock
+     * 🛡️ EMERGENCY SHIELDED FETCH
      */
     async fetchEmails(options = {}) {
+        // 1. GLOBAL STATIC BLOCK (The "Nuclear" Option)
+        // This variable is attached to the class itself, so it persists
+        // even if new instances of the service are created.
+        const now = Date.now();
+        if (GmailInboxService.lastFetchTime && (now - GmailInboxService.lastFetchTime < 10000)) {
+            console.log('🛑 BLOCKED: Fetch loop detected (Cooldown active).');
+            return [];
+        }
+        GmailInboxService.lastFetchTime = now;
+
+        // 2. LOG THE CULPRIT (So we can find the file causing this)
+        console.log('🔍 fetchEmails called by:');
+        console.trace(); // <--- This will print the file path triggering the loop!
+
         if (this.isFetching) {
             console.warn('⚠️ Fetch already in progress. Skipping.');
             return [];
@@ -208,9 +222,6 @@ class GmailInboxService {
                 validMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
 
                 // --- 🚀 PERFORMANCE FIX: PARALLEL PROCESSING ---
-                // Old way: Processed 1-by-1 (Slow)
-                // New way: Processes all 50 concurrently (Fast)
-
                 const emailPromises = validMessages.map(async (message) => {
                     try {
                         return await this.parseMessage(message);
@@ -225,7 +236,6 @@ class GmailInboxService {
 
                 console.log(`✅ Successfully processed ${emails.length} emails.`);
                 return emails;
-                // -----------------------------------------------
             });
 
         } catch (err) {
