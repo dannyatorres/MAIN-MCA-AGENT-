@@ -70,7 +70,8 @@ Output Workflow
 Underwriting Section Breakdown
 
 Monthly Financial Summary
-Use consistent column spacing to ensure headers align vertically:
+Use consistent column spacing to ensure headers align vertically.
+FORMAT EXAMPLE (Do NOT output this example line, only the actual data):
 Month Year  Deposits: $amount  Revenue: $amount  Neg Days: #  End Bal: $amount  #Dep: #
 
 Example with proper column alignment:

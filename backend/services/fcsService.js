@@ -1,4 +1,4 @@
-// services/fcsService.js - FIXED: Gemini Only + External Prompt
+// services/fcsService.js - FIXED: Output Cleaner Added
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -173,7 +173,10 @@ class FCSService {
             if (extractedData.length === 0) throw new Error('No text extracted from any documents');
 
             // 4. Generate Analysis (GEMINI ONLY)
-            const fcsAnalysis = await this.generateFCSAnalysis(extractedData, businessName);
+            const fcsAnalysisRaw = await this.generateFCSAnalysis(extractedData, businessName);
+
+            // 🧹 CLEANER: Remove markdown artifacts and echo lines
+            const fcsAnalysis = this.cleanGeminiOutput(fcsAnalysisRaw);
 
             // 5. Extract Metrics
             const averageRevenue = extractMoneyValue(fcsAnalysis, 'Average True Revenue') || extractMoneyValue(fcsAnalysis, 'Revenue');
@@ -235,10 +238,8 @@ class FCSService {
     async generateFCSAnalysis(extractedData, businessName) {
         await this.initializeGemini();
 
-        // 1. Prepare Data
         const allText = extractedData.map(d => `=== ${d.filename} ===\n${d.text.substring(0, 25000)}`).join('\n\n');
 
-        // 2. Load Prompt from File
         let promptTemplate;
         try {
             const promptPath = path.join(__dirname, '../prompts/fcs_prompt.md');
@@ -248,7 +249,6 @@ class FCSService {
             throw new Error('Prompt file missing');
         }
 
-        // 3. Inject Variables
         const prompt = promptTemplate
             .replace(/{{BUSINESS_NAME}}/g, businessName)
             .replace(/{{STATEMENT_COUNT}}/g, extractedData.length)
@@ -266,6 +266,25 @@ class FCSService {
             console.error('❌ Gemini Generation Failed:', err.message);
             throw new Error(`Gemini Error: ${err.message}`);
         }
+    }
+
+    // 🧹 NEW: Removes markdown code blocks and specific artifacts
+    cleanGeminiOutput(text) {
+        if (!text) return '';
+
+        let clean = text;
+
+        // 1. Remove Markdown code block syntax (```text, ```markdown, ```)
+        clean = clean.replace(/^```[a-z]*\n?/im, '').replace(/```$/im, '');
+
+        // 2. Remove the specific "text" label if it appears alone at start
+        clean = clean.replace(/^text\s*$/im, '');
+
+        // 3. Remove the echoed header instructions (The white stuff)
+        // Matches "Month Year Deposits: ... #Dep: #" and removes it
+        clean = clean.replace(/Month Year\s+Deposits:.*#Dep:\s*#/gi, '');
+
+        return clean.trim();
     }
 }
 
