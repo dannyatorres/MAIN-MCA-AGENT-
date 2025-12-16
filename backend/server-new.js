@@ -141,6 +141,7 @@ const requireAuth = (req, res, next) => {
         '/api/contact',
         '/api/conversations/fix/schema-patch',      // Database migration routes
         '/api/conversations/fix/fcs-schema-update', // Database migration routes
+        '/api/conversations/fix/upgrade-submissions-schema', // Lender submissions schema upgrade
         '/api/agent/trigger'       // Dispatcher AI Agent endpoint
     ];
 

@@ -13,6 +13,42 @@ const { v4: uuidv4 } = require('uuid');
 // Initialize email service
 const emailService = new EmailService();
 
+// ==========================================
+// 🛠️ MIGRATION ROUTE (Place at TOP of file)
+// Run: /api/conversations/fix/upgrade-submissions-schema
+// ==========================================
+router.get('/fix/upgrade-submissions-schema', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Starting Schema Upgrade for Lender Submissions...');
+
+        // 1. Upgrade Lender Submissions (Add Scorecard Columns)
+        await db.query(`
+            ALTER TABLE lender_submissions
+            ADD COLUMN IF NOT EXISTS offer_amount NUMERIC(15,2),
+            ADD COLUMN IF NOT EXISTS factor_rate NUMERIC(5,4),
+            ADD COLUMN IF NOT EXISTS term_months INTEGER,
+            ADD COLUMN IF NOT EXISTS payment_frequency VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS decline_reason TEXT,
+            ADD COLUMN IF NOT EXISTS offer_details JSONB,
+            ADD COLUMN IF NOT EXISTS last_response_at TIMESTAMP;
+        `);
+
+        // 2. Add "Green Button" Flag to Conversations
+        await db.query(`
+            ALTER TABLE conversations
+            ADD COLUMN IF NOT EXISTS has_offer BOOLEAN DEFAULT FALSE;
+        `);
+
+        console.log('✅ Schema Upgrade Complete.');
+        res.json({ success: true, message: 'Database patched! Offers/Declines support active.' });
+
+    } catch (error) {
+        console.error('❌ Migration Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Initialize S3
 const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
