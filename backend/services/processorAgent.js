@@ -42,12 +42,19 @@ function getSimilarity(s1, s2) {
 }
 
 async function startProcessor() {
-    console.log('👩‍💼 Processor Agent: Online (Ledger Mode)...');
-    setInterval(runCheck, CHECK_INTERVAL);
+    console.log('👩‍💼 Processor Agent: Online (Smart Ledger Mode)...');
+    // Start the first run immediately
     runCheck();
 }
 
 async function runCheck() {
+    // Loop Tracking Variable to prevent duplicates if accidentally called
+    if (global.isProcessorRunning) {
+        console.log('⚠️ Processor overlapped. Skipping this cycle.');
+        return;
+    }
+    global.isProcessorRunning = true;
+
     const db = getDatabase();
     try {
         // 1. FETCH RECENT EMAILS (Read AND Unread)
@@ -87,6 +94,11 @@ async function runCheck() {
         }
     } catch (err) {
         console.error('❌ Processor Loop Error:', err.message);
+    } finally {
+        // Schedule the NEXT run only after this one finishes
+        global.isProcessorRunning = false;
+        console.log(`💤 Sleeping for ${CHECK_INTERVAL / 1000} seconds...`);
+        setTimeout(runCheck, CHECK_INTERVAL);
     }
 }
 
