@@ -98,15 +98,30 @@ router.post('/chat', async (req, res) => {
 
                 // 6. Pack it all up
                 conversationContext = {
+                    // Standard Info
                     business_name: conversation.business_name,
-                    first_name: conversation.first_name,
-                    last_name: conversation.last_name,
-                    business_type: conversation.business_type,
-                    credit_score: conversation.credit_score,
                     monthly_revenue: conversation.monthly_revenue,
                     funding_amount: conversation.requested_amount,
-                    annual_revenue: conversation.annual_revenue,
-                    us_state: conversation.us_state,
+                    
+                    // Owner Names
+                    first_name: conversation.first_name, 
+                    last_name: conversation.last_name,
+
+                    // Address mapping based on schema
+                    address: conversation.business_address || conversation.address || 'N/A',
+                    owner_address: conversation.owner_home_address,
+                    owner_city: conversation.owner_home_city,
+                    owner_state: conversation.owner_home_state,
+                    owner_zip: conversation.owner_home_zip,
+
+                    // Tax ID (encrypted)
+                    tax_id: conversation.tax_id_encrypted ? '(Encrypted)' : 'N/A', 
+
+                    // Credit & Industry
+                    credit_range: conversation.credit_score, 
+                    industry: conversation.business_type,
+
+                    // Data Arrays
                     recent_messages: smsResult.rows,
                     lender_submissions: lenderResult.rows,
                     fcs: fcsResult.rows[0] || null,

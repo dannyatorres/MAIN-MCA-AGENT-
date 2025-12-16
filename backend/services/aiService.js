@@ -56,12 +56,15 @@ const generateResponse = async (query, context) => {
             systemPrompt += `\n\n=== 🏢 BUSINESS & OWNER DETAILS ===`;
             systemPrompt += `\nBusiness Name: ${context.business_name || 'Unknown'}`;
             systemPrompt += `\nOwner Name: ${context.first_name || ''} ${context.last_name || ''}`.trim();
-            systemPrompt += `\nIndustry: ${context.business_type || 'Unknown'}`;
-            systemPrompt += `\nCredit Score: ${context.credit_score || 'N/A'}`;
+            systemPrompt += `\nBusiness Address: ${context.address || 'N/A'}`;
+            if (context.owner_city) {
+                systemPrompt += `\nOwner Location: ${context.owner_city}, ${context.owner_state || ''} ${context.owner_zip || ''}`.trim();
+            }
+            systemPrompt += `\nIndustry: ${context.industry || 'Unknown'}`;
+            systemPrompt += `\nCredit Score: ${context.credit_range || 'N/A'}`;
             const monthlyRevenue = context.monthly_revenue || (context.annual_revenue ? (context.annual_revenue / 12).toFixed(0) : null);
             systemPrompt += `\nMonthly Revenue: ${monthlyRevenue || 'N/A'}`;
             systemPrompt += `\nRequested Amount: ${context.funding_amount || 'N/A'}`;
-            systemPrompt += `\nState: ${context.us_state || 'N/A'}`;
 
             // 🟢 2. FCS DATA (Bank Analysis)
             if (context.fcs) {
