@@ -18,13 +18,25 @@ export class EmailTab {
         this.container.innerHTML = this.getLayoutHTML();
         this.attachEventListeners();
 
-        // 🧠 SMART RENDER: If we already have emails, just show them.
-        // Only fetch from server if the list is empty.
-        if (this.emails && this.emails.length > 0) {
-            this.renderEmailList();
-        } else {
-            this.fetchEmails();
-        }
+        // 👁️ LAZY LOAD: Only fetch when the tab actually becomes visible
+        // This prevents the "Background Loop" when the tab is hidden.
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                // The tab is now visible!
+                console.log("👁️ Email Tab is visible - Fetching emails...");
+
+                // Only fetch if we haven't loaded data yet
+                if (this.emails.length === 0) {
+                    this.fetchEmails();
+                }
+
+                // Optional: Stop observing after first load (remove if you want auto-refresh on tab switch)
+                // observer.disconnect();
+            }
+        }, { threshold: 0.1 });
+
+        // Start watching the container
+        observer.observe(this.container);
     }
 
     getLayoutHTML() {
