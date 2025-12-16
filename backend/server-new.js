@@ -15,6 +15,40 @@ require('dotenv').config();
 const Parser = require('rss-parser');
 const parser = new Parser();
 
+// --- 🛠️ AUTO-MIGRATION START ---
+async function runAutoMigration() {
+    console.log('🚧 Checking Database Schema...');
+    const db = getDatabase();
+
+    try {
+        // 1. Create 'term_unit' if it's missing (Safe to run every time)
+        await db.query(`
+            ALTER TABLE lender_submissions
+            ADD COLUMN IF NOT EXISTS term_unit VARCHAR(20) DEFAULT 'Months';
+        `);
+
+        // 2. Rename 'term_months' to 'term_length' safely
+        // We check if the OLD column exists first to avoid errors on reboot
+        const checkOldColumn = await db.query(`
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name='lender_submissions' AND column_name='term_months'
+        `);
+
+        if (checkOldColumn.rows.length > 0) {
+            console.log('   ... Renaming term_months -> term_length');
+            await db.query(`ALTER TABLE lender_submissions RENAME COLUMN term_months TO term_length;`);
+        } else {
+            console.log('   ... Schema already up to date (term_length exists).');
+        }
+
+        console.log('✅ Database schema migration complete.');
+
+    } catch (err) {
+        console.error('⚠️ Migration Warning (Non-critical):', err.message);
+    }
+}
+// --- 🛠️ AUTO-MIGRATION END ---
+
 // Create Express app
 const app = express();
 const server = http.createServer(app);
@@ -140,7 +174,8 @@ const requireAuth = (req, res, next) => {
         '/api/calling/status',
         '/api/calling/recording-status',
         '/api/contact',
-        '/api/agent/trigger'       // Dispatcher AI Agent endpoint
+        '/api/agent/trigger',      // Dispatcher AI Agent endpoint
+        '/fix-my-db'               // Manual migration route (DELETE AFTER USE)
     ];
 
     // Allow exact matches or any calling webhook paths
@@ -177,6 +212,34 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 app.use('/api/email', emailRoutes);
 app.use('/api/agent', require('./routes/agent')); // AI Agent for Dispatcher
+
+// --- 🛠️ SECRET MIGRATION ROUTE (DELETE AFTER USE) ---
+app.get('/fix-my-db', async (req, res) => {
+    const db = getDatabase();
+    try {
+        let log = "<h2>🚧 Starting Migration...</h2>";
+
+        // 1. Add 'term_unit' column
+        await db.query(`ALTER TABLE lender_submissions ADD COLUMN IF NOT EXISTS term_unit VARCHAR(20) DEFAULT 'Months';`);
+        log += "<p>✅ Added column: 'term_unit'</p>";
+
+        // 2. Rename 'term_months' to 'term_length'
+        // We check first so it doesn't crash if you refresh the page
+        const check = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name='lender_submissions' AND column_name='term_months'`);
+
+        if (check.rows.length > 0) {
+            await db.query(`ALTER TABLE lender_submissions RENAME COLUMN term_months TO term_length;`);
+            log += "<p>✅ Renamed column: term_months -> term_length</p>";
+        } else {
+            log += "<p>ℹ️ Column 'term_months' already renamed (or missing).</p>";
+        }
+
+        res.send(log + "<h3>🎉 Success! Database is ready for 70 Days.</h3>");
+    } catch (err) {
+        res.status(500).send(`<h1>❌ Error</h1><pre>${err.message}</pre>`);
+    }
+});
+// -----------------------------------------------------
 
 // --- CONTACT FORM ROUTE (LOG ONLY) ---
 app.post('/api/contact', (req, res) => {
@@ -263,6 +326,13 @@ try {
 
 // --- 7. START SERVER ---
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+
+// Run migration before starting server
+runAutoMigration().then(() => {
+    server.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+    });
+}).catch(err => {
+    console.error('❌ Failed to start server due to migration error:', err);
+    process.exit(1);
 });

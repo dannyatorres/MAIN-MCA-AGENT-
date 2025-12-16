@@ -102,20 +102,16 @@ async function processEmail(email, db) {
         messages: [{
             role: "system",
             content: `
-            You are an expert MCA underwriter assistant. Analyze this email for the database.
-
-            CONTEXT:
-            - Emails are often informal (e.g., "10k 70 days" = $10,000 for 70 days).
-            - The "Business Name" is the merchant. The "Lender" is the Sender.
-            - PRIORITIZE Subject Line for Lender Name (e.g., "Project Capital Offer").
+            You are an expert MCA underwriter assistant. Analyze this email.
 
             TASKS:
-            1. **Lender**: If Subject says "Project Capital Offer", Lender is "Project Capital".
-            2. **Merchant**: Find the business applying for funds.
+            1. **Lender**: Prioritize Subject Line (e.g. "Project Capital Offer").
+            2. **Merchant**: Find the business name.
             3. **Terms**:
-               - "70 days" -> term_months: 2 (Round to nearest integer).
-               - "Daily" / "Weekly" -> payment_frequency.
-            4. **Categories**: 'OFFER', 'DECLINE', 'STIPS', 'OTHER'.
+               - "70 days" -> term_length: 70, term_unit: "Days"
+               - "15 weeks" -> term_length: 15, term_unit: "Weeks"
+               - "6 Months" -> term_length: 6, term_unit: "Months"
+               - payment_frequency: "Daily" or "Weekly".
 
             Return JSON:
             {
@@ -124,11 +120,11 @@ async function processEmail(email, db) {
                 "category": "OFFER"|"DECLINE"|"STIPS"|"OTHER",
                 "offer_amount": number|null,
                 "factor_rate": number|null,
-                "term_months": integer|null (Must be whole number),
-                "payment_frequency": string|null ("Daily", "Weekly"),
+                "term_length": number|null,    // Supports 70, 15, etc.
+                "term_unit": string|null,      // "Days", "Weeks", "Months"
+                "payment_frequency": "Daily"|"Weekly"|null,
                 "decline_reason": string|null,
-                "summary": string,
-                "raw_terms": string (e.g. "70 days, 10k")
+                "summary": string
             }
             `
         }, {
@@ -177,43 +173,44 @@ async function processEmail(email, db) {
 
     // Prepare "Offer Details" JSON bucket
     const offerDetailsJson = {
-        raw_terms: data.raw_terms,
         ai_summary: data.summary,
         parsed_at: new Date().toISOString()
     };
 
     if (submissionCheck.rows.length > 0) {
-        // UPDATE EXISTING
+        // UPDATE EXISTING (Using new schema columns)
         await db.query(`
             UPDATE lender_submissions
             SET status = $1,
                 offer_amount = COALESCE($2, offer_amount),
                 factor_rate = COALESCE($3, factor_rate),
-                term_months = COALESCE($4, term_months),
-                payment_frequency = COALESCE($5, payment_frequency),
-                decline_reason = COALESCE($6, decline_reason),
-                offer_details = offer_details || $7::jsonb,
+                term_length = COALESCE($4, term_length),
+                term_unit = COALESCE($5, term_unit),
+                payment_frequency = COALESCE($6, payment_frequency),
+                decline_reason = COALESCE($7, decline_reason),
+                offer_details = offer_details || $8::jsonb,
                 last_response_at = NOW()
-            WHERE id = $8
+            WHERE id = $9
         `, [
             data.category,
             data.offer_amount,
             data.factor_rate,
-            data.term_months, // Now an Integer!
+            data.term_length,
+            data.term_unit,
             data.payment_frequency,
             data.decline_reason,
             JSON.stringify(offerDetailsJson),
             submissionCheck.rows[0].id
         ]);
     } else {
-        // INSERT NEW
+        // INSERT NEW (Using new schema columns)
         await db.query(`
             INSERT INTO lender_submissions (
                 id, conversation_id, lender_name, status,
-                offer_amount, factor_rate, term_months, payment_frequency,
+                offer_amount, factor_rate, term_length, term_unit, payment_frequency,
                 decline_reason, offer_details,
                 submitted_at, last_response_at, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW(), NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW())
         `, [
             uuidv4(),
             bestMatchId,
@@ -221,7 +218,8 @@ async function processEmail(email, db) {
             data.category,
             data.offer_amount,
             data.factor_rate,
-            data.term_months,
+            data.term_length,  // "70"
+            data.term_unit,    // "Days"
             data.payment_frequency,
             data.decline_reason,
             JSON.stringify(offerDetailsJson)
