@@ -139,9 +139,7 @@ const requireAuth = (req, res, next) => {
         '/api/calling/status',
         '/api/calling/recording-status',
         '/api/contact',
-        '/api/conversations/fix/schema-patch',      // Database migration routes
-        '/api/conversations/fix/fcs-schema-update', // Database migration routes
-        '/api/conversations/fix/upgrade-submissions-schema', // Lender submissions schema upgrade
+        // ❌ MIGRATION ROUTES REMOVED (Secured)
         '/api/agent/trigger'       // Dispatcher AI Agent endpoint
     ];
 
@@ -253,6 +251,15 @@ app.get('*', (req, res) => {
         }
     }
 });
+
+// --- 8. START BACKGROUND PROCESSORS ---
+// ✅ START THE EMAIL PROCESSOR AGENT
+try {
+    require('./services/processorAgent').startProcessor();
+    console.log('✅ Processor Agent Service: INITIALIZED');
+} catch (e) {
+    console.error('⚠️ Failed to start Processor Agent:', e.message);
+}
 
 // --- 7. START SERVER ---
 const PORT = process.env.PORT || 3000;
