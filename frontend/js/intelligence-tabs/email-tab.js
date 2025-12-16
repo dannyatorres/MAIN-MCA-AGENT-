@@ -17,7 +17,14 @@ export class EmailTab {
         this.container = container;
         this.container.innerHTML = this.getLayoutHTML();
         this.attachEventListeners();
-        this.fetchEmails();
+
+        // 🧠 SMART RENDER: If we already have emails, just show them.
+        // Only fetch from server if the list is empty.
+        if (this.emails && this.emails.length > 0) {
+            this.renderEmailList();
+        } else {
+            this.fetchEmails();
+        }
     }
 
     getLayoutHTML() {
@@ -139,6 +146,15 @@ export class EmailTab {
     // --- LOGIC (Unchanged + Send/Reply additions) ---
 
     async fetchEmails(options = {}) {
+        // 🛡️ SHIELD: Prevent infinite loops (max 1 fetch per 2 seconds)
+        const now = Date.now();
+        if (!options.isLoadMore && !options.query && window._lastEmailFetch && (now - window._lastEmailFetch < 2000)) {
+            console.log("🛡️ Frontend Shield: Blocking rapid email fetch.");
+            return;
+        }
+        window._lastEmailFetch = now;
+        // -----------------------------------------------------------
+
         if (this.isLoading) return;
         this.isLoading = true;
 
@@ -149,7 +165,10 @@ export class EmailTab {
             this.unreadOnly = unreadOnly;
             this.query = query || null;
             const list = document.getElementById('emailList');
-            if (list && !query) list.innerHTML = '<div style="padding:40px; text-align:center; color:#6b7280;">Loading...</div>';
+            // Only show "Loading..." if the list is actually empty to prevent flickering
+            if (list && !query && this.emails.length === 0) {
+                 list.innerHTML = '<div style="padding:40px; text-align:center; color:#6b7280;">Loading...</div>';
+            }
         }
 
         const refreshBtn = document.getElementById('refreshEmailBtn');
@@ -170,10 +189,12 @@ export class EmailTab {
                 this.renderEmailList();
 
                 const loadMoreContainer = document.getElementById('loadMoreContainer');
-                if (!query && data.emails.length === this.limit) {
-                    loadMoreContainer.style.display = 'block';
-                } else {
-                    loadMoreContainer.style.display = 'none';
+                if (loadMoreContainer) {
+                    if (!query && data.emails.length === this.limit) {
+                        loadMoreContainer.style.display = 'block';
+                    } else {
+                        loadMoreContainer.style.display = 'none';
+                    }
                 }
             }
         } catch (err) {
