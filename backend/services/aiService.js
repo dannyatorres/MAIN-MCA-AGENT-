@@ -66,15 +66,35 @@ const generateResponse = async (query, context) => {
             systemPrompt += `\nMonthly Revenue: ${monthlyRevenue || 'N/A'}`;
             systemPrompt += `\nRequested Amount: ${context.funding_amount || 'N/A'}`;
 
-            // 🟢 2. FCS DATA (Bank Analysis)
+            // B. FCS / Bank Analysis Data
             if (context.fcs) {
                 const fcs = context.fcs;
                 systemPrompt += `\n\n=== 🏦 BANK ANALYSIS (FCS) ===`;
-                systemPrompt += `\nAvg Daily Balance: ${fcs.average_daily_balance || 'N/A'}`;
-                systemPrompt += `\nAvg Deposit Count: ${fcs.average_deposit_count || 'N/A'}`;
+                
+                // 1. Core Financials (Use CORRECT Schema Names)
+                systemPrompt += `\nMonthly Revenue: $${fcs.average_revenue || '0'}`;
+                systemPrompt += `\nAvg Daily Balance (ADB): $${fcs.average_daily_balance || '0'}`;
+                systemPrompt += `\nAvg Deposit Count: ${fcs.average_deposit_count || '0'}`;
+                systemPrompt += `\nAvg Deposit Volume: $${fcs.average_deposits || '0'}`;
+                
+                // 2. Risk Factors
                 systemPrompt += `\nNegative Days: ${fcs.total_negative_days || '0'}`;
-                systemPrompt += `\nNSFs: ${fcs.total_nsfs || '0'}`;
-                systemPrompt += `\nRecency: ${fcs.statement_months || 'N/A'}`;
+                systemPrompt += `\nRecency (Statement Count): ${fcs.statement_count || '0'} Months`;
+                
+                // 3. Stacking / Positions
+                systemPrompt += `\nExisting Positions: ${fcs.position_count || '0'}`;
+                systemPrompt += `\nLast MCA Date: ${fcs.last_mca_deposit_date || 'None Detected'}`;
+                
+                // 4. Business Health
+                systemPrompt += `\nTime in Business: ${fcs.time_in_business_text || 'Unknown'}`;
+                
+                // 5. The "Full" Report (Limit length to prevent token overflow)
+                // This 'fcs_report' column usually contains the raw text summary from the parser
+                if (fcs.fcs_report) {
+                    // Take the first 500 chars which usually has the summary lines
+                    systemPrompt += `\n\n-- RAW ANALYST SUMMARY --\n${fcs.fcs_report.substring(0, 500)}...`;
+                }
+
             } else {
                 systemPrompt += `\n\n(No Bank Analysis/FCS available yet)`;
             }
