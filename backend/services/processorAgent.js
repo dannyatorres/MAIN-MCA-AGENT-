@@ -168,23 +168,36 @@ async function processEmail(email, db) {
         WHERE conversation_id = $1 AND lender_name ILIKE $2
     `, [bestMatchId, `%${data.lender}%`]);
 
-    const offerDetailsJson = {
-        ai_summary: data.summary,
-        parsed_at: new Date().toISOString()
+    // Build history log entry for this email
+    const newLogEntry = {
+        date: new Date().toISOString(),
+        category: data.category,
+        summary: data.summary,
+        raw_snippet: email.snippet || ""
     };
 
     if (submissionCheck.rows.length > 0) {
+        console.log(`      🔄 Updating history for ${data.lender}...`);
+
         await db.query(`
             UPDATE lender_submissions
-            SET status = $1,
+            SET 
+                status = CASE 
+                    WHEN $1 = 'OTHER' THEN status
+                    ELSE $1
+                END,
                 offer_amount = COALESCE($2, offer_amount),
                 factor_rate = COALESCE($3, factor_rate),
                 term_length = COALESCE($4, term_length),
                 term_unit = COALESCE($5, term_unit),
                 payment_frequency = COALESCE($6, payment_frequency),
                 decline_reason = COALESCE($7, decline_reason),
-                offer_details = offer_details || $8::jsonb,
-                raw_email_body = COALESCE($10, raw_email_body),
+                offer_details = jsonb_set(
+                    COALESCE(offer_details, '{}'::jsonb),
+                    '{history}',
+                    (COALESCE(offer_details->'history', '[]'::jsonb) || $8::jsonb)
+                ),
+                raw_email_body = $10,
                 last_response_at = NOW()
             WHERE id = $9
         `, [
@@ -195,11 +208,17 @@ async function processEmail(email, db) {
             data.term_unit,
             data.payment_frequency,
             data.decline_reason,
-            JSON.stringify(offerDetailsJson),
+            JSON.stringify([newLogEntry]),
             submissionCheck.rows[0].id,
             email.snippet || ""
         ]);
     } else {
+        console.log(`      ➕ Creating new record for ${data.lender}...`);
+
+        const initialDetails = {
+            history: [newLogEntry]
+        };
+
         await db.query(`
             INSERT INTO lender_submissions (
                 id, conversation_id, lender_name, status,
@@ -218,7 +237,7 @@ async function processEmail(email, db) {
             data.term_unit,
             data.payment_frequency,
             data.decline_reason,
-            JSON.stringify(offerDetailsJson),
+            JSON.stringify(initialDetails),
             email.snippet || ""
         ]);
     }
