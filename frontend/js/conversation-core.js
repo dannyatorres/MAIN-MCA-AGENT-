@@ -103,6 +103,12 @@ class ConversationCore {
             const isChecked = this.selectedForDeletion.has(conv.id) ? 'checked' : '';
             const checkedClass = this.selectedForDeletion.has(conv.id) ? 'checked-for-deletion' : '';
 
+            // 7. Offer Badge (Green Button)
+            let offerBadgeHTML = '';
+            if (conv.has_offer) {
+                offerBadgeHTML = `<span style="background:rgba(0,255,136,0.1); border:1px solid #00ff88; color:#00ff88; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:6px; font-weight:bold; box-shadow:0 0 5px rgba(0,255,136,0.2);">OFFER</span>`;
+            }
+
             return `
                 <div class="conversation-item ${isSelected} ${checkedClass}" data-conversation-id="${conv.id}">
                     <div class="conversation-avatar">
@@ -113,7 +119,7 @@ class ConversationCore {
 
                     <div class="conversation-content">
                         <div class="conversation-header">
-                            <div class="business-name" title="${businessName}">${businessName}</div>
+                            <div class="business-name" title="${businessName}">${businessName}${offerBadgeHTML}</div>
                             <div class="conversation-time">${timeAgo}</div>
                         </div>
 

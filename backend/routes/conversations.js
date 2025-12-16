@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
 
         let query = `
             SELECT id, display_id, lead_phone, business_name, first_name, last_name,
-                   state, current_step, priority,
+                   state, current_step, priority, has_offer,
                    COALESCE(last_activity, created_at) as last_activity,
                    created_at
             FROM conversations
@@ -132,6 +132,12 @@ router.get('/:id', async (req, res) => {
         }
 
         const conversation = result.rows[0];
+
+        // --- AUTO-CLEAR OFFER FLAG ---
+        if (conversation.has_offer) {
+            await db.query(`UPDATE conversations SET has_offer = FALSE WHERE id = $1`, [conversation.id]);
+        }
+        // -----------------------------
 
         // Debug: Log address fields
         console.log('📍 Address fields from DB:', {
