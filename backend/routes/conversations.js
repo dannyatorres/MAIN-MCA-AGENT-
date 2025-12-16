@@ -1851,34 +1851,6 @@ router.get('/fix/fcs-schema-update', async (req, res) => {
 });
 
 // ==========================================
-// 🛠️ MIGRATION: CREATE EMAIL LEDGER
-// Run: /api/conversations/fix/create-email-ledger
-// ==========================================
-router.get('/fix/create-email-ledger', async (req, res) => {
-    try {
-        const db = getDatabase();
-        console.log('🛠️ Creating Email Ledger Table...');
-
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS processed_emails (
-                message_id VARCHAR(255) PRIMARY KEY,
-                processed_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
-
-        // Index for lightning-fast lookups
-        await db.query(`CREATE INDEX IF NOT EXISTS idx_processed_emails_id ON processed_emails(message_id);`);
-
-        console.log('✅ Ledger Ready.');
-        res.json({ success: true, message: 'Email Ledger created. No more double-reads.' });
-
-    } catch (error) {
-        console.error('❌ Migration Error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ==========================================
 // 🤖 AI DISPATCHER TOOLS
 // ==========================================
 

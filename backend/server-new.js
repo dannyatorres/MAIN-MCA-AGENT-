@@ -10,6 +10,32 @@ const path = require('path');
 const emailRoutes = require('./routes/emailRoutes');
 require('dotenv').config();
 
+const { getDatabase } = require('./services/database');
+
+// 🛠️ AUTO-MIGRATION: Create Email Ledger on Startup
+(async function runMigration() {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Checking Email Ledger Table...');
+
+        // 1. Create Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS processed_emails (
+                message_id VARCHAR(255) PRIMARY KEY,
+                processed_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // 2. Create Index
+        await db.query(`CREATE INDEX IF NOT EXISTS idx_processed_emails_id ON processed_emails(message_id);`);
+
+        console.log('✅ Email Ledger Verified.');
+    } catch (err) {
+        console.error('⚠️ Migration Warning:', err.message);
+        // We don't exit process here so the server can still start if DB is just waking up
+    }
+})();
+
 // RSS Parser for News Feed
 const Parser = require('rss-parser');
 const parser = new Parser();
