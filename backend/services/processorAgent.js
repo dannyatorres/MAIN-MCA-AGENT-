@@ -13,9 +13,6 @@ const gmail = new GmailInboxService();
 // ⚡ SETTINGS
 const CHECK_INTERVAL = 2 * 60 * 1000; // Check every 2 minutes
 
-// 🟢 UPDATE: Added "Test" and "Check" so your manual emails get through
-const KEYWORDS_REGEX = /(Offer|Decline|Stipulations|Submission|Funding|Approval|Re:|Fwd:|Test|Check)/i;
-
 // 🟢 LOAD PROMPT HELPER
 function getSystemPrompt() {
     try {
@@ -70,7 +67,7 @@ async function runCheck() {
     console.log(`🔍 [Processor] Starting check at ${new Date().toLocaleTimeString()}...`);
 
     try {
-        // 🟢 Optimized to 15 emails (fast but deep enough)
+        // Fetch latest emails
         const recentEmails = await gmail.fetchEmails({ limit: 15 });
 
         if (!recentEmails || recentEmails.length === 0) {
@@ -79,38 +76,25 @@ async function runCheck() {
         }
 
         const newEmails = [];
-
-        // 🟢 NEW LOGIC: Log EVERYTHING so you know it was seen
-        console.log(`   📬 Fetched ${recentEmails.length} emails. Scanning headers...`);
+        console.log(`   📬 Fetched ${recentEmails.length} emails. Checking DB for duplicates...`);
 
         for (const email of recentEmails) {
-            const subject = email.subject || "(No Subject)";
-
-            // 1. Check Database Duplicates
             const exists = await db.query('SELECT 1 FROM processed_emails WHERE message_id = $1', [email.id]);
-            if (exists.rows.length > 0) {
-                // Uncomment this if you want to see even the old ones
-                // console.log(`      ⏭️  Skipped (Old): "${subject}"`);
-                continue;
+            
+            if (exists.rows.length === 0) {
+                console.log(`      ✨ NEW EMAIL FOUND: "${email.subject || '(No Subject)'}"`);
+                newEmails.push(email);
+            } else {
+                // console.log(`      ⏭️  Skipped (Old): "${email.subject}"`);
             }
-
-            // 2. Check Keywords
-            if (!KEYWORDS_REGEX.test(subject)) {
-                console.log(`      ⛔ Skipped (No Keyword): "${subject}"`);
-                continue;
-            }
-
-            // If we get here, it's valid!
-            console.log(`      ✨ VALID CANDIDATE: "${subject}"`);
-            newEmails.push(email);
         }
 
         if (newEmails.length === 0) {
-            console.log('   🗑️ [Processor] No NEW actionable emails found this cycle.');
+            console.log('   🗑️ [Processor] No new emails found this cycle.');
             return;
         }
 
-        console.log(`   🚀 Processing ${newEmails.length} new emails...`);
+        console.log(`   🚀 Sending ${newEmails.length} new emails to AI...`);
 
         for (const email of newEmails) {
             await processEmail(email, db);
@@ -150,8 +134,8 @@ async function processEmail(email, db) {
 
     const data = JSON.parse(extraction.choices[0].message.content);
 
-    if (!data.business_name) {
-        console.log(`      ⚠️ [AI] Could not identify merchant name. Skipping.`);
+    if (!data.business_name || data.business_name === "null") {
+        console.log(`      ⚠️ [AI] Irrelevant or Spam (No Merchant Found). Skipping.`);
         return;
     }
 
