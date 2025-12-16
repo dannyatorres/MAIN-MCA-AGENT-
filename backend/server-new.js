@@ -92,10 +92,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false, 
+        secure: false,
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000 
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 
@@ -140,7 +140,6 @@ const requireAuth = (req, res, next) => {
         '/api/calling/status',
         '/api/calling/recording-status',
         '/api/contact',
-        // ❌ MIGRATION ROUTES REMOVED (Secured)
         '/api/agent/trigger'       // Dispatcher AI Agent endpoint
     ];
 
@@ -241,45 +240,6 @@ app.get('/api/news', async (req, res) => {
         res.status(500).json({ success: false, message: 'Wire sync failed' });
     }
 });
-
-// ==========================================
-// 🛠️ MIGRATION ROUTE (RUN ONCE THEN DELETE)
-// ==========================================
-app.get('/init-email-tables', async (req, res) => {
-    try {
-        const pool = getDatabase();
-        const client = await pool.connect(); // Grab a client from your pool
-
-        // 1. Create table for Offers/Declines
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS lender_submissions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                conversation_id UUID REFERENCES conversations(id),
-                lender_name TEXT,
-                status TEXT,
-                offer_amount TEXT,
-                decline_reason TEXT,
-                raw_email_body TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
-
-        // 2. Create table to track processed emails
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS processed_emails (
-                email_uid TEXT PRIMARY KEY,
-                processed_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
-
-        client.release(); // Release the client back to the pool
-        res.send('✅ SUCCESS: Tables `lender_submissions` and `processed_emails` created.');
-    } catch (err) {
-        console.error('Migration Error:', err);
-        res.status(500).send('❌ ERROR: ' + err.message);
-    }
-});
-// ==========================================
 
 // --- 6. FRONTEND ROUTING ---
 app.get('*', (req, res) => {
