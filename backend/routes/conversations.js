@@ -13,6 +13,23 @@ const { v4: uuidv4 } = require('uuid');
 // Initialize email service
 const emailService = new EmailService();
 
+// 🛠️ FIX ROUTE: Add 'raw_email_body' to lender_submissions
+router.get('/fix/add-email-body-column', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Adding raw_email_body column...');
+
+        await db.query(`
+            ALTER TABLE lender_submissions
+            ADD COLUMN IF NOT EXISTS raw_email_body TEXT;
+        `);
+
+        res.json({ success: true, message: 'Column raw_email_body added successfully!' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ==========================================
 // 🛠️ MIGRATION ROUTE (Place at TOP of file)
 // Run: /api/conversations/fix/upgrade-submissions-schema

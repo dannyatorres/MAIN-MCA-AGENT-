@@ -184,6 +184,7 @@ async function processEmail(email, db) {
                 payment_frequency = COALESCE($6, payment_frequency),
                 decline_reason = COALESCE($7, decline_reason),
                 offer_details = offer_details || $8::jsonb,
+                raw_email_body = COALESCE($10, raw_email_body),
                 last_response_at = NOW()
             WHERE id = $9
         `, [
@@ -195,16 +196,17 @@ async function processEmail(email, db) {
             data.payment_frequency,
             data.decline_reason,
             JSON.stringify(offerDetailsJson),
-            submissionCheck.rows[0].id
+            submissionCheck.rows[0].id,
+            email.snippet || ""
         ]);
     } else {
         await db.query(`
             INSERT INTO lender_submissions (
                 id, conversation_id, lender_name, status,
                 offer_amount, factor_rate, term_length, term_unit, payment_frequency,
-                decline_reason, offer_details,
+                decline_reason, offer_details, raw_email_body,
                 submitted_at, last_response_at, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW(), NOW())
         `, [
             uuidv4(),
             bestMatchId,
@@ -216,7 +218,8 @@ async function processEmail(email, db) {
             data.term_unit,
             data.payment_frequency,
             data.decline_reason,
-            JSON.stringify(offerDetailsJson)
+            JSON.stringify(offerDetailsJson),
+            email.snippet || ""
         ]);
     }
 
