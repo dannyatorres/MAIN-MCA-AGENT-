@@ -470,23 +470,29 @@ class FCSModule {
         }
 
         try {
-            // 1. Clean up the raw text
-            let lines = content.split('\n').filter(line => line.trim() !== '');
+            // 1. Clean up the raw text (remove ```json, ```markdown wrappers if backend missed them)
+            let cleanText = content.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
+            let lines = cleanText.split('\n').filter(line => line.trim() !== '');
+
             let html = '<div class="fcs-styled-report" style="font-family: sans-serif; color: #e6edf3;">';
-            
             let inTable = false;
 
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
 
+                // SKIP: Separator lines (---) or simple spacers
+                if (line.match(/^[-=_*]{3,}$/)) continue;
+
                 // 2. HEADERS (Blue Text)
-                // Detect lines that are all caps or end with ":" (but aren't data)
-                if ((line === line.toUpperCase() && line.length > 4 && !line.includes('$')) || 
-                    (line.endsWith(':') && !line.includes('$'))) {
-                    
+                // Detects: All Caps lines, OR lines ending in colon (that aren't data), OR lines marked with ##
+                const isHeader = (line === line.toUpperCase() && line.length > 4 && !line.includes('$')) ||
+                                 (line.endsWith(':') && !line.includes('$')) ||
+                                 line.startsWith('##');
+
+                if (isHeader) {
                     if (inTable) { html += '</tbody></table></div>'; inTable = false; }
-                    
-                    // Inside formatFCSContent loop...
+
+                    // Handle "Business Name" extraction specifically
                     if (line.includes('EXTRACTED_BUSINESS_NAME')) {
                         const name = line.split(':')[1] || '';
                         html += `
@@ -497,14 +503,19 @@ class FCSModule {
                         continue;
                     }
 
-                    html += `<h4 style="color: #3b82f6; margin: 24px 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 8px;">${line.replace(/:/g, '')}</h4>`;
+                    // Clean ## or : characters for display
+                    const headerText = line.replace(/^[#\s]+/, '').replace(/:$/, '');
+                    html += `<h4 style="color: #3b82f6; margin: 24px 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 8px;">${headerText}</h4>`;
                     continue;
                 }
 
-                // 3. TABLE ROWS (The Magic Part)
-                // Detects lines like: "Aug 2025 Deposits: $10,000..."
-                if (line.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/i) && line.includes('Deposits:')) {
-                    
+                // 3. TABLE ROWS (The Fixed Logic)
+                // Detects lines starting with a Month/Year pattern OR standard date (MM/YYYY)
+                const dateMatch = line.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z,.]*\s+\d{4}/i) ||
+                                  line.match(/\d{1,2}\/\d{4}/);
+
+                // If it has a date AND a dollar sign, treat it as a table row
+                if (dateMatch && line.includes('$')) {
                     if (!inTable) {
                         html += `
                         <div style="overflow-x: auto; margin-bottom: 20px; border-radius: 8px; border: 1px solid #30363d;">
@@ -522,12 +533,20 @@ class FCSModule {
                         inTable = true;
                     }
 
-                    // Parse the row data
-                    const month = line.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/i)?.[0] || 'Date';
-                    const deposits = line.match(/Deposits:\s*(\$[\d,.]+)/i)?.[1] || '-';
-                    const revenue = line.match(/Revenue:\s*(\$[\d,.]+)/i)?.[1] || '-';
-                    const negDays = line.match(/Neg Days:\s*(\d+)/i)?.[1] || '0';
-                    const endBal = line.match(/End Bal:\s*([-$]+[\d,.]+)/i)?.[1] || '-';
+                    const month = dateMatch[0];
+
+                    // Regex for currency: $ followed by numbers, dots, commas, optional negative
+                    const moneyMatches = line.match(/[$]-?[\d,.]+/g) || [];
+
+                    // Flexible logic: Try to find specific labels, otherwise use position in the array
+                    const deposits = line.match(/Deposits?:?\s*(\$[\d,.]+)/i)?.[1] || moneyMatches[0] || '-';
+                    const revenue  = line.match(/Revenue:?\s*(\$[\d,.]+)/i)?.[1] || moneyMatches[1] || '-';
+
+                    // Neg days is usually a plain number, often labeled
+                    const negDays  = line.match(/Neg(?:ative)?\s*Days?:?\s*(\d+)/i)?.[1] || '0';
+
+                    // End balance is usually the last money value found
+                    const endBal   = line.match(/End\s*Bal(?:ance)?:?\s*([-$]+[\d,.]+)/i)?.[1] || moneyMatches[moneyMatches.length-1] || '-';
 
                     html += `
                         <tr style="border-bottom: 1px solid #21262d;">
@@ -544,8 +563,8 @@ class FCSModule {
                 if (inTable) { html += '</tbody></table></div>'; inTable = false; }
 
                 // 5. BULLET POINTS
-                if (line.startsWith('-') || line.startsWith('•')) {
-                    const content = line.replace(/^[-•]\s*/, '');
+                if (line.match(/^[-•*]\s/)) {
+                    const content = line.replace(/^[-•*]\s*/, '');
                     html += `
                     <div style="display: flex; gap: 10px; margin-bottom: 8px; font-size: 13px; color: #d1d5db;">
                         <span style="color: #3b82f6;">•</span>
@@ -555,18 +574,23 @@ class FCSModule {
                 }
 
                 // 6. KEY-VALUE PAIRS (e.g., "State: NY")
-                if (line.includes(':') && line.length < 50) {
-                    const [key, val] = line.split(':');
-                    html += `
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 13px;">
-                        <span style="color: #9ca3af;">${key}</span>
-                        <span style="font-weight: 600; color: #e6edf3;">${val}</span>
-                    </div>`;
-                    continue;
+                if (line.includes(':') && line.length < 80) {
+                    const parts = line.split(':');
+                    const key = parts[0].trim();
+                    const val = parts.slice(1).join(':').trim();
+
+                    if(val) {
+                        html += `
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 13px;">
+                            <span style="color: #9ca3af;">${key}</span>
+                            <span style="font-weight: 600; color: #e6edf3;">${val}</span>
+                        </div>`;
+                        continue;
+                    }
                 }
 
-                // 7. PLAIN TEXT
-                html += `<div style="margin-bottom: 6px; font-size: 13px; line-height: 1.5;">${line}</div>`;
+                // 7. PLAIN TEXT (Fallback - now VISIBLE grey text instead of potentially hidden)
+                html += `<div style="margin-bottom: 6px; font-size: 13px; line-height: 1.5; color: #9ca3af;">${line}</div>`;
             }
 
             if (inTable) { html += '</tbody></table></div>'; }
@@ -575,7 +599,8 @@ class FCSModule {
 
         } catch (error) {
             console.error('Formatting error:', error);
-            return `<pre style="white-space: pre-wrap; color: #e6edf3;">${content}</pre>`; // Fallback to raw text
+            // Fallback that ensures text is visible
+            return `<pre style="white-space: pre-wrap; color: #e6edf3; font-family: monospace;">${content}</pre>`;
         }
     }
 
