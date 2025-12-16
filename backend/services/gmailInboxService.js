@@ -207,13 +207,25 @@ class GmailInboxService {
                 const validMessages = rawMessages.filter(m => targetUidSet.has(m.attributes.uid));
                 validMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
 
-                const emails = [];
-                for (const message of validMessages) {
+                // --- 🚀 PERFORMANCE FIX: PARALLEL PROCESSING ---
+                // Old way: Processed 1-by-1 (Slow)
+                // New way: Processes all 50 concurrently (Fast)
+
+                const emailPromises = validMessages.map(async (message) => {
                     try {
-                        emails.push(await this.parseMessage(message));
-                    } catch (e) { console.error('Parse error:', e.message); }
-                }
+                        return await this.parseMessage(message);
+                    } catch (e) {
+                        console.error('Parse error for specific message:', e.message);
+                        return null;
+                    }
+                });
+
+                // Wait for all to finish, then remove any failed ones (nulls)
+                const emails = (await Promise.all(emailPromises)).filter(e => e !== null);
+
+                console.log(`✅ Successfully processed ${emails.length} emails.`);
                 return emails;
+                // -----------------------------------------------
             });
 
         } catch (err) {

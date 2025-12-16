@@ -18,24 +18,20 @@ export class EmailTab {
         this.container.innerHTML = this.getLayoutHTML();
         this.attachEventListeners();
 
-        // 👁️ LAZY LOAD: Only fetch when the tab actually becomes visible
-        // This prevents the "Background Loop" when the tab is hidden.
+        // 👁️ OPTIMIZED SENSOR
         const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                // The tab is now visible!
-                console.log("👁️ Email Tab is visible - Fetching emails...");
+            const entry = entries[0];
 
-                // Only fetch if we haven't loaded data yet
-                if (this.emails.length === 0) {
-                    this.fetchEmails();
-                }
+            // Only fetch if visible AND not already loading AND list is empty
+            if (entry.isIntersecting && !this.isLoading && this.emails.length === 0) {
+                console.log("👁️ Email Tab visible -> Fetching...");
+                this.fetchEmails();
 
-                // Optional: Stop observing after first load (remove if you want auto-refresh on tab switch)
-                // observer.disconnect();
+                // disconnect to prevent future double-triggers until full reload
+                observer.disconnect();
             }
         }, { threshold: 0.1 });
 
-        // Start watching the container
         observer.observe(this.container);
     }
 
