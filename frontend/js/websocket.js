@@ -130,6 +130,44 @@ class WebSocketManager {
                 if (this.app.fcs) this.app.fcs.loadFCSData();
             }
         });
+
+        // 5. Offer / Lead List Refresh (THE MISSING PIECE)
+        this.socket.on('refresh_lead_list', (data) => {
+            console.log('⚡ WebSocket: refresh_lead_list', data);
+            
+            // A. Smart Instant Update (No Reload)
+            if (data && data.conversationId) {
+                const listContainer = document.getElementById('conversationsList');
+                const row = document.querySelector(`.conversation-item[data-conversation-id=\"${data.conversationId}\"]`);
+                
+                if (row && listContainer) {
+                    // 1. Add Green Badge if missing
+                    const nameEl = row.querySelector('.business-name');
+                    if (nameEl && !nameEl.innerHTML.includes('OFFER')) {
+                        const badge = document.createElement('span');
+                        // Use inline style to match your css logic or class
+                        badge.style.cssText = \"background:rgba(0,255,136,0.1); border:1px solid #00ff88; color:#00ff88; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:6px; font-weight:bold;\";
+                        badge.innerText = \"OFFER\";
+                        nameEl.appendChild(badge);
+                    }
+
+                    // 2. Move to Top
+                    row.remove();
+                    listContainer.prepend(row);
+
+                    // 3. Flash Effect
+                    row.style.transition = \"background-color 0.5s\";
+                    row.style.backgroundColor = \"rgba(0, 255, 136, 0.1)\";
+                    setTimeout(() => { row.style.backgroundColor = \"\"; }, 1000);
+                } else {
+                    // Row not found? Reload just to be safe.
+                    if (this.app.conversationUI) this.app.conversationUI.loadConversations();
+                }
+            } else {
+                // Fallback: Full reload
+                if (this.app.conversationUI) this.app.conversationUI.loadConversations();
+            }
+        });
     }
 
     joinConversation(conversationId) {
