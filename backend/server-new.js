@@ -242,11 +242,13 @@ app.get('/api/news', async (req, res) => {
     }
 });
 
-// --- DATABASE MIGRATION ROUTE ---
+// ==========================================
+// 🛠️ MIGRATION ROUTE (RUN ONCE THEN DELETE)
+// ==========================================
 app.get('/init-email-tables', async (req, res) => {
     try {
         const pool = getDatabase();
-        const client = await pool.connect();
+        const client = await pool.connect(); // Grab a client from your pool
 
         // 1. Create table for Offers/Declines
         await client.query(`
@@ -254,7 +256,7 @@ app.get('/init-email-tables', async (req, res) => {
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 conversation_id UUID REFERENCES conversations(id),
                 lender_name TEXT,
-                status TEXT, -- 'Offer', 'Decline', 'Stipulations'
+                status TEXT,
                 offer_amount TEXT,
                 decline_reason TEXT,
                 raw_email_body TEXT,
@@ -262,23 +264,22 @@ app.get('/init-email-tables', async (req, res) => {
             );
         `);
 
-        // 2. Create table to track which emails we have already processed
-        // This prevents the "Loop" problem where AI reads the same email 50 times
+        // 2. Create table to track processed emails
         await client.query(`
             CREATE TABLE IF NOT EXISTS processed_emails (
                 email_uid TEXT PRIMARY KEY,
-                subject_line TEXT,
                 processed_at TIMESTAMP DEFAULT NOW()
             );
         `);
 
-        client.release();
-        res.send('✅ SUCCESS: Tables `lender_submissions` and `processed_emails` created successfully.');
+        client.release(); // Release the client back to the pool
+        res.send('✅ SUCCESS: Tables `lender_submissions` and `processed_emails` created.');
     } catch (err) {
         console.error('Migration Error:', err);
         res.status(500).send('❌ ERROR: ' + err.message);
     }
 });
+// ==========================================
 
 // --- 6. FRONTEND ROUTING ---
 app.get('*', (req, res) => {
