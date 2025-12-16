@@ -48,56 +48,65 @@ async function startProcessor() {
 }
 
 async function runCheck() {
-    // Loop Tracking Variable to prevent duplicates if accidentally called
+    // 1. SAFETY: Prevent overlapping runs
     if (global.isProcessorRunning) {
-        console.log('⚠️ Processor overlapped. Skipping this cycle.');
+        console.log('⚠️ [Processor] Overlap detected. Skipping this cycle.');
         return;
     }
     global.isProcessorRunning = true;
 
     const db = getDatabase();
+    console.log(`🔍 [Processor] Starting check at ${new Date().toLocaleTimeString()}...`);
+
     try {
-        // 1. FETCH RECENT EMAILS (Read AND Unread)
-        // We look at the last 50 emails. The DB prevents duplicates, so this is safe.
+        // STEP A: Fetch Emails
+        console.log('   ... connecting to Gmail ...');
         const recentEmails = await gmail.fetchEmails({ limit: 50 });
+        console.log(`   📥 [Gmail] Fetched ${recentEmails.length} recent emails.`);
 
-        if (!recentEmails || recentEmails.length === 0) return;
+        if (!recentEmails || recentEmails.length === 0) {
+            console.log('   💤 [Processor] No emails found. Going back to sleep.');
+            return; // Ends the function naturally
+        }
 
-        // 2. FILTER: Keyword + LEDGER CHECK
+        // STEP B: Local Filter (Free)
+        let relevantCount = 0;
         const newEmails = [];
 
         for (const email of recentEmails) {
-            // A. Keyword Check (Fastest)
-            if (!KEYWORDS_REGEX.test(email.subject || "")) continue;
-
-            // B. Database Ledger Check (The Safety Valve)
-            // We check if this specific Message ID is already in our table
-            const exists = await db.query(
-                'SELECT 1 FROM processed_emails WHERE message_id = $1',
-                [email.id]
-            );
-
-            if (exists.rows.length === 0) {
-                newEmails.push(email);
+            // Check Keywords
+            if (KEYWORDS_REGEX.test(email.subject || "")) {
+                // Check Database (Deduplication)
+                const exists = await db.query('SELECT 1 FROM processed_emails WHERE message_id = $1', [email.id]);
+                if (exists.rows.length === 0) {
+                    newEmails.push(email);
+                    relevantCount++;
+                }
             }
         }
 
         if (newEmails.length === 0) {
-            // console.log(`💤 Checked ${recentEmails.length} emails. No new deal updates.`);
+            console.log('   🗑️ [Processor] All emails were either irrelevant or already processed.');
             return;
         }
 
-        console.log(`📨 Processor: found ${newEmails.length} NEW relevant emails.`);
+        console.log(`   ✨ [Processor] Found ${newEmails.length} NEW relevant emails to analyze.`);
 
+        // STEP C: Process & AI (Costs $)
         for (const email of newEmails) {
-            await processEmail(email, db); // Pass DB to save connection time
+            console.log(`   🤖 [AI] Analyzing email: "${email.subject}"...`);
+            await processEmail(email, db);
+            console.log(`   ✅ [Database] Saved results for: "${email.subject}"`);
         }
+
     } catch (err) {
-        console.error('❌ Processor Loop Error:', err.message);
+        console.error('   ❌ [Processor Error]:', err.message);
     } finally {
-        // Schedule the NEXT run only after this one finishes
+        // STEP D: Schedule Next Run
         global.isProcessorRunning = false;
-        console.log(`💤 Sleeping for ${CHECK_INTERVAL / 1000} seconds...`);
+        console.log(`💤 [Processor] Done. Sleeping for ${CHECK_INTERVAL / 1000} seconds...`);
+
+        // This is the "Smart Polling" line that prevents loops
         setTimeout(runCheck, CHECK_INTERVAL);
     }
 }
