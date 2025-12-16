@@ -165,34 +165,68 @@ router.post('/', async (req, res) => {
             lastName = parts.slice(1).join(' ');
         }
 
-        // --- 3. INSERT INTO CONVERSATIONS (Basic Info) ---
-        const convResult = await db.query(`
-            INSERT INTO conversations (
-                business_name, lead_phone, email, us_state,
-                address, city, zip,
-                first_name, last_name,
-                lead_source, notes,
-                current_step, priority
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'initial_contact', $12)
-            RETURNING id, business_name, first_name
-        `, [
-            data.business_name,
-            data.lead_phone,
-            data.email,
-            data.us_state,
-            data.business_address || data.address,
-            data.business_city || data.city,
-            data.business_zip || data.zip,
-            firstName,
-            lastName,
-            data.lead_source || 'Manual Entry',
-            data.notes || '',
-            data.priority ? parseInt(data.priority) : 1
-        ]);
+        // --- 3. CHECK FOR DUPLICATES & INSERT/UPDATE ---
 
-        const newId = convResult.rows[0].id;
-        console.log(`✅ Step 1: Conversation created: ${newId} (Name: ${firstName})`);
+        // First, check if this phone number already exists
+        const existingCheck = await db.query(
+            'SELECT id FROM conversations WHERE lead_phone = $1',
+            [data.lead_phone]
+        );
+
+        let newId;
+        let isUpdate = false;
+
+        if (existingCheck.rows.length > 0) {
+            // DUPLICATE FOUND: Update the existing record instead
+            newId = existingCheck.rows[0].id;
+            isUpdate = true;
+            console.log(`⚠️ Lead exists (${newId}). Updating instead of creating.`);
+
+            await db.query(`
+                UPDATE conversations SET
+                    business_name = COALESCE($1, business_name),
+                    email = COALESCE($2, email),
+                    first_name = COALESCE($3, first_name),
+                    last_name = COALESCE($4, last_name),
+                    last_activity = NOW()
+                WHERE id = $5
+            `, [
+                data.business_name,
+                data.email,
+                firstName,
+                lastName,
+                newId
+            ]);
+        } else {
+            // NEW RECORD: Insert normally
+            const convResult = await db.query(`
+                INSERT INTO conversations (
+                    business_name, lead_phone, email, us_state,
+                    address, city, zip,
+                    first_name, last_name,
+                    lead_source, notes,
+                    current_step, priority
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'initial_contact', $12)
+                RETURNING id
+            `, [
+                data.business_name,
+                data.lead_phone,
+                data.email,
+                data.us_state,
+                data.business_address || data.address,
+                data.business_city || data.city,
+                data.business_zip || data.zip,
+                firstName,
+                lastName,
+                data.lead_source || 'Manual Entry',
+                data.notes || '',
+                data.priority ? parseInt(data.priority) : 1
+            ]);
+            newId = convResult.rows[0].id;
+        }
+
+        console.log(`✅ Step 1: Conversation ${isUpdate ? 'updated' : 'created'}: ${newId}`);
 
         // --- 4. INSERT INTO LEAD_DETAILS (The Deep Data) ---
         // This saves SSN, Revenue, and OWNER 2 info
