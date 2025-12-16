@@ -8,7 +8,7 @@ const cors = require('cors');
 const session = require('express-session');
 const path = require('path');
 const emailRoutes = require('./routes/emailRoutes');
-const { getDatabase } = require('./services/database'); // 🟢 ADD THIS
+const { getDatabase } = require('./services/database'); 
 require('dotenv').config();
 
 // RSS Parser for News Feed
