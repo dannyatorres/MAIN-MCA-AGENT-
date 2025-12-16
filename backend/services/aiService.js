@@ -149,11 +149,12 @@ const generateResponse = async (query, context) => {
         messages.push({ role: "user", content: query });
 
         // 4. Call OpenAI
-        console.log('   🧠 [AI Service] Sending request to OpenAI...');
+        console.log('   🧠 [AI Service] Sending request to OpenAI (Model: gpt-4o-mini)...');
         const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o-mini",
             messages: messages,
-            temperature: 0.7
+            temperature: 0.3,
+            max_tokens: 500
         });
 
         // 🟢 NEW: Token Logging
