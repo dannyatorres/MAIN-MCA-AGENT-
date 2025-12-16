@@ -23,6 +23,7 @@ router.post('/chat', async (req, res) => {
 
     try {
         const { conversationId, query, includeContext = true } = req.body;
+        console.log(`🤖 [AI Route] Request received for ID: ${conversationId}`);
         const db = getDatabase();
         let conversationContext = null;
 
@@ -30,11 +31,10 @@ router.post('/chat', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Query is required' });
         }
 
-        console.log(`🤖 [AI CHAT] Processing for ID: ${conversationId}`);
-
         if (conversationId && includeContext) {
 
             // 1. Basic Lead Info
+            console.log('   🔍 [AI Route] Fetching Lead Details...');
             const convResult = await db.query(`
                 SELECT c.*, ld.*
                 FROM conversations c
@@ -44,6 +44,7 @@ router.post('/chat', async (req, res) => {
 
             if (convResult.rows.length > 0) {
                 const conversation = convResult.rows[0];
+                console.log(`   ✅ [AI Route] Found Lead: ${conversation.business_name || 'Unknown'}`);
 
                 // 2. SMS History (Existing)
                 const smsResult = await db.query(`
@@ -61,7 +62,8 @@ router.post('/chat', async (req, res) => {
                         FROM lender_submissions
                         WHERE conversation_id = $1 ORDER BY created_at DESC
                     `, [conversationId]);
-                } catch (e) { console.log('Lender fetch error', e.message); }
+                    console.log(`   💰 [AI Route] Found ${lenderResult.rows.length} Lender Offers`);
+                } catch (e) { console.log('   ⚠️ Lender fetch error', e.message); }
 
                 // 🟢 4. FETCH FCS / BANK ANALYSIS (NEW)
                 let fcsResult = { rows: [] };
@@ -71,7 +73,17 @@ router.post('/chat', async (req, res) => {
                         WHERE conversation_id = $1 
                         ORDER BY created_at DESC LIMIT 1
                     `, [conversationId]);
-                } catch (e) { console.log('FCS fetch error', e.message); }
+                    
+                    if (fcsResult.rows.length > 0) {
+                        console.log(`   🏦 [AI Route] ✅ FCS DATA FOUND:`);
+                        console.log(`       - Revenue: ${fcsResult.rows[0].average_revenue}`);
+                        console.log(`       - Neg Days: ${fcsResult.rows[0].total_negative_days}`);
+                        console.log(`       - Deposits: ${fcsResult.rows[0].average_deposit_count}`);
+                    } else {
+                        console.log(`   🏦 [AI Route] ❌ NO FCS DATA FOUND in DB.`);
+                    }
+
+                } catch (e) { console.log('   ⚠️ FCS fetch error', e.message); }
 
                 // 🟢 5. FETCH AI CHAT HISTORY (NEW)
                 let historyResult = { rows: [] };
@@ -100,6 +112,7 @@ router.post('/chat', async (req, res) => {
                     fcs: fcsResult.rows[0] || null,
                     chat_history: historyResult.rows.reverse()
                 };
+                console.log('   📦 [AI Route] Context Package ready for Service.');
             }
         }
 

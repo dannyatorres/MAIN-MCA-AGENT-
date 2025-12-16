@@ -44,6 +44,14 @@ const generateResponse = async (query, context) => {
         let systemPrompt = getSystemPrompt();
 
         if (context) {
+            // Log what the AI Service actually sees
+            console.log('   🧠 [AI Service] Received Context:');
+            console.log(`       - Business: ${context.business_name}`);
+            console.log(`       - Has FCS? ${context.fcs ? 'YES' : 'NO'}`);
+            if (context.fcs) {
+                 console.log(`       - FCS ADB: ${context.fcs.average_daily_balance}`);
+            }
+
             // 🟢 1. FULL LEAD DETAILS (Added Credit, Industry, Owner, etc.)
             systemPrompt += `\n\n=== 🏢 BUSINESS & OWNER DETAILS ===`;
             systemPrompt += `\nBusiness Name: ${context.business_name || 'Unknown'}`;
