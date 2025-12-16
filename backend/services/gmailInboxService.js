@@ -187,14 +187,34 @@ class GmailInboxService {
             return await this.retryOperation(async () => {
                 await this.ensureConnection();
 
-                const { folder = 'INBOX', limit = 50, offset = 0, unreadOnly = false, since = null } = options;
+                let { folder = 'INBOX', limit = 50, offset = 0, unreadOnly = false, since = null } = options;
 
+                // 🛠️ FIX: Default to "Since Midnight (EST)"
+                if (!since && !unreadOnly) {
+                    const now = new Date();
+                    // Create a date string for the US/Eastern timezone
+                    const estString = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+                    const estDate = new Date(estString);
+
+                    // Reset to Midnight (00:00:00)
+                    estDate.setHours(0, 0, 0, 0);
+
+                    since = estDate;
+                    console.log(`📅 Defaulting fetch to emails received since: ${estDate.toLocaleString()} (EST)`);
+                }
+
+                console.log(`📂 Opening '${folder}'...`);
                 await this.connection.openBox(folder);
 
                 const searchCriteria = [];
                 if (unreadOnly) searchCriteria.push('UNSEEN');
-                else searchCriteria.push('ALL');
-                if (since) searchCriteria.push(['SINCE', since]);
+
+                // IMPORTANT: Use the 'since' date we just calculated
+                if (since) {
+                    searchCriteria.push(['SINCE', since]);
+                } else {
+                    searchCriteria.push('ALL');
+                }
 
                 const initialFetchOptions = { bodies: [], markSeen: false };
                 const allMessages = await this.connection.search(searchCriteria, initialFetchOptions);
