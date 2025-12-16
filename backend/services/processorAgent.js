@@ -43,6 +43,22 @@ function getSimilarity(s1, s2) {
 
 async function startProcessor() {
     console.log('👩‍💼 Processor Agent: Online (Smart Ledger Mode)...');
+
+    // --- 🕵️‍♀️ TEMPORARY DATABASE PROBE ---
+    const db = getDatabase();
+    try {
+        console.log('🔍 PROBE: Checking lender_submissions table...');
+        const res = await db.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'lender_submissions'
+        `);
+        console.table(res.rows); // <--- This prints the columns to your logs!
+    } catch (e) {
+        console.log('Probe failed:', e.message);
+    }
+    // ------------------------------------
+
     // Start the first run immediately
     runCheck();
 }
