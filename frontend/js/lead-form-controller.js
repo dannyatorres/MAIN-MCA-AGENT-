@@ -536,13 +536,12 @@ export class LeadFormController {
                     if(res.success) {
                         document.getElementById('leadModalWrapper').remove();
 
-                        // 🟢 FIX: Force the list to refresh immediately
+                        // 🟢 FIX: Refresh the list immediately
                         console.log('🔄 Refreshing lead list...');
-                        if (this.parent.conversationUI && typeof this.parent.conversationUI.loadConversations === 'function') {
-                            await this.parent.conversationUI.loadConversations();
-                        } else if (window.conversationUI && window.conversationUI.conversationUI) {
-                            // Fallback: Use global reference if 'this.parent' is missing
-                            await window.conversationUI.conversationUI.loadConversations();
+                        if (this.parent.conversationUI) {
+                            await this.parent.conversationUI.loadConversations(true); // 'true' resets the list to page 1
+                        } else if (window.conversationUI) {
+                            await window.conversationUI.loadConversations(true);
                         }
 
                         this.parent.utils.showNotification('Lead created successfully!', 'success');
