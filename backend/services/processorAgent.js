@@ -3,6 +3,8 @@ const GmailInboxService = require('./gmailInboxService');
 const { getDatabase } = require('./database');
 const { OpenAI } = require('openai');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -11,6 +13,18 @@ const gmail = new GmailInboxService();
 // ⚡ SETTINGS
 const CHECK_INTERVAL = 2 * 60 * 1000; // Check every 2 minutes
 const KEYWORDS_REGEX = /(Offer|Decline|Stipulations|Submission|Funding|Approval|Re:|Fwd:)/i;
+
+// 🟢 LOAD PROMPT HELPER
+function getSystemPrompt() {
+    try {
+        const promptPath = path.join(__dirname, '../prompts/email-analysis.md');
+        return fs.readFileSync(promptPath, 'utf8');
+    } catch (err) {
+        console.error('❌ Could not load prompt file:', err.message);
+        // Fallback in case file is missing
+        return `You are an expert MCA underwriter assistant. Analyze this email and return JSON with business_name, lender, category, offer_amount, etc.`;
+    }
+}
 
 function normalizeName(name) {
     if (!name) return "";
@@ -96,37 +110,14 @@ async function processEmail(email, db) {
 
     console.log(`   🤖 [AI] Analyzing email: "${email.subject}"...`);
 
-    // --- 🧠 SCHEMA-AWARE AI PROMPT ---
+    // --- 🧠 LOAD EXTERNAL PROMPT ---
+    const systemPrompt = getSystemPrompt();
+
     const extraction = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{
             role: "system",
-            content: `
-            You are an expert MCA underwriter assistant. Analyze this email.
-
-            TASKS:
-            1. **Lender**: Prioritize Subject Line (e.g. "Project Capital Offer").
-            2. **Merchant**: Find the business name.
-            3. **Terms**:
-               - "70 days" -> term_length: 70, term_unit: "Days"
-               - "15 weeks" -> term_length: 15, term_unit: "Weeks"
-               - "6 Months" -> term_length: 6, term_unit: "Months"
-               - payment_frequency: "Daily" or "Weekly".
-
-            Return JSON:
-            {
-                "business_name": string (or null),
-                "lender": string,
-                "category": "OFFER"|"DECLINE"|"STIPS"|"OTHER",
-                "offer_amount": number|null,
-                "factor_rate": number|null,
-                "term_length": number|null,    // Supports 70, 15, etc.
-                "term_unit": string|null,      // "Days", "Weeks", "Months"
-                "payment_frequency": "Daily"|"Weekly"|null,
-                "decline_reason": string|null,
-                "summary": string
-            }
-            `
+            content: systemPrompt // 🟢 Uses the .md file content
         }, {
             role: "user",
             content: `Sender: "${email.from.name}" <${email.from.email}>\nSubject: "${email.subject}"\nBody Snippet: "${email.snippet}"`
@@ -165,20 +156,18 @@ async function processEmail(email, db) {
 
     console.log(`   ✅ MATCH: "${data.business_name}" -> Lead ${bestMatchId} (${data.category})`);
 
-    // --- SAVE TO DATABASE (MATCHING YOUR EXACT SCHEMA) ---
+    // --- SAVE TO DATABASE ---
     const submissionCheck = await db.query(`
         SELECT id FROM lender_submissions
         WHERE conversation_id = $1 AND lender_name ILIKE $2
     `, [bestMatchId, `%${data.lender}%`]);
 
-    // Prepare "Offer Details" JSON bucket
     const offerDetailsJson = {
         ai_summary: data.summary,
         parsed_at: new Date().toISOString()
     };
 
     if (submissionCheck.rows.length > 0) {
-        // UPDATE EXISTING (Using new schema columns)
         await db.query(`
             UPDATE lender_submissions
             SET status = $1,
@@ -203,7 +192,6 @@ async function processEmail(email, db) {
             submissionCheck.rows[0].id
         ]);
     } else {
-        // INSERT NEW (Using new schema columns)
         await db.query(`
             INSERT INTO lender_submissions (
                 id, conversation_id, lender_name, status,
@@ -218,8 +206,8 @@ async function processEmail(email, db) {
             data.category,
             data.offer_amount,
             data.factor_rate,
-            data.term_length,  // "70"
-            data.term_unit,    // "Days"
+            data.term_length,
+            data.term_unit,
             data.payment_frequency,
             data.decline_reason,
             JSON.stringify(offerDetailsJson)
@@ -227,22 +215,21 @@ async function processEmail(email, db) {
     }
 
     if (data.category === 'OFFER') {
-        // ✅ Keep the Green Badge Logic
         await db.query(`UPDATE conversations SET has_offer = TRUE, last_activity = NOW() WHERE id = $1`, [bestMatchId]);
         if (global.io) global.io.emit('refresh_lead_list');
     }
 
     const systemNote = `📩 **INBOX UPDATE (${data.lender}):** ${data.summary}`;
 
-    // 🔴 REMOVED: Writing to SMS 'messages' table
-    // await db.query(`INSERT INTO messages (conversation_id, direction, content, timestamp) VALUES ($1, 'inbound', $2, NOW())`, [bestMatchId, systemNote]);
-
-    // 🟢 ADDED: Write to 'ai_chat_messages' table (Assistant Panel)
-    // We use role='assistant' so it looks like the AI is notifying you inside the helper window.
-    await db.query(`
-        INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
-        VALUES ($1, 'assistant', $2, NOW())
-    `, [bestMatchId, systemNote]);
+    // 🟢 FIXED: Write to AI Chat (Assistant) instead of SMS (Messages)
+    try {
+        await db.query(`
+            INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
+            VALUES ($1, 'assistant', $2, NOW())
+        `, [bestMatchId, systemNote]);
+    } catch (err) {
+        console.error('   ⚠️ [AI] Failed to log to assistant history:', err.message);
+    }
 
     console.log(`   ✅ [Database] Saved results for: "${email.subject}"`);
 }
