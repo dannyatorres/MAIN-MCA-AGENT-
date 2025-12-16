@@ -8,33 +8,8 @@ const cors = require('cors');
 const session = require('express-session');
 const path = require('path');
 const emailRoutes = require('./routes/emailRoutes');
-require('dotenv').config();
-
 const { getDatabase } = require('./services/database');
-
-// 🛠️ AUTO-MIGRATION: Create Email Ledger on Startup
-(async function runMigration() {
-    try {
-        const db = getDatabase();
-        console.log('🛠️ Checking Email Ledger Table...');
-
-        // 1. Create Table
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS processed_emails (
-                message_id VARCHAR(255) PRIMARY KEY,
-                processed_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
-
-        // 2. Create Index
-        await db.query(`CREATE INDEX IF NOT EXISTS idx_processed_emails_id ON processed_emails(message_id);`);
-
-        console.log('✅ Email Ledger Verified.');
-    } catch (err) {
-        console.error('⚠️ Migration Warning:', err.message);
-        // We don't exit process here so the server can still start if DB is just waking up
-    }
-})();
+require('dotenv').config();
 
 // RSS Parser for News Feed
 const Parser = require('rss-parser');
@@ -264,6 +239,44 @@ app.get('/api/news', async (req, res) => {
     } catch (error) {
         console.error('RSS Error:', error);
         res.status(500).json({ success: false, message: 'Wire sync failed' });
+    }
+});
+
+// --- DATABASE MIGRATION ROUTE ---
+app.get('/init-email-tables', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const client = await pool.connect();
+
+        // 1. Create table for Offers/Declines
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS lender_submissions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                conversation_id UUID REFERENCES conversations(id),
+                lender_name TEXT,
+                status TEXT, -- 'Offer', 'Decline', 'Stipulations'
+                offer_amount TEXT,
+                decline_reason TEXT,
+                raw_email_body TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // 2. Create table to track which emails we have already processed
+        // This prevents the "Loop" problem where AI reads the same email 50 times
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS processed_emails (
+                email_uid TEXT PRIMARY KEY,
+                subject_line TEXT,
+                processed_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        client.release();
+        res.send('✅ SUCCESS: Tables `lender_submissions` and `processed_emails` created successfully.');
+    } catch (err) {
+        console.error('Migration Error:', err);
+        res.status(500).send('❌ ERROR: ' + err.message);
     }
 });
 
