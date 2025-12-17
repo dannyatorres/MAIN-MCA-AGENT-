@@ -34,6 +34,7 @@ router.post('/', async (req, res) => {
         const {
             name,
             email,
+            cc_email, // <--- ✅ ADDED
             phone,
             company,
             min_amount,
@@ -45,6 +46,9 @@ router.post('/', async (req, res) => {
             notes
         } = req.body;
 
+        // ✅ LOGGING: See exactly what is being sent to the backend
+        console.log('📝 CREATING LENDER:', { name, email, cc_email });
+
         if (!name || !email) {
             return res.status(400).json({ error: 'Name and email are required' });
         }
@@ -52,18 +56,29 @@ router.post('/', async (req, res) => {
         const db = getDatabase();
         const lenderId = uuidv4();
 
+        // ✅ ADDED cc_email to SQL
         const result = await db.query(`
             INSERT INTO lenders (
-                id, name, email, phone, company, min_amount, max_amount,
+                id, name, email, cc_email, phone, company, min_amount, max_amount,
                 industries, states, credit_score_min, time_in_business_min, notes,
                 created_at, updated_at
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW()
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()
             ) RETURNING *
         `, [
-            lenderId, name, email, phone, company, min_amount, max_amount,
-            JSON.stringify(industries || []), JSON.stringify(states || []),
-            credit_score_min, time_in_business_min, notes
+            lenderId,
+            name,
+            email,
+            cc_email || null, // <--- $4
+            phone,
+            company,
+            min_amount,
+            max_amount,
+            JSON.stringify(industries || []),
+            JSON.stringify(states || []),
+            credit_score_min,
+            time_in_business_min,
+            notes
         ]);
 
         console.log(`✅ Lender created: ${name}`);
@@ -85,6 +100,7 @@ router.put('/:id', async (req, res) => {
         const {
             name,
             email,
+            cc_email, // <--- ✅ ADDED
             phone,
             company,
             min_amount,
@@ -96,38 +112,54 @@ router.put('/:id', async (req, res) => {
             notes
         } = req.body;
 
+        // ✅ LOGGING
+        console.log(`📝 UPDATING LENDER [${id}]:`, { name, cc_email });
+
         if (!name || !email) {
             return res.status(400).json({ error: 'Name and email are required' });
         }
 
         const db = getDatabase();
+
+        // ✅ ADDED cc_email to SQL
         const result = await db.query(`
             UPDATE lenders SET
                 name = $2,
                 email = $3,
-                phone = $4,
-                company = $5,
-                min_amount = $6,
-                max_amount = $7,
-                industries = $8,
-                states = $9,
-                credit_score_min = $10,
-                time_in_business_min = $11,
-                notes = $12,
+                cc_email = $4,
+                phone = $5,
+                company = $6,
+                min_amount = $7,
+                max_amount = $8,
+                industries = $9,
+                states = $10,
+                credit_score_min = $11,
+                time_in_business_min = $12,
+                notes = $13,
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
         `, [
-            id, name, email, phone, company, min_amount, max_amount,
-            JSON.stringify(industries || []), JSON.stringify(states || []),
-            credit_score_min, time_in_business_min, notes
+            id,
+            name,
+            email,
+            cc_email || null, // <--- $4
+            phone,
+            company,
+            min_amount,
+            max_amount,
+            JSON.stringify(industries || []),
+            JSON.stringify(states || []),
+            credit_score_min,
+            time_in_business_min,
+            notes
         ]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Lender not found' });
         }
 
-        console.log(`✅ Lender updated: ${name}`);
+        console.log(`✅ Lender updated: ${name} (CC: ${cc_email || 'None'})`);
 
         res.json(result.rows[0]);
     } catch (error) {
