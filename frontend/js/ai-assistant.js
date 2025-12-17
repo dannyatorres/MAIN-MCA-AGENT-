@@ -31,6 +31,12 @@ class AIAssistant {
             return;
         }
 
+        // --- THE FIX: RESET STATE ---
+        // Since we are about to wipe the HTML container, we must force the
+        // logic to re-run, even if it's the same conversation ID.
+        this.isInitialized = false;
+        // ----------------------------
+
         container.innerHTML = `
             <div class="ai-assistant-section">
                 <div id="aiChatMessages" class="ai-chat-messages">
