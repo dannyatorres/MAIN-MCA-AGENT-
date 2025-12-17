@@ -38,24 +38,20 @@ const TOOLS = [
     }
 ];
 
-// 📖 HELPER: Load the Global Persona from Markdown
+// 📖 HELPER: Load the Global Persona
 function getGlobalPrompt() {
     try {
         const promptsDir = path.join(__dirname, '../prompts');
         
-        // 1. Load Persona (Who am I?)
         const personaPath = path.join(promptsDir, 'persona.md');
         const persona = fs.existsSync(personaPath) ? fs.readFileSync(personaPath, 'utf8') : "";
 
-        // 2. Load New Lead Strategy (The Hook)
         const strategyNewPath = path.join(promptsDir, 'strategy_new.md');
         const strategyNew = fs.existsSync(strategyNewPath) ? fs.readFileSync(strategyNewPath, 'utf8') : "";
 
-        // 3. Load History Strategy (How to reply)
         const strategyHistoryPath = path.join(promptsDir, 'strategy_history.md');
         const strategyHistory = fs.existsSync(strategyHistoryPath) ? fs.readFileSync(strategyHistoryPath, 'utf8') : "";
 
-        // Combine them into one "Super Brain"
         return `${persona}\n\n${strategyNew}\n\n${strategyHistory}`;
 
     } catch (err) {
@@ -80,11 +76,12 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const businessName = lead?.business_name || "Unknown Business";
 
         // 2. TEMPLATE MODE: "Underwriter Hook"
-        // We still keep this hardcoded check for speed, BUT we removed the auto-sync as requested
+        // (No OpenAI call here = 0 tokens used)
         if (systemInstruction.includes("Underwriter Hook")) {
             console.log(`⚡ TEMPLATE MODE: Sending Dan Torres Script to ${nameToUse}`);
             
-            // Note: We use the exact text from your strategy_new.md here for safety
+            // REMINDER: We DO NOT sync drive here. We wait for their reply.
+            
             const exactTemplate = `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
             return { shouldReply: true, content: exactTemplate };
         }
@@ -92,10 +89,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 3. AI MODE (Thinking)
         console.log("🤖 AI MODE: Analyzing history...");
 
-        // ✅ A. LOAD THE NEW BRAIN (Reads MD files)
         const globalPersona = getGlobalPrompt();
 
-        // B. Get Conversation History
         const history = await db.query(`
             SELECT direction, content FROM messages
             WHERE conversation_id = $1
@@ -105,12 +100,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         const messages = [];
 
-        // ✅ C. Combine Global Persona + Specific Instruction
         messages.push({
             role: "system",
             content: `${globalPersona}
             
-            CURRENT INSTRUCTION FROM SCHEDULER:
+            CURRENT INSTRUCTION:
             ${systemInstruction}
             
             RULES:
@@ -118,7 +112,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             2. If they mentioned they SENT documents (or ask you to check), ONLY THEN use 'trigger_drive_sync'.`
         });
 
-        // D. Add History
         history.rows.forEach(msg => {
             messages.push({
                 role: msg.direction === 'outbound' ? 'assistant' : 'user',
@@ -126,12 +119,22 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             });
         });
 
+        // 🟢 CALL OPENAI
         const completion = await openai.chat.completions.create({
             model: "gpt-4-turbo",
             messages: messages,
             tools: TOOLS,
             tool_choice: "auto"
         });
+
+        // 🟢 NEW: LOG TOKEN USAGE
+        const usage = completion.usage;
+        if (usage) {
+            console.log(`      🎟️ [AI Agent] Token Usage Report:`);
+            console.log(`          - Input (Prompt): ${usage.prompt_tokens}`);
+            console.log(`          - Output (Reply): ${usage.completion_tokens}`);
+            console.log(`          - Total Tokens:   ${usage.total_tokens}`);
+        }
 
         const aiMsg = completion.choices[0].message;
         let responseContent = aiMsg.content;
@@ -140,7 +143,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         if (aiMsg.tool_calls) {
             for (const tool of aiMsg.tool_calls) {
                 
-                // A. STATUS UPDATE
                 if (tool.function.name === 'update_lead_status') {
                     const args = JSON.parse(tool.function.arguments);
                     console.log(`🔄 AI Moving Lead -> ${args.status}`);
@@ -148,7 +150,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     if (args.status === 'DEAD') return { shouldReply: false };
                 }
 
-                // B. DRIVE SYNC
                 else if (tool.function.name === 'trigger_drive_sync') {
                     console.log(`📂 AI decided to check Google Drive for "${businessName}"...`);
                     
