@@ -8,6 +8,7 @@ class FCSModule {
         this.templates = parent.templates;
         this._fcsGenerationInProgress = false;
         this._initialized = false;
+        this.reportCache = new Map(); // ✅ NEW
 
         this.init();
     }
@@ -364,29 +365,38 @@ class FCSModule {
             }
         }
 
-        if (fcsResults) {
-            fcsResults.innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <div class="loading-spinner"></div>
-                    <p style="color: #8b949e; margin-top: 16px;">Loading FCS report...</p>
-                </div>
-            `;
-            fcsResults.style.display = 'block';
+        // 1. INSTANT RENDER FROM CACHE
+        if (this.reportCache.has(conversationId)) {
+            console.log(`⚡ [Cache] Showing FCS Report for ${conversationId}`);
+            this.displayFCSReport(this.reportCache.get(conversationId));
+        } else {
+            if (fcsResults) {
+                fcsResults.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <div class="loading-spinner"></div>
+                        <p style="color: #8b949e; margin-top: 16px;">Loading FCS report...</p>
+                    </div>`;
+                fcsResults.style.display = 'block';
+            }
         }
 
         try {
-            // FIX: Correct URL to match backend route
             const result = await this.parent.apiCall(`/api/fcs/results/${conversationId}?_=${Date.now()}`);
 
             if (result.success && result.analysis) {
-                this.displayFCSReport({
-                    // FIX: Use correct field names from fcs_analyses table
+                const reportData = {
                     report_content: result.analysis.fcs_report,
                     generated_at: result.analysis.completed_at,
                     business_name: result.analysis.extracted_business_name
-                });
+                };
+
+                // Update Cache
+                this.reportCache.set(conversationId, reportData);
+                
+                // Update UI
+                this.displayFCSReport(reportData);
             } else {
-                if (fcsResults) {
+                if (!this.reportCache.has(conversationId) && fcsResults) {
                     fcsResults.innerHTML = `
                         <div style="text-align: center; padding: 60px 40px;">
                             <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
@@ -406,18 +416,20 @@ class FCSModule {
             if (fcsResults) {
                 // Handle 404 gracefully (just means no report yet)
                 if (e.message.includes('404')) {
-                    fcsResults.innerHTML = `
-                        <div style="text-align: center; padding: 60px 40px;">
-                            <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
-                            <h3 style="color: #e6edf3; margin-bottom: 12px;">No FCS Report Available</h3>
-                            <p style="color: #8b949e; margin-bottom: 24px;">Generate a report to analyze your financial documents</p>
-                            <button onclick="window.conversationUI.fcs.showFCSModal()"
-                                    class="btn btn-primary"
-                                    style="padding: 10px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                Generate FCS Report
-                            </button>
-                        </div>
-                    `;
+                    if (!this.reportCache.has(conversationId)) {
+                        fcsResults.innerHTML = `
+                            <div style="text-align: center; padding: 60px 40px;">
+                                <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+                                <h3 style="color: #e6edf3; margin-bottom: 12px;">No FCS Report Available</h3>
+                                <p style="color: #8b949e; margin-bottom: 24px;">Generate a report to analyze your financial documents</p>
+                                <button onclick="window.conversationUI.fcs.showFCSModal()"
+                                        class="btn btn-primary"
+                                        style="padding: 10px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    Generate FCS Report
+                                </button>
+                            </div>
+                        `;
+                    }
                 } else {
                     fcsResults.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #ef4444;">

@@ -11,6 +11,9 @@ class DocumentsModule {
         this.currentDocuments = [];
         this.selectedFiles = [];
         this.documentsNeedRefresh = false;
+        
+        // ✅ NEW: Cache Store
+        this.documentsCache = new Map();
 
         this.init();
     }
@@ -74,7 +77,6 @@ class DocumentsModule {
             console.error('❌ No conversation ID available, cannot load documents');
             this.renderDocumentsList([]);
 
-            // UPDATED: Used CSS class .doc-state-container
             if (documentsList) {
                 documentsList.innerHTML = `
                     <div class="doc-state-container">
@@ -87,40 +89,49 @@ class DocumentsModule {
             return;
         }
 
+        // 1. INSTANT RENDER FROM CACHE
+        if (this.documentsCache.has(targetId)) {
+            console.log(`⚡ [Cache] Rendering documents for ${targetId}`);
+            this.currentDocuments = this.documentsCache.get(targetId);
+            this.renderDocumentsList();
+            this.toggleFCSGenerationSection();
+        } else {
+            // Only show spinner if we have NO data
+            if (documentsList) {
+                 documentsList.innerHTML = `
+                    <div class="loading-state" id="documentsLoading">
+                        <div class="loading-spinner small"></div>
+                        <span>Loading documents...</span>
+                    </div>`;
+            }
+        }
+
         try {
             console.log(`📄 Loading documents for conversation: ${targetId}`);
             const result = await this.parent.apiCall(`/api/conversations/${targetId}/documents`);
 
             if (result.success) {
-                this.currentDocuments = (result.documents || []).map(doc => this.normalizeDocumentFields(doc));
-                console.log(`✅ Loaded ${this.currentDocuments.length} documents`);
-                this.renderDocumentsList();
-                this.updateDocumentsSummary();
-                this.toggleFCSGenerationSection();
-            } else {
-                console.error('❌ Failed to load documents:', result.error);
-
-                // UPDATED: Used CSS class .doc-state-container
-                if (documentsList) {
-                    documentsList.innerHTML = `
-                        <div class="doc-state-container error-state">
-                            <div class="doc-state-icon">❌</div>
-                            <h4 class="doc-state-title">Failed to Load Documents</h4>
-                            <p class="doc-state-text">${result.error || 'Unknown error'}</p>
-                            <button onclick="window.conversationUI.documents.loadDocuments()"
-                                    class="btn btn-primary btn-sm">
-                                Retry
-                            </button>
-                        </div>
-                    `;
+                const freshDocs = (result.documents || []).map(doc => this.normalizeDocumentFields(doc));
+                
+                // Update Cache & Current State
+                this.documentsCache.set(targetId, freshDocs);
+                this.currentDocuments = freshDocs;
+                
+                // Update UI (only if user is still on this tab)
+                if (this.parent.getCurrentConversationId() == targetId) {
+                    this.renderDocumentsList();
+                    this.updateDocumentsSummary();
+                    this.toggleFCSGenerationSection();
                 }
-                this.renderDocumentsList([]);
+            } else {
+                // If cache existed, we just stay on old data silently. If not, show error.
+                if (!this.documentsCache.has(targetId) && documentsList) {
+                    documentsList.innerHTML = `<div class="doc-state-container error-state">...</div>`;
+                }
             }
         } catch (error) {
             console.error('❌ Error loading documents:', error);
-
-            // UPDATED: Used CSS class .doc-state-container
-            if (documentsList) {
+            if (!this.documentsCache.has(targetId) && documentsList) {
                 documentsList.innerHTML = `
                     <div class="doc-state-container error-state">
                         <div class="doc-state-icon">❌</div>
@@ -601,6 +612,12 @@ class DocumentsModule {
             if (docIndex !== -1) {
                 this.currentDocuments[docIndex].originalFilename = newName;
                 this.currentDocuments[docIndex].documentType = newType;
+                
+                // ✅ NEW: Update Cache immediately
+                const conversationId = this.parent.getCurrentConversationId();
+                if (conversationId) {
+                    this.documentsCache.set(conversationId, [...this.currentDocuments]);
+                }
             }
         }
 

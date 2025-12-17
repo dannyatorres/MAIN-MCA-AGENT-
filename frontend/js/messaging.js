@@ -14,6 +14,12 @@ class MessagingModule {
         this.socketRetries = 0; // Prevent infinite recursion
         this.socketListenersAttached = false; // Prevent multiple attachments
 
+        // ✅ NEW: Message Cache Store
+        this.messageCache = new Map();
+
+        // ✅ NEW: Message Cache Store
+        this.messageCache = new Map();
+
         this.init();
     }
 
@@ -165,36 +171,38 @@ class MessagingModule {
     async loadConversationMessages(conversationId = null) {
         console.log('🔄 loadConversationMessages called');
         const convId = conversationId || this.parent.getCurrentConversationId();
-        console.log('🔄 Current conversation ID:', convId);
-        if (!convId) {
-            console.log('❌ No conversation ID found, returning');
-            return;
+        if (!convId) return;
+
+        this.removeConversationBadge(convId);
+        const container = document.getElementById('messagesContainer');
+
+        // 1. SMART CACHE: Do we have messages in memory?
+        if (this.messageCache.has(convId)) {
+            console.log(`⚡ [Cache] Rendering messages for ${convId} instantly`);
+            this.renderMessages(this.messageCache.get(convId));
+        } else {
+            // Only show spinner if cache is empty
+            if (container) container.innerHTML = '<div class="loading-spinner"></div>';
         }
 
-        // ✅ Clear red/green badges immediately when opening
-        this.removeConversationBadge(convId);
-
         try {
-            console.log(`📨 Loading messages for conversation: ${convId}`);
+            // 2. BACKGROUND FETCH: Get fresh messages
             const data = await this.parent.apiCall(`/api/conversations/${convId}/messages`);
-            console.log(`Loaded ${data?.length || 0} messages`);
+            
+            // Update Cache
+            this.messageCache.set(convId, data || []);
 
-            this.renderMessages(data || []);
+            // 3. Re-render with fresh data (silent update)
+            // Only re-render if the user is still looking at this conversation
+            if (this.parent.getCurrentConversationId() == convId) {
+                this.renderMessages(data || []);
+            }
         } catch (error) {
-            this.utils.handleError(error, 'Error loading messages', `Failed to load messages: ${error.message}`);
-
-            const container = document.getElementById('messagesContainer');
-            if (container) {
-                container.innerHTML = `
-                    <div class="error-state">
-                        <div class="error-icon">⚠️</div>
-                        <h3>Messages Failed to Load</h3>
-                        <p>${error.message}</p>
-                        <button onclick="window.conversationUI.messaging.loadConversationMessages()" class="retry-btn">
-                            Retry
-                        </button>
-                    </div>
-                `;
+            // If cache existed, we still show the old messages, just warn about connection
+            if (!this.messageCache.has(convId)) {
+                this.utils.handleError(error, 'Error loading messages', `Failed to load messages`);
+            } else {
+                console.warn('Background message fetch failed, using cache.');
             }
         }
     }
@@ -217,6 +225,15 @@ class MessagingModule {
     }
 
     addMessage(message) {
+        // ✅ NEW: Keep cache in sync with new messages
+        const convId = message.conversation_id;
+        if (convId && this.messageCache.has(String(convId))) {
+            const cached = this.messageCache.get(String(convId));
+            if (!cached.find(m => m.id === message.id)) {
+                cached.push(message);
+            }
+        }
+
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 

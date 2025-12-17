@@ -141,50 +141,63 @@ class ConversationCore {
     async selectConversation(conversationId) {
         if (this.currentConversationId === conversationId) return;
 
-        // Cleanup previous state
-        this.unreadMessages.delete(conversationId);
-        if (this.parent.messaging) this.parent.messaging.removeConversationBadge(conversationId);
+        // 1. INSTANT SWAP: Update ID immediately so UI knows where we are
         this.currentConversationId = conversationId;
         if (this.parent) this.parent.currentConversationId = conversationId;
 
-        // Reset UI
+        // Reset UI Elements
         document.querySelectorAll('.tab-btn[data-tab="ai-assistant"]').forEach(btn => btn.click());
         document.getElementById('backHomeBtn')?.classList.remove('hidden');
         document.getElementById('conversationActions')?.classList.remove('hidden');
-        
-        // ✅ HIDE INPUT INITIALLY (So it doesn't glitch)
+        this.updateConversationSelection(); // Highlight the list item instantly
+
         const inputContainer = document.getElementById('messageInputContainer');
+        const msgContainer = document.getElementById('messagesContainer');
+
+        // 2. SMART CACHE: Do we already have this person's info in memory?
+        // If yes, render the header/details INSTANTLY.
+        const cachedConv = this.conversations.get(conversationId);
+        if (cachedConv) {
+            console.log(`⚡ [Cache] Rendering details for ${conversationId} immediately`);
+            this.selectedConversation = cachedConv;
+            this.showConversationDetails();
+        } else {
+            // Only show spinner if we have NO data at all
+            if (msgContainer) msgContainer.innerHTML = '<div class="loading-spinner"></div>';
+        }
+
+        // Hide input initially to prevent "wrong chat" bugs, unless we trust cache? 
+        // Safer to hide briefly until messages load.
         if (inputContainer) inputContainer.classList.add('hidden');
 
-        // Show a loading state in the message area
-        const msgContainer = document.getElementById('messagesContainer');
-        if (msgContainer) msgContainer.innerHTML = '<div class="loading-spinner"></div>';
-
-        // Fetch & Render Details
         try {
-            const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
-            // ✅ CRITICAL FIX: Race Condition Guard
-            // If the user clicked "Back" or another chat while this was loading, stop immediately.
-            if (this.currentConversationId !== conversationId) return; 
-
-            this.selectedConversation = data.conversation || data;
-            this.conversations.set(conversationId, this.selectedConversation);
+            // 3. BACKGROUND FETCH: Get fresh details silently
+            // We start the network request, but the user is already looking at the header info!
+            const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
             
-            this.showConversationDetails();
-            this.updateConversationSelection();
-
-            // 1. Start all requests in parallel immediately
+            // 4. PARALLEL LOAD: Start loading messages & tools simultaneously
             const msgPromise = this.parent.messaging ? 
                 this.parent.messaging.loadConversationMessages(conversationId) : Promise.resolve();
-                
-            const otherPromises = [];
-            if (this.parent.intelligence) otherPromises.push(this.parent.intelligence.loadConversationIntelligence(conversationId, data));
-            if (this.parent.documents) otherPromises.push(this.parent.documents.loadDocuments());
 
-            // 2. ONLY wait for messages (Critical for UI)
+            const toolsPromise = Promise.allSettled([
+                this.parent.intelligence ? this.parent.intelligence.loadConversationIntelligence(conversationId, cachedConv) : Promise.resolve(),
+                this.parent.documents ? this.parent.documents.loadDocuments() : Promise.resolve()
+            ]);
+
+            // 5. CRITICAL: Wait for the fresh conversation details
+            const data = await dataPromise;
+            
+            // Safety Check: Did user switch away while we were loading?
+            if (this.currentConversationId !== conversationId) return;
+
+            // Update with fresh data from server (in case status changed)
+            this.selectedConversation = data.conversation || data;
+            this.conversations.set(conversationId, this.selectedConversation);
+            this.showConversationDetails(); // Re-render with confirmed data
+
+            // 6. UI UNLOCK: As soon as messages are ready, unlock the input
             await msgPromise;
-
-            // 3. Show the UI immediately! (Don't wait for AI/Docs)
+            
             if (inputContainer) {
                 inputContainer.classList.remove('hidden');
                 inputContainer.style.opacity = '0';
@@ -192,13 +205,12 @@ class ConversationCore {
                 requestAnimationFrame(() => inputContainer.style.opacity = '1');
             }
 
-            // 4. Let the heavy stuff finish in the background
-            Promise.allSettled(otherPromises).then(() => {
-                console.log('Background data (AI/Docs) loaded.');
-            });
+            // 7. Lazy load the heavy tools (AI, Docs)
+            await toolsPromise;
 
         } catch (error) {
             console.error('Error selecting conversation:', error);
+            this.utils.showNotification('Failed to load conversation', 'error');
         }
     }
 

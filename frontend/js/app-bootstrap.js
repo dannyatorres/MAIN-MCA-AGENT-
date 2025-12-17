@@ -254,73 +254,97 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window.loadMarketNews) window.loadMarketNews();
             };
 
-            // 3. NEWS LOADER
+            // 3. NEWS LOADER (Optimized with Caching)
+            let newsCache = null; // Store data here so we don't refetch constantly
+            let lastFetchTime = 0;
+
             window.loadMarketNews = async () => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
 
-                container.innerHTML = `
-                    <div class="news-feed-container">
-                        <div class="news-header-rich">
-                            <span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>
-                        </div>
-                        <div class="news-loading"><i class="fas fa-circle-notch fa-spin fa-2x"></i></div>
-                    </div>`;
+                // 1. FAST RENDER: If we have data, show it IMMEDIATELY
+                if (newsCache) {
+                    renderNews(newsCache);
+                    // If data is less than 5 minutes old, stop here (saves bandwidth)
+                    if (Date.now() - lastFetchTime < 300000) return; 
+                } else {
+                    // Only show spinner if we have absolutely nothing
+                    container.innerHTML = `
+                        <div class="news-feed-container">
+                            <div class="news-header-rich">
+                                <span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>
+                            </div>
+                            <div class="news-loading"><i class="fas fa-circle-notch fa-spin fa-2x"></i></div>
+                        </div>`;
+                }
 
+                // 2. BACKGROUND FETCH: Get fresh data silently
                 try {
                     const response = await fetch('/api/news');
                     const result = await response.json();
 
                     if (result.success && result.data?.length > 0) {
-                        container.innerHTML = ''; 
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'news-feed-container';
-                        
-                        const header = document.createElement('div');
-                        header.className = 'news-header-rich';
-                        header.innerHTML = `<span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>`;
-                        wrapper.appendChild(header);
-
-                        result.data.forEach(item => {
-                            const card = document.createElement('div');
-                            card.className = 'news-card';
-                            card.onclick = () => window.open(item.link, '_blank');
-
-                            const metaTop = document.createElement('div');
-                            metaTop.className = 'news-meta-top';
-                            
-                            const badge = document.createElement('div');
-                            let badgeClass = '';
-                            if (item.source === 'deBanked') badgeClass = 'source-debanked';
-                            if (item.source === 'Legal/Regs') badgeClass = 'source-legal';
-                            badge.className = `news-source-badge ${badgeClass}`;
-                            badge.innerHTML = `<i class="fas ${item.icon || 'fa-bolt'}"></i>`;
-                            badge.appendChild(document.createTextNode(' ' + item.source));
-
-                            metaTop.appendChild(badge);
-                            card.appendChild(metaTop);
-
-                            const title = document.createElement('h4');
-                            title.className = 'news-title';
-                            title.textContent = item.title; 
-                            card.appendChild(title);
-
-                            const footer = document.createElement('div');
-                            footer.className = 'news-footer';
-                            footer.innerHTML = '<span class="read-more-link">Open Source <i class="fas fa-external-link-alt"></i></span>';
-                            card.appendChild(footer);
-
-                            wrapper.appendChild(card);
-                        });
-
-                        container.appendChild(wrapper);
-                    } else {
+                        newsCache = result.data; // Save to cache
+                        lastFetchTime = Date.now();
+                        renderNews(newsCache);   // Update UI
+                    } else if (!newsCache) {
                         container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire is silent.</p></div></div>';
                     }
                 } catch (e) {
                     console.error(e);
-                    container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire Offline</p></div></div>';
+                    if (!newsCache) {
+                        container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire Offline</p></div></div>';
+                    }
                 }
+            };
+
+            // Helper to draw the HTML (Moved out to reuse it)
+            const renderNews = (data) => {
+                const container = document.getElementById('newsFeedContainer');
+                if (!container) return;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'news-feed-container';
+                
+                const header = document.createElement('div');
+                header.className = 'news-header-rich';
+                header.innerHTML = `<span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>`;
+                wrapper.appendChild(header);
+
+                data.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'news-card';
+                    card.onclick = () => window.open(item.link, '_blank');
+
+                    const metaTop = document.createElement('div');
+                    metaTop.className = 'news-meta-top';
+                    
+                    const badge = document.createElement('div');
+                    let badgeClass = '';
+                    if (item.source === 'deBanked') badgeClass = 'source-debanked';
+                    if (item.source === 'Legal/Regs') badgeClass = 'source-legal';
+                    badge.className = `news-source-badge ${badgeClass}`;
+                    badge.innerHTML = `<i class="fas ${item.icon || 'fa-bolt'}"></i>`;
+                    badge.appendChild(document.createTextNode(' ' + item.source));
+
+                    metaTop.appendChild(badge);
+                    card.appendChild(metaTop);
+
+                    const title = document.createElement('h4');
+                    title.className = 'news-title';
+                    title.textContent = item.title; 
+                    card.appendChild(title);
+
+                    const footer = document.createElement('div');
+                    footer.className = 'news-footer';
+                    footer.innerHTML = '<span class="read-more-link">Open Source <i class="fas fa-external-link-alt"></i></span>';
+                    card.appendChild(footer);
+
+                    wrapper.appendChild(card);
+                });
+
+                container.innerHTML = ''; 
+                container.appendChild(wrapper);
             };
 
             // 4. OTHER HELPERS (Fixed: Attaches Listener Properly)

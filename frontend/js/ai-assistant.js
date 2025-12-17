@@ -13,6 +13,7 @@ class AIAssistant {
         this.isTyping = false;
         this.currentConversationId = null;
         this.isInitialized = false;
+        this.aiChatCache = new Map(); // ✅ NEW
 
         console.log('🔧 AI Assistant Module Loaded');
     }
@@ -217,33 +218,56 @@ class AIAssistant {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
-        try {
-            const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
+        const hadCache = this.aiChatCache.has(conversationId);
 
-            messagesContainer.style.visibility = 'hidden';
-            messagesContainer.style.scrollBehavior = 'auto';
+        // 1. CACHE CHECK
+        if (hadCache) {
+            console.log(`⚡ [Cache] Rendering AI history for ${conversationId}`);
             messagesContainer.innerHTML = '';
+            const cachedMsgs = this.aiChatCache.get(conversationId);
+            cachedMsgs.forEach(msg => {
+                this.addMessageToChat(msg.role, msg.content, false, false);
+            });
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        } else {
+            // Spinner only if no cache
+            messagesContainer.innerHTML = `
+                <div class="ai-loading-container">
+                    <div class="ai-thinking ai-loading-spinner-center">
+                        <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+                    </div>
+                </div>`;
+        }
 
+        try {
+            // 2. BACKGROUND SYNC
+            const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
+            
             if (data.messages && data.messages.length > 0) {
-                // If history exists, just show it
-                data.messages.forEach(msg => {
-                    this.addMessageToChat(msg.role, msg.content, false, false);
-                });
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                this.aiChatCache.set(conversationId, data.messages); // Update Cache
+                
+                // Only redraw if we didn't have cache (prevent jitter)
+                if (!hadCache) {
+                    messagesContainer.innerHTML = '';
+                    data.messages.forEach(msg => {
+                        this.addMessageToChat(msg.role, msg.content, false, false);
+                    });
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
             } else {
-                // 🧠 SMART START: If no history, trigger Auto-Analysis
-                this.triggerSmartIntro();
+                if (!hadCache) {
+                     this.triggerSmartIntro(); // No history ever? Do intro.
+                }
             }
-
-            const forceLayout = messagesContainer.offsetHeight;
+            
+            // Clean up visual state
             messagesContainer.style.visibility = 'visible';
-            setTimeout(() => { messagesContainer.style.scrollBehavior = 'smooth'; }, 100);
 
         } catch (error) {
             console.log('Error loading history:', error);
-            messagesContainer.innerHTML = '';
-            messagesContainer.style.visibility = 'visible';
-            this.addMessageToChat('assistant', "I'm ready. (History load failed)", false);
+            if (!this.aiChatCache.has(conversationId)) {
+                this.addMessageToChat('assistant', "I'm ready. (History load failed)", false);
+            }
         }
     }
 
