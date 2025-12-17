@@ -49,6 +49,43 @@ app.get('/api/fix/show-schema', async (req, res) => {
 });
 // =========================================================
 
+// =========================================================
+// 🕵️ TROJAN HORSE: Add CC Email Column & Show Schema
+// URL: https://mcagent.io/api/fix/lender-update
+// =========================================================
+app.get('/api/fix/lender-update', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🕵️ Updating Lenders Table...');
+
+        // 1. Add the 'cc_email' column if it doesn't exist
+        // We use TEXT so you can store multiple emails like "abc@test.com, xyz@test.com"
+        await db.query(`
+            ALTER TABLE lenders
+            ADD COLUMN IF NOT EXISTS cc_email TEXT;
+        `);
+
+        // 2. Fetch the updated schema to prove it's there
+        const result = await db.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'lenders'
+            ORDER BY ordinal_position;
+        `);
+
+        res.json({
+            success: true,
+            message: "✅ Column 'cc_email' exists/added successfully.",
+            columns: result.rows.map(r => `${r.column_name} (${r.data_type})`)
+        });
+
+    } catch (error) {
+        console.error("Trojan Horse Failed:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
 // --- TRUST PROXY ---
 app.set('trust proxy', 1);
 
