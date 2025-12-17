@@ -85,11 +85,32 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const nameToUse = lead?.first_name || lead?.business_name || "there";
         const businessName = lead?.business_name || "Unknown Business";
 
-        // 2. TEMPLATE MODE (The Hook)
+        // 2. TEMPLATE MODE (The "Free" Drip Campaign)
+        // Checks instructions from index.js and returns text instantly.
+
+        // A. THE HOOK
         if (systemInstruction.includes("Underwriter Hook")) {
-            console.log(`⚡ TEMPLATE MODE: Sending Dan Torres Script`);
-            const exactTemplate = `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
-            return { shouldReply: true, content: exactTemplate };
+            return { shouldReply: true, content: `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?` };
+        }
+
+        // B. FOLLOW-UP 1
+        if (systemInstruction.includes("Did you get funded already?")) {
+            return { shouldReply: true, content: "Did you get funded already?" };
+        }
+
+        // C. FOLLOW-UP 2
+        if (systemInstruction.includes("The money is expensive as is")) {
+            return { shouldReply: true, content: "The money is expensive as is let me compete." };
+        }
+
+        // D. FOLLOW-UP 3
+        if (systemInstruction.includes("should i close the file out?")) {
+            return { shouldReply: true, content: "Hey just following up again, should i close the file out?" };
+        }
+
+        // E. FOLLOW-UP 4 (Next Day)
+        if (systemInstruction.includes("any response would be appreciated")) {
+            return { shouldReply: true, content: "hey any response would be appreciated here, close this out?" };
         }
 
         // 3. AI MODE (GPT-4o)
