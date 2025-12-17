@@ -156,8 +156,23 @@ class ConversationCore {
     async selectConversation(conversationId) {
         if (this.currentConversationId === conversationId) return;
 
+        // 1. Tell the Traffic Cop we are moving
         this.currentConversationId = conversationId;
         if (this.parent) this.parent.currentConversationId = conversationId;
+
+        // 2. CLEAR THE STAGE
+        // Since the container is permanent, we must empty it before loading new chats.
+        const msgContainer = document.getElementById('messagesContainer');
+        if (msgContainer) msgContainer.innerHTML = '';
+
+        // 3. Show the loading spinner inside that empty box
+        if (msgContainer) {
+            msgContainer.innerHTML = `
+                <div class="loading-state-chat">
+                    <div class="loading-spinner"></div>
+                </div>
+            `;
+        }
 
         // Reset UI Elements
         document.querySelectorAll('.tab-btn[data-tab="ai-assistant"]').forEach(btn => btn.click());
@@ -166,7 +181,6 @@ class ConversationCore {
         this.updateConversationSelection();
 
         const inputContainer = document.getElementById('messageInputContainer');
-        const msgContainer = document.getElementById('messagesContainer');
 
         // --- FIX 1: STOP HIDING THE INPUT ---
         // We removed the line that adds 'hidden' to inputContainer.
@@ -179,8 +193,6 @@ class ConversationCore {
         if (cachedConv) {
             this.selectedConversation = cachedConv;
             this.showConversationDetails();
-        } else {
-            if (msgContainer) msgContainer.innerHTML = '<div class="loading-spinner"></div>';
         }
 
         try {
