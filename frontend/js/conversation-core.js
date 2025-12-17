@@ -300,7 +300,7 @@ class ConversationCore {
     }
 
     generateConversationHTML(conv) {
-        // Optimized helper for HTML generation
+        // 1. Helper for Time
         const timeSince = (d) => {
             if(!d) return '';
             const s = Math.floor((new Date() - new Date(d)) / 1000);
@@ -310,11 +310,24 @@ class ConversationCore {
             return Math.floor(s/86400) + 'd ago';
         };
 
+        // 2. Helper for Phone Formatting (The Fix)
+        const formatPhone = (phone) => {
+            if (!phone) return 'No Phone';
+            // Clean non-numeric characters
+            const cleaned = ('' + phone).replace(/\D/g, '');
+            // Check if it looks like a standard US number (10 digits)
+            const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+            if (match) {
+                return `(${match[1]}) ${match[2]}-${match[3]}`;
+            }
+            return phone; // Return original if unique format
+        };
+
         const initials = (conv.business_name || 'U').substring(0,2).toUpperCase();
         const isSelected = this.currentConversationId === conv.id ? 'selected' : '';
         const isChecked = this.selectedForDeletion.has(conv.id) ? 'checked' : '';
         const unread = this.unreadMessages.get(conv.id);
-        
+
         let offerBadge = conv.has_offer ? `<span class="offer-badge-small">OFFER</span>` : '';
 
         // Safely format ID
@@ -332,7 +345,7 @@ class ConversationCore {
                          <span class="message-preview">${conv.last_message || 'No messages yet'}</span>
                     </div>
                     <div class="conversation-meta">
-                        <span class="phone-number">${conv.lead_phone || 'No Phone'}</span>
+                        <span class="phone-number">${formatPhone(conv.lead_phone)}</span>
                         <span class="cid-tag">CID# ${displayCid}</span>
                     </div>
                 </div>
