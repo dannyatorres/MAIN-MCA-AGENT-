@@ -6,52 +6,48 @@ class StatsModule {
         this.apiBaseUrl = parent.apiBaseUrl;
         this.utils = parent.utils;
 
-        // Initialize stats tracking
         this.init();
     }
 
     init() {
         console.log('📊 StatsModule initialized');
-
-        // Set up stats tracking if needed
-        this.setupStatsTracking();
+        // Optionally load stats immediately if we are on dashboard
+        if (!this.parent.currentConversationId) {
+            this.loadStats();
+        }
     }
 
-    setupStatsTracking() {
-        // Basic stats tracking functionality
-        // This can be expanded based on requirements
+    async loadStats() {
+        // Ensure we are only trying to update elements if they exist
+        const activeEl = document.getElementById('activeCount');
+        const processingEl = document.getElementById('processingCount');
+        const todayEl = document.getElementById('todayCount');
+
+        if (!activeEl) return; // Not on dashboard, skip
+
+        try {
+            console.log('📊 Fetching dashboard stats...');
+            const stats = await this.parent.apiCall('/api/stats');
+            
+            // Map API response to UI
+            // Handle various potential API response structures
+            const active = stats.totalConversations || stats.conversations?.total || 0;
+            const processing = stats.processing || stats.fcs_processing?.currentlyProcessing || 0;
+            const today = stats.newLeads || stats.conversations?.today || 0;
+
+            activeEl.textContent = active;
+            processingEl.textContent = processing;
+            todayEl.textContent = today;
+
+        } catch (error) {
+            console.error('Error loading stats:', error);
+            activeEl.textContent = '-';
+            processingEl.textContent = '-';
+            todayEl.textContent = '-';
+        }
     }
 
-    // Method to track events
     trackEvent(eventName, data = {}) {
         console.log('📈 Event tracked:', eventName, data);
-
-        // Here you could send analytics to a service
-        // For now, just log locally
-    }
-
-    // Method to get basic stats
-    getStats() {
-        return {
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            url: window.location.href
-        };
-    }
-
-    // Method to display stats in UI if needed
-    displayStats(container) {
-        if (!container) return;
-
-        const stats = this.getStats();
-        container.innerHTML = `
-            <div class="stats-container">
-                <h3>Application Stats</h3>
-                <div class="stat-item">
-                    <label>Last Updated:</label>
-                    <span>${stats.timestamp}</span>
-                </div>
-            </div>
-        `;
     }
 }

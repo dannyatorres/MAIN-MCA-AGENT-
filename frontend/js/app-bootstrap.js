@@ -3,7 +3,6 @@ import { LeadFormController } from './lead-form-controller.js';
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 [DEBUG] Main Module: DOM Loaded. Waiting for CommandCenter...');
 
-    // --- HELPER: Safe DOM Creation (Prevents XSS) ---
     const createSafeElement = (tag, text, classes = []) => {
         const el = document.createElement(tag);
         if (text) el.textContent = text;
@@ -11,17 +10,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return el;
     };
 
-    // --- INITIALIZATION LOOP ---
     const initApp = () => {
-        // Ensure CommandCenter exists
         if (!window.commandCenter || !window.commandCenter.isInitialized) return false;
-        
-        // Ensure critical sub-systems are ready or explicitly undefined
-        // This prevents the "Calling system failed" error later
         if (typeof CallManager !== 'undefined' && !window.callManager) {
             window.callManager = new CallManager();
         }
-        
         return true;
     };
 
@@ -35,23 +28,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearInterval(appInitInterval);
             console.log('✅ [DEBUG] Main Module: CommandCenter is READY.');
 
-            // --- A. INJECT CONTROLLERS ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
-            // Pre-load Lender Admin safely
             if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
-                console.log("🏦 [DEBUG] Pre-loading LenderAdmin...");
                 window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
             }
 
-            // --- B. DEFINE GLOBAL FUNCTIONS ---
+            // --- GLOBAL FUNCTIONS ---
 
-            // 1. HEADER RENDERER (Smart Update - Fixes Timer Bug)
+            // 1. HEADER RENDERER
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
                 
-                // UNHIDE INPUTS
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
@@ -64,27 +53,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const displayTitle = businessName || 'Unknown Business';
                 const displayOwner = ownerName || 'No Owner';
                 const initials = displayTitle.substring(0, 2).toUpperCase();
+                
+                // Hide Back Button logic is handled by CSS usually, but ensure it's visible here
+                const backBtn = document.getElementById('backHomeBtn');
+                if (backBtn) backBtn.classList.remove('hidden');
 
-                // Check if we are already in "Chat Mode" to avoid destroying the DOM (and the Timer)
+                // Check for existing header to do a light update
                 const existingTitle = header.querySelector('.chat-business-title');
                 
                 if (existingTitle) {
-                    // LIGHT UPDATE: Only change text, leave DOM/Listeners intact
                     header.querySelector('.chat-avatar-large').textContent = initials;
                     existingTitle.textContent = displayTitle;
                     header.querySelector('.chat-row-secondary span').textContent = displayOwner;
                     
-                    // Update Call Button attributes
                     const callBtn = document.getElementById('callBtn');
                     if (callBtn) {
                         callBtn.title = `Call ${phoneNumber || 'No phone'}`;
-                        // Remove old listeners by cloning
                         const newCallBtn = callBtn.cloneNode(true);
                         callBtn.parentNode.replaceChild(newCallBtn, callBtn);
                         attachCallListeners(newCallBtn, phoneNumber, conversationId);
                     }
                 } else {
-                    // FULL RENDER: First time load
+                    // Full Render
                     header.innerHTML = `
                         <div class="chat-header-rich">
                             <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard">
@@ -92,7 +82,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </button>
                             <div class="chat-avatar-large">${initials}</div>
                             <div class="chat-details-stack">
-                                <h2 class="chat-business-title"></h2> <div class="chat-row-secondary">
+                                <h2 class="chat-business-title"></h2>
+                                <div class="chat-row-secondary">
                                     <span></span>
                                 </div>
                             </div>
@@ -115,15 +106,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     `;
                     
-                    // Safely set text content
                     header.querySelector('.chat-business-title').textContent = displayTitle;
                     header.querySelector('.chat-row-secondary span').textContent = displayOwner;
 
-                    // Attach Listeners
                     document.getElementById('backHomeBtn').addEventListener('click', window.loadDashboard);
                     attachCallListeners(document.getElementById('callBtn'), phoneNumber, conversationId);
                     
-                    // Call Bar Controls
                     document.getElementById('endCallBtn')?.addEventListener('click', () => {
                         if (window.callManager) window.callManager.endCall();
                         else {
@@ -156,24 +144,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.loadDashboard = () => {
                 console.log("🏠 [DEBUG] Loading Dashboard...");
 
+                // Reset Selection
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
                     window.commandCenter.conversationUI.selectedConversation = null;
+                    // Visually deselect list items
+                    document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
                 }
 
                 const centerPanel = document.querySelector('.center-panel');
                 const centerHeader = centerPanel ? centerPanel.querySelector('.panel-header') : null;
                 const messages = document.getElementById('messagesContainer');
-
-                // HIDE INPUTS
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
+                // UI Mode Switching
                 if (centerPanel) centerPanel.classList.add('dashboard-mode');
-                if (centerHeader) centerHeader.innerHTML = '';
+                if (centerHeader) centerHeader.innerHTML = ''; // Hide chat header
                 if (inputs) inputs.classList.add('hidden');
                 if (actions) actions.classList.add('hidden');
 
+                // Render Dashboard
                 if (messages) {
                     messages.innerHTML = `
                         <div class="dashboard-container">
@@ -198,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             <div class="stats-grid">
                                 <div class="stat-card">
-                                    <div class="stat-icon"><i class="fas fal_fire"></i></div>
+                                    <div class="stat-icon"><i class="fas fa-fire"></i></div>
                                     <div class="stat-value" id="activeCount">-</div>
                                     <div class="stat-label">Active Leads</div>
                                 </div>
@@ -216,7 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     `;
 
-                    // Attach Listeners in JS (Fixes "undefined function" error)
+                    // Wire up buttons
                     document.getElementById('dashFormatterBtn').addEventListener('click', () => window.open('/lead_reformatter.html', '_blank'));
                     document.getElementById('dashLenderBtn').addEventListener('click', () => {
                         if (typeof window.openLenderManagementModal === 'function') {
@@ -227,20 +218,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
 
-                // Handle Stats Loading Safely
-                if (window.commandCenter.stats?.loadStats) {
-                    window.commandCenter.stats.loadStats();
+                // 🔴 CRITICAL FIX: Switch Right Panel back to Home/News Mode
+                if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
+                    window.commandCenter.intelligence.toggleView(false);
                 } else {
-                    // Retry once if stats aren't ready immediately
-                    setTimeout(() => {
-                        window.commandCenter.stats?.loadStats && window.commandCenter.stats.loadStats();
-                    }, 500);
+                    // Fallback manual toggle
+                    document.getElementById('rightPanelHome')?.classList.remove('hidden');
+                    document.getElementById('rightPanelIntelligence')?.classList.add('hidden');
                 }
 
+                // Load Stats
+                if (window.commandCenter.stats?.loadStats) {
+                    window.commandCenter.stats.loadStats();
+                }
+
+                // Load News
                 if (window.loadMarketNews) window.loadMarketNews();
             };
 
-            // 3. NEWS LOADER (XSS Fixed)
+            // 3. NEWS LOADER
             window.loadMarketNews = async () => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
@@ -258,9 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const result = await response.json();
 
                     if (result.success && result.data?.length > 0) {
-                        // Clear loading state
                         container.innerHTML = ''; 
-                        
                         const wrapper = document.createElement('div');
                         wrapper.className = 'news-feed-container';
                         
@@ -277,22 +271,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const metaTop = document.createElement('div');
                             metaTop.className = 'news-meta-top';
                             
-                            // Safe Badge
                             const badge = document.createElement('div');
                             let badgeClass = '';
                             if (item.source === 'deBanked') badgeClass = 'source-debanked';
                             if (item.source === 'Legal/Regs') badgeClass = 'source-legal';
                             badge.className = `news-source-badge ${badgeClass}`;
                             badge.innerHTML = `<i class="fas ${item.icon || 'fa-bolt'}"></i>`;
-                            badge.appendChild(document.createTextNode(' ' + item.source)); // Safe text
+                            badge.appendChild(document.createTextNode(' ' + item.source));
 
                             metaTop.appendChild(badge);
                             card.appendChild(metaTop);
 
-                            // Safe Title
                             const title = document.createElement('h4');
                             title.className = 'news-title';
-                            title.textContent = item.title; // PREVENTS XSS
+                            title.textContent = item.title; 
                             card.appendChild(title);
 
                             const footer = document.createElement('div');
@@ -313,22 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // 4. OTHER HELPERS (Optimized)
-            window.toggleDeleteMode = () => {
-                const list = document.getElementById('conversationsList');
-                if(!list) return;
-                
-                const isDeleteMode = list.classList.toggle('delete-mode');
-                document.getElementById('toggleDeleteModeBtn')?.classList.toggle('active-danger', isDeleteMode);
-                document.getElementById('deleteSelectedBtn')?.classList.toggle('hidden', !isDeleteMode);
-
-                if(!isDeleteMode) {
-                    document.querySelectorAll('.delete-checkbox').forEach(cb => cb.checked = false);
-                    window.commandCenter.conversationUI?.selectedForDeletion?.clear();
-                }
-            };
-
-            // C. INITIAL LOAD
+            // Initial Load
             if (!window.commandCenter.currentConversationId) {
                 window.loadDashboard();
             }
