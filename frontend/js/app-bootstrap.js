@@ -95,10 +95,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Priority Logic: Ensure we have strings
                 let displayBusiness = businessName || 'Unknown Business';
-                let displayOwner = ownerName || 'Business Contact';
+                let displayOwner = (ownerName || '').trim() || 'Business Contact';
 
                 // If owner is missing but business is there, don't show "Unknown", just handle gracefully
-                if (!ownerName && businessName) {
+                if (!(ownerName || '').trim() && businessName) {
                     displayOwner = businessName; // Fallback to business name in big text
                     displayBusiness = 'Business Account'; // Secondary text
                 }
