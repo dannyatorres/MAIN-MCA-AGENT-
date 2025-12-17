@@ -143,7 +143,7 @@ class LenderAdmin {
 
     showAddModal() {
         const modalHtml = `
-            <div id="addLenderModal" class="modal" style="display: flex;">
+            <div id="addLenderModal" class="modal" style="display: flex; z-index: 2100;">
                 <div class="modal-content">
                     <div class="modal-header"><h3>Add New Lender</h3><button class="modal-close" onclick="this.closest('.modal').remove()">×</button></div>
                     <div class="modal-body">
@@ -210,7 +210,7 @@ class LenderAdmin {
         const statesStr = Array.isArray(lender.states) ? lender.states.join(', ') : '';
 
         const modalHtml = `
-            <div id="editLenderModal" class="modal" style="display: flex;">
+            <div id="editLenderModal" class="modal" style="display: flex; z-index: 2100;">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>Edit Lender: ${lender.name}</h3>
