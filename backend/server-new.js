@@ -31,7 +31,7 @@ app.get('/api/fix/show-schema', async (req, res) => {
         const result = await db.query(`
             SELECT table_name, column_name, data_type 
             FROM information_schema.columns 
-            WHERE table_name IN ('lead_details', 'fcs_analyses')
+            WHERE table_name IN ('lead_details', 'fcs_analyses', 'lenders', 'lender_submissions')
             ORDER BY table_name, ordinal_position;
         `);
 
