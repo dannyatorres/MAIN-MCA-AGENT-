@@ -31,29 +31,52 @@ class ConversationCore {
     }
 
     setupEventListeners() {
-        // 1. List Event Delegation (PERFORMANCE FIX)
-        // Instead of attaching 50+ listeners, we attach just ONE to the container.
-        const listContainer = document.getElementById('conversationsList');
-        if (listContainer) {
-            listContainer.addEventListener('click', (e) => {
-                // A. Handle Delete Checkbox
-                const checkbox = e.target.closest('.delete-checkbox');
-                if (checkbox) {
-                    e.stopPropagation();
-                    this.toggleDeleteSelection(checkbox.dataset.conversationId);
-                    return;
-                }
+        // --- 1. ROBUST Event Delegation ---
+        // We attach to a permanent parent (document or main-content) to ensure
+        // we catch events even if #conversationsList is re-created or loaded late.
 
-                // B. Handle Conversation Selection
-                const item = e.target.closest('.conversation-item');
-                // Ensure we didn't click a button inside the item
-                if (item && !e.target.closest('button') && !e.target.closest('input')) {
-                    this.selectConversation(item.dataset.conversationId);
-                }
-            });
-        }
+        const mainContainer = document.getElementById('main-content') || document.body;
 
-        // 2. Filters & Search
+        mainContainer.addEventListener('click', (e) => {
+            // Ensure we are only clicking inside the list
+            const listContainer = e.target.closest('#conversationsList');
+            if (!listContainer) return;
+
+            // A. Handle Delete Checkbox (Expanded for Custom CSS)
+            // Checks for the class on the target, OR if the target is inside a wrapper
+            const checkboxWrapper = e.target.closest('.conversation-checkbox');
+            const realInput = e.target.closest('.delete-checkbox');
+
+            if (realInput || (checkboxWrapper && !e.target.closest('.conversation-item'))) {
+                e.stopPropagation();
+
+                // If they clicked a wrapper/label, find the ID associated with it
+                const id = realInput ? realInput.dataset.conversationId :
+                           checkboxWrapper.querySelector('.delete-checkbox')?.dataset.conversationId;
+
+                if (id) this.toggleDeleteSelection(id);
+                return;
+            }
+
+            // B. Handle Conversation Selection
+            const item = e.target.closest('.conversation-item');
+
+            // Critical: Ensure we didn't click a button, input, or label inside the item
+            if (item &&
+                !e.target.closest('button') &&
+                !e.target.closest('input') &&
+                !e.target.closest('.delete-checkbox')) {
+
+                this.selectConversation(item.dataset.conversationId);
+            }
+
+            // C. Handle "Load More" (Delegated)
+            if (e.target.id === 'loadMoreBtn') {
+                this.loadConversations(false);
+            }
+        });
+
+        // --- 2. Filters & Search (unchanged) ---
         const stateFilter = document.getElementById('stateFilter');
         if (stateFilter) stateFilter.addEventListener('change', () => this.filterConversations());
 
@@ -64,28 +87,20 @@ class ConversationCore {
                 this.searchTimeout = setTimeout(() => {
                     if (e.target.value.trim() === '') this.renderConversationsList();
                     else this.filterConversations();
-                }, 300); // Increased debounce to 300ms for smoother typing
+                }, 300);
             });
+            // Handle the little 'x' clear button in search inputs
             searchInput.addEventListener('search', (e) => {
                 if (e.target.value === '') this.renderConversationsList();
             });
         }
 
-        // 3. Global Buttons
+        // --- 3. Global Buttons (Check existence before attaching) ---
         const refreshBtn = document.getElementById('refreshBtn');
         if (refreshBtn) refreshBtn.addEventListener('click', () => this.refreshData());
 
         const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
         if (deleteSelectedBtn) deleteSelectedBtn.addEventListener('click', () => this.confirmDeleteSelected());
-
-        // 4. Load More Button (Delegated)
-        if (listContainer) {
-            listContainer.addEventListener('click', (e) => {
-                if (e.target.id === 'loadMoreBtn') {
-                    this.loadConversations(false);
-                }
-            });
-        }
     }
 
     // --- DATA LOADING ---
