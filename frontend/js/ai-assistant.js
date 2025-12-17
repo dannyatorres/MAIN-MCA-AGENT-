@@ -247,41 +247,20 @@ class AIAssistant {
         }
     }
 
-    // 🔥 THIS IS THE NEW FEATURE
-    // Automatically asks the backend: "What is going on?"
+    // 🧠 SMART START: REPLACED
+    // Instead of asking AI to analyze, we just output the specific greeting instantly.
     async triggerSmartIntro() {
-        const conversationId = this.parent.getCurrentConversationId();
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
-        // Show typing immediately
-        this.showTypingIndicator();
-        messagesContainer.style.visibility = 'visible';
+        // 1. Get the business name from the parent app
+        const conversation = this.parent.getSelectedConversation();
+        const businessName = conversation ? conversation.business_name : 'this deal';
 
-        try {
-            // We send a "Hidden" query that the user didn't type
-            const data = await this.parent.apiCall('/api/ai/chat', {
-                method: 'POST',
-                body: JSON.stringify({
-                    // UPDATED PROMPT: Start with a greeting that bolds the business name, then analyze offers/status
-                    query: "Start your response exactly with: 'I'm ready to help with **[Business Name]**.' (using the actual business name). Then, analyze the database. If there are any offers, list them. If no offers, just summarize the deal status.",
-                    conversationId: conversationId,
-                    includeContext: true
-                })
-            });
+        // 2. Construct the exact message you wanted
+        const message = `I'm ready to help with **${businessName}**.`;
 
-            this.hideTypingIndicator();
-
-            if (data.success && data.response) {
-                // Display the AI's "Auto-Analysis"
-                this.addMessageToChat('assistant', data.response, true);
-            } else {
-                this.addMessageToChat('assistant', "Hi! I'm ready to help. (Auto-analysis unavailable)", false);
-            }
-
-        } catch (e) {
-            this.hideTypingIndicator();
-            this.addMessageToChat('assistant', "Hi! I'm ready to help.", false);
-        }
+        // 3. Display it immediately (No API call, no loading spinner)
+        this.addMessageToChat('assistant', message, true);
     }
 }
