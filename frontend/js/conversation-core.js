@@ -368,58 +368,85 @@ class ConversationCore {
 
     // --- UPDATES ---
 
-    updateConversationPreview(conversationId, message) {
-        const conv = this.conversations.get(conversationId);
+    async updateConversationPreview(conversationId, message) {
+        let conv = this.conversations.get(conversationId);
 
-        // 1. UPDATE DATA (Always do this in the background)
+        // 1. UPDATE DATA
         if (!conv) {
-             this.loadConversations(false);
-             return;
+            console.log(`⚠️ Conversation ${conversationId} not in memory. Fetching single record...`);
+            try {
+                // FIX: Fetch ONLY this specific conversation, do not reload the whole list
+                const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
+                if (data && (data.conversation || data)) {
+                    conv = data.conversation || data;
+                    this.conversations.set(conversationId, conv);
+
+                    // If we are searching/filtering, don't force it into the view unless it matches
+                    const searchTerm = document.getElementById('searchInput')?.value.trim();
+                    if (!searchTerm) {
+                        this.renderConversationsList(); // Safe re-render
+                    }
+                } else {
+                    return; // Lead doesn't exist or error
+                }
+            } catch (e) {
+                console.error("Error fetching missing conversation update:", e);
+                return;
+            }
         }
 
+        // Now we definitely have the conv (or we returned)
         conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
         conv.last_activity = new Date().toISOString();
         conv.unread_count = (conv.unread_count || 0) + 1;
         this.conversations.set(conversationId, conv);
         this.unreadMessages.set(conversationId, conv.unread_count);
 
-        // 2. UPDATE SIDEBAR (Always safe)
+        // 2. UPDATE SIDEBAR (DOM Manipulation)
         const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
         const list = document.getElementById('conversationsList');
 
         if (item && list) {
-            item.querySelector('.message-preview').textContent = conv.last_message;
-            item.querySelector('.conversation-time').textContent = 'Just now';
+            // Update existing item
+            const preview = item.querySelector('.message-preview');
+            const time = item.querySelector('.conversation-time');
+            if (preview) preview.textContent = conv.last_message;
+            if (time) time.textContent = 'Just now';
 
-            // Handle Badge
+            // Update Badge
             let badge = item.querySelector('.conversation-badge');
-            if(!badge) {
+            if (!badge) {
                 badge = document.createElement('div');
                 badge.className = 'conversation-badge';
                 item.appendChild(badge);
             }
             badge.textContent = conv.unread_count;
 
-            // Move to top
+            // Move to top of list
             list.prepend(item);
+        } else if (list) {
+            // Item exists in memory but not DOM (e.g. filtered out or new), prepend it
+            // Only if no search is active (otherwise it looks weird appearing in a search result)
+            if (!document.getElementById('searchInput')?.value.trim()) {
+                const html = this.generateConversationHTML(conv);
+                list.insertAdjacentHTML('afterbegin', html);
+            }
         }
 
-        // 3. THE GUARD (Crucial Fix)
-        // Check the Traffic Cop. Are we in Dashboard mode?
+        // 3. THE GUARD (Traffic Cop)
         if (window.appState && window.appState.mode === 'dashboard') {
-            console.log("🛡️ [Guard] Blocked chat render because user is on Dashboard.");
-            return; // STOP HERE. Do not touch the middle panel.
+            return;
         }
 
         // 4. CHECK ACTIVE CHAT
-        // If we are in Chat Mode, but looking at a DIFFERENT person, also stop.
-        if (this.currentConversationId !== conversationId) {
+        if (String(this.currentConversationId) !== String(conversationId)) {
              return;
         }
 
-        // 5. RENDER MESSAGE (Only runs if we are safely in the chat for this person)
-        if (this.parent.messaging && typeof this.parent.messaging.appendMessage === 'function') {
-            this.parent.messaging.appendMessage(message);
+        // 5. RENDER MESSAGE
+        // FIX: Using the correct method name 'addMessage'
+        if (this.parent.messaging && typeof this.parent.messaging.addMessage === 'function') {
+            this.parent.messaging.addMessage(message);
         }
     }
 

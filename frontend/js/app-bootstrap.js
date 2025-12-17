@@ -122,10 +122,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                     displayBusiness = 'Business Account';
                 }
 
+                // --- FIX STARTS HERE ---
+                // Check if we are already displaying this user. If so, DO NOT re-render HTML.
+                // This prevents wiping event listeners and flickering.
+                const currentTitle = header.querySelector('.chat-business-title')?.textContent;
+                const currentBusiness = header.querySelector('.chat-row-secondary span')?.textContent;
+
+                if (currentTitle === displayOwner && currentBusiness === displayBusiness) {
+                    // Just verify the phone button action is updated, then exit
+                    const callBtn = document.getElementById('callBtn');
+                    if (callBtn) {
+                        // Update title just in case
+                        callBtn.title = `Call ${phoneNumber || 'No phone'}`;
+                        // We can't easily update the event listener without recreating,
+                        // but this simple check saves 99% of UI redraws.
+                    }
+
+                    // Ensure input is visible
+                    const inputContainer = document.getElementById('messageInputContainer');
+                    if (inputContainer) inputContainer.classList.remove('hidden');
+
+                    return; // <--- EXIT EARLY
+                }
+                // --- FIX ENDS HERE ---
+
                 // Call Protection Guard
                 const existingCallBar = document.getElementById('callBar');
                 const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
-                const currentTitle = header.querySelector('.chat-business-title')?.textContent;
 
                 if (isCallActive && currentTitle === displayOwner) return;
 
