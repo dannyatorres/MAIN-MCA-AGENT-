@@ -356,24 +356,22 @@ class ConversationCore {
 
     // --- UPDATES ---
 
-    // --- FIX 2: STOP THE "TEXT GLITCH" REFRESH ---
     updateConversationPreview(conversationId, message) {
         const conv = this.conversations.get(conversationId);
 
-        // If it's a brand new lead not in our list, THEN we reload safely
+        // 1. UPDATE DATA (Always do this in the background)
         if (!conv) {
              this.loadConversations(false);
              return;
         }
 
-        // Update local data
         conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
         conv.last_activity = new Date().toISOString();
         conv.unread_count = (conv.unread_count || 0) + 1;
         this.conversations.set(conversationId, conv);
         this.unreadMessages.set(conversationId, conv.unread_count);
 
-        // Targeted DOM Update (No flickering)
+        // 2. UPDATE SIDEBAR (Always safe)
         const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
         const list = document.getElementById('conversationsList');
 
@@ -381,6 +379,7 @@ class ConversationCore {
             item.querySelector('.message-preview').textContent = conv.last_message;
             item.querySelector('.conversation-time').textContent = 'Just now';
 
+            // Handle Badge
             let badge = item.querySelector('.conversation-badge');
             if(!badge) {
                 badge = document.createElement('div');
@@ -389,9 +388,26 @@ class ConversationCore {
             }
             badge.textContent = conv.unread_count;
 
-            list.prepend(item); // Move to top
-        } else {
-            this.renderConversationsList();
+            // Move to top
+            list.prepend(item);
+        }
+
+        // 3. THE GUARD (Crucial Fix)
+        // Check the Traffic Cop. Are we in Dashboard mode?
+        if (window.appState && window.appState.mode === 'dashboard') {
+            console.log("🛡️ [Guard] Blocked chat render because user is on Dashboard.");
+            return; // STOP HERE. Do not touch the middle panel.
+        }
+
+        // 4. CHECK ACTIVE CHAT
+        // If we are in Chat Mode, but looking at a DIFFERENT person, also stop.
+        if (this.currentConversationId !== conversationId) {
+             return;
+        }
+
+        // 5. RENDER MESSAGE (Only runs if we are safely in the chat for this person)
+        if (this.parent.messaging && typeof this.parent.messaging.appendMessage === 'function') {
+            this.parent.messaging.appendMessage(message);
         }
     }
 

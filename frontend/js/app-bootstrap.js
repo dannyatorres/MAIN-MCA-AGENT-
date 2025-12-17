@@ -58,6 +58,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearInterval(appInitInterval);
             console.log('✅ [DEBUG] Main Module: CommandCenter is READY.');
 
+            // 1. DEFINE THE TRAFFIC COP (Global State Management)
+            window.appState = {
+                mode: 'dashboard',       // 'dashboard' or 'chat'
+                activeConversationId: null
+            };
+
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
             if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
@@ -87,6 +93,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
+                // Tell the Traffic Cop we are now in Chat Mode
+                window.appState.mode = 'chat';
+                window.appState.activeConversationId = conversationId;
+
                 window.setViewMode('chat');
 
                 const header = document.querySelector('.center-panel .panel-header');
@@ -172,16 +182,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
             };
 
-            // 2. DASHBOARD LOADER
+            // 2. DASHBOARD LOADER (Strict State Management)
             window.loadDashboard = () => {
-                console.log("🏠 [DEBUG] Loading Dashboard...");
+                console.log("🏠 [Navigation] Switching to DASHBOARD Mode");
+
+                // A. UPDATE THE TRAFFIC COP
+                window.appState.mode = 'dashboard';
+                window.appState.activeConversationId = null;
+
+                // B. RESET CORE VARIABLES
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
                     window.commandCenter.conversationUI.selectedConversation = null;
+                    // Visually deselect left sidebar items
                     document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
                 }
+
+                // C. FORCE UI CLEANUP (The "Reset")
                 window.setViewMode('dashboard');
 
+                // D. RENDER DASHBOARD
                 const messages = document.getElementById('messagesContainer');
                 if (messages) {
                     messages.innerHTML = `
@@ -227,6 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
 
+                // E. HIDE SIDE PANELS
                 if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
                     window.commandCenter.intelligence.toggleView(false);
                 } else {
