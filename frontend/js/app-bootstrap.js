@@ -67,7 +67,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
             if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
-                window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
+                window.commandCenter.lenderAdmin = new LenderAdmin();
+
+                // ADD THIS LINE: Map the class method to the global window object
+                // This ensures the button works even if lender-admin.js loads late
+                window.openLenderManagementModal = () => window.commandCenter.lenderAdmin.openManagementModal();
             }
 
 
