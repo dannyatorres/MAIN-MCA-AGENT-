@@ -95,7 +95,8 @@ class EmailService {
         }
     }
 
-    async sendLenderSubmission(lenderEmail, businessData, documents = []) {
+    // ✅ FIX: Add ccEmail as the 4th argument (default to null)
+    async sendLenderSubmission(lenderEmail, businessData, documents = [], ccEmail = null) {
         if (!this.transporter) {
             throw new Error('Email service not configured or failed to initialize');
         }
@@ -157,6 +158,10 @@ class EmailService {
         const mailOptions = {
             from: process.env.EMAIL_FROM || getEnvVar('EMAIL_USER'),
             to: lenderEmail,
+
+            // ✅ FIX: Add the CC field here
+            cc: ccEmail,
+
             subject: subject,
             text: textContent,
             html: htmlContent,
@@ -176,6 +181,8 @@ class EmailService {
                 success: true,
                 messageId: result.messageId,
                 recipient: lenderEmail,
+                // ✅ LOGGING: Useful to see if CC worked
+                cc: ccEmail,
                 attachmentsSkipped: invalidDocuments.length,
                 warning: warningMessage
             };
@@ -337,7 +344,14 @@ This email was sent from MCA Command Center automated system.
 
         for (const lender of lenders) {
             try {
-                const result = await this.sendLenderSubmission(lender.email, businessData, documents);
+                // ✅ FIX: Pass 'lender.cc_email' as the 4th argument
+                const result = await this.sendLenderSubmission(
+                    lender.email,
+                    businessData,
+                    documents,
+                    lender.cc_email // <--- Pass the CC data here!
+                );
+
                 results.push({
                     lender: lender.name,
                     email: lender.email,
