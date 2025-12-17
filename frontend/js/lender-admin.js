@@ -9,7 +9,7 @@ class LenderAdmin {
 
     // --- HELPER: Get Live System ---
     get system() {
-        if (window.commandCenter && window.commandCenter.apiCall) {
+        if (window.commandCenter && window.commandCenter.isInitialized && window.commandCenter.apiCall) {
             return window.commandCenter;
         }
         console.error("❌ LenderAdmin: Command Center API is missing or not ready.");
