@@ -1,51 +1,6 @@
 // js/app-bootstrap.js
 import { LeadFormController } from './lead-form-controller.js';
 
-// --- GLOBAL HANDLER: Open Lender Management ---
-window.openLenderManagementModal = () => {
-    console.log("🏦 [DEBUG] openLenderManagementModal triggered.");
-
-    // 1. Check Core System
-    if (!window.commandCenter) {
-        console.error("❌ [DEBUG] window.commandCenter is missing!");
-        alert("System error: Command Center core not found.");
-        return;
-    }
-    
-    if (!window.commandCenter.isInitialized) {
-        console.warn("⏳ [DEBUG] System still initializing... please wait.");
-        return;
-    }
-
-    // 2. Check/Load Lender Admin
-    if (!window.commandCenter.lenderAdmin) {
-        console.log("🔍 [DEBUG] LenderAdmin instance missing. Attempting lazy load...");
-        
-        if (typeof LenderAdmin !== 'undefined') {
-            try {
-                window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
-                console.log("✅ [DEBUG] LenderAdmin instantiated successfully.");
-            } catch (err) {
-                console.error("❌ [DEBUG] Failed to instantiate LenderAdmin:", err);
-                alert("Error initializing Lender Admin. Check console.");
-                return;
-            }
-        } else {
-            console.error("❌ [DEBUG] 'LenderAdmin' class is undefined. Script not loaded?");
-            alert("Critical Error: LenderAdmin script is missing.");
-            return;
-        }
-    }
-
-    // 3. Open Modal
-    console.log("🚀 [DEBUG] Calling lenderAdmin.openManagementModal()...");
-    try {
-        window.commandCenter.lenderAdmin.openManagementModal();
-    } catch (e) {
-        console.error("❌ [DEBUG] Error executing openManagementModal:", e);
-    }
-};
-
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 [DEBUG] Main Module: DOM Loaded. Waiting for CommandCenter...');
 

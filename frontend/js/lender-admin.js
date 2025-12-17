@@ -298,3 +298,27 @@ class LenderAdmin {
         }
     }
 }
+
+// =============================================================================
+// CRITICAL: Expose to Window so app-bootstrap.js can see it!
+// =============================================================================
+window.LenderAdmin = LenderAdmin;
+
+// --- GLOBAL OPENER (Direct Call from Dashboard Button) ---
+window.openLenderManagementModal = function() {
+    console.log("🏦 Opening Lender Admin via Direct Global...");
+
+    // 1. Check if Command Center exists
+    if (!window.commandCenter) {
+        return alert("System initializing... try again in a second.");
+    }
+
+    // 2. Initialize LenderAdmin if missing
+    if (!window.commandCenter.lenderAdmin) {
+        console.log("⚙️ Lazy-loading LenderAdmin...");
+        window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
+    }
+
+    // 3. Open
+    window.commandCenter.lenderAdmin.openManagementModal();
+};
