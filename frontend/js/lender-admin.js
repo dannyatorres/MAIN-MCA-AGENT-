@@ -308,19 +308,41 @@ class LenderAdmin {
     }
 }
 
-// --- GLOBAL EXPORT & OPENER ---
-// This guarantees the button works globally and instantiates with a LIVE connection.
+// --- GLOBAL EXPORT & ROBUST OPENER ---
 window.LenderAdmin = LenderAdmin;
 
 window.openLenderManagementModal = function() {
-    console.log("🏦 Opening Lender Admin...");
+    console.log("🏦 Requesting Lender Admin...");
 
-    // 1. Ensure global admin exists
+    // 1. Check if Command Center exists
+    if (!window.commandCenter) {
+        alert("System is still loading core components. Please wait...");
+        return;
+    }
+
+    // 2. Ensure LenderAdmin instance exists
     if (!window.commandCenter.lenderAdmin) {
-        // We do NOT pass window.commandCenter to the constructor anymore
         window.commandCenter.lenderAdmin = new LenderAdmin();
     }
 
-    // 2. Open
-    window.commandCenter.lenderAdmin.openManagementModal();
+    // 3. FORCE System Check with Retry
+    // We check if the system is ready. If not, we wait 500ms and try once more.
+    try {
+        // Try accessing the system getter to see if it throws
+        const sys = window.commandCenter.lenderAdmin.system;
+
+        // If successful, open the modal
+        window.commandCenter.lenderAdmin.openManagementModal();
+
+    } catch (e) {
+        console.warn("⚠️ System not ready yet. Retrying in 500ms...");
+
+        setTimeout(() => {
+            if (window.commandCenter.isInitialized) {
+                window.commandCenter.lenderAdmin.openManagementModal();
+            } else {
+                alert("System is initializing. Please try again in a moment.");
+            }
+        }, 500);
+    }
 };
