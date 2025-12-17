@@ -219,87 +219,83 @@ class EmailService {
     }
 
     generateLenderEmailHtml(businessData, documents) {
+        // 🛠️ SMART HELPER: Hides empty rows & fixes "ARCHIVED" bug
+        const renderRow = (label, value, isCurrency = false) => {
+            if (!value || value === 'N/A' || value === 'ARCHIVED' || value === 'null') return '';
+
+            const displayValue = isCurrency ? `${Number(value).toLocaleString()}` : value;
+
+            return `
+                <div class="info-row">
+                    <span class="label">${label}:</span>
+                    <span class="value">${displayValue}</span>
+                </div>`;
+        };
+
         const documentsHtml = documents.length > 0
             ? `
-                <h3>Attached Documents:</h3>
-                <ul>
-                    ${documents.map(doc => `<li>${doc.filename || doc.name || 'Document'} (${doc.type || doc.mimeType || 'PDF'})</li>`).join('')}
-                </ul>
-            `
-            : '<p><em>No documents attached</em></p>';
+                <div class="docs-section">
+                    <h3>📎 Attached Documents</h3>
+                    <ul>
+                        ${documents.map(doc => `<li>${doc.filename || doc.name || 'Document'}</li>`).join('')}
+                    </ul>
+                </div>`
+            : '';
 
         return `
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>New MCA Application</title>
+                <title>New Deal Submission</title>
                 <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
-                    .content { padding: 20px; }
-                    .business-info { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
-                    .info-row { display: flex; justify-content: space-between; margin: 8px 0; }
-                    .label { font-weight: bold; color: #2c3e50; }
+                    body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+                    .header { background: #1a1a1a; color: white; padding: 25px; text-align: center; }
+                    .header h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 1px; }
+                    .content { padding: 30px; }
+                    /* Cleaner box without the redundant "Business Info" header */
+                    .business-info { background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; border: 1px solid #e9ecef; }
+                    .info-row { display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+                    .info-row:last-child { border-bottom: none; margin-bottom: 0; }
+                    .label { font-weight: 600; color: #555; font-size: 14px; }
+                    .value { font-weight: 500; color: #000; font-size: 14px; }
+                    .docs-section { margin-top: 25px; padding-top: 15px; border-top: 2px dashed #eee; }
                     .footer { background: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d; }
                 </style>
             </head>
             <body>
-                <div class="header">
-                    <h1>New MCA Application Submission</h1>
-                </div>
-
-                <div class="content">
-                    <p>Dear Lender,</p>
-
-                    <p>We have a new Merchant Cash Advance application that matches your lending criteria. Please find the business details below:</p>
-
-                    <div class="business-info">
-                        <h2>Business Information</h2>
-                        <div class="info-row">
-                            <span class="label">Business Name:</span>
-                            <span>${businessData.businessName || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Industry:</span>
-                            <span>${businessData.industry || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">State:</span>
-                            <span>${businessData.state || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Monthly Revenue:</span>
-                            <span>$${businessData.monthlyRevenue ? businessData.monthlyRevenue.toLocaleString() : 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">FICO Score:</span>
-                            <span>${businessData.fico || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Time in Business:</span>
-                            <span>${businessData.tib ? businessData.tib + ' months' : 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Requested Position:</span>
-                            <span>${businessData.position || businessData.requestedPosition || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Negative Days:</span>
-                            <span>${businessData.negativeDays !== undefined ? businessData.negativeDays : 'N/A'}</span>
-                        </div>
+                <div class="container">
+                    <div class="header">
+                        <h1>JMS GLOBAL</h1>
                     </div>
 
-                    ${documentsHtml}
+                    <div class="content">
+                        <p><strong>New Submission:</strong></p>
+                        <p>Please review the details below for a new opportunity.</p>
 
-                    <p>This application has been pre-qualified based on your lending criteria. Please review the attached documentation and let us know if you would like to proceed with an offer.</p>
+                        <div class="business-info">
+                            ${renderRow('Business Name', businessData.businessName)}
+                            ${renderRow('Industry', businessData.industry)}
+                            ${renderRow('State', businessData.state)}
+                            ${renderRow('Monthly Revenue', businessData.monthlyRevenue, true)}
+                            ${renderRow('FICO Score', businessData.fico)}
+                            ${renderRow('Time in Business', businessData.tib ? businessData.tib + ' months' : null)}
+                            ${renderRow('Requested Position', businessData.position || businessData.requestedPosition)}
+                            ${renderRow('Negative Days', businessData.negativeDays)}
+                        </div>
 
-                    <p>Best regards,<br>
-                    <strong>MCA Command Center</strong></p>
-                </div>
+                        ${documentsHtml}
 
-                <div class="footer">
-                    <p>This email was sent from MCA Command Center automated system.</p>
+                        <p>Let us know if you can provide an offer on this file.</p>
+
+                        <p>Best regards,<br>
+                        <strong>JMS GLOBAL Team</strong></p>
+                    </div>
+
+                    <div class="footer">
+                        <p>Sent via JMS GLOBAL Systems</p>
+                    </div>
                 </div>
             </body>
             </html>
@@ -308,33 +304,22 @@ class EmailService {
 
     generateLenderEmailText(businessData, documents) {
         const documentsText = documents.length > 0
-            ? `\nAttached Documents:\n${documents.map(doc => `- ${doc.filename || doc.name || 'Document'} (${doc.type || doc.mimeType || 'PDF'})`).join('\n')}\n`
-            : '\nNo documents attached\n';
+            ? `\nAttached Documents:\n${documents.map(doc => `- ${doc.filename || doc.name || 'Document'}`).join('\n')}\n`
+            : '\n(No documents attached)\n';
+
+        const field = (label, val) => (!val || val === 'N/A' || val === 'ARCHIVED') ? '' : `- ${label}: ${val}\n`;
 
         return `
-NEW MCA APPLICATION SUBMISSION
+NEW SUBMISSION - JMS GLOBAL
 
-Dear Lender,
+Please review the details below for a new opportunity.
 
-We have a new Merchant Cash Advance application that matches your lending criteria. Please find the business details below:
-
-BUSINESS INFORMATION:
-- Business Name: ${businessData.businessName || 'N/A'}
-- Industry: ${businessData.industry || 'N/A'}
-- State: ${businessData.state || 'N/A'}
-- Monthly Revenue: $${businessData.monthlyRevenue ? businessData.monthlyRevenue.toLocaleString() : 'N/A'}
-- FICO Score: ${businessData.fico || 'N/A'}
-- Time in Business: ${businessData.tib ? businessData.tib + ' months' : 'N/A'}
-- Requested Position: ${businessData.position || businessData.requestedPosition || 'N/A'}
-- Negative Days: ${businessData.negativeDays !== undefined ? businessData.negativeDays : 'N/A'}
+${field('Business Name', businessData.businessName)}${field('Industry', businessData.industry)}${field('State', businessData.state)}${field('Monthly Revenue', businessData.monthlyRevenue ? '$' + businessData.monthlyRevenue.toLocaleString() : null)}${field('FICO Score', businessData.fico)}${field('Time in Business', businessData.tib ? businessData.tib + ' months' : null)}${field('Requested Position', businessData.position || businessData.requestedPosition)}${field('Negative Days', businessData.negativeDays)}
 ${documentsText}
-This application has been pre-qualified based on your lending criteria. Please review the attached documentation and let us know if you would like to proceed with an offer.
+Let us know if you can provide an offer on this file.
 
 Best regards,
-MCA Command Center
-
----
-This email was sent from MCA Command Center automated system.
+JMS GLOBAL Team
         `;
     }
 
