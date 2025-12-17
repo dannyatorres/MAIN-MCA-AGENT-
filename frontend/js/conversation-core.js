@@ -232,12 +232,22 @@ class ConversationCore {
     showConversationDetails() {
         if (!this.selectedConversation) return;
         const c = this.selectedConversation;
-        
+
+        // Build safer owner/merchant display with fallbacks
+        const ownerFirst = (c.owner_first_name || c.first_name || c.contact_name || '').trim();
+        const ownerLast = (c.owner_last_name || c.last_name || '').trim();
+        let ownerDisplay = [ownerFirst, ownerLast].filter(Boolean).join(' ');
+        if (!ownerDisplay) {
+            ownerDisplay = c.owner_name || c.business_name || c.company_name || 'Unknown Merchant';
+        }
+
+        const businessDisplay = c.business_name || c.company_name || 'Unknown Business';
+
         // Delegate to Global Header Renderer
         if (window.updateChatHeader) {
             window.updateChatHeader(
-                c.business_name || c.company_name, 
-                `${c.owner_first_name || ''} ${c.owner_last_name || ''}`, 
+                businessDisplay, 
+                ownerDisplay, 
                 c.lead_phone || c.phone, 
                 c.id
             );
