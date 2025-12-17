@@ -173,24 +173,29 @@ class ConversationCore {
             this.showConversationDetails();
             this.updateConversationSelection();
 
-            // Parallel Load (Faster switching)
-            const promises = [];
-            if (this.parent.messaging) promises.push(this.parent.messaging.loadConversationMessages(conversationId));
-            if (this.parent.intelligence) promises.push(this.parent.intelligence.loadConversationIntelligence(conversationId, data));
-            if (this.parent.documents) promises.push(this.parent.documents.loadDocuments());
-            
-            await Promise.allSettled(promises);
+            // 1. Start all requests in parallel immediately
+            const msgPromise = this.parent.messaging ? 
+                this.parent.messaging.loadConversationMessages(conversationId) : Promise.resolve();
+                
+            const otherPromises = [];
+            if (this.parent.intelligence) otherPromises.push(this.parent.intelligence.loadConversationIntelligence(conversationId, data));
+            if (this.parent.documents) otherPromises.push(this.parent.documents.loadDocuments());
 
-            // ✅ NOW show the input (Smooth reveal)
+            // 2. ONLY wait for messages (Critical for UI)
+            await msgPromise;
+
+            // 3. Show the UI immediately! (Don't wait for AI/Docs)
             if (inputContainer) {
                 inputContainer.classList.remove('hidden');
-                // Optional: Fade in effect
                 inputContainer.style.opacity = '0';
-                setTimeout(() => {
-                    inputContainer.style.transition = 'opacity 0.2s ease';
-                    inputContainer.style.opacity = '1';
-                }, 50);
+                inputContainer.style.transition = 'opacity 0.2s ease';
+                requestAnimationFrame(() => inputContainer.style.opacity = '1');
             }
+
+            // 4. Let the heavy stuff finish in the background
+            Promise.allSettled(otherPromises).then(() => {
+                console.log('Background data (AI/Docs) loaded.');
+            });
 
         } catch (error) {
             console.error('Error selecting conversation:', error);
