@@ -3,6 +3,44 @@ import { LeadFormController } from './lead-form-controller.js';
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 [DEBUG] Main Module: DOM Loaded. Waiting for CommandCenter...');
 
+    // Helper: Draggable Logic (global, outside the loop)
+    const makeDraggable = (element, handle) => {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        if (handle) {
+            handle.onmousedown = dragMouseDown;
+        } else {
+            element.onmousedown = dragMouseDown;
+        }
+
+        function dragMouseDown(e) {
+            // Allow clicking buttons without dragging
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            e = e || window.event;
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.transform = 'none';
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    };
+
     const createSafeElement = (tag, text, classes = []) => {
         const el = document.createElement(tag);
         if (text) el.textContent = text;
@@ -148,87 +186,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
             };
 
-            // Helper: Draggable Logic
-            function makeDraggable(element, handle) {
-                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-                if (handle) handle.onmousedown = dragMouseDown;
-                else element.onmousedown = dragMouseDown;
-
-                function dragMouseDown(e) {
-                    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-                    e = e || window.event;
-                    e.preventDefault();
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-                    document.onmouseup = closeDragElement;
-                    document.onmousemove = elementDrag;
-                }
-
-                function elementDrag(e) {
-                    e = e || window.event;
-                    e.preventDefault();
-                    pos1 = pos3 - e.clientX;
-                    pos2 = pos4 - e.clientY;
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-                    element.style.transform = 'none';
-                    element.style.top = (element.offsetTop - pos2) + "px";
-                    element.style.left = (element.offsetLeft - pos1) + "px";
-                }
-
-                function closeDragElement() {
-                    document.onmouseup = null;
-                    document.onmousemove = null;
-                }
-            }
-
-            // Helper: Draggable Logic
-            function makeDraggable(element, handle) {
-                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
-                if (handle) {
-                    handle.onmousedown = dragMouseDown;
-                } else {
-                    element.onmousedown = dragMouseDown;
-                }
-
-                function dragMouseDown(e) {
-                    // Allow clicking buttons inside without dragging
-                    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-
-                    e = e || window.event;
-                    e.preventDefault();
-                    // Get the mouse cursor position at startup:
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-                    document.onmouseup = closeDragElement;
-                    // Call a function whenever the cursor moves:
-                    document.onmousemove = elementDrag;
-                }
-
-                function elementDrag(e) {
-                    e = e || window.event;
-                    e.preventDefault();
-                    // Calculate the new cursor position:
-                    pos1 = pos3 - e.clientX;
-                    pos2 = pos4 - e.clientY;
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-
-                    // Remove transform centering once dragged so it follows mouse accurately
-                    element.style.transform = 'none';
-
-                    // Set the element's new position:
-                    element.style.top = (element.offsetTop - pos2) + "px";
-                    element.style.left = (element.offsetLeft - pos1) + "px";
-                }
-
-                function closeDragElement() {
-                    // Stop moving when mouse button is released:
-                    document.onmouseup = null;
-                    document.onmousemove = null;
-                }
-            }
 
             // 2. DASHBOARD LOADER
             window.loadDashboard = () => {
