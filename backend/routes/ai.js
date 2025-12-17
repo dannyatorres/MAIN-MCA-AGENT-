@@ -134,13 +134,27 @@ router.post('/chat', async (req, res) => {
         const result = await aiService.generateResponse(query, conversationContext);
 
         // Save the User/AI interaction to DB so memory builds up
-        if(result.success) {
+        if (result.success) {
             try {
-                await db.query(`
-                    INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
-                    VALUES ($1, 'user', $2, NOW()), ($1, 'assistant', $3, NOW())
-                `, [conversationId, query, result.response]);
-            } catch(e) { /* ignore */ }
+                // Detect the hidden auto-analysis prompt
+                const isHiddenPrompt = query.includes("Analyze the database for this conversation");
+
+                if (isHiddenPrompt) {
+                    // Only save the AI response so it appears as the welcome message
+                    await db.query(`
+                        INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
+                        VALUES ($1, 'assistant', $2, NOW())
+                    `, [conversationId, result.response]);
+                } else {
+                    // Normal chat: save both user question and AI answer
+                    await db.query(`
+                        INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
+                        VALUES ($1, 'user', $2, NOW()), ($1, 'assistant', $3, NOW())
+                    `, [conversationId, query, result.response]);
+                }
+            } catch(e) {
+                console.error("Error saving chat message:", e);
+            }
         }
 
         res.json(result);
