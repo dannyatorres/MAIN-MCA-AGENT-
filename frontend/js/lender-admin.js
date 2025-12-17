@@ -149,6 +149,9 @@ class LenderAdmin {
                     <div class="modal-body">
                         <div class="form-group"><label>Name *</label><input type="text" id="newLenderName" class="form-input"></div>
                         <div class="form-group"><label>Email *</label><input type="email" id="newLenderEmail" class="form-input"></div>
+
+                        <div class="form-group"><label>CC Emails (comma separated)</label><input type="text" id="newLenderCC" class="form-input" placeholder="manager@bank.com, assistant@bank.com"></div>
+
                         <div class="form-group"><label>Min Amount</label><input type="number" id="newLenderMin" class="form-input"></div>
                         <div class="form-group"><label>Max Amount</label><input type="number" id="newLenderMax" class="form-input"></div>
                     </div>
@@ -164,14 +167,17 @@ class LenderAdmin {
     async saveLender() {
         const name = document.getElementById('newLenderName').value;
         const email = document.getElementById('newLenderEmail').value;
+        // ✅ GET CC VALUE
+        const cc_email = document.getElementById('newLenderCC').value;
         const min = document.getElementById('newLenderMin').value;
         const max = document.getElementById('newLenderMax').value;
 
         if (!name || !email) return alert('Name and Email required');
 
+        // ✅ ADD cc_email TO BODY
         const result = await this.system.apiCall('/api/lenders', {
             method: 'POST',
-            body: JSON.stringify({ name, email, min_amount: min, max_amount: max })
+            body: JSON.stringify({ name, email, cc_email, min_amount: min, max_amount: max })
         });
 
         if (result.success) {
@@ -225,6 +231,12 @@ class LenderAdmin {
                             <label>Email Address *</label>
                             <input type="email" id="editLenderEmail" class="form-input" value="${lender.email || ''}">
                         </div>
+
+                        <div class="form-group">
+                            <label>CC Emails</label>
+                            <input type="text" id="editLenderCC" class="form-input" value="${lender.cc_email || ''}" placeholder="a@test.com, b@test.com">
+                        </div>
+
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Phone</label>
@@ -280,6 +292,8 @@ class LenderAdmin {
         const data = {
             name: name,
             email: email,
+            // ✅ GET CC VALUE
+            cc_email: document.getElementById('editLenderCC').value.trim(),
             phone: document.getElementById('editLenderPhone').value.trim() || null,
             company: document.getElementById('editLenderCompany').value.trim() || null,
             min_amount: parseFloat(document.getElementById('editLenderMin').value) || 0,
