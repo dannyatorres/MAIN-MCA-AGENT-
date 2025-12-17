@@ -359,6 +359,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (attempts >= maxAttempts) {
             clearInterval(appInitInterval);
             console.error('❌ [DEBUG] CommandCenter load timeout (200 attempts)');
+            
+            // ✅ FIX: Restore the "Security Alert" behavior
+            // When the server restarts, the session dies. The app won't initialize.
+            // We catch that here and force the user back to safety.
+            alert("Security Error: Unable to authenticate session. Please sign in again.");
+            window.location.href = '/login'; // Change this to your actual login route (e.g., / or /signin)
         }
     }, 50);
 });
