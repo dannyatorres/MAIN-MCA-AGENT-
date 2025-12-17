@@ -94,12 +94,10 @@ class ConversationCore {
         try {
             console.log('Loading initial data...');
             this.utils.showLoading();
-            await this.loadConversations(true);
             
-            // Default to dashboard if nothing selected
-            if (!this.currentConversationId && window.loadDashboard) {
-                window.loadDashboard();
-            }
+            // Just fetch the list.
+            // We trust app-bootstrap.js has already shown the dashboard.
+            await this.loadConversations(true);
         } catch (error) {
             this.utils.handleError(error, 'Error loading initial data');
         } finally {
