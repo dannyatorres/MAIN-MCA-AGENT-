@@ -53,7 +53,6 @@ class AIAssistant {
             </div>
         `;
 
-        this.currentConversationId = null;
         this.initializeAIChat();
     }
 
@@ -256,6 +255,7 @@ class AIAssistant {
                 }
             } else {
                 if (!hadCache) {
+                     messagesContainer.innerHTML = ''; // Clear spinner before intro
                      this.triggerSmartIntro(); // No history ever? Do intro.
                 }
             }
@@ -285,6 +285,6 @@ class AIAssistant {
         const message = `I'm ready to help with **${businessName}**.`;
 
         // 3. Display it immediately (No API call, no loading spinner)
-        this.addMessageToChat('assistant', message, true);
+        this.addMessageToChat('assistant', message, false);
     }
 }
