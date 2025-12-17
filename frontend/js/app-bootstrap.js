@@ -72,34 +72,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- GLOBAL FUNCTIONS ---
 
+            // 1. The Clean View Switcher
             window.setViewMode = (mode) => {
-                const centerPanel = document.querySelector('.center-panel');
-                const actions = document.getElementById('conversationActions');
-                const inputs = document.getElementById('messageInputContainer');
+                const dashboard = document.getElementById('dashboardView');
+                const chat = document.getElementById('chatView');
                 const backBtn = document.getElementById('backHomeBtn');
-                const header = centerPanel ? centerPanel.querySelector('.panel-header') : null;
+                const actions = document.getElementById('conversationActions');
 
                 if (mode === 'dashboard') {
-                    if (centerPanel) centerPanel.classList.add('dashboard-mode');
+                    // Show Dashboard, Hide Chat
+                    if (dashboard) dashboard.classList.remove('hidden');
+                    if (chat) chat.classList.add('hidden');
+
+                    // Cleanup Left Panel Buttons
                     if (actions) actions.classList.add('hidden');
-                    if (inputs) inputs.classList.add('hidden');
                     if (backBtn) backBtn.classList.add('hidden');
-                    if (header) header.innerHTML = '';
+
+                    // Set Global Flag (The Traffic Cop)
+                    window.appState = window.appState || {};
+                    window.appState.mode = 'dashboard';
                 } else {
-                    if (centerPanel) centerPanel.classList.remove('dashboard-mode');
+                    // Show Chat, Hide Dashboard
+                    if (dashboard) dashboard.classList.add('hidden');
+                    if (chat) chat.classList.remove('hidden');
+
                     if (actions) actions.classList.remove('hidden');
                     if (backBtn) backBtn.classList.remove('hidden');
+
+                    window.appState = window.appState || {};
+                    window.appState.mode = 'chat';
                 }
             };
 
+            // 3. The Header Renderer (Targets #chatView only)
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
-                // Tell the Traffic Cop we are now in Chat Mode
-                window.appState.mode = 'chat';
-                window.appState.activeConversationId = conversationId;
-
+                // Force Chat Mode
                 window.setViewMode('chat');
 
-                const header = document.querySelector('.center-panel .panel-header');
+                const chatView = document.getElementById('chatView');
+                const header = chatView ? chatView.querySelector('.panel-header') : null;
                 if (!header) return;
 
                 let displayBusiness = businessName || 'Unknown Business';
@@ -110,17 +121,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     displayBusiness = 'Business Account';
                 }
 
-                // --- FIX 3: CALL PROTECTION ---
-                // If a call is active and we are looking at the right person,
-                // DO NOT redraw the header. This stops the call box from vanishing.
+                // Call Protection Guard
                 const existingCallBar = document.getElementById('callBar');
                 const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
                 const currentTitle = header.querySelector('.chat-business-title')?.textContent;
 
-                if (isCallActive && currentTitle === displayOwner) {
-                    return; // Stop here, everything is fine.
-                }
-                // ------------------------------
+                if (isCallActive && currentTitle === displayOwner) return;
 
                 // Render Header
                 header.innerHTML = `
@@ -180,74 +186,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Make draggable
                 makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
+
+                // IMPORTANT: Ensure Input is visible
+                const inputContainer = document.getElementById('messageInputContainer');
+                if (inputContainer) inputContainer.classList.remove('hidden');
             };
 
-            // 2. DASHBOARD LOADER (Strict State Management)
+            // 2. The Dashboard Loader (Now purely for Data, not HTML)
             window.loadDashboard = () => {
-                console.log("🏠 [Navigation] Switching to DASHBOARD Mode");
+                console.log("🏠 [Navigation] Switching to Dashboard View");
 
-                // A. UPDATE THE TRAFFIC COP
-                window.appState.mode = 'dashboard';
-                window.appState.activeConversationId = null;
+                // A. Switch Views physically
+                window.setViewMode('dashboard');
 
-                // B. RESET CORE VARIABLES
+                // B. Reset Selection Logic
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
                     window.commandCenter.conversationUI.selectedConversation = null;
-                    // Visually deselect left sidebar items
                     document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
                 }
 
-                // C. FORCE UI CLEANUP (The "Reset")
-                window.setViewMode('dashboard');
+                // C. Re-bind Dashboard Buttons (Since they are permanent now, we just ensure listeners exist)
+                const fmtBtn = document.getElementById('dashFormatterBtn');
+                if (fmtBtn) fmtBtn.onclick = () => window.open('/lead_reformatter.html', '_blank');
 
-                // D. RENDER DASHBOARD
-                const messages = document.getElementById('messagesContainer');
-                if (messages) {
-                    messages.innerHTML = `
-                        <div class="dashboard-container">
-                            <div class="dashboard-header">
-                                <h1>Welcome back, Agent</h1>
-                                <p>Here is what's happening with your pipeline today.</p>
-                            </div>
-                            <div class="dashboard-toolbar">
-                                <button class="btn btn-secondary dashboard-action-btn" id="dashFormatterBtn">
-                                    <i class="fas fa-table"></i> Formatter
-                                </button>
-                                <button class="btn btn-secondary dashboard-action-btn" id="dashLenderBtn">
-                                    <i class="fas fa-university"></i> Manage Lenders
-                                </button>
-                                <button class="btn btn-secondary dashboard-action-btn">
-                                    <i class="fas fa-cog"></i> Settings
-                                </button>
-                            </div>
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-icon"><i class="fas fa-fire"></i></div>
-                                    <div class="stat-value" id="activeCount">-</div>
-                                    <div class="stat-label">Active Leads</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon"><i class="fas fa-spinner"></i></div>
-                                    <div class="stat-value" id="processingCount">-</div>
-                                    <div class="stat-label">Processing</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
-                                    <div class="stat-value" id="todayCount">-</div>
-                                    <div class="stat-label">New Today</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('dashFormatterBtn').addEventListener('click', () => window.open('/lead_reformatter.html', '_blank'));
-                    document.getElementById('dashLenderBtn').addEventListener('click', () => {
-                        if (typeof window.openLenderManagementModal === 'function') window.openLenderManagementModal();
-                        else alert('Lender Management module not loaded.');
-                    });
-                }
+                const lendBtn = document.getElementById('dashLenderBtn');
+                if (lendBtn) lendBtn.onclick = () => {
+                     if (typeof window.openLenderManagementModal === 'function') window.openLenderManagementModal();
+                };
 
-                // E. HIDE SIDE PANELS
+                // D. Hide Side Panels
                 if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
                     window.commandCenter.intelligence.toggleView(false);
                 } else {
@@ -255,6 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('rightPanelIntelligence')?.classList.add('hidden');
                 }
 
+                // E. Load Stats Data
                 if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
                 if (window.loadMarketNews) window.loadMarketNews();
             };

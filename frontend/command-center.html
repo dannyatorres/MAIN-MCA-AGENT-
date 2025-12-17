@@ -74,26 +74,67 @@
                 </div>
             </div>
 
-            <div class="center-panel dashboard-mode">
-                <div class="panel-header">
-                    </div>
-                <div class="messages-container" id="messagesContainer">
-                    </div>
-                <div class="message-input-container hidden" id="messageInputContainer">
-                    <div class="ai-suggestions hidden" id="aiSuggestions">
-                        <div class="suggestions-header">
-                            <span>AI Suggestions:</span>
-                            <button class="close-suggestions" id="closeSuggestions">×</button>
+            <div class="center-panel">
+                <div id="dashboardView" class="view-layer">
+                    <div class="dashboard-container">
+                        <div class="dashboard-header">
+                            <h1>Welcome back, Agent</h1>
+                            <p>Here is what's happening with your pipeline today.</p>
                         </div>
-                        <div class="suggestions-list" id="suggestionsList"></div>
+                        <div class="dashboard-toolbar">
+                            <button class="btn btn-secondary dashboard-action-btn" id="dashFormatterBtn">
+                                <i class="fas fa-table"></i> Formatter
+                            </button>
+                            <button class="btn btn-secondary dashboard-action-btn" id="dashLenderBtn">
+                                <i class="fas fa-university"></i> Manage Lenders
+                            </button>
+                            <button class="btn btn-secondary dashboard-action-btn">
+                                <i class="fas fa-cog"></i> Settings
+                            </button>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                                <div class="stat-value" id="activeCount">-</div>
+                                <div class="stat-label">Active Leads</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-spinner"></i></div>
+                                <div class="stat-value" id="processingCount">-</div>
+                                <div class="stat-label">Processing</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                                <div class="stat-value" id="todayCount">-</div>
+                                <div class="stat-label">New Today</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="input-deck-main">
-                        <input type="file" id="fileInput" accept="image/*" class="hidden">
-                        <button class="attachment-icon" id="attachmentBtn" title="Attach file">📎</button>
-                        <textarea class="message-input" id="messageInput" placeholder="Message" rows="1"></textarea>
-                        <button class="icon-btn-small primary-send" id="sendMessageBtn" title="Send">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+                </div>
+
+                <div id="chatView" class="view-layer hidden">
+                    <div class="panel-header">
+                        </div>
+
+                    <div class="messages-container" id="messagesContainer">
+                        </div>
+
+                    <div class="message-input-container" id="messageInputContainer">
+                        <div class="ai-suggestions hidden" id="aiSuggestions">
+                            <div class="suggestions-header">
+                                <span>AI Suggestions:</span>
+                                <button class="close-suggestions" id="closeSuggestions">×</button>
+                            </div>
+                            <div class="suggestions-list" id="suggestionsList"></div>
+                        </div>
+                        <div class="input-deck-main">
+                            <input type="file" id="fileInput" accept="image/*" class="hidden">
+                            <button class="attachment-icon" id="attachmentBtn" title="Attach file">📎</button>
+                            <textarea class="message-input" id="messageInput" placeholder="Message" rows="1"></textarea>
+                            <button class="icon-btn-small primary-send" id="sendMessageBtn" title="Send">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
