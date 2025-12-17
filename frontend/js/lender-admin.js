@@ -167,8 +167,11 @@ class LenderAdmin {
     async saveLender() {
         const name = document.getElementById('newLenderName').value;
         const email = document.getElementById('newLenderEmail').value;
-        // ✅ GET CC VALUE
-        const cc_email = document.getElementById('newLenderCC').value;
+
+        // ✅ CLEANER: Split by comma, trim spaces, remove empties, then join back cleanly
+        const rawCC = document.getElementById('newLenderCC').value;
+        const cc_email = rawCC.split(',').map(e => e.trim()).filter(e => e).join(', ') || null;
+
         const min = document.getElementById('newLenderMin').value;
         const max = document.getElementById('newLenderMax').value;
 
@@ -292,8 +295,10 @@ class LenderAdmin {
         const data = {
             name: name,
             email: email,
-            // ✅ GET CC VALUE
-            cc_email: document.getElementById('editLenderCC').value.trim(),
+
+            // ✅ CLEANER: Same logic here
+            cc_email: document.getElementById('editLenderCC').value.split(',').map(e => e.trim()).filter(e => e).join(', ') || null,
+
             phone: document.getElementById('editLenderPhone').value.trim() || null,
             company: document.getElementById('editLenderCompany').value.trim() || null,
             min_amount: parseFloat(document.getElementById('editLenderMin').value) || 0,
