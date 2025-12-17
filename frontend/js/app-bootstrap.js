@@ -230,19 +230,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 2. The Dashboard Loader (Now purely for Data, not HTML)
             window.loadDashboard = () => {
-                console.log("🏠 [Navigation] Switching to Dashboard View");
-
-                // A. Switch Views physically
+                console.log("🏠 Switching to Dashboard (Rebuilding Controls)");
                 window.setViewMode('dashboard');
 
-                // B. Reset Selection Logic
+                // 1. CLEAR OLD SELECTIONS (Standard cleanup)
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
-                    window.commandCenter.conversationUI.selectedConversation = null;
                     document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
                 }
 
-                // C. Hide Side Panels
+                // ============================================================
+                // 🧹 THE FIX: DESTROY & REBUILD "MANAGE LENDERS"
+                // ============================================================
+                const oldBtn = document.getElementById('dashLenderBtn');
+
+                // 1. Create the NEW button from scratch
+                const newBtn = document.createElement('button');
+                newBtn.id = 'dashLenderBtn';
+                newBtn.className = 'btn btn-secondary dashboard-action-btn';
+                newBtn.innerHTML = '<i class="fas fa-university"></i> Manage Lenders';
+
+                // 2. Attach the listener directly to the new fresh element
+                newBtn.onclick = function() {
+                    console.log("force-click: Opening Lender Modal");
+                    if (typeof window.openLenderManagementModal === 'function') {
+                        window.openLenderManagementModal();
+                    } else if (window.commandCenter.lenderAdmin) {
+                        window.commandCenter.lenderAdmin.openManagementModal();
+                    } else {
+                        alert("System loading... try again in 1 second.");
+                    }
+                };
+
+                // 3. Swap them out (or append if missing)
+                if (oldBtn && oldBtn.parentNode) {
+                    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+                } else {
+                    // Fallback: If button is missing entirely, add it to the toolbar
+                    const toolbar = document.querySelector('.dashboard-toolbar');
+                    if (toolbar) toolbar.appendChild(newBtn);
+                }
+                // ============================================================
+
+                // Re-bind Formatter Button (Optional, can do the same logic if needed)
+                const fmtBtn = document.getElementById('dashFormatterBtn');
+                if(fmtBtn) fmtBtn.onclick = () => window.open('/lead_reformatter.html', '_blank');
+
+                // Hide Side Panels
                 if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
                     window.commandCenter.intelligence.toggleView(false);
                 } else {
@@ -250,7 +284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('rightPanelIntelligence')?.classList.add('hidden');
                 }
 
-                // D. Load Stats Data
+                // Load Stats Data
                 if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
                 if (window.loadMarketNews) window.loadMarketNews();
             };
