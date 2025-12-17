@@ -9,6 +9,7 @@ class LendersModule {
 
         // Lender state
         this.qualifiedLenders = [];
+        this.nonQualifiedLenders = [];
         this.lastLenderCriteria = null;
         this.lenderResultsCache = new Map();
         this.modalListenersAttached = false;
@@ -103,6 +104,7 @@ class LendersModule {
                     console.log('♻️ Restoring cached lender results for:', conversationId);
 
                     this.qualifiedLenders = parsed.data.qualified || [];
+                    this.nonQualifiedLenders = parsed.data.nonQualified || [];
                     this.displayLenderResults(parsed.data, parsed.criteria);
                 } else {
                     localStorage.removeItem(`lender_results_${conversationId}`);
@@ -195,7 +197,12 @@ class LendersModule {
                             <div class="submission-col">
                                 <div class="submission-col-header">
                                     <span>Select Lenders</span>
-                                    <button id="toggleAllLendersBtn" class="btn-link">Deselect All</button>
+                                    <div style="display:flex; align-items:center; gap: 10px;">
+                                        <label style="font-size:11px; color:#64748b; cursor:pointer; display:flex; align-items:center; gap:4px; user-select:none;">
+                                            <input type="checkbox" id="showAllLendersToggle"> Override Filters
+                                        </label>
+                                        <button id="toggleAllLendersBtn" class="btn-link">Deselect All</button>
+                                    </div>
                                 </div>
                                 <div class="submission-search-container">
                                     <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders...">
@@ -923,12 +930,16 @@ class LendersModule {
 
         const cleanNonQualified = (data.nonQualified || []).map(item => ({
             ...item,
-            lender: item.lender || item.name || item['Lender Name'],
+            // Ensure we have a standard name and email for these too
+            name: item.name || item.lender || item['Lender Name'] || 'Unknown',
+            lender_name: item.name || item.lender || item['Lender Name'],
+            email: item.email || item['Lender Email'] || item['contact_email'] || null, // ✅ Capture Email
             blockingRule: item.blockingRule || item.reason || 'Unknown reason'
         }));
 
-        // ✅ STEP 2: Save the CLEAN data
+        // ✅ STEP 2: Save BOTH lists
         this.qualifiedLenders = cleanQualified;
+        this.nonQualifiedLenders = cleanNonQualified; // <--- ADD THIS LINE
         this.lastLenderCriteria = criteria;
 
         // Update the 'data' object so the rest of the function uses the clean lists
@@ -1478,6 +1489,11 @@ class LendersModule {
             lendersModule.toggleAllDocuments();
         });
 
+        // Toggle Show All / Override
+        attachListener('showAllLendersToggle', (e) => {
+            lendersModule.populateSubmissionLenders();
+        }, 'change');
+
         // Send submissions button
         attachListener('confirmLenderSubmission', async (e) => {
             e.preventDefault();
@@ -1553,39 +1569,60 @@ class LendersModule {
 
     populateSubmissionLenders() {
         const lenderList = document.getElementById('lenderSelectionList');
+        // ✅ Check the toggle state
+        const showAll = document.getElementById('showAllLendersToggle')?.checked || false;
 
-        // Safety check
         if (!lenderList) return;
-        if (!this.qualifiedLenders || this.qualifiedLenders.length === 0) {
-            lenderList.innerHTML = '<p style="color: #6b7280; padding: 10px;">No qualified lenders available.</p>';
+
+        // Combine lists if toggle is ON
+        let displayList = [...(this.qualifiedLenders || [])];
+        if (showAll && this.nonQualifiedLenders) {
+            displayList = [...displayList, ...this.nonQualifiedLenders];
+        }
+
+        if (displayList.length === 0) {
+            lenderList.innerHTML = '<p style="color: #6b7280; padding: 10px;">No lenders available.</p>';
             return;
         }
 
-        // Group by tier
+        // Group by tier (Non-Qualified gets a special tier)
         const lendersByTier = {};
-        this.qualifiedLenders.forEach(lender => {
-            const tier = lender.Tier || 'Unknown';
+        displayList.forEach(lender => {
+            // If it's from the non-qualified list, label it "Restricted"
+            let tier = lender.Tier || 'Unknown';
+            if (!lender.Tier && lender.blockingRule) tier = 'Restricted';
+
             if (!lendersByTier[tier]) lendersByTier[tier] = [];
             lendersByTier[tier].push(lender);
         });
 
         let html = '';
-        Object.keys(lendersByTier).sort().forEach(tier => {
+        // Custom sort to put "Restricted" at the bottom
+        const sortedTiers = Object.keys(lendersByTier).sort((a, b) => {
+            if (a === 'Restricted') return 1;
+            if (b === 'Restricted') return -1;
+            return a.localeCompare(b);
+        });
+
+        sortedTiers.forEach(tier => {
             html += `<div style="margin-bottom: 12px;">`;
-            // Tier Header
-            html += `<div style="font-size: 11px; font-weight: 700; color: #8b949e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Tier ${tier}</div>`;
+
+            // Tier Header with color for Restricted
+            const headerColor = tier === 'Restricted' ? '#ef4444' : '#8b949e';
+            html += `<div style="font-size: 11px; font-weight: 700; color: ${headerColor}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Tier ${tier}</div>`;
 
             lendersByTier[tier].forEach(lender => {
                 const lenderName = lender['Lender Name'] || lender.name;
                 const isPreferred = lender.isPreferred;
+                const reason = lender.blockingRule ? `(${lender.blockingRule})` : '';
 
-                // Clean HTML (No Icon)
                 html += `
                     <label>
-                        <input type="checkbox" class="lender-checkbox" value="${lenderName}" checked>
+                        <input type="checkbox" class="lender-checkbox" value="${lenderName}">
                         <div class="list-text">
                             ${lenderName}
                             ${isPreferred ? '<span style="color:#3b82f6; margin-left:6px;">★</span>' : ''}
+                            ${reason ? `<span style="color:#ef4444; font-size:10px; margin-left:6px;">${reason}</span>` : ''}
                         </div>
                     </label>
                 `;
@@ -1595,10 +1632,10 @@ class LendersModule {
 
         lenderList.innerHTML = html;
 
-        // Ensure the "Select All" button uses the text-link style
+        // Reset button text
         const toggleBtn = document.getElementById('toggleAllLendersBtn');
         if (toggleBtn) {
-            toggleBtn.textContent = 'Deselect All';
+            toggleBtn.textContent = 'Select All';
             toggleBtn.className = 'btn-link';
         }
     }
@@ -1740,9 +1777,11 @@ Best regards`;
             const selectedLenders = selectedLenderCheckboxes.map(cb => {
                 const lenderName = cb.value;
 
-                // Find the original lender object in memory
-                const lender = this.qualifiedLenders?.find(l =>
-                    l['Lender Name'] === lenderName || l.name === lenderName
+                // ✅ FIX: Search BOTH lists to find the lender data object
+                const allLenders = [...(this.qualifiedLenders || []), ...(this.nonQualifiedLenders || [])];
+
+                const lender = allLenders.find(l =>
+                    (l['Lender Name'] === lenderName) || (l.name === lenderName)
                 );
 
                 if (!lender) {
