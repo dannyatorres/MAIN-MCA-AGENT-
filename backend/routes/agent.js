@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { processLeadWithAI } = require('../services/dispatcherService');
+const { processLeadWithAI } = require('../services/aiAgent'); // ✅ Correct
 const { getDatabase } = require('../services/database');
 const twilio = require('twilio');
 

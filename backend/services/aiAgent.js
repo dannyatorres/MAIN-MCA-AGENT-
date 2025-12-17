@@ -1,11 +1,15 @@
 // backend/services/aiAgent.js
+// FORMERLY: dispatcherService.js
+// HANDLES: All AI Logic, "Dan Torres" Templates, and Drive Syncing
+
 const { OpenAI } = require('openai');
 const { getDatabase } = require('./database');
+const { syncDriveFiles } = require('./driveService'); // ✅ Connected to Drive
 require('dotenv').config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// 🛠️ DEFINE TOOLS (The "Arms" of the Agent)
+// 🛠️ TOOLS (The capabilities of your agent)
 const TOOLS = [
     {
         type: "function",
@@ -28,91 +32,115 @@ const TOOLS = [
     {
         type: "function",
         function: {
-            name: "stop_outreach",
-            description: "Call this if the user says STOP, UNSUBSCRIBE, or is hostile.",
-            parameters: { type: "object", properties: {} } // No params needed
+            name: "trigger_drive_sync",
+            description: "Checks Google Drive for documents matching this business name.",
+            parameters: { type: "object", properties: {} } 
         }
     }
 ];
 
-async function runAgentForLead(leadId, systemInstruction) {
+// 🧠 THE MAIN FUNCTION
+async function processLeadWithAI(conversationId, systemInstruction) {
     const db = getDatabase();
-
-    console.log(`🤖 AI Agent Processing Lead ${leadId}...`);
+    console.log(`🧠 AI Agent Processing Lead: ${conversationId}`);
 
     try {
-        // 1. FETCH CONTEXT (The Memory)
-        // Get the last 10 messages so the AI knows what's going on
-        const historyResult = await db.query(`
-            SELECT content, direction, timestamp FROM messages
+        // 1. GET LEAD DETAILS 
+        const leadRes = await db.query(
+            "SELECT first_name, business_name FROM conversations WHERE id = $1",
+            [conversationId]
+        );
+
+        const lead = leadRes.rows[0];
+        const nameToUse = lead?.first_name || lead?.business_name || "there";
+        const businessName = lead?.business_name || "Unknown Business";
+
+        // 2. TEMPLATE MODE: "Underwriter Hook"
+        if (systemInstruction.includes("Underwriter Hook")) {
+            console.log(`⚡ TEMPLATE MODE: Sending Dan Torres Script to ${nameToUse}`);
+            
+            // Auto-check Drive in background
+            syncDriveFiles(conversationId, businessName).catch(e => console.error("Background sync err:", e.message));
+
+            const exactTemplate = `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
+            return { shouldReply: true, content: exactTemplate };
+        }
+
+        // 3. AI MODE (Thinking)
+        console.log("🤖 AI MODE: Analyzing history...");
+
+        const history = await db.query(`
+            SELECT direction, content FROM messages
             WHERE conversation_id = $1
             ORDER BY timestamp ASC
-            LIMIT 10
-        `, [leadId]);
+            LIMIT 20
+        `, [conversationId]);
 
-        const messages = historyResult.rows.map(msg => ({
-            role: msg.direction === 'outbound' ? 'assistant' : 'user',
-            content: msg.content
-        }));
+        const messages = [];
 
-        // Add the "Boss's Orders" (Dispatcher Instruction)
-        messages.unshift({ role: "system", content: systemInstruction });
+        messages.push({
+            role: "system",
+            content: `${systemInstruction} 
+            
+            RULES:
+            1. If the user mentions sending docs, checking for files, or asks if you got them, CALL the 'trigger_drive_sync' tool.
+            2. Keep replies short (under 160 chars).`
+        });
 
-        console.log(`📚 Loaded ${historyResult.rows.length} messages for context`);
+        history.rows.forEach(msg => {
+            messages.push({
+                role: msg.direction === 'outbound' ? 'assistant' : 'user',
+                content: msg.content
+            });
+        });
 
-        // 2. THE THINKING LOOP (Call OpenAI)
         const completion = await openai.chat.completions.create({
-            model: "gpt-4-turbo", // or "gpt-4o"
+            model: "gpt-4-turbo",
             messages: messages,
             tools: TOOLS,
             tool_choice: "auto"
         });
 
-        const responseMessage = completion.choices[0].message;
+        const aiMsg = completion.choices[0].message;
+        let responseContent = aiMsg.content;
 
-        console.log('🧠 AI Response:', {
-            hasContent: !!responseMessage.content,
-            hasToolCalls: !!responseMessage.tool_calls,
-            toolCount: responseMessage.tool_calls?.length || 0
-        });
-
-        // 3. CHECK FOR TOOLS (Did AI want to update status?)
-        if (responseMessage.tool_calls) {
-            for (const toolCall of responseMessage.tool_calls) {
-                const fnName = toolCall.function.name;
-                const args = JSON.parse(toolCall.function.arguments);
-
-                if (fnName === 'update_lead_status') {
-                    console.log(`📝 AI Moving Lead ${leadId} to ${args.status}`);
-                    await db.query("UPDATE conversations SET state = $1 WHERE id = $2", [args.status, leadId]);
+        // 4. HANDLE TOOLS
+        if (aiMsg.tool_calls) {
+            for (const tool of aiMsg.tool_calls) {
+                
+                // A. STATUS UPDATE
+                if (tool.function.name === 'update_lead_status') {
+                    const args = JSON.parse(tool.function.arguments);
+                    console.log(`🔄 AI Moving Lead -> ${args.status}`);
+                    await db.query("UPDATE conversations SET state = $1 WHERE id = $2", [args.status, conversationId]);
+                    if (args.status === 'DEAD') return { shouldReply: false };
                 }
 
-                if (fnName === 'stop_outreach') {
-                    console.log(`🛑 AI Stopping outreach for ${leadId}`);
-                    await db.query("UPDATE conversations SET state = 'DEAD' WHERE id = $1", [leadId]);
-                    return { success: true, action: "stopped", lead_id: leadId };
+                // B. DRIVE SYNC
+                else if (tool.function.name === 'trigger_drive_sync') {
+                    console.log(`📂 AI decided to check Google Drive for "${businessName}"...`);
+                    
+                    const syncResult = await syncDriveFiles(conversationId, businessName);
+                    
+                    if (syncResult.success && syncResult.count > 0) {
+                        responseContent = "I just found the documents! I'll review them and get back to you shortly.";
+                    } else {
+                        responseContent = "I'm checking the folder now but don't see them yet. Did you upload them recently?";
+                    }
                 }
             }
         }
 
-        // 4. RETURN REPLY (If AI wrote a message)
-        if (responseMessage.content) {
-            console.log(`💬 AI Generated Reply: "${responseMessage.content.substring(0, 100)}..."`);
-
-            return {
-                success: true,
-                reply: responseMessage.content,
-                lead_id: leadId,
-                tokens_used: completion.usage?.total_tokens || 0
-            };
+        if (responseContent) {
+            return { shouldReply: true, content: responseContent };
         }
 
-        return { success: true, action: "no_reply_needed", lead_id: leadId };
+        return { shouldReply: false };
 
     } catch (err) {
-        console.error("🔥 AI Brain Error:", err.message);
-        return { success: false, error: err.message, lead_id: leadId };
+        console.error("🔥 AI Agent Error:", err);
+        return { error: err.message };
     }
 }
 
-module.exports = { runAgentForLead };
+module.exports = { processLeadWithAI };

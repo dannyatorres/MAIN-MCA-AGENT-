@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
-const { processLeadWithAI } = require('../services/aiService'); // <--- ADD THIS
+const { processLeadWithAI } = require('../services/aiAgent');
 const multer = require('multer');
 const AWS = require('aws-sdk');
 const path = require('path');
