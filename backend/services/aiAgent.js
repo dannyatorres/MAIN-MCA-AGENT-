@@ -56,20 +56,29 @@ const TOOLS = [
     }
 ];
 
-// 📖 HELPER: Load ONLY the Master Strategy
+// 📖 HELPER: Load Persona + Strategy
 function getGlobalPrompt() {
     try {
         const promptsDir = path.join(__dirname, '../prompts');
-        const masterPath = path.join(promptsDir, 'strategy_master.md');
+        const personaPath = path.join(promptsDir, 'persona.md');
+        const strategyPath = path.join(promptsDir, 'strategy_logic.md');
         
-        if (fs.existsSync(masterPath)) {
-            return fs.readFileSync(masterPath, 'utf8');
+        let combinedPrompt = "";
+
+        if (fs.existsSync(personaPath)) {
+            combinedPrompt += fs.readFileSync(personaPath, 'utf8') + "\n\n";
         } else {
-            console.error("⚠️ strategy_master.md not found!");
-            return "You are Dan Torres, an underwriter. Keep texts short.";
+            combinedPrompt += "You are Dan Torres, an underwriter. Keep texts short.\n\n";
         }
+
+        if (fs.existsSync(strategyPath)) {
+            combinedPrompt += fs.readFileSync(strategyPath, 'utf8');
+        }
+
+        return combinedPrompt;
+
     } catch (err) {
-        console.error('⚠️ Error loading prompt file:', err.message);
+        console.error('⚠️ Error loading prompt files:', err.message);
         return "You are Dan Torres. Keep texts short.";
     }
 }
@@ -87,45 +96,35 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // 2. TEMPLATE MODE (The "Free" Drip Campaign)
         // Checks instructions from index.js and returns text instantly.
-
-        // A. THE HOOK
         if (systemInstruction.includes("Underwriter Hook")) {
             return { shouldReply: true, content: `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?` };
         }
-
-        // B. FOLLOW-UP 1
         if (systemInstruction.includes("Did you get funded already?")) {
             return { shouldReply: true, content: "Did you get funded already?" };
         }
-
-        // C. FOLLOW-UP 2
         if (systemInstruction.includes("The money is expensive as is")) {
             return { shouldReply: true, content: "The money is expensive as is let me compete." };
         }
-
-        // D. FOLLOW-UP 3
         if (systemInstruction.includes("should i close the file out?")) {
             return { shouldReply: true, content: "Hey just following up again, should i close the file out?" };
         }
-
-        // E. FOLLOW-UP 4 (Next Day)
         if (systemInstruction.includes("any response would be appreciated")) {
             return { shouldReply: true, content: "hey any response would be appreciated here, close this out?" };
         }
 
         // 3. AI MODE (GPT-4o)
-        console.log("🤖 AI MODE: Reading Master Strategy...");
+        console.log("🤖 AI MODE: Reading Strategy...");
         
         const history = await db.query(`SELECT direction, content FROM messages WHERE conversation_id = $1 ORDER BY timestamp ASC LIMIT 20`, [conversationId]);
         
-        // Load the single master file
-        const messages = [{ role: "system", content: getGlobalPrompt() }];
+        // Build the Message Chain
+        let messages = [{ role: "system", content: getGlobalPrompt() }];
         
         history.rows.forEach(msg => {
             messages.push({ role: msg.direction === 'outbound' ? 'assistant' : 'user', content: msg.content });
         });
 
-        // Call GPT-4o (The Frontman)
+        // --- FIRST PASS (Decide what to do) ---
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: messages,
@@ -133,80 +132,70 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             tool_choice: "auto"
         });
 
-        // Token usage logs
-        if (completion.usage) {
-            console.log(`      🎟️ [AI Agent] Token Usage Report:`);
-            console.log(`          - Input (Prompt): ${completion.usage.prompt_tokens}`);
-            console.log(`          - Output (Reply): ${completion.usage.completion_tokens}`);
-            console.log(`          - Total Tokens:   ${completion.usage.total_tokens}`);
-        }
-
         const aiMsg = completion.choices[0].message;
         let responseContent = aiMsg.content;
 
-        // 4. HANDLE TOOLS
+        // 4. HANDLE TOOLS & RE-THINK
         if (aiMsg.tool_calls) {
+            
+            // Add the AI's tool decision to history
+            messages.push(aiMsg);
+
             for (const tool of aiMsg.tool_calls) {
-                
+                let toolResult = "";
+
                 if (tool.function.name === 'update_lead_status') {
                     const args = JSON.parse(tool.function.arguments);
                     await db.query("UPDATE conversations SET state = $1 WHERE id = $2", [args.status, conversationId]);
+                    toolResult = `Status updated to ${args.status}.`;
                 }
 
                 else if (tool.function.name === 'trigger_drive_sync') {
                     console.log(`📂 AI DECISION: Syncing Drive for "${businessName}"...`);
-                    
-                    // 1. Run Sync
                     syncDriveFiles(conversationId, businessName); 
-                    
-                    // 2. The Bridge Reply
-                    responseContent = "Got it. While I finalize the numbers—just confirming, have you taken any new positions since you sent this application?";
+                    toolResult = "Drive sync started in background.";
                 }
 
                 else if (tool.function.name === 'consult_analyst') {
                     const args = JSON.parse(tool.function.arguments);
                     console.log(`🎓 HANDOFF: GPT-4o -> Gemini 2.5 Pro`);
 
-                    // 1. Fetch FCS Data
-                    const fcsRes = await db.query(`
-                        SELECT average_revenue, total_negative_days 
-                        FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1
-                    `, [conversationId]);
+                    const fcsRes = await db.query(`SELECT average_revenue, total_negative_days FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1`, [conversationId]);
 
                     if (fcsRes.rows.length > 0) {
                         const fcs = fcsRes.rows[0];
                         const rev = Math.round(fcs.average_revenue || 0).toLocaleString();
 
-                        // 2. GEMINI 2.5 PROMPTING
                         const analystPrompt = `
                             You are the Senior Analyst at JMS Global.
-                            
-                            DATA:
-                            - Business: ${businessName}
-                            - Revenue: $${rev}/mo
-                            - Negatives: ${fcs.total_negative_days}
-                            - User Credit: ${args.credit_score}
-                            - Recent Funding: ${args.recent_funding}
-                            
-                            TASK:
-                            Write the CLOSING text message.
-                            - Mention revenue ($${rev}).
-                            - Give a "Soft Offer" based on credit.
-                            - End with: "I'm generating the PDF now."
-                            - Keep it casual.
+                            DATA: Revenue: $${rev}/mo, Negatives: ${fcs.total_negative_days}, Credit: ${args.credit_score}, Funding: ${args.recent_funding}
+                            TASK: Write the CLOSING text message. Mention revenue. Give a "Soft Offer". End with: "I'm generating the PDF now."
                         `;
-
                         try {
                              const result = await geminiModel.generateContent(analystPrompt);
-                             responseContent = result.response.text().replace(/"/g, '').trim();
+                             toolResult = result.response.text().replace(/"/g, '').trim();
                         } catch (e) {
-                             responseContent = "Got it. I'm finalizing the PDF offer now. I'll email it over in 5 minutes.";
+                             toolResult = "Got it. I'm finalizing the PDF offer now.";
                         }
                     } else {
-                        responseContent = `Thanks. With a ${args.credit_score} score, I can work with this. I'm waiting for the bank analysis to finish. I'll email you in 5 minutes.`;
+                        toolResult = `Analysis pending. Tell user you will email them in 5 mins.`;
                     }
                 }
+
+                messages.push({
+                    role: "tool",
+                    tool_call_id: tool.id,
+                    content: toolResult
+                });
             }
+
+            // --- SECOND PASS (Generate the Final Reply with Context) ---
+            const secondPass = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: messages
+            });
+
+            responseContent = secondPass.choices[0].message.content;
         }
 
         if (responseContent) {
