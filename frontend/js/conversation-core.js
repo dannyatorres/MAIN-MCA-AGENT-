@@ -110,17 +110,36 @@ class ConversationCore {
     }
 
     setupEventListeners() {
+        // 1. State Filter
         const stateFilter = document.getElementById('stateFilter');
         if (stateFilter) stateFilter.addEventListener('change', () => this.filterConversations());
 
+        // 2. Search Input
         const searchInput = document.getElementById('searchInput');
         if (searchInput) this.setupSearchListeners(searchInput);
 
+        // 3. Refresh Button
         const refreshBtn = document.getElementById('refreshBtn');
         if (refreshBtn) refreshBtn.addEventListener('click', () => this.refreshData());
 
+        // 4. FIX: Trash Can (Toggle Delete Mode)
+        // This connects the trash icon button to the global toggle function
+        const toggleDeleteBtn = document.getElementById('toggleDeleteModeBtn');
+        if (toggleDeleteBtn) {
+            toggleDeleteBtn.addEventListener('click', () => {
+                if (window.toggleDeleteMode) {
+                    window.toggleDeleteMode();
+                } else {
+                    console.warn('Delete mode function not loaded yet');
+                }
+            });
+        }
+
+        // 5. Delete Action Button (The "Confirm" button)
         const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
-        if (deleteSelectedBtn) deleteSelectedBtn.addEventListener('click', () => this.confirmDeleteSelected());
+        if (deleteSelectedBtn) {
+            deleteSelectedBtn.addEventListener('click', () => this.confirmDeleteSelected());
+        }
     }
 
     setupSearchListeners(searchInput) {
