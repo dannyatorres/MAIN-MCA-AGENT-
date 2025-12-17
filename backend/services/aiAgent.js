@@ -42,18 +42,11 @@ const TOOLS = [
 function getGlobalPrompt() {
     try {
         const promptsDir = path.join(__dirname, '../prompts');
-        
-        const personaPath = path.join(promptsDir, 'persona.md');
-        const persona = fs.existsSync(personaPath) ? fs.readFileSync(personaPath, 'utf8') : "";
-
-        const strategyNewPath = path.join(promptsDir, 'strategy_new.md');
-        const strategyNew = fs.existsSync(strategyNewPath) ? fs.readFileSync(strategyNewPath, 'utf8') : "";
-
-        const strategyHistoryPath = path.join(promptsDir, 'strategy_history.md');
-        const strategyHistory = fs.existsSync(strategyHistoryPath) ? fs.readFileSync(strategyHistoryPath, 'utf8') : "";
+        const persona = fs.existsSync(path.join(promptsDir, 'persona.md')) ? fs.readFileSync(path.join(promptsDir, 'persona.md'), 'utf8') : "";
+        const strategyNew = fs.existsSync(path.join(promptsDir, 'strategy_new.md')) ? fs.readFileSync(path.join(promptsDir, 'strategy_new.md'), 'utf8') : "";
+        const strategyHistory = fs.existsSync(path.join(promptsDir, 'strategy_history.md')) ? fs.readFileSync(path.join(promptsDir, 'strategy_history.md'), 'utf8') : "";
 
         return `${persona}\n\n${strategyNew}\n\n${strategyHistory}`;
-
     } catch (err) {
         console.error('⚠️ Error loading strategy files:', err.message);
         return "You are Dan Torres, an underwriter at JMS Global. Keep replies short.";
@@ -79,8 +72,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // (No OpenAI call here = 0 tokens used)
         if (systemInstruction.includes("Underwriter Hook")) {
             console.log(`⚡ TEMPLATE MODE: Sending Dan Torres Script to ${nameToUse}`);
-            
-            // REMINDER: We DO NOT sync drive here. We wait for their reply.
             
             const exactTemplate = `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
             return { shouldReply: true, content: exactTemplate };
@@ -108,8 +99,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             ${systemInstruction}
             
             RULES:
-            1. If they provide an email, acknowledge it.
-            2. If they mentioned they SENT documents (or ask you to check), ONLY THEN use 'trigger_drive_sync'.`
+            1. CRITICAL: If the message contains an EMAIL ADDRESS, you MUST use the function 'trigger_drive_sync' immediately.
+            2. If they say they sent documents, also use 'trigger_drive_sync'.
+            3. If no email or documents are mentioned, just answer the question.`
         });
 
         history.rows.forEach(msg => {
@@ -119,15 +111,16 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             });
         });
 
-        // 🟢 CALL OPENAI
+        // 🟢 CALL OPENAI (GPT-4o)
+        // Using gpt-4o because it is the best at following tool-use instructions reliably.
         const completion = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
+            model: "gpt-4o", 
             messages: messages,
             tools: TOOLS,
             tool_choice: "auto"
         });
 
-        // 🟢 NEW: LOG TOKEN USAGE
+        // 🟢 LOG TOKEN USAGE (Shows "How much" it thought)
         const usage = completion.usage;
         if (usage) {
             console.log(`      🎟️ [AI Agent] Token Usage Report:`);
@@ -139,19 +132,19 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const aiMsg = completion.choices[0].message;
         let responseContent = aiMsg.content;
 
-        // 4. HANDLE TOOLS
+        // 4. HANDLE TOOLS (The Result of its Thinking)
         if (aiMsg.tool_calls) {
             for (const tool of aiMsg.tool_calls) {
                 
                 if (tool.function.name === 'update_lead_status') {
                     const args = JSON.parse(tool.function.arguments);
-                    console.log(`🔄 AI Moving Lead -> ${args.status}`);
+                    console.log(`🔄 AI DECISION: Moving Lead -> ${args.status}`); // <--- Decision Log
                     await db.query("UPDATE conversations SET state = $1 WHERE id = $2", [args.status, conversationId]);
                     if (args.status === 'DEAD') return { shouldReply: false };
                 }
 
                 else if (tool.function.name === 'trigger_drive_sync') {
-                    console.log(`📂 AI decided to check Google Drive for "${businessName}"...`);
+                    console.log(`📂 AI DECISION: Check Google Drive for "${businessName}"...`); // <--- Decision Log
                     
                     const syncResult = await syncDriveFiles(conversationId, businessName);
                     
