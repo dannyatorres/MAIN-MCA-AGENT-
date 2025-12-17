@@ -3,7 +3,7 @@ import { LeadFormController } from './lead-form-controller.js';
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 [DEBUG] Main Module: DOM Loaded. Waiting for CommandCenter...');
 
-    // Helper: Draggable Logic (global, outside the loop)
+    // Helper: Draggable Logic
     const makeDraggable = (element, handle) => {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
         if (handle) {
@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         function dragMouseDown(e) {
-            // Allow clicking buttons without dragging
             if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
             e = e || window.event;
             e.preventDefault();
@@ -39,13 +38,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.onmouseup = null;
             document.onmousemove = null;
         }
-    };
-
-    const createSafeElement = (tag, text, classes = []) => {
-        const el = document.createElement(tag);
-        if (text) el.textContent = text;
-        if (classes.length) el.classList.add(...classes);
-        return el;
     };
 
     const initApp = () => {
@@ -74,7 +66,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- GLOBAL FUNCTIONS ---
 
-            // ✅ FIX: Centralize View Logic (Prevents inputs getting stuck on Dashboard)
             window.setViewMode = (mode) => {
                 const centerPanel = document.querySelector('.center-panel');
                 const actions = document.getElementById('conversationActions');
@@ -85,42 +76,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (mode === 'dashboard') {
                     if (centerPanel) centerPanel.classList.add('dashboard-mode');
                     if (actions) actions.classList.add('hidden');
-                    if (inputs) inputs.classList.add('hidden'); // Force hide inputs
+                    if (inputs) inputs.classList.add('hidden');
                     if (backBtn) backBtn.classList.add('hidden');
-                    if (header) header.innerHTML = ''; 
+                    if (header) header.innerHTML = '';
                 } else {
                     if (centerPanel) centerPanel.classList.remove('dashboard-mode');
                     if (actions) actions.classList.remove('hidden');
                     if (backBtn) backBtn.classList.remove('hidden');
-                    // Note: We do NOT unhide inputs here. conversation-core does that after data loads.
                 }
             };
 
-            // 1. HEADER RENDERER (Draggable Modal + Owner Name)
-            // 1. HEADER RENDERER (Unified: Merchant Name is Primary Everywhere)
+            // ✅ HEADER RENDERER FIX: Owner Name Primary
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 window.setViewMode('chat');
-                
+
                 const header = document.querySelector('.center-panel .panel-header');
                 if (!header) return;
 
-                const displayTitle = businessName || 'Unknown Business';
-                const displayOwner = ownerName || 'Unknown Merchant';
-                const initials = displayTitle.substring(0, 2).toUpperCase();
+                // Priority Logic: Ensure we have strings
+                let displayBusiness = businessName || 'Unknown Business';
+                let displayOwner = ownerName || 'Business Contact';
 
-                // 1. RENDER HEADER (Now matches: Merchant Name = BIG)
+                // If owner is missing but business is there, don't show "Unknown", just handle gracefully
+                if (!ownerName && businessName) {
+                    displayOwner = businessName; // Fallback to business name in big text
+                    displayBusiness = 'Business Account'; // Secondary text
+                }
+
+                const initials = displayOwner.substring(0, 2).toUpperCase();
+
+                // 1. RENDER HEADER
+                // .chat-business-title = BIG (Used for Owner Name)
+                // .chat-row-secondary = SMALL (Used for Business Name)
                 header.innerHTML = `
                     <div class="chat-header-rich">
                         <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard">
                             <i class="fas fa-arrow-left"></i>
                         </button>
-                        <div class="chat-avatar-large">${initials}</div>
+
                         <div class="chat-details-stack">
                             <h2 class="chat-business-title">${displayOwner}</h2>
                             <div class="chat-row-secondary">
-                                <i class="fas fa-building" style="font-size: 10px; margin-right: 4px;"></i> <span>${displayTitle}</span>
+                                <i class="fas fa-building" style="font-size: 10px; margin-right: 4px;"></i> <span>${displayBusiness}</span>
                             </div>
                         </div>
+
                         <div class="chat-header-actions">
                             <button id="callBtn" class="header-action-btn phone-btn" title="Call ${phoneNumber || 'No phone'}">
                                 <i class="fas fa-phone"></i>
@@ -132,15 +132,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="call-modal-content" id="callModalCard">
                             <div class="drag-handle-icon"><i class="fas fa-grip-lines"></i></div>
                             <div class="call-avatar-pulse"><i class="fas fa-phone"></i></div>
-                            
+
                             <h3 class="call-contact-name">${displayOwner}</h3>
-                            
+
                             <p class="call-contact-subtext">
-                                <span class="owner-badge"><i class="fas fa-building"></i> ${displayTitle}</span>
+                                <span class="owner-badge"><i class="fas fa-building"></i> ${displayBusiness}</span>
                             </p>
 
                             <div class="call-timer" id="callTimer">00:00</div>
-                            
+
                             <div class="call-actions-row">
                                 <button class="call-control-btn" id="muteBtn" title="Mute"><i class="fas fa-microphone"></i></button>
                                 <button class="call-control-btn end-call" id="endCallBtn" title="End Call"><i class="fas fa-phone-slash"></i></button>
@@ -151,23 +151,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 2. ATTACH LISTENERS
                 document.getElementById('backHomeBtn').addEventListener('click', window.loadDashboard);
-                
+
                 const callBtn = document.getElementById('callBtn');
                 if (callBtn) {
                     callBtn.addEventListener('click', async () => {
                         if (!phoneNumber) return alert('No phone number available.');
                         if (!window.callManager) return alert("Calling system failed to load.");
-                        
-                        // Reset position
+
                         const modal = document.getElementById('callBar');
+                        modal.classList.remove('hidden'); // Ensure it becomes visible
                         modal.style.top = '15%';
                         modal.style.left = '50%';
                         modal.style.transform = 'translateX(-50%)';
-                        
+
                         await window.callManager.startCall(phoneNumber, conversationId);
                     });
                 }
-                
+
                 document.getElementById('endCallBtn')?.addEventListener('click', () => {
                     if (window.callManager) window.callManager.endCall();
                     else document.getElementById('callBar').classList.add('hidden');
@@ -186,25 +186,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
             };
 
-
             // 2. DASHBOARD LOADER
             window.loadDashboard = () => {
                 console.log("🏠 [DEBUG] Loading Dashboard...");
-
-                // Reset Selection
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
                     window.commandCenter.conversationUI.selectedConversation = null;
-                    // Visually deselect list items
                     document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
                 }
-
-                // ✅ FIX: Use central switcher to guarantee inputs are hidden
                 window.setViewMode('dashboard');
 
                 const messages = document.getElementById('messagesContainer');
-
-                // Render Dashboard
                 if (messages) {
                     messages.innerHTML = `
                         <div class="dashboard-container">
@@ -212,21 +204,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <h1>Welcome back, Agent</h1>
                                 <p>Here is what's happening with your pipeline today.</p>
                             </div>
-
                             <div class="dashboard-toolbar">
                                 <button class="btn btn-secondary dashboard-action-btn" id="dashFormatterBtn">
                                     <i class="fas fa-table"></i> Formatter
                                 </button>
-                                
                                 <button class="btn btn-secondary dashboard-action-btn" id="dashLenderBtn">
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
-                                
                                 <button class="btn btn-secondary dashboard-action-btn">
                                     <i class="fas fa-cog"></i> Settings
                                 </button>
                             </div>
-
                             <div class="stats-grid">
                                 <div class="stat-card">
                                     <div class="stat-icon"><i class="fas fa-fire"></i></div>
@@ -246,51 +234,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                     `;
-
-                    // Wire up buttons
                     document.getElementById('dashFormatterBtn').addEventListener('click', () => window.open('/lead_reformatter.html', '_blank'));
                     document.getElementById('dashLenderBtn').addEventListener('click', () => {
-                        if (typeof window.openLenderManagementModal === 'function') {
-                            window.openLenderManagementModal();
-                        } else {
-                            alert('Lender Management module not loaded.');
-                        }
+                        if (typeof window.openLenderManagementModal === 'function') window.openLenderManagementModal();
+                        else alert('Lender Management module not loaded.');
                     });
                 }
 
-                // 🔴 CRITICAL FIX: Switch Right Panel back to Home/News Mode
                 if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
                     window.commandCenter.intelligence.toggleView(false);
                 } else {
-                    // Fallback manual toggle
                     document.getElementById('rightPanelHome')?.classList.remove('hidden');
                     document.getElementById('rightPanelIntelligence')?.classList.add('hidden');
                 }
 
-                // Load Stats
-                if (window.commandCenter.stats?.loadStats) {
-                    window.commandCenter.stats.loadStats();
-                }
-
-                // Load News
+                if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
                 if (window.loadMarketNews) window.loadMarketNews();
             };
 
-            // 3. NEWS LOADER (Optimized with Caching)
-            let newsCache = null; // Store data here so we don't refetch constantly
+            // 3. NEWS LOADER
+            let newsCache = null;
             let lastFetchTime = 0;
 
             window.loadMarketNews = async () => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
 
-                // 1. FAST RENDER: If we have data, show it IMMEDIATELY
                 if (newsCache) {
                     renderNews(newsCache);
-                    // If data is less than 5 minutes old, stop here (saves bandwidth)
-                    if (Date.now() - lastFetchTime < 300000) return; 
+                    if (Date.now() - lastFetchTime < 300000) return;
                 } else {
-                    // Only show spinner if we have absolutely nothing
                     container.innerHTML = `
                         <div class="news-feed-container">
                             <div class="news-header-rich">
@@ -300,34 +273,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>`;
                 }
 
-                // 2. BACKGROUND FETCH: Get fresh data silently
                 try {
                     const response = await fetch('/api/news');
                     const result = await response.json();
-
                     if (result.success && result.data?.length > 0) {
-                        newsCache = result.data; // Save to cache
+                        newsCache = result.data;
                         lastFetchTime = Date.now();
-                        renderNews(newsCache);   // Update UI
+                        renderNews(newsCache);
                     } else if (!newsCache) {
                         container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire is silent.</p></div></div>';
                     }
                 } catch (e) {
-                    console.error(e);
-                    if (!newsCache) {
-                        container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire Offline</p></div></div>';
-                    }
+                    if (!newsCache) container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire Offline</p></div></div>';
                 }
             };
 
-            // Helper to draw the HTML (Moved out to reuse it)
             const renderNews = (data) => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
-
                 const wrapper = document.createElement('div');
                 wrapper.className = 'news-feed-container';
-                
                 const header = document.createElement('div');
                 header.className = 'news-header-rich';
                 header.innerHTML = `<span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>`;
@@ -340,7 +305,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const metaTop = document.createElement('div');
                     metaTop.className = 'news-meta-top';
-                    
                     const badge = document.createElement('div');
                     let badgeClass = '';
                     if (item.source === 'deBanked') badgeClass = 'source-debanked';
@@ -354,7 +318,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const title = document.createElement('h4');
                     title.className = 'news-title';
-                    title.textContent = item.title; 
+                    title.textContent = item.title;
                     card.appendChild(title);
 
                     const footer = document.createElement('div');
@@ -364,40 +328,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     wrapper.appendChild(card);
                 });
-
-                container.innerHTML = ''; 
+                container.innerHTML = '';
                 container.appendChild(wrapper);
             };
 
-            // 4. OTHER HELPERS (Fixed: Attaches Listener Properly)
             window.toggleDeleteMode = () => {
                 const list = document.getElementById('conversationsList');
                 if (!list) return;
-
                 const isDeleteMode = list.classList.toggle('delete-mode');
-                
                 document.getElementById('toggleDeleteModeBtn')?.classList.toggle('active-danger', isDeleteMode);
                 document.getElementById('deleteSelectedBtn')?.classList.toggle('hidden', !isDeleteMode);
 
-                // ✅ FIX: Safe Decoupling - Call a method on the class instead of touching raw data
                 if (!isDeleteMode && window.commandCenter.conversationUI) {
-                    // We will add this method to ConversationCore below
                     if (typeof window.commandCenter.conversationUI.clearDeleteSelection === 'function') {
                         window.commandCenter.conversationUI.clearDeleteSelection();
                     }
                 }
             };
 
-            // ✅ ATTACH THE LISTENER (The missing piece)
             const toggleBtn = document.getElementById('toggleDeleteModeBtn');
             if (toggleBtn) {
-                // Clone to strip any old listeners, then attach the new one
                 const newToggleBtn = toggleBtn.cloneNode(true);
                 toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
                 newToggleBtn.addEventListener('click', window.toggleDeleteMode);
             }
 
-            // Initial Load
             if (!window.commandCenter.currentConversationId) {
                 window.loadDashboard();
             }
@@ -405,12 +360,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (attempts >= maxAttempts) {
             clearInterval(appInitInterval);
             console.error('❌ [DEBUG] CommandCenter load timeout (200 attempts)');
-            
-            // ✅ FIX: Restore the "Security Alert" behavior
-            // When the server restarts, the session dies. The app won't initialize.
-            // We catch that here and force the user back to safety.
             alert("Security Error: Unable to authenticate session. Please sign in again.");
-            window.location.href = '/login'; // Change this to your actual login route (e.g., / or /signin)
+            window.location.href = '/login';
         }
     }, 50);
 });
