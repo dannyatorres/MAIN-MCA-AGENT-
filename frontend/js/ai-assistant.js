@@ -263,7 +263,8 @@ class AIAssistant {
             const data = await this.parent.apiCall('/api/ai/chat', {
                 method: 'POST',
                 body: JSON.stringify({
-                    query: "Analyze the database for this conversation. If there are any offers (even messy ones like '10k 70 days'), tell me immediately. If no offers, just summarize the deal status.",
+                    // UPDATED PROMPT: Start with a greeting that bolds the business name, then analyze offers/status
+                    query: "Start your response exactly with: 'I'm ready to help with **[Business Name]**.' (using the actual business name). Then, analyze the database. If there are any offers, list them. If no offers, just summarize the deal status.",
                     conversationId: conversationId,
                     includeContext: true
                 })
