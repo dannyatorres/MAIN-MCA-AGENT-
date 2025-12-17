@@ -59,17 +59,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             // 1. HEADER RENDERER (Draggable Modal + Owner Name)
+            // 1. HEADER RENDERER (Unified: Merchant Name is Primary Everywhere)
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 window.setViewMode('chat');
-
+                
                 const header = document.querySelector('.center-panel .panel-header');
                 if (!header) return;
 
                 const displayTitle = businessName || 'Unknown Business';
-                const displayOwner = ownerName || 'No Owner';
+                const displayOwner = ownerName || 'Unknown Merchant';
                 const initials = displayTitle.substring(0, 2).toUpperCase();
 
-                // 1. RENDER HEADER (Clean standard header)
+                // 1. RENDER HEADER (Now matches: Merchant Name = BIG)
                 header.innerHTML = `
                     <div class="chat-header-rich">
                         <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard">
@@ -77,9 +78,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </button>
                         <div class="chat-avatar-large">${initials}</div>
                         <div class="chat-details-stack">
-                            <h2 class="chat-business-title">${displayTitle}</h2>
+                            <h2 class="chat-business-title">${displayOwner}</h2>
                             <div class="chat-row-secondary">
-                                <span>${displayOwner}</span>
+                                <i class="fas fa-building" style="font-size: 10px; margin-right: 4px;"></i> <span>${displayTitle}</span>
                             </div>
                         </div>
                         <div class="chat-header-actions">
@@ -92,26 +93,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div id="callBar" class="call-bar hidden">
                         <div class="call-modal-content" id="callModalCard">
                             <div class="drag-handle-icon"><i class="fas fa-grip-lines"></i></div>
-
-                            <div class="call-avatar-pulse">
-                                <i class="fas fa-phone"></i>
-                            </div>
-
-                            <h3 class="call-contact-name">${displayTitle}</h3>
-
+                            <div class="call-avatar-pulse"><i class="fas fa-phone"></i></div>
+                            
+                            <h3 class="call-contact-name">${displayOwner}</h3>
+                            
                             <p class="call-contact-subtext">
-                                <span class="owner-badge"><i class="fas fa-user"></i> ${displayOwner}</span>
+                                <span class="owner-badge"><i class="fas fa-building"></i> ${displayTitle}</span>
                             </p>
 
                             <div class="call-timer" id="callTimer">00:00</div>
-
+                            
                             <div class="call-actions-row">
-                                <button class="call-control-btn" id="muteBtn" title="Mute">
-                                    <i class="fas fa-microphone"></i>
-                                </button>
-                                <button class="call-control-btn end-call" id="endCallBtn" title="End Call">
-                                    <i class="fas fa-phone-slash"></i>
-                                </button>
+                                <button class="call-control-btn" id="muteBtn" title="Mute"><i class="fas fa-microphone"></i></button>
+                                <button class="call-control-btn end-call" id="endCallBtn" title="End Call"><i class="fas fa-phone-slash"></i></button>
                             </div>
                         </div>
                     </div>
@@ -119,23 +113,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 2. ATTACH LISTENERS
                 document.getElementById('backHomeBtn').addEventListener('click', window.loadDashboard);
-
+                
                 const callBtn = document.getElementById('callBtn');
                 if (callBtn) {
                     callBtn.addEventListener('click', async () => {
                         if (!phoneNumber) return alert('No phone number available.');
                         if (!window.callManager) return alert("Calling system failed to load.");
-
-                        // Reset position on new call
+                        
+                        // Reset position
                         const modal = document.getElementById('callBar');
                         modal.style.top = '15%';
                         modal.style.left = '50%';
                         modal.style.transform = 'translateX(-50%)';
-
+                        
                         await window.callManager.startCall(phoneNumber, conversationId);
                     });
                 }
-
+                
                 document.getElementById('endCallBtn')?.addEventListener('click', () => {
                     if (window.callManager) window.callManager.endCall();
                     else document.getElementById('callBar').classList.add('hidden');
@@ -153,6 +147,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 3. ENABLE DRAGGING
                 makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
             };
+
+            // Helper: Draggable Logic
+            function makeDraggable(element, handle) {
+                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                if (handle) handle.onmousedown = dragMouseDown;
+                else element.onmousedown = dragMouseDown;
+
+                function dragMouseDown(e) {
+                    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+                    e = e || window.event;
+                    e.preventDefault();
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    document.onmouseup = closeDragElement;
+                    document.onmousemove = elementDrag;
+                }
+
+                function elementDrag(e) {
+                    e = e || window.event;
+                    e.preventDefault();
+                    pos1 = pos3 - e.clientX;
+                    pos2 = pos4 - e.clientY;
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    element.style.transform = 'none';
+                    element.style.top = (element.offsetTop - pos2) + "px";
+                    element.style.left = (element.offsetLeft - pos1) + "px";
+                }
+
+                function closeDragElement() {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                }
+            }
 
             // Helper: Draggable Logic
             function makeDraggable(element, handle) {
