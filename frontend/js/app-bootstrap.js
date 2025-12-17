@@ -305,6 +305,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
+            // 4. OTHER HELPERS (Fixed: Attaches Listener Properly)
+            window.toggleDeleteMode = () => {
+                const list = document.getElementById('conversationsList');
+                if (!list) return;
+
+                const isDeleteMode = list.classList.toggle('delete-mode');
+                
+                // Toggle UI states
+                document.getElementById('toggleDeleteModeBtn')?.classList.toggle('active-danger', isDeleteMode);
+                document.getElementById('deleteSelectedBtn')?.classList.toggle('hidden', !isDeleteMode);
+
+                // If turning OFF, clear all selections
+                if (!isDeleteMode) {
+                    document.querySelectorAll('.delete-checkbox').forEach(cb => cb.checked = false);
+                    // Safely clear the set in ConversationUI
+                    if (window.commandCenter.conversationUI && window.commandCenter.conversationUI.selectedForDeletion) {
+                        window.commandCenter.conversationUI.selectedForDeletion.clear();
+                    }
+                }
+            };
+
+            // ✅ ATTACH THE LISTENER (The missing piece)
+            const toggleBtn = document.getElementById('toggleDeleteModeBtn');
+            if (toggleBtn) {
+                // Clone to strip any old listeners, then attach the new one
+                const newToggleBtn = toggleBtn.cloneNode(true);
+                toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
+                newToggleBtn.addEventListener('click', window.toggleDeleteMode);
+            }
+
             // Initial Load
             if (!window.commandCenter.currentConversationId) {
                 window.loadDashboard();
