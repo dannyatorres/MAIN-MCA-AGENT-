@@ -112,6 +112,52 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             return { shouldReply: true, content: "hey any response would be appreciated here, close this out?" };
         }
 
+        // 🟢 F. THE HAIL MARY (Ballpark Offer)
+        // Handles "Generate Ballpark Offer" instruction from scheduler
+        if (systemInstruction.includes("Generate Ballpark Offer")) {
+            console.log(`🏈 AI MODE: Generating Gemini Ballpark Offer (Hail Mary)...`);
+
+            const fcsRes = await db.query(`
+                SELECT average_revenue, average_daily_balance 
+                FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1
+            `, [conversationId]);
+
+            let offerText = "";
+
+            if (fcsRes.rows.length > 0) {
+                const fcs = fcsRes.rows[0];
+                const revenueNum = Math.round(fcs.average_revenue || 0);
+                const rev = revenueNum.toLocaleString();
+                const blindOffer = Math.round(revenueNum * 0.8).toLocaleString();
+
+                const prompt = `
+                    You are Dan Torres. This client has ghosted you.
+                    
+                    DATA:
+                    - Their Monthly Revenue: $${rev}
+                    
+                    TASK:
+                    Write a text to wake them up.
+                    - State clearly: "I haven't heard back, but looking at the statements, I see about $${rev} in revenue."
+                    - Make a BLIND OFFER: "I can probably get you $${blindOffer} landed today if we move now."
+                    - End with: "Want me to lock that in?"
+                    
+                    Keep it short and punchy.
+                `;
+
+                try {
+                    const result = await geminiModel.generateContent(prompt);
+                    offerText = result.response.text().replace(/"/g, '').trim();
+                } catch (e) {
+                    offerText = `I haven't heard back, but looking at the $${rev} revenue, I can probably get you funded today. Do you want me to finalize the offer?`;
+                }
+            } else {
+                offerText = "I haven't heard back—I'm assuming you found capital elsewhere? I'll go ahead and close the file.";
+            }
+
+            return { shouldReply: true, content: offerText };
+        }
+
         // 3. AI MODE (GPT-4o)
         console.log("🤖 AI MODE: Reading Strategy...");
         
