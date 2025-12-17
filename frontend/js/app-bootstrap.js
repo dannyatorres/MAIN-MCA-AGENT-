@@ -49,26 +49,6 @@ window.openLenderManagementModal = () => {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 [DEBUG] Main Module: DOM Loaded. Waiting for CommandCenter...');
 
-    // --- EVENT DELEGATION (The "Silent Fail" Fix) ---
-    // This catches the click at the document level, so it works even if the button was just re-rendered.
-    document.addEventListener('click', (e) => {
-        // Check if the clicked element (or its parent) is the manage button
-        const btn = e.target.closest('#manageLendersBtn');
-        
-        if (btn) {
-            console.log("🖱️ [DEBUG] Click detected on #manageLendersBtn");
-            e.preventDefault(); // Stop any default link behavior
-            
-            if (btn.classList.contains('disabled') || btn.disabled) {
-                console.warn("🚫 [DEBUG] Click ignored: Button is disabled.");
-                return;
-            }
-
-            // Execute the function
-            window.openLenderManagementModal();
-        }
-    });
-
     // --- INITIALIZATION LOOP ---
     const initApp = () => {
         if (!window.commandCenter || !window.commandCenter.isInitialized) return false;
@@ -223,7 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <i class="fas fa-table"></i> Formatter
                                 </button>
                                 
-                                <button id="manageLendersBtn" class="btn btn-secondary dashboard-action-btn">
+                                <button class="btn btn-secondary dashboard-action-btn" onclick="window.openLenderManagementModal()">
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
                                 
