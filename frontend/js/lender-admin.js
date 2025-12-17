@@ -62,7 +62,7 @@ class LenderAdmin {
                         </button>
                     </div>
 
-                    <div id="lendersTableContainer" style="flex: 1; overflow-y: auto; padding-bottom: 50px;">
+                    <div id="adminLendersTableContainer" style="flex: 1; overflow-y: auto; padding-bottom: 50px;">
                         <div class="loading-state">Loading lenders...</div>
                     </div>
                 </div>
@@ -73,7 +73,7 @@ class LenderAdmin {
     // --- CRUD Operations ---
 
     async loadLendersList() {
-        const container = document.getElementById('lendersTableContainer');
+        const container = document.getElementById('adminLendersTableContainer');
         if (container) container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Loading Network...</div>';
 
         try {
@@ -99,7 +99,7 @@ class LenderAdmin {
     }
 
     displayLendersList(lenders) {
-        const container = document.getElementById('lendersTableContainer');
+        const container = document.getElementById('adminLendersTableContainer');
         if (!lenders || lenders.length === 0) {
             container.innerHTML = `
                 <div class="empty-state-card">
