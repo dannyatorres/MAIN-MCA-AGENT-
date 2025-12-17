@@ -1,12 +1,27 @@
-// js/app-bootstrap.js
 import { LeadFormController } from './lead-form-controller.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 [DEBUG] Main Module: DOM Loaded. Waiting for CommandCenter...');
 
+    // --- HELPER: Safe DOM Creation (Prevents XSS) ---
+    const createSafeElement = (tag, text, classes = []) => {
+        const el = document.createElement(tag);
+        if (text) el.textContent = text;
+        if (classes.length) el.classList.add(...classes);
+        return el;
+    };
+
     // --- INITIALIZATION LOOP ---
     const initApp = () => {
+        // Ensure CommandCenter exists
         if (!window.commandCenter || !window.commandCenter.isInitialized) return false;
+        
+        // Ensure critical sub-systems are ready or explicitly undefined
+        // This prevents the "Calling system failed" error later
+        if (typeof CallManager !== 'undefined' && !window.callManager) {
+            window.callManager = new CallManager();
+        }
+        
         return true;
     };
 
@@ -23,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // --- A. INJECT CONTROLLERS ---
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
 
-            // Pre-load Lender Admin (Optional, makes first click faster)
+            // Pre-load Lender Admin safely
             if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
                 console.log("🏦 [DEBUG] Pre-loading LenderAdmin...");
                 window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
@@ -31,12 +46,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- B. DEFINE GLOBAL FUNCTIONS ---
 
-            // 1. HEADER RENDERER
+            // 1. HEADER RENDERER (Smart Update - Fixes Timer Bug)
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
-
-                // UNHIDE INPUTS WHEN ENTERING CHAT
+                
+                // UNHIDE INPUTS
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
@@ -47,71 +62,78 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!header) return;
 
                 const displayTitle = businessName || 'Unknown Business';
+                const displayOwner = ownerName || 'No Owner';
                 const initials = displayTitle.substring(0, 2).toUpperCase();
 
-                // Preserve Call Bar State
-                const existingCallBar = document.getElementById('callBar');
-                const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
-                const currentTimer = existingCallBar ? document.getElementById('callTimer').innerText : '00:00';
-
-                header.innerHTML = `
-                    <div class="chat-header-rich">
-                        <button id="backHomeBtn" onclick="loadDashboard()" class="icon-btn-small" title="Back to Dashboard">
-                            <i class="fas fa-arrow-left"></i>
-                        </button>
-                        <div class="chat-avatar-large">${initials}</div>
-                        <div class="chat-details-stack">
-                            <h2 class="chat-business-title">${displayTitle}</h2>
-                            <div class="chat-row-secondary">
-                                <span>${ownerName || 'No Owner'}</span>
+                // Check if we are already in "Chat Mode" to avoid destroying the DOM (and the Timer)
+                const existingTitle = header.querySelector('.chat-business-title');
+                
+                if (existingTitle) {
+                    // LIGHT UPDATE: Only change text, leave DOM/Listeners intact
+                    header.querySelector('.chat-avatar-large').textContent = initials;
+                    existingTitle.textContent = displayTitle;
+                    header.querySelector('.chat-row-secondary span').textContent = displayOwner;
+                    
+                    // Update Call Button attributes
+                    const callBtn = document.getElementById('callBtn');
+                    if (callBtn) {
+                        callBtn.title = `Call ${phoneNumber || 'No phone'}`;
+                        // Remove old listeners by cloning
+                        const newCallBtn = callBtn.cloneNode(true);
+                        callBtn.parentNode.replaceChild(newCallBtn, callBtn);
+                        attachCallListeners(newCallBtn, phoneNumber, conversationId);
+                    }
+                } else {
+                    // FULL RENDER: First time load
+                    header.innerHTML = `
+                        <div class="chat-header-rich">
+                            <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <div class="chat-avatar-large">${initials}</div>
+                            <div class="chat-details-stack">
+                                <h2 class="chat-business-title"></h2> <div class="chat-row-secondary">
+                                    <span></span>
+                                </div>
+                            </div>
+                            <div class="chat-header-actions">
+                                <button id="callBtn" class="header-action-btn phone-btn" title="Call ${phoneNumber || 'No phone'}">
+                                    <i class="fas fa-phone"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="chat-header-actions">
-                            <button id="callBtn" class="header-action-btn phone-btn ${isCallActive ? 'active' : ''}" title="Call ${phoneNumber || 'No phone'}">
-                                <i class="fas fa-phone"></i>
-                            </button>
-                        </div>
-                    </div>
 
-                    <div id="callBar" class="call-bar ${isCallActive ? '' : 'hidden'}">
-                        <div class="call-bar-info">
-                            <span class="call-status">Calling...</span>
-                            <span class="call-timer" id="callTimer">${currentTimer}</span>
+                        <div id="callBar" class="call-bar hidden">
+                            <div class="call-bar-info">
+                                <span class="call-status">Calling...</span>
+                                <span class="call-timer" id="callTimer">00:00</span>
+                            </div>
+                            <div class="call-bar-actions">
+                                <button class="call-control-btn" id="muteBtn" title="Mute"><i class="fas fa-microphone"></i></button>
+                                <button class="call-control-btn end-call" id="endCallBtn" title="End Call"><i class="fas fa-phone-slash"></i></button>
+                            </div>
                         </div>
-                        <div class="call-bar-actions">
-                            <button class="call-control-btn" id="muteBtn" title="Mute"><i class="fas fa-microphone"></i></button>
-                            <button class="call-control-btn end-call" id="endCallBtn" title="End Call"><i class="fas fa-phone-slash"></i></button>
-                        </div>
-                    </div>
-                `;
+                    `;
+                    
+                    // Safely set text content
+                    header.querySelector('.chat-business-title').textContent = displayTitle;
+                    header.querySelector('.chat-row-secondary span').textContent = displayOwner;
 
-                // Re-attach specific listeners (Call bar, etc)
-                // Note: Manage Lenders is NOT here, it is in Dashboard
-                const callBtn = document.getElementById('callBtn');
-                const endCallBtn = document.getElementById('endCallBtn');
-                const muteBtn = document.getElementById('muteBtn');
-
-                if (callBtn) {
-                    callBtn.addEventListener('click', async () => {
-                        if (!phoneNumber) return alert('No phone number available.');
-                        if (!window.callManager) {
-                            if (typeof CallManager !== 'undefined') window.callManager = new CallManager();
-                            else return alert("Calling system failed to load.");
-                        }
-                        await window.callManager.startCall(phoneNumber, conversationId);
-                    });
-                }
-                if (endCallBtn) {
-                    endCallBtn.addEventListener('click', () => {
+                    // Attach Listeners
+                    document.getElementById('backHomeBtn').addEventListener('click', window.loadDashboard);
+                    attachCallListeners(document.getElementById('callBtn'), phoneNumber, conversationId);
+                    
+                    // Call Bar Controls
+                    document.getElementById('endCallBtn')?.addEventListener('click', () => {
                         if (window.callManager) window.callManager.endCall();
                         else {
                             document.getElementById('callBar')?.classList.add('hidden');
                             document.getElementById('callBtn')?.classList.remove('active');
                         }
                     });
-                }
-                if (muteBtn) {
-                    muteBtn.addEventListener('click', () => {
+
+                    const muteBtn = document.getElementById('muteBtn');
+                    muteBtn?.addEventListener('click', () => {
                         if (window.callManager) window.callManager.toggleMute();
                         else {
                             muteBtn.classList.toggle('muted');
@@ -119,6 +141,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     });
                 }
+            };
+
+            const attachCallListeners = (btn, phoneNumber, conversationId) => {
+                if (!btn) return;
+                btn.addEventListener('click', async () => {
+                    if (!phoneNumber) return alert('No phone number available.');
+                    if (!window.callManager) return alert("Calling system failed to load.");
+                    await window.callManager.startCall(phoneNumber, conversationId);
+                });
             };
 
             // 2. DASHBOARD LOADER
@@ -134,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const centerHeader = centerPanel ? centerPanel.querySelector('.panel-header') : null;
                 const messages = document.getElementById('messagesContainer');
 
-                // HIDE INPUTS FOR DASHBOARD
+                // HIDE INPUTS
                 const inputs = document.getElementById('messageInputContainer');
                 const actions = document.getElementById('conversationActions');
 
@@ -144,8 +175,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (actions) actions.classList.add('hidden');
 
                 if (messages) {
-                    // NOTE: Removed 'disabled' attribute from button below because
-                    // we are now gated by the robust click handler above.
                     messages.innerHTML = `
                         <div class="dashboard-container">
                             <div class="dashboard-header">
@@ -154,30 +183,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
 
                             <div class="dashboard-toolbar">
-                                <button class="btn btn-secondary dashboard-action-btn" onclick="window.open('/lead_reformatter.html', '_blank')">
+                                <button class="btn btn-secondary dashboard-action-btn" id="dashFormatterBtn">
                                     <i class="fas fa-table"></i> Formatter
                                 </button>
                                 
-                                <button class="btn btn-secondary dashboard-action-btn" onclick="window.openLenderManagementModal()">
+                                <button class="btn btn-secondary dashboard-action-btn" id="dashLenderBtn">
                                     <i class="fas fa-university"></i> Manage Lenders
                                 </button>
                                 
                                 <button class="btn btn-secondary dashboard-action-btn">
                                     <i class="fas fa-cog"></i> Settings
                                 </button>
-                                <button class="btn btn-secondary dashboard-action-btn">
-                                    <i class="fas fa-shield-alt"></i> Admin
-                                </button>
-                            </div>
-
-                            <div class="goal-card">
-                                <div class="goal-header">
-                                    <span class="goal-title">Monthly Funding Goal</span>
-                                    <span class="goal-numbers">$145,000 <span class="goal-subtext">/ $250k</span></span>
-                                </div>
-                                <div class="progress-track">
-                                    <div class="progress-fill w-58"></div>
-                                </div>
                             </div>
 
                             <div class="stats-grid">
@@ -199,23 +215,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                     `;
+
+                    // Attach Listeners in JS (Fixes "undefined function" error)
+                    document.getElementById('dashFormatterBtn').addEventListener('click', () => window.open('/lead_reformatter.html', '_blank'));
+                    document.getElementById('dashLenderBtn').addEventListener('click', () => {
+                        if (typeof window.openLenderManagementModal === 'function') {
+                            window.openLenderManagementModal();
+                        } else {
+                            alert('Lender Management module not loaded.');
+                        }
+                    });
                 }
 
-                // Ensure Right Panel is in Home Mode
-                if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
-                    window.commandCenter.intelligence.toggleView(false);
+                // Handle Stats Loading Safely
+                if (window.commandCenter.stats?.loadStats) {
+                    window.commandCenter.stats.loadStats();
                 } else {
-                    const homePanel = document.getElementById('rightPanelHome');
-                    const intelPanel = document.getElementById('rightPanelIntelligence');
-                    if (homePanel) homePanel.classList.remove('hidden');
-                    if (intelPanel) intelPanel.classList.add('hidden');
+                    // Retry once if stats aren't ready immediately
+                    setTimeout(() => {
+                        window.commandCenter.stats?.loadStats && window.commandCenter.stats.loadStats();
+                    }, 500);
                 }
 
                 if (window.loadMarketNews) window.loadMarketNews();
-                if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
             };
 
-            // 3. NEWS LOADER
+            // 3. NEWS LOADER (XSS Fixed)
             window.loadMarketNews = async () => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
@@ -225,48 +250,60 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="news-header-rich">
                             <span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>
                         </div>
-                        <div class="news-loading"><i class="fas fa-circle-notch fa-spin fa-2x" style="color: #30363d;"></i></div>
+                        <div class="news-loading"><i class="fas fa-circle-notch fa-spin fa-2x"></i></div>
                     </div>`;
 
                 try {
                     const response = await fetch('/api/news');
                     const result = await response.json();
 
-                    const getTime = (d) => {
-                        if (!d) return 'Recent';
-                        const diff = new Date() - new Date(d);
-                        const days = Math.floor(diff/86400000);
-                        const hours = Math.floor(diff/3600000);
-                        if(days > 0) return `${days}d ago`;
-                        if(hours > 0) return `${hours}h ago`;
-                        return 'Just now';
-                    };
-
                     if (result.success && result.data?.length > 0) {
-                        const newsHTML = result.data.map((item) => {
+                        // Clear loading state
+                        container.innerHTML = ''; 
+                        
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'news-feed-container';
+                        
+                        const header = document.createElement('div');
+                        header.className = 'news-header-rich';
+                        header.innerHTML = `<span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>`;
+                        wrapper.appendChild(header);
+
+                        result.data.forEach(item => {
+                            const card = document.createElement('div');
+                            card.className = 'news-card';
+                            card.onclick = () => window.open(item.link, '_blank');
+
+                            const metaTop = document.createElement('div');
+                            metaTop.className = 'news-meta-top';
+                            
+                            // Safe Badge
+                            const badge = document.createElement('div');
                             let badgeClass = '';
                             if (item.source === 'deBanked') badgeClass = 'source-debanked';
                             if (item.source === 'Legal/Regs') badgeClass = 'source-legal';
+                            badge.className = `news-source-badge ${badgeClass}`;
+                            badge.innerHTML = `<i class="fas ${item.icon || 'fa-bolt'}"></i>`;
+                            badge.appendChild(document.createTextNode(' ' + item.source)); // Safe text
 
-                            return `
-                            <div class="news-card" onclick="window.open('${item.link}', '_blank')">
-                                <div class="news-meta-top">
-                                    <div class="news-source-badge ${badgeClass}"><i class="fas ${item.icon || 'fa-bolt'}"></i> ${item.source}</div>
-                                    <span class="news-time-badge">${getTime(item.pubDate)}</span>
-                                </div>
-                                <h4 class="news-title">${item.title}</h4>
-                                <div class="news-footer"><span class="read-more-link">Open Source <i class="fas fa-external-link-alt"></i></span></div>
-                            </div>`;
-                        }).join('');
+                            metaTop.appendChild(badge);
+                            card.appendChild(metaTop);
 
-                        container.innerHTML = `
-                            <div class="news-feed-container">
-                                <div class="news-header-rich">
-                                    <span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>
-                                    <span style="font-size: 10px; color: #6e7681;">Updated</span>
-                                </div>
-                                ${newsHTML}
-                            </div>`;
+                            // Safe Title
+                            const title = document.createElement('h4');
+                            title.className = 'news-title';
+                            title.textContent = item.title; // PREVENTS XSS
+                            card.appendChild(title);
+
+                            const footer = document.createElement('div');
+                            footer.className = 'news-footer';
+                            footer.innerHTML = '<span class="read-more-link">Open Source <i class="fas fa-external-link-alt"></i></span>';
+                            card.appendChild(footer);
+
+                            wrapper.appendChild(card);
+                        });
+
+                        container.appendChild(wrapper);
                     } else {
                         container.innerHTML = '<div class="news-feed-container"><div class="empty-state"><p>Wire is silent.</p></div></div>';
                     }
@@ -276,20 +313,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // 4. OTHER HELPERS
+            // 4. OTHER HELPERS (Optimized)
             window.toggleDeleteMode = () => {
                 const list = document.getElementById('conversationsList');
-                const btn = document.getElementById('toggleDeleteModeBtn');
                 if(!list) return;
+                
                 const isDeleteMode = list.classList.toggle('delete-mode');
-                const confirmBtn = document.getElementById('deleteSelectedBtn');
-
-                if(btn) btn.classList.toggle('active-danger', isDeleteMode);
-                if(confirmBtn) confirmBtn.classList.toggle('hidden', !isDeleteMode);
+                document.getElementById('toggleDeleteModeBtn')?.classList.toggle('active-danger', isDeleteMode);
+                document.getElementById('deleteSelectedBtn')?.classList.toggle('hidden', !isDeleteMode);
 
                 if(!isDeleteMode) {
                     document.querySelectorAll('.delete-checkbox').forEach(cb => cb.checked = false);
-                    window.commandCenter.conversationUI?.selectedForDeletion.clear();
+                    window.commandCenter.conversationUI?.selectedForDeletion?.clear();
                 }
             };
 
