@@ -284,8 +284,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const renderNews = (data) => {
                 const container = document.getElementById('newsFeedContainer');
                 if (!container) return;
+
                 const wrapper = document.createElement('div');
                 wrapper.className = 'news-feed-container';
+
                 const header = document.createElement('div');
                 header.className = 'news-header-rich';
                 header.innerHTML = `<span class="news-header-title"><div class="live-indicator"></div> Market Pulse</span>`;
@@ -298,13 +300,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const metaTop = document.createElement('div');
                     metaTop.className = 'news-meta-top';
+
                     const badge = document.createElement('div');
-                    let badgeClass = '';
-                    if (item.source === 'deBanked') badgeClass = 'source-debanked';
-                    if (item.source === 'Legal/Regs') badgeClass = 'source-legal';
+
+                    // ✅ FIX: Robust Class Mapping to match server-new.js tags
+                    let badgeClass = 'source-industry'; // Default
+                    const src = (item.source || '').toLowerCase();
+
+                    if (src.includes('debanked')) badgeClass = 'source-debanked'; // Green
+                    else if (src.includes('legal') || src.includes('ftc')) badgeClass = 'source-legal'; // Red/Warning
+                    else if (src.includes('lendsaas')) badgeClass = 'source-lendsaas'; // Blue (matches UI)
+
                     badge.className = `news-source-badge ${badgeClass}`;
-                    badge.innerHTML = `<i class="fas ${item.icon || 'fa-bolt'}"></i>`;
-                    badge.appendChild(document.createTextNode(' ' + item.source));
+
+                    // Icon mapping fallback
+                    const iconClass = item.icon || 'fa-bolt';
+                    badge.innerHTML = `<i class="fas ${iconClass}"></i> ${item.source}`;
 
                     metaTop.appendChild(badge);
                     card.appendChild(metaTop);
@@ -321,6 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     wrapper.appendChild(card);
                 });
+
                 container.innerHTML = '';
                 container.appendChild(wrapper);
             };
