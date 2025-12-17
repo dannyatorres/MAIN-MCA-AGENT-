@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // ✅ HEADER RENDERER FIX: Owner Name Primary
+            // ✅ HEADER RENDERER FIX: Owner Name Primary + Call Safe Guard
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 window.setViewMode('chat');
 
@@ -99,15 +99,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // If owner is missing but business is there, don't show "Unknown", just handle gracefully
                 if (!(ownerName || '').trim() && businessName) {
-                    displayOwner = businessName; // Fallback to business name in big text
-                    displayBusiness = 'Business Account'; // Secondary text
+                    displayOwner = businessName;
+                    displayBusiness = 'Business Account';
                 }
+
+                // --- 🛡️ FIX: CALL PROTECTION ---
+                // If the call modal is OPEN and we are looking at the same person,
+                // DO NOT redraw the HTML. This prevents the call box from disappearing.
+                const existingCallBar = document.getElementById('callBar');
+                const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
+                const currentTitle = header.querySelector('.chat-business-title')?.textContent;
+
+                // If call is active and names match, stop here. UI is already good.
+                if (isCallActive && currentTitle === displayOwner) {
+                    console.log('🛡️ [DEBUG] Skipping header redraw to preserve active call.');
+                    return;
+                }
+                // ------------------------------
 
                 const initials = displayOwner.substring(0, 2).toUpperCase();
 
                 // 1. RENDER HEADER
-                // .chat-business-title = BIG (Used for Owner Name)
-                // .chat-row-secondary = SMALL (Used for Business Name)
                 header.innerHTML = `
                     <div class="chat-header-rich">
                         <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard">
@@ -159,7 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!window.callManager) return alert("Calling system failed to load.");
 
                         const modal = document.getElementById('callBar');
-                        modal.classList.remove('hidden'); // Ensure it becomes visible
+                        modal.classList.remove('hidden');
                         modal.style.top = '15%';
                         modal.style.left = '50%';
                         modal.style.transform = 'translateX(-50%)';

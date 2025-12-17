@@ -373,29 +373,47 @@ class ConversationCore {
 
     updateConversationPreview(conversationId, message) {
         const conv = this.conversations.get(conversationId);
+
+        // 🛡️ FIX: If it's a new lead (not in list), DON'T refresh the whole app.
         if (!conv) {
-            // New conversation? Refresh list.
-            this.refreshData();
+            console.log('New lead detected. Fetching quietly...');
+            // Instead of refreshData(), we just try to load the latest page
+            // This prevents the whole sidebar from flashing/disappearing
+            this.loadConversations(false);
             return;
         }
 
         // Update local data
         conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
         conv.last_activity = new Date().toISOString();
+        conv.unread_count = (conv.unread_count || 0) + 1; // Increment badge
         this.conversations.set(conversationId, conv);
 
-        // If we are just sorting, re-render is safer and fast enough for single updates
-        // But for performance, we can just move the DOM node to top
+        // Update unread map
+        this.unreadMessages.set(conversationId, conv.unread_count);
+
+        // DOM Update
         const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
         const list = document.getElementById('conversationsList');
-        
+
         if (item && list) {
             // Update Text
             item.querySelector('.message-preview').textContent = conv.last_message;
             item.querySelector('.conversation-time').textContent = 'Just now';
+
+            // Add Badge if needed
+            let badge = item.querySelector('.conversation-badge');
+            if(!badge) {
+                badge = document.createElement('div');
+                badge.className = 'conversation-badge';
+                item.appendChild(badge);
+            }
+            badge.textContent = conv.unread_count;
+
             // Move to top
             list.prepend(item);
         } else {
+            // Only if we absolutely can't find the item, re-render the list
             this.renderConversationsList();
         }
     }
