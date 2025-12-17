@@ -60,19 +60,31 @@ const TOOLS = [
 function getGlobalPrompt() {
     try {
         const promptsDir = path.join(__dirname, '../prompts');
-        const personaPath = path.join(promptsDir, 'persona.md');
-        const strategyPath = path.join(promptsDir, 'strategy_logic.md');
+        
+        // List of strategy files to load (in order)
+        const strategyFiles = [
+            'persona.md',              // Optional: identity/tone
+            'strategy_objectives.md',  // What we're trying to accomplish
+            'strategy_vetting.md',     // How to collect info
+            'strategy_objections.md',  // Handling pushback
+            'strategy_engagement.md'   // Reading the conversation
+        ];
         
         let combinedPrompt = "";
 
-        if (fs.existsSync(personaPath)) {
-            combinedPrompt += fs.readFileSync(personaPath, 'utf8') + "\n\n";
-        } else {
-            combinedPrompt += "You are Dan Torres, an underwriter. Keep texts short.\n\n";
+        for (const filename of strategyFiles) {
+            const filePath = path.join(promptsDir, filename);
+            if (fs.existsSync(filePath)) {
+                combinedPrompt += fs.readFileSync(filePath, 'utf8') + "\n\n---\n\n";
+                console.log(`✅ Loaded: ${filename}`);
+            } else {
+                console.log(`⚠️ Missing: ${filename}`);
+            }
         }
 
-        if (fs.existsSync(strategyPath)) {
-            combinedPrompt += fs.readFileSync(strategyPath, 'utf8');
+        // Fallback if no files found
+        if (!combinedPrompt) {
+            combinedPrompt = "You are Dan Torres, an underwriter at JMS Global. Keep texts short and professional.";
         }
 
         return combinedPrompt;
