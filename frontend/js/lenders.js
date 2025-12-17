@@ -1803,6 +1803,9 @@ Best regards`;
                     lender['email_address'] ||
                     null;
 
+                // ✅ FIX: Find CC Email
+                const foundCC = lender.cc_email || lender.cc || null;
+
                 if (!foundEmail) {
                     console.error(`⚠️ WARNING: No email found for ${lenderName}. Available keys:`, Object.keys(lender));
                 }
@@ -1810,7 +1813,8 @@ Best regards`;
                 return {
                     name: lenderName,
                     lender_name: lenderName,
-                    email: foundEmail ? foundEmail.trim() : null
+                    email: foundEmail ? foundEmail.trim() : null,
+                    cc_email: foundCC ? foundCC.trim() : null // <--- ADD THIS LINE
                 };
             });
 

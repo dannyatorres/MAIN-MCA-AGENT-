@@ -235,46 +235,58 @@ class EmailService {
         const documentsHtml = documents.length > 0
             ? `
                 <div class="docs-section">
-                    <h3>📎 Attached Documents</h3>
+                    <h3>Attached Documents:</h3>
                     <ul>
                         ${documents.map(doc => `<li>${doc.filename || doc.name || 'Document'}</li>`).join('')}
                     </ul>
                 </div>`
             : '';
 
+        // ✅ RESTORED: Classic Blue Header & "Business Information" Section
         return `
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>New Deal Submission</title>
+                <title>New MCA Application Submission</title>
                 <style>
-                    body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
-                    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-                    .header { background: #1a1a1a; color: white; padding: 25px; text-align: center; }
-                    .header h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 1px; }
-                    .content { padding: 30px; }
-                    /* Cleaner box without the redundant "Business Info" header */
-                    .business-info { background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; border: 1px solid #e9ecef; }
-                    .info-row { display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-                    .info-row:last-child { border-bottom: none; margin-bottom: 0; }
-                    .label { font-weight: 600; color: #555; font-size: 14px; }
-                    .value { font-weight: 500; color: #000; font-size: 14px; }
-                    .docs-section { margin-top: 25px; padding-top: 15px; border-top: 2px dashed #eee; }
-                    .footer { background: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d; }
+                    body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f9f9f9; margin: 0; padding: 0; }
+                    .container { max-width: 650px; margin: 20px auto; background: #ffffff; overflow: hidden; border: 1px solid #ddd; }
+                    /* Classic Dark Blue Header */
+                    .header { background: #2c3e50; color: white; padding: 30px; text-align: center; }
+                    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+                    .content { padding: 40px 30px; }
+
+                    /* The Gray Box from your screenshot */
+                    .business-info-box { background: #f8f9fa; padding: 25px; border-radius: 4px; margin-top: 10px; margin-bottom: 25px; }
+
+                    .info-row { margin-bottom: 10px; }
+                    .label { font-weight: 700; color: #2c3e50; font-size: 15px; margin-right: 5px; }
+                    .value { font-weight: 400; color: #333; font-size: 15px; }
+
+                    .section-title { font-size: 20px; font-weight: 700; color: #2c3e50; margin-bottom: 15px; margin-top: 0; }
+
+                    .docs-section { margin-top: 30px; }
+                    .docs-section h3 { font-size: 18px; color: #2c3e50; margin-bottom: 10px; }
+                    .docs-section ul { padding-left: 20px; }
+                    .docs-section li { margin-bottom: 5px; color: #555; }
+
+                    .footer { padding: 20px; text-align: left; font-size: 14px; color: #333; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>JMS GLOBAL</h1>
+                        <h1>New MCA Application Submission</h1>
                     </div>
 
                     <div class="content">
-                        <p><strong>New Submission:</strong></p>
-                        <p>Please review the details below for a new opportunity.</p>
+                        <p>Dear Lender,</p>
+                        <p>We have a new Merchant Cash Advance application that matches your lending criteria. Please find the business details below:</p>
 
-                        <div class="business-info">
+                        <h2 class="section-title">Business Information</h2>
+
+                        <div class="business-info-box">
                             ${renderRow('Business Name', businessData.businessName)}
                             ${renderRow('Industry', businessData.industry)}
                             ${renderRow('State', businessData.state)}
@@ -287,14 +299,10 @@ class EmailService {
 
                         ${documentsHtml}
 
-                        <p>Let us know if you can provide an offer on this file.</p>
+                        <p>This application has been pre-qualified based on your lending criteria. Please review the attached documentation and let us know if you would like to proceed with an offer.</p>
 
                         <p>Best regards,<br>
-                        <strong>JMS GLOBAL Team</strong></p>
-                    </div>
-
-                    <div class="footer">
-                        <p>Sent via JMS GLOBAL Systems</p>
+                        <strong>MCA Command Center</strong></p>
                     </div>
                 </div>
             </body>
