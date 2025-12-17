@@ -150,8 +150,15 @@ class ConversationCore {
         // Reset UI
         document.querySelectorAll('.tab-btn[data-tab="ai-assistant"]').forEach(btn => btn.click());
         document.getElementById('backHomeBtn')?.classList.remove('hidden');
-        document.getElementById('messageInputContainer')?.classList.remove('hidden');
         document.getElementById('conversationActions')?.classList.remove('hidden');
+        
+        // ✅ HIDE INPUT INITIALLY (So it doesn't glitch)
+        const inputContainer = document.getElementById('messageInputContainer');
+        if (inputContainer) inputContainer.classList.add('hidden');
+
+        // Show a loading state in the message area
+        const msgContainer = document.getElementById('messagesContainer');
+        if (msgContainer) msgContainer.innerHTML = '<div class="loading-spinner"></div>';
 
         // Fetch & Render Details
         try {
@@ -169,6 +176,17 @@ class ConversationCore {
             if (this.parent.documents) promises.push(this.parent.documents.loadDocuments());
             
             await Promise.allSettled(promises);
+
+            // ✅ NOW show the input (Smooth reveal)
+            if (inputContainer) {
+                inputContainer.classList.remove('hidden');
+                // Optional: Fade in effect
+                inputContainer.style.opacity = '0';
+                setTimeout(() => {
+                    inputContainer.style.transition = 'opacity 0.2s ease';
+                    inputContainer.style.opacity = '1';
+                }, 50);
+            }
 
         } catch (error) {
             console.error('Error selecting conversation:', error);

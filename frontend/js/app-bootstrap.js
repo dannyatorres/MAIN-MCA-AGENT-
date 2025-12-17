@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const actions = document.getElementById('conversationActions');
 
                 if (centerPanel) centerPanel.classList.remove('dashboard-mode');
-                if (inputs) inputs.classList.remove('hidden');
+                // (Input visibility is now handled by conversation-core.js after data loads)
                 if (actions) actions.classList.remove('hidden');
 
                 if (!header) return;
