@@ -2,8 +2,18 @@
 // HANDLES: Global Lender Management (CRUD Operations)
 
 class LenderAdmin {
-    constructor(parent) {
-        this.parent = parent; // Access to commandCenter (apiCall, utils)
+    constructor() {
+        // WE REMOVED "parent" from here. 
+        // We will grab the live system dynamically to prevent stale references.
+    }
+
+    // --- HELPER: Get Live System ---
+    get system() {
+        if (window.commandCenter && window.commandCenter.apiCall) {
+            return window.commandCenter;
+        }
+        console.error("❌ LenderAdmin: Command Center API is missing or not ready.");
+        throw new Error("System not ready");
     }
 
     // --- Entry Point ---
@@ -63,16 +73,28 @@ class LenderAdmin {
     // --- CRUD Operations ---
 
     async loadLendersList() {
-        try {
-            const container = document.getElementById('lendersTableContainer');
-            if (container) container.innerHTML = '<div class="loading-state">Loading...</div>';
+        const container = document.getElementById('lendersTableContainer');
+        if (container) container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Loading Network...</div>';
 
-            const lenders = await this.parent.apiCall(`/api/lenders`);
+        try {
+            // ✅ THE FIX: Use "this.system" (dynamic) instead of "this.parent" (stale)
+            // We also add a timeout so it can't spin forever
+            const apiPromise = this.system.apiCall(`/api/lenders`);
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 5000));
+
+            const lenders = await Promise.race([apiPromise, timeoutPromise]);
+            
             this.displayLendersList(lenders);
+
         } catch (error) {
             console.error('Error loading lenders:', error);
-            const container = document.getElementById('lendersTableContainer');
-            if (container) container.innerHTML = '<div class="error-state">Failed to load lenders</div>';
+            if (container) {
+                container.innerHTML = `
+                    <div class="error-state" style="text-align:center; padding:20px;">
+                        <p>⚠️ Failed to load lenders.</p>
+                        <button class="btn btn-secondary" onclick="window.commandCenter.lenderAdmin.loadLendersList()">Try Again</button>
+                    </div>`;
+            }
         }
     }
 
@@ -87,6 +109,7 @@ class LenderAdmin {
             return;
         }
 
+        // Sort alphabetically
         const sorted = [...lenders].sort((a, b) => a.name.localeCompare(b.name));
 
         container.innerHTML = `
@@ -146,7 +169,7 @@ class LenderAdmin {
 
         if (!name || !email) return alert('Name and Email required');
 
-        const result = await this.parent.apiCall('/api/lenders', {
+        const result = await this.system.apiCall('/api/lenders', {
             method: 'POST',
             body: JSON.stringify({ name, email, min_amount: min, max_amount: max })
         });
@@ -159,7 +182,7 @@ class LenderAdmin {
 
     async deleteLender(id, name) {
         if (!confirm(`Delete ${name}?`)) return;
-        await this.parent.apiCall(`/api/lenders/${id}`, { method: 'DELETE' });
+        await this.system.apiCall(`/api/lenders/${id}`, { method: 'DELETE' });
         this.loadLendersList();
     }
     
@@ -167,8 +190,7 @@ class LenderAdmin {
 
     async editLender(lenderId) {
         try {
-            // 1. Fetch latest data
-            const result = await this.parent.apiCall(`/api/lenders/${lenderId}`);
+            const result = await this.system.apiCall(`/api/lenders/${lenderId}`);
             if (result.success && result.lender) {
                 this.showEditModal(result.lender);
             } else {
@@ -181,15 +203,12 @@ class LenderAdmin {
     }
 
     showEditModal(lender) {
-        // Remove existing modal if open
         const existing = document.getElementById('editLenderModal');
         if (existing) existing.remove();
 
-        // Format arrays for display (["A", "B"] -> "A, B")
         const industriesStr = Array.isArray(lender.industries) ? lender.industries.join(', ') : '';
         const statesStr = Array.isArray(lender.states) ? lender.states.join(', ') : '';
 
-        // Create Modal HTML
         const modalHtml = `
             <div id="editLenderModal" class="modal" style="display: flex;">
                 <div class="modal-content">
@@ -246,12 +265,10 @@ class LenderAdmin {
                 </div>
             </div>
         `;
-
         document.body.insertAdjacentHTML('beforeend', modalHtml);
     }
 
     async updateLender(lenderId) {
-        // 1. Gather Data
         const name = document.getElementById('editLenderName').value.trim();
         const email = document.getElementById('editLenderEmail').value.trim();
         
@@ -273,22 +290,14 @@ class LenderAdmin {
         };
 
         try {
-            // 2. Send API Request
-            const result = await this.parent.apiCall(`/api/lenders/${lenderId}`, {
+            const result = await this.system.apiCall(`/api/lenders/${lenderId}`, {
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
 
-            // 3. Handle Result
             if (result.success || result.id) {
-                // Success!
                 document.getElementById('editLenderModal').remove();
-                this.loadLendersList(); // Refresh the table
-                
-                // Optional: Show notification if you have utils
-                if (this.parent.utils) {
-                    this.parent.utils.showNotification('Lender updated successfully', 'success');
-                }
+                this.loadLendersList();
             } else {
                 throw new Error(result.error || 'Update failed');
             }
@@ -299,26 +308,19 @@ class LenderAdmin {
     }
 }
 
-// =============================================================================
-// CRITICAL: Expose to Window so app-bootstrap.js can see it!
-// =============================================================================
+// --- GLOBAL EXPORT & OPENER ---
+// This guarantees the button works globally and instantiates with a LIVE connection.
 window.LenderAdmin = LenderAdmin;
 
-// --- GLOBAL OPENER (Direct Call from Dashboard Button) ---
 window.openLenderManagementModal = function() {
-    console.log("🏦 Opening Lender Admin via Direct Global...");
+    console.log("🏦 Opening Lender Admin...");
 
-    // 1. Check if Command Center exists
-    if (!window.commandCenter) {
-        return alert("System initializing... try again in a second.");
-    }
-
-    // 2. Initialize LenderAdmin if missing
+    // 1. Ensure global admin exists
     if (!window.commandCenter.lenderAdmin) {
-        console.log("⚙️ Lazy-loading LenderAdmin...");
-        window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
+        // We do NOT pass window.commandCenter to the constructor anymore
+        window.commandCenter.lenderAdmin = new LenderAdmin();
     }
 
-    // 3. Open
+    // 2. Open
     window.commandCenter.lenderAdmin.openManagementModal();
 };
