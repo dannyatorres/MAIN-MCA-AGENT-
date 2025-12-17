@@ -66,11 +66,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const header = document.querySelector('.center-panel .panel-header');
                 if (!header) return;
 
+                // Fallbacks if data is missing
                 const displayTitle = businessName || 'Unknown Business';
                 const displayOwner = ownerName || 'No Owner';
                 const initials = displayTitle.substring(0, 2).toUpperCase();
 
-                // 1. RENDER HEADER (Clean, no hidden bars)
+                // 1. RENDER HEADER (Clean standard header)
                 header.innerHTML = `
                     <div class="chat-header-rich">
                         <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard">
@@ -89,16 +90,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </button>
                         </div>
                     </div>
+                `;
 
-                    <div id="callBar" class="call-bar hidden">
+                // Inject modal into body so it floats above everything
+                let callBar = document.getElementById('callBar');
+                if (!callBar) {
+                    callBar = document.createElement('div');
+                    callBar.id = 'callBar';
+                    callBar.className = 'call-bar hidden';
+                    callBar.innerHTML = `
                         <div class="call-modal-content">
                             <div class="call-avatar-pulse">
                                 <i class="fas fa-phone"></i>
                             </div>
                             
                             <h3 class="call-contact-name">${displayTitle}</h3>
-                            <p class="call-contact-subtext" style="color: #9ca3af; margin: 0 0 16px 0; font-size: 14px;">
-                                <i class="fas fa-user" style="font-size: 12px; margin-right: 5px;"></i> ${displayOwner}
+                            
+                            <p class="call-contact-subtext">
+                                <i class="fas fa-user"></i> ${displayOwner}
                             </p>
 
                             <div class="call-timer" id="callTimer">00:00</div>
@@ -112,8 +121,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </button>
                             </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                    document.body.appendChild(callBar);
+                } else {
+                    // Update modal text if it already exists
+                    const nameEl = callBar.querySelector('.call-contact-name');
+                    const ownerEl = callBar.querySelector('.call-contact-subtext');
+                    if (nameEl) nameEl.textContent = displayTitle;
+                    if (ownerEl) ownerEl.innerHTML = `<i class="fas fa-user"></i> ${displayOwner}`;
+                }
 
                 // 2. ATTACH LISTENERS
                 document.getElementById('backHomeBtn').addEventListener('click', window.loadDashboard);
