@@ -86,6 +86,99 @@ app.get('/api/fix/lender-update', async (req, res) => {
 });
 // =========================================================
 
+// =========================================================
+// 🚀 BULK LENDER IMPORT
+// URL: https://mcagent.io/api/fix/bulk-import-lenders
+// =========================================================
+app.get('/api/fix/bulk-import-lenders', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🚀 Bulk importing lenders...');
+
+        const lenders = [
+            { name: 'App Funding', email: 'Subs@appfunding.com', cc_email: 'Peter@appfunding.com,Ben@appfunding.com,david@appfunding.com' },
+            { name: 'BizFund', email: 's.anz@bizfund.com', cc_email: '' },
+            { name: 'Blackbridge Investment Group', email: 'subs@bbigm.com', cc_email: '' },
+            { name: 'Capitalize', email: 'subs@capitalizegroup.com', cc_email: 'isaac@capitalizegroup.com' },
+            { name: 'Capybara Capital', email: 'Deals@capybarausa.com', cc_email: 'jc@capybarausa.com,marcus@capybarausa.com' },
+            { name: 'Credia Capital', email: 'submissions@crediacapital.com', cc_email: '' },
+            { name: 'CFG', email: 'ISOEmail@CFGMS.Com', cc_email: 'aisakov@cfgms.com' },
+            { name: 'Diamond Advances', email: 'Newdeals@diamondadvances.com', cc_email: 'Justin@diamondadvances.com' },
+            { name: 'eFinancial Tree', email: 'submissions@efinancialtree.com', cc_email: 'craig@efinancialtree.com' },
+            { name: 'Elevate Funding', email: 'newdeals@elevatefunding.com', cc_email: '' },
+            { name: 'Emmy Capital Group', email: 'processing@emmycapitalgroup.com', cc_email: 'john@emmycapitalgroup.com,william@emmycapitalgroup.com,uw@emmycapitalgroup.com' },
+            { name: 'Essential Funding Group', email: 'submissions@myessentialfunding.com', cc_email: 'rkim@myessentialfunding.com' },
+            { name: 'Fintap', email: 'Submissions@FinTap.com', cc_email: 'ASilverstein@FinTap.com' },
+            { name: 'Fox Business Fund', email: 'underwriting@foxbusinessfunding.com', cc_email: 'goldie@foxbusinessfunding.com' },
+            { name: 'Fundkite', email: 'submissions@fundkite.com', cc_email: '' },
+            { name: 'Fundworks', email: 'newdeals@thefundworks.com', cc_email: 'jlee@thefundworks.com' },
+            { name: 'Instagreen Capital', email: 'isabel@instagreencapital.com', cc_email: 'submit@instagreencapital.com' },
+            { name: 'Kalamata Capital Group', email: 'deals@kalamatacapitalgroup.com', cc_email: 'amy.erlich@kalamatacapitalgroup.com' },
+            { name: 'Lendbug', email: 'iso@lendbug.com', cc_email: 'newdeals@lendbug.com' },
+            { name: 'Lendini', email: 'submissions@lendini.com', cc_email: 'gianna.simmers@fundingmetrics.com' },
+            { name: 'Merchant Marketplace', email: 'deals@merchantmarketplace.com', cc_email: 'Paul@merchantmarketplace.com' },
+            { name: 'Mercury Funding', email: 'sara@mercuryfundingllc.com', cc_email: 'subs@mercuryfundingllc.com' },
+            { name: 'Mint Funding', email: 'rafael@mintfunding.com', cc_email: 'deals@mintfunding.com' },
+            { name: 'Mr Advance', email: 'avi@mradvancellc.com', cc_email: '' },
+            { name: 'Nationwide Capital Solutions', email: 'tony@nationwidecapitalsolution.com', cc_email: '' },
+            { name: 'Newport Business Capital', email: 'submissions@newportbc.com', cc_email: '' },
+            { name: 'Pinnacle Business Funding', email: 'submissions@pbffunding.com', cc_email: 'brandon@pbffunding.com' },
+            { name: 'PDM Capital', email: 'Submissions@pdmcapital.com', cc_email: '' },
+            { name: 'Simply Funding', email: 'Submissions@simplyfunding.com', cc_email: '' },
+            { name: 'SWIFT FUNDING SOURCE', email: 'submissions@swiftfundingsource.com', cc_email: 'mf@swiftfundingsource.com' },
+            { name: 'The Smarter Merchant', email: 'submissions@thesmartermerchant.com', cc_email: 'ari@thesmartermerchant.com' },
+            { name: 'Trust Capital Funding', email: 'newdeals@trustcapitalfunding.com', cc_email: '' },
+            { name: 'UFS', email: 'autosubs@ufsfunding.com', cc_email: 'ari@ufsfunding.com,subs@ufsfunding.com' },
+            { name: 'UFS (Texas)', email: 'ari@trupathlend.com', cc_email: '' },
+            { name: 'Velocity Capital Group', email: 'subs@velocitycg.com', cc_email: 'Shensky@velocitycg.com' },
+            { name: 'Vital Cap', email: 'submissions@vitalcapfund.com', cc_email: 'mary.sheprow@vitalcapfund.com' },
+            { name: 'Wall Funding', email: 'iso@wallfunding.com', cc_email: 'stephen@wallfunding.com' },
+            { name: 'Westwood Funding', email: 'subs@masoncapitalfp.com', cc_email: '' }
+        ];
+
+        let inserted = 0;
+        let skipped = 0;
+        const errors = [];
+
+        for (const lender of lenders) {
+            try {
+                // Check if lender already exists
+                const existing = await db.query(
+                    'SELECT id FROM lenders WHERE LOWER(name) = LOWER($1) OR LOWER(email) = LOWER($2)',
+                    [lender.name, lender.email]
+                );
+
+                if (existing.rows.length > 0) {
+                    skipped++;
+                    continue;
+                }
+
+                // Insert new lender
+                await db.query(
+                    'INSERT INTO lenders (name, email, cc_email, created_at) VALUES ($1, $2, $3, NOW())',
+                    [lender.name, lender.email, lender.cc_email || null]
+                );
+                inserted++;
+            } catch (err) {
+                errors.push({ name: lender.name, error: err.message });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Bulk import complete: ${inserted} inserted, ${skipped} skipped`,
+            inserted,
+            skipped,
+            errors: errors.length > 0 ? errors : undefined
+        });
+
+    } catch (error) {
+        console.error('Bulk import failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
 // --- TRUST PROXY ---
 app.set('trust proxy', 1);
 
