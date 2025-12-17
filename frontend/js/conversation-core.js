@@ -163,6 +163,10 @@ class ConversationCore {
         // Fetch & Render Details
         try {
             const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
+            // ✅ CRITICAL FIX: Race Condition Guard
+            // If the user clicked "Back" or another chat while this was loading, stop immediately.
+            if (this.currentConversationId !== conversationId) return; 
+
             this.selectedConversation = data.conversation || data;
             this.conversations.set(conversationId, this.selectedConversation);
             
@@ -359,6 +363,14 @@ class ConversationCore {
         const cb = document.querySelector(`.delete-checkbox[data-conversation-id="${id}"]`);
         if(cb) cb.checked = this.selectedForDeletion.has(id);
         
+        this.updateDeleteButtonVisibility();
+    }
+
+    // ✅ FIX: Public method for safe cleanup used by app-bootstrap
+    clearDeleteSelection() {
+        this.selectedForDeletion.clear();
+        // Visually uncheck boxes without reloading the whole list
+        document.querySelectorAll('.delete-checkbox').forEach(cb => cb.checked = false);
         this.updateDeleteButtonVisibility();
     }
 

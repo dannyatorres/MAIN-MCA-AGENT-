@@ -36,8 +36,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- GLOBAL FUNCTIONS ---
 
+            // ✅ FIX: Centralize View Logic (Prevents inputs getting stuck on Dashboard)
+            window.setViewMode = (mode) => {
+                const centerPanel = document.querySelector('.center-panel');
+                const actions = document.getElementById('conversationActions');
+                const inputs = document.getElementById('messageInputContainer');
+                const backBtn = document.getElementById('backHomeBtn');
+                const header = centerPanel ? centerPanel.querySelector('.panel-header') : null;
+
+                if (mode === 'dashboard') {
+                    if (centerPanel) centerPanel.classList.add('dashboard-mode');
+                    if (actions) actions.classList.add('hidden');
+                    if (inputs) inputs.classList.add('hidden'); // Force hide inputs
+                    if (backBtn) backBtn.classList.add('hidden');
+                    if (header) header.innerHTML = ''; 
+                } else {
+                    if (centerPanel) centerPanel.classList.remove('dashboard-mode');
+                    if (actions) actions.classList.remove('hidden');
+                    if (backBtn) backBtn.classList.remove('hidden');
+                    // Note: We do NOT unhide inputs here. conversation-core does that after data loads.
+                }
+            };
+
             // 1. HEADER RENDERER
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
+                // ✅ FIX: Switch to chat mode immediately
+                window.setViewMode('chat');
+
                 const header = document.querySelector('.center-panel .panel-header');
                 const centerPanel = document.querySelector('.center-panel');
                 
@@ -152,17 +177,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
                 }
 
-                const centerPanel = document.querySelector('.center-panel');
-                const centerHeader = centerPanel ? centerPanel.querySelector('.panel-header') : null;
-                const messages = document.getElementById('messagesContainer');
-                const inputs = document.getElementById('messageInputContainer');
-                const actions = document.getElementById('conversationActions');
+                // ✅ FIX: Use central switcher to guarantee inputs are hidden
+                window.setViewMode('dashboard');
 
-                // UI Mode Switching
-                if (centerPanel) centerPanel.classList.add('dashboard-mode');
-                if (centerHeader) centerHeader.innerHTML = ''; // Hide chat header
-                if (inputs) inputs.classList.add('hidden');
-                if (actions) actions.classList.add('hidden');
+                const messages = document.getElementById('messagesContainer');
 
                 // Render Dashboard
                 if (messages) {
@@ -312,16 +330,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const isDeleteMode = list.classList.toggle('delete-mode');
                 
-                // Toggle UI states
                 document.getElementById('toggleDeleteModeBtn')?.classList.toggle('active-danger', isDeleteMode);
                 document.getElementById('deleteSelectedBtn')?.classList.toggle('hidden', !isDeleteMode);
 
-                // If turning OFF, clear all selections
-                if (!isDeleteMode) {
-                    document.querySelectorAll('.delete-checkbox').forEach(cb => cb.checked = false);
-                    // Safely clear the set in ConversationUI
-                    if (window.commandCenter.conversationUI && window.commandCenter.conversationUI.selectedForDeletion) {
-                        window.commandCenter.conversationUI.selectedForDeletion.clear();
+                // ✅ FIX: Safe Decoupling - Call a method on the class instead of touching raw data
+                if (!isDeleteMode && window.commandCenter.conversationUI) {
+                    // We will add this method to ConversationCore below
+                    if (typeof window.commandCenter.conversationUI.clearDeleteSelection === 'function') {
+                        window.commandCenter.conversationUI.clearDeleteSelection();
                     }
                 }
             };
