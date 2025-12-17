@@ -70,6 +70,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
             }
 
+            // ✅ PERMANENT DASHBOARD BUTTON LISTENERS
+            // Since the buttons are now hardcoded in HTML, we attach them once. Forever.
+            const lendBtn = document.getElementById('dashLenderBtn');
+            if (lendBtn) {
+                lendBtn.addEventListener('click', () => {
+                    console.log("🏦 Opening Lender Manager...");
+                    // Check both common ways this function might be stored
+                    if (typeof window.openLenderManagementModal === 'function') {
+                        window.openLenderManagementModal();
+                    } else if (window.commandCenter.lenderAdmin && typeof window.commandCenter.lenderAdmin.openModal === 'function') {
+                        // Fallback if it's stored inside the class instance
+                        window.commandCenter.lenderAdmin.openModal();
+                    } else {
+                        alert('Lender Management module is loading... please wait.');
+                    }
+                });
+            }
+
+            const fmtBtn = document.getElementById('dashFormatterBtn');
+            if (fmtBtn) {
+                fmtBtn.addEventListener('click', () => window.open('/lead_reformatter.html', '_blank'));
+            }
+
             // --- GLOBAL FUNCTIONS ---
 
             // 1. The Clean View Switcher
@@ -206,16 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
                 }
 
-                // C. Re-bind Dashboard Buttons (Since they are permanent now, we just ensure listeners exist)
-                const fmtBtn = document.getElementById('dashFormatterBtn');
-                if (fmtBtn) fmtBtn.onclick = () => window.open('/lead_reformatter.html', '_blank');
-
-                const lendBtn = document.getElementById('dashLenderBtn');
-                if (lendBtn) lendBtn.onclick = () => {
-                     if (typeof window.openLenderManagementModal === 'function') window.openLenderManagementModal();
-                };
-
-                // D. Hide Side Panels
+                // C. Hide Side Panels
                 if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
                     window.commandCenter.intelligence.toggleView(false);
                 } else {
@@ -223,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('rightPanelIntelligence')?.classList.add('hidden');
                 }
 
-                // E. Load Stats Data
+                // D. Load Stats Data
                 if (window.commandCenter.stats?.loadStats) window.commandCenter.stats.loadStats();
                 if (window.loadMarketNews) window.loadMarketNews();
             };
