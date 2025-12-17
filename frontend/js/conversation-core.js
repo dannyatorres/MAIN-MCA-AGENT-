@@ -156,7 +156,6 @@ class ConversationCore {
     async selectConversation(conversationId) {
         if (this.currentConversationId === conversationId) return;
 
-        // 1. INSTANT SWAP: Update ID immediately so UI knows where we are
         this.currentConversationId = conversationId;
         if (this.parent) this.parent.currentConversationId = conversationId;
 
@@ -164,34 +163,32 @@ class ConversationCore {
         document.querySelectorAll('.tab-btn[data-tab="ai-assistant"]').forEach(btn => btn.click());
         document.getElementById('backHomeBtn')?.classList.remove('hidden');
         document.getElementById('conversationActions')?.classList.remove('hidden');
-        this.updateConversationSelection(); // Highlight the list item instantly
+        this.updateConversationSelection();
 
         const inputContainer = document.getElementById('messageInputContainer');
         const msgContainer = document.getElementById('messagesContainer');
 
-        // 2. SMART CACHE: Do we already have this person's info in memory?
-        // If yes, render the header/details INSTANTLY.
+        // --- FIX 1: STOP HIDING THE INPUT ---
+        // We removed the line that adds 'hidden' to inputContainer.
+        // We just make sure it's visible.
+        if (inputContainer) inputContainer.classList.remove('hidden');
+        // ------------------------------------
+
+        // Check Cache for Header Info
         const cachedConv = this.conversations.get(conversationId);
         if (cachedConv) {
-            console.log(`⚡ [Cache] Rendering details for ${conversationId} immediately`);
             this.selectedConversation = cachedConv;
             this.showConversationDetails();
         } else {
-            // Only show spinner if we have NO data at all
             if (msgContainer) msgContainer.innerHTML = '<div class="loading-spinner"></div>';
         }
 
-        // Hide input initially to prevent "wrong chat" bugs, unless we trust cache? 
-        // Safer to hide briefly until messages load.
-        if (inputContainer) inputContainer.classList.add('hidden');
-
         try {
-            // 3. BACKGROUND FETCH: Get fresh details silently
-            // We start the network request, but the user is already looking at the header info!
+            // Fetch Details & Messages
             const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
-            
-            // 4. PARALLEL LOAD: Start loading messages & tools simultaneously
-            const msgPromise = this.parent.messaging ? 
+
+            // Parallel Loads
+            const msgPromise = this.parent.messaging ?
                 this.parent.messaging.loadConversationMessages(conversationId) : Promise.resolve();
 
             const toolsPromise = Promise.allSettled([
@@ -199,33 +196,21 @@ class ConversationCore {
                 this.parent.documents ? this.parent.documents.loadDocuments() : Promise.resolve()
             ]);
 
-            // 5. CRITICAL: Wait for the fresh conversation details
+            // Update Header with fresh data
             const data = await dataPromise;
-            
-            // Safety Check: Did user switch away while we were loading?
             if (this.currentConversationId !== conversationId) return;
 
-            // Update with fresh data from server (in case status changed)
             this.selectedConversation = data.conversation || data;
             this.conversations.set(conversationId, this.selectedConversation);
-            this.showConversationDetails(); // Re-render with confirmed data
+            this.showConversationDetails();
 
-            // 6. UI UNLOCK: As soon as messages are ready, unlock the input
             await msgPromise;
-            
-            if (inputContainer) {
-                inputContainer.classList.remove('hidden');
-                inputContainer.style.opacity = '0';
-                inputContainer.style.transition = 'opacity 0.2s ease';
-                requestAnimationFrame(() => inputContainer.style.opacity = '1');
-            }
-
-            // 7. Lazy load the heavy tools (AI, Docs)
-            await toolsPromise;
+            // Tools load silently in background
 
         } catch (error) {
             console.error('Error selecting conversation:', error);
-            this.utils.showNotification('Failed to load conversation', 'error');
+            // Even if error, ensure input is visible so user isn't stuck
+            if (inputContainer) inputContainer.classList.remove('hidden');
         }
     }
 
@@ -371,37 +356,31 @@ class ConversationCore {
 
     // --- UPDATES ---
 
+    // --- FIX 2: STOP THE "TEXT GLITCH" REFRESH ---
     updateConversationPreview(conversationId, message) {
         const conv = this.conversations.get(conversationId);
 
-        // 🛡️ FIX: If it's a new lead (not in list), DON'T refresh the whole app.
+        // If it's a brand new lead not in our list, THEN we reload safely
         if (!conv) {
-            console.log('New lead detected. Fetching quietly...');
-            // Instead of refreshData(), we just try to load the latest page
-            // This prevents the whole sidebar from flashing/disappearing
-            this.loadConversations(false);
-            return;
+             this.loadConversations(false);
+             return;
         }
 
         // Update local data
         conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
         conv.last_activity = new Date().toISOString();
-        conv.unread_count = (conv.unread_count || 0) + 1; // Increment badge
+        conv.unread_count = (conv.unread_count || 0) + 1;
         this.conversations.set(conversationId, conv);
-
-        // Update unread map
         this.unreadMessages.set(conversationId, conv.unread_count);
 
-        // DOM Update
+        // Targeted DOM Update (No flickering)
         const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
         const list = document.getElementById('conversationsList');
 
         if (item && list) {
-            // Update Text
             item.querySelector('.message-preview').textContent = conv.last_message;
             item.querySelector('.conversation-time').textContent = 'Just now';
 
-            // Add Badge if needed
             let badge = item.querySelector('.conversation-badge');
             if(!badge) {
                 badge = document.createElement('div');
@@ -410,10 +389,8 @@ class ConversationCore {
             }
             badge.textContent = conv.unread_count;
 
-            // Move to top
-            list.prepend(item);
+            list.prepend(item); // Move to top
         } else {
-            // Only if we absolutely can't find the item, re-render the list
             this.renderConversationsList();
         }
     }

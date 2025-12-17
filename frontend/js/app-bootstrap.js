@@ -86,40 +86,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            // ✅ HEADER RENDERER FIX: Owner Name Primary + Call Safe Guard
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 window.setViewMode('chat');
 
                 const header = document.querySelector('.center-panel .panel-header');
                 if (!header) return;
 
-                // Priority Logic: Ensure we have strings
                 let displayBusiness = businessName || 'Unknown Business';
                 let displayOwner = (ownerName || '').trim() || 'Business Contact';
 
-                // If owner is missing but business is there, don't show "Unknown", just handle gracefully
                 if (!(ownerName || '').trim() && businessName) {
                     displayOwner = businessName;
                     displayBusiness = 'Business Account';
                 }
 
-                // --- 🛡️ FIX: CALL PROTECTION ---
-                // If the call modal is OPEN and we are looking at the same person,
-                // DO NOT redraw the HTML. This prevents the call box from disappearing.
+                // --- FIX 3: CALL PROTECTION ---
+                // If a call is active and we are looking at the right person,
+                // DO NOT redraw the header. This stops the call box from vanishing.
                 const existingCallBar = document.getElementById('callBar');
                 const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
                 const currentTitle = header.querySelector('.chat-business-title')?.textContent;
 
-                // If call is active and names match, stop here. UI is already good.
                 if (isCallActive && currentTitle === displayOwner) {
-                    console.log('🛡️ [DEBUG] Skipping header redraw to preserve active call.');
-                    return;
+                    return; // Stop here, everything is fine.
                 }
                 // ------------------------------
 
-                const initials = displayOwner.substring(0, 2).toUpperCase();
-
-                // 1. RENDER HEADER
+                // Render Header
                 header.innerHTML = `
                     <div class="chat-header-rich">
                         <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard">
@@ -144,24 +137,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="call-modal-content" id="callModalCard">
                             <div class="drag-handle-icon"><i class="fas fa-grip-lines"></i></div>
                             <div class="call-avatar-pulse"><i class="fas fa-phone"></i></div>
-
                             <h3 class="call-contact-name">${displayOwner}</h3>
-
-                            <p class="call-contact-subtext">
-                                <span class="owner-badge"><i class="fas fa-building"></i> ${displayBusiness}</span>
-                            </p>
-
                             <div class="call-timer" id="callTimer">00:00</div>
-
                             <div class="call-actions-row">
-                                <button class="call-control-btn" id="muteBtn" title="Mute"><i class="fas fa-microphone"></i></button>
-                                <button class="call-control-btn end-call" id="endCallBtn" title="End Call"><i class="fas fa-phone-slash"></i></button>
+                                <button class="call-control-btn" id="muteBtn"><i class="fas fa-microphone"></i></button>
+                                <button class="call-control-btn end-call" id="endCallBtn"><i class="fas fa-phone-slash"></i></button>
                             </div>
                         </div>
                     </div>
                 `;
 
-                // 2. ATTACH LISTENERS
+                // Re-attach listeners
                 document.getElementById('backHomeBtn').addEventListener('click', window.loadDashboard);
 
                 const callBtn = document.getElementById('callBtn');
@@ -169,32 +155,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     callBtn.addEventListener('click', async () => {
                         if (!phoneNumber) return alert('No phone number available.');
                         if (!window.callManager) return alert("Calling system failed to load.");
-
                         const modal = document.getElementById('callBar');
                         modal.classList.remove('hidden');
                         modal.style.top = '15%';
                         modal.style.left = '50%';
                         modal.style.transform = 'translateX(-50%)';
-
                         await window.callManager.startCall(phoneNumber, conversationId);
                     });
                 }
-
                 document.getElementById('endCallBtn')?.addEventListener('click', () => {
                     if (window.callManager) window.callManager.endCall();
                     else document.getElementById('callBar').classList.add('hidden');
                 });
 
-                const muteBtn = document.getElementById('muteBtn');
-                muteBtn?.addEventListener('click', () => {
-                    if (window.callManager) window.callManager.toggleMute();
-                    else {
-                         muteBtn.classList.toggle('muted');
-                         muteBtn.querySelector('i').classList.toggle('fa-microphone-slash');
-                    }
-                });
-
-                // 3. ENABLE DRAGGING
+                // Make draggable
                 makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
             };
 
