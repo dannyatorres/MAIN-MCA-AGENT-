@@ -72,19 +72,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // ✅ PERMANENT DASHBOARD BUTTON LISTENERS
             // Since the buttons are now hardcoded in HTML, we attach them once. Forever.
+
+            // ✅ ROBUST LISTENER: Wait until the click to find the function
             const lendBtn = document.getElementById('dashLenderBtn');
             if (lendBtn) {
-                lendBtn.addEventListener('click', () => {
-                    console.log("🏦 Opening Lender Manager...");
-                    // Check both common ways this function might be stored
+                // Remove any old listeners just in case
+                const newBtn = lendBtn.cloneNode(true);
+                lendBtn.parentNode.replaceChild(newBtn, lendBtn);
+
+                newBtn.addEventListener('click', () => {
+                    console.log("🏦 Attempting to open Lender Manager...");
+
+                    // 1. Try the Global Function (Standard)
                     if (typeof window.openLenderManagementModal === 'function') {
                         window.openLenderManagementModal();
-                    } else if (window.commandCenter.lenderAdmin && typeof window.commandCenter.lenderAdmin.openModal === 'function') {
-                        // Fallback if it's stored inside the class instance
-                        window.commandCenter.lenderAdmin.openModal();
-                    } else {
-                        alert('Lender Management module is loading... please wait.');
+                        return;
                     }
+
+                    // 2. Try the Class Instance (Fallback)
+                    if (window.commandCenter.lenderAdmin && typeof window.commandCenter.lenderAdmin.openModal === 'function') {
+                        window.commandCenter.lenderAdmin.openModal(); // Note: check exact method name in your class
+                        return;
+                    }
+
+                    // 3. If we get here, the script is truly not ready
+                    console.warn("⚠️ LenderAdmin script not loaded yet.");
+                    alert("System is still initializing. Please try again in 2 seconds.");
                 });
             }
 
