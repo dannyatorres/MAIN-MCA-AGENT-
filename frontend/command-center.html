@@ -82,10 +82,18 @@
                             <p>Here is what's happening with your pipeline today.</p>
                         </div>
                         <div class="dashboard-toolbar">
-                            <button class="btn btn-secondary dashboard-action-btn" id="dashFormatterBtn">
+                            <button
+                                class="btn btn-secondary dashboard-action-btn"
+                                id="dashFormatterBtn"
+                                onclick="window.open('/lead_reformatter.html', '_blank')"
+                            >
                                 <i class="fas fa-table"></i> Formatter
                             </button>
-                            <button class="btn btn-secondary dashboard-action-btn" id="dashLenderBtn">
+                            <button
+                                class="btn btn-secondary dashboard-action-btn"
+                                id="dashLenderBtn"
+                                onclick="if(window.openLenderManagementModal) window.openLenderManagementModal(); else alert('System loading...');"
+                            >
                                 <i class="fas fa-university"></i> Manage Lenders
                             </button>
                             <button class="btn btn-secondary dashboard-action-btn">

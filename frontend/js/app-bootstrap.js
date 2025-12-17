@@ -70,41 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.commandCenter.lenderAdmin = new LenderAdmin(window.commandCenter);
             }
 
-            // ✅ PERMANENT DASHBOARD BUTTON LISTENERS
-            // Since the buttons are now hardcoded in HTML, we attach them once. Forever.
-
-            // ✅ ROBUST LISTENER: Wait until the click to find the function
-            const lendBtn = document.getElementById('dashLenderBtn');
-            if (lendBtn) {
-                // Remove any old listeners just in case
-                const newBtn = lendBtn.cloneNode(true);
-                lendBtn.parentNode.replaceChild(newBtn, lendBtn);
-
-                newBtn.addEventListener('click', () => {
-                    console.log("🏦 Attempting to open Lender Manager...");
-
-                    // 1. Try the Global Function (Standard)
-                    if (typeof window.openLenderManagementModal === 'function') {
-                        window.openLenderManagementModal();
-                        return;
-                    }
-
-                    // 2. Try the Class Instance (Fallback)
-                    if (window.commandCenter.lenderAdmin && typeof window.commandCenter.lenderAdmin.openModal === 'function') {
-                        window.commandCenter.lenderAdmin.openModal(); // Note: check exact method name in your class
-                        return;
-                    }
-
-                    // 3. If we get here, the script is truly not ready
-                    console.warn("⚠️ LenderAdmin script not loaded yet.");
-                    alert("System is still initializing. Please try again in 2 seconds.");
-                });
-            }
-
-            const fmtBtn = document.getElementById('dashFormatterBtn');
-            if (fmtBtn) {
-                fmtBtn.addEventListener('click', () => window.open('/lead_reformatter.html', '_blank'));
-            }
 
             // --- GLOBAL FUNCTIONS ---
 
@@ -233,48 +198,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log("🏠 Switching to Dashboard (Rebuilding Controls)");
                 window.setViewMode('dashboard');
 
-                // 1. CLEAR OLD SELECTIONS (Standard cleanup)
+                // CLEAR OLD SELECTIONS (Standard cleanup)
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
+                    window.commandCenter.conversationUI.selectedConversation = null;
                     document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
                 }
-
-                // ============================================================
-                // 🧹 THE FIX: DESTROY & REBUILD "MANAGE LENDERS"
-                // ============================================================
-                const oldBtn = document.getElementById('dashLenderBtn');
-
-                // 1. Create the NEW button from scratch
-                const newBtn = document.createElement('button');
-                newBtn.id = 'dashLenderBtn';
-                newBtn.className = 'btn btn-secondary dashboard-action-btn';
-                newBtn.innerHTML = '<i class="fas fa-university"></i> Manage Lenders';
-
-                // 2. Attach the listener directly to the new fresh element
-                newBtn.onclick = function() {
-                    console.log("force-click: Opening Lender Modal");
-                    if (typeof window.openLenderManagementModal === 'function') {
-                        window.openLenderManagementModal();
-                    } else if (window.commandCenter.lenderAdmin) {
-                        window.commandCenter.lenderAdmin.openManagementModal();
-                    } else {
-                        alert("System loading... try again in 1 second.");
-                    }
-                };
-
-                // 3. Swap them out (or append if missing)
-                if (oldBtn && oldBtn.parentNode) {
-                    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-                } else {
-                    // Fallback: If button is missing entirely, add it to the toolbar
-                    const toolbar = document.querySelector('.dashboard-toolbar');
-                    if (toolbar) toolbar.appendChild(newBtn);
-                }
-                // ============================================================
-
-                // Re-bind Formatter Button (Optional, can do the same logic if needed)
-                const fmtBtn = document.getElementById('dashFormatterBtn');
-                if(fmtBtn) fmtBtn.onclick = () => window.open('/lead_reformatter.html', '_blank');
 
                 // Hide Side Panels
                 if (window.commandCenter.intelligence && typeof window.commandCenter.intelligence.toggleView === 'function') {
