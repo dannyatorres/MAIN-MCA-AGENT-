@@ -172,9 +172,9 @@ class GmailInboxService {
         }
         GmailInboxService.lastFetchTime = now;
 
-        // 2. LOG THE CULPRIT (So we can find the file causing this)
-        console.log('🔍 fetchEmails called by:');
-        console.trace(); // <--- This will print the file path triggering the loop!
+        // 2. LOG THE CULPRIT (Disabled to clean up logs)
+        // console.log('🔍 fetchEmails called by:');
+        // console.trace();
 
         if (this.isFetching) {
             console.warn('⚠️ Fetch already in progress. Skipping.');
