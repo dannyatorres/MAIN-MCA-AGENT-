@@ -1007,3 +1007,50 @@ select.form-input {
     scrollbar-width: thin;
     scrollbar-color: #30363d transparent;
 }
+
+/* ==========================================================================
+   [POLISH] Typography & Modal Sizing Alignment
+   ========================================================================== */
+
+/* 1. Make Headers Look "Professional" (Muted Slate vs Stark White) */
+.submission-col-title,
+.field-label {
+    color: #94a3b8 !important; /* Muted Slate Blue instead of White */
+    font-size: 11px !important;
+    font-weight: 600 !important; /* Slightly less chunky than 700 */
+    letter-spacing: 0.8px !important; /* Wider spacing looks more "pro" */
+    text-transform: uppercase;
+}
+
+/* 2. Style the "Send Emails" button text to be crisp */
+#sendSubmissionsText {
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* 3. Make "Lender Qualification" Modal an EXACT TWIN of "Send to Lenders" */
+#lenderModal .modal-content,
+#lendersInlineModal .modal-content {
+    /* Exact dimensions from the Submission Modal */
+    max-width: 900px !important;
+    width: 90vw !important;
+    height: 85vh !important;
+    max-height: 800px !important;
+    min-height: 600px !important;
+
+    /* Ensure layout flow is identical */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 4. Fix the scroll area inside the Qualification modal to match */
+.lender-form-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #161b22;
+    /* Custom Scrollbar to match */
+    scrollbar-width: thin;
+    scrollbar-color: #30363d transparent;
+}
