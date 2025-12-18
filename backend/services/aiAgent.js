@@ -3,6 +3,7 @@ const { OpenAI } = require('openai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getDatabase } = require('./database');
 const { syncDriveFiles } = require('./driveService');
+const commanderService = require('./commanderService');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -53,6 +54,14 @@ const TOOLS = [
                 required: ["credit_score", "recent_funding"]
             } 
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "generate_offer",
+            description: "Call this when the lead says they want to see the offer, or agrees to move forward. Examples: 'ok let's see it', 'send me the offer', 'what can you do for me'",
+            parameters: { type: "object", properties: {} }
+        }
     }
 ];
 
@@ -100,11 +109,35 @@ async function processLeadWithAI(conversationId, systemInstruction) {
     console.log(`🧠 AI Agent Processing Lead: ${conversationId}`);
 
     try {
-        // 1. GET LEAD DETAILS 
-        const leadRes = await db.query("SELECT first_name, business_name FROM conversations WHERE id = $1", [conversationId]);
+        // 1. GET LEAD DETAILS + STATE
+        const leadRes = await db.query(`
+            SELECT first_name, business_name, state, email,
+                   credit_score, recent_funding
+            FROM conversations
+            WHERE id = $1
+        `, [conversationId]);
         const lead = leadRes.rows[0];
         const nameToUse = lead?.first_name || lead?.business_name || "there";
         const businessName = lead?.business_name || "Unknown Business";
+        const leadState = lead?.state || 'NEW';
+
+        // 1.5 GET COMMANDER'S GAME PLAN (if exists)
+        let gamePlan = null;
+        const strategyRes = await db.query(`
+            SELECT game_plan, lead_grade, strategy_type
+            FROM lead_strategy
+            WHERE conversation_id = $1
+        `, [conversationId]);
+
+        if (strategyRes.rows[0]) {
+            gamePlan = strategyRes.rows[0].game_plan;
+            if (typeof gamePlan === 'string') {
+                gamePlan = JSON.parse(gamePlan);
+            }
+            console.log(`🎖️ Commander Orders Loaded: Grade ${strategyRes.rows[0].lead_grade} | ${strategyRes.rows[0].strategy_type}`);
+        } else {
+            console.log(`📋 No Commander strategy yet - using default prompts`);
+        }
 
         // 2. TEMPLATE MODE (The "Free" Drip Campaign)
         // Checks instructions from index.js and returns text instantly.
@@ -175,8 +208,50 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         
         const history = await db.query(`SELECT direction, content FROM messages WHERE conversation_id = $1 ORDER BY timestamp ASC LIMIT 20`, [conversationId]);
         
-        // Build the Message Chain
-        let messages = [{ role: "system", content: getGlobalPrompt() }];
+        // Build system prompt
+        let systemPrompt = getGlobalPrompt();
+
+        // Inject Commander's orders if available
+        if (gamePlan) {
+            systemPrompt += `\n\n---\n\n## 🎖️ COMMANDER'S ORDERS\n`;
+            systemPrompt += `**Lead Grade:** ${gamePlan.lead_grade}\n`;
+            systemPrompt += `**Strategy:** ${gamePlan.strategy_type}\n\n`;
+            systemPrompt += `**Your Approach:** ${gamePlan.approach}\n\n`;
+
+            if (gamePlan.talking_points && gamePlan.talking_points.length > 0) {
+                systemPrompt += `**Talking Points:**\n`;
+                gamePlan.talking_points.forEach(point => {
+                    systemPrompt += `- ${point}\n`;
+                });
+                systemPrompt += `\n`;
+            }
+
+            if (gamePlan.offer_range) {
+                systemPrompt += `**Offer Range:** $${gamePlan.offer_range.min.toLocaleString()} - $${gamePlan.offer_range.max.toLocaleString()}\n\n`;
+            }
+
+            if (gamePlan.objection_strategy) {
+                systemPrompt += `**If They Push Back:** ${gamePlan.objection_strategy}\n\n`;
+            }
+
+            if (gamePlan.urgency_angle) {
+                systemPrompt += `**Urgency Angle:** ${gamePlan.urgency_angle}\n\n`;
+            }
+
+            if (gamePlan.next_action) {
+                systemPrompt += `**Your Next Move:** ${gamePlan.next_action}\n`;
+            }
+
+            if (gamePlan.stacking_assessment) {
+                systemPrompt += `\n**Stacking Info:** ${gamePlan.stacking_assessment.stacking_notes}\n`;
+            }
+
+            if (gamePlan.lender_notes) {
+                systemPrompt += `**Lender Strategy:** ${gamePlan.lender_notes}\n`;
+            }
+        }
+
+        let messages = [{ role: "system", content: systemPrompt }];
         
         history.rows.forEach(msg => {
             messages.push({ role: msg.direction === 'outbound' ? 'assistant' : 'user', content: msg.content });
@@ -237,6 +312,18 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                         }
                     } else {
                         toolResult = `Analysis pending. Tell user you will email them in 5 mins.`;
+                    }
+                }
+
+                else if (tool.function.name === 'generate_offer') {
+                    console.log(`💰 AI DECISION: Generating formal offer...`);
+                    const offer = await commanderService.generateOffer(conversationId);
+                    if (offer) {
+                        toolResult = `OFFER READY: $${offer.offer_amount.toLocaleString()} at ${offer.factor_rate} factor rate. Term: ${offer.term} ${offer.term_unit}. Payment: $${offer.payment_amount} ${offer.payment_frequency}.
+
+Send this message to the lead: "${offer.pitch_message}"`;
+                    } else {
+                        toolResult = "Offer generation failed. Tell the lead you're finalizing numbers and will text back in a few minutes.";
                     }
                 }
 

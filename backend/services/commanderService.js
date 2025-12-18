@@ -76,17 +76,36 @@ async function analyzeAndStrategize(conversationId) {
             .join('\n');
 
         const prompt = injectVariables(template, {
+            // Financial Data
             monthly_revenue: Math.round(fcs.average_revenue || 0).toLocaleString(),
+            average_deposits: Math.round(fcs.average_deposits || fcs.average_revenue || 0).toLocaleString(),
             daily_balance: Math.round(fcs.average_daily_balance || 0).toLocaleString(),
             negative_days: fcs.total_negative_days || 0,
+            average_negative_days: fcs.average_negative_days || 0,
             deposit_count: fcs.average_deposit_count || 'Unknown',
-            nsf_count: fcs.nsf_count || 0,
-            business_name: lead.business_name || 'Unknown',
+
+            // MCA & Risk Data
+            withholding_percentage: fcs.withholding_percentage || 'Unknown',
+            last_mca_deposit: fcs.last_mca_deposit_date || 'None detected',
+            position_count: fcs.position_count || 'Unknown',
+
+            // Business Info
+            extracted_business_name: fcs.extracted_business_name || lead.business_name || 'Unknown',
+            industry: fcs.industry || 'Unknown',
+            state: fcs.state || 'Unknown',
+            time_in_business: fcs.time_in_business_text || 'Unknown',
+
+            // Lead Info
             first_name: lead.first_name || '',
             last_name: lead.last_name || '',
             credit_score: lead.credit_score || 'Unknown',
             recent_funding: lead.recent_funding || 'None mentioned',
             requested_amount: lead.requested_amount || 'Not specified',
+
+            // Full FCS Report
+            fcs_report: fcs.fcs_report || 'No detailed report available',
+
+            // Conversation
             conversation_history: conversationHistory
         });
 
@@ -156,7 +175,11 @@ async function generateOffer(conversationId) {
             return null;
         }
 
-        const gamePlan = strategyRes.rows[0].game_plan;
+        let gamePlan = strategyRes.rows[0].game_plan;
+        if (typeof gamePlan === 'string') {
+            gamePlan = JSON.parse(gamePlan);
+        }
+
         const fcs = fcsRes.rows[0];
         const lead = leadRes.rows[0];
 
@@ -169,7 +192,11 @@ async function generateOffer(conversationId) {
             monthly_revenue: Math.round(fcs.average_revenue || 0).toLocaleString(),
             daily_balance: Math.round(fcs.average_daily_balance || 0).toLocaleString(),
             negative_days: fcs.total_negative_days || 0,
+            withholding_percentage: fcs.withholding_percentage || 'Unknown',
+            last_mca_deposit: fcs.last_mca_deposit_date || 'None',
             business_name: lead.business_name,
+            industry: fcs.industry || 'Unknown',
+            state: fcs.state || 'Unknown',
             credit_score: lead.credit_score || 'Unknown'
         });
 
@@ -214,7 +241,10 @@ async function reStrategize(conversationId, newContext) {
             return await analyzeAndStrategize(conversationId);
         }
 
-        const currentPlan = strategyRes.rows[0].game_plan;
+        let currentPlan = strategyRes.rows[0].game_plan;
+        if (typeof currentPlan === 'string') {
+            currentPlan = JSON.parse(currentPlan);
+        }
 
         // Load and populate the prompt template
         const template = loadPrompt('restrategize.md');
