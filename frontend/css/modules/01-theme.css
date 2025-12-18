@@ -1,18 +1,74 @@
 :root {
+    /* BACKGROUNDS */
     --app-bg-silver: #0f1115;
     --white: #161b22;
-    --gray-900: #e6edf3;
-    --gray-500: #8b949e;
-    --blue-accent: #3b82f6;
     --border-color: #30363d;
+
+    /* --- THE TEXT UPGRADE --- */
+
+    /* 1. Primary Text: Slightly softened (not pure white) */
+    /* Old: #e6edf3 | New: #f8fafc (Slate 50) - Crisp but not harsh */
+    --text-primary: #f8fafc;
+
+    /* 2. Secondary Text: The "Professional" Blue-Grey */
+    /* Old: #8b949e | New: #94a3b8 (Slate 400) - Much smoother on dark bg */
+    --text-secondary: #94a3b8;
+
+    /* 3. Muted Text: For labels/metadata */
+    --text-muted: #64748b;
+
+    /* ACCENTS */
+    --blue-accent: #3b82f6;
+
+    /* --- NEW: Text Gradient Variables (For that modern 'glow') --- */
+    --gradient-text: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; /* Added system fonts for crispness */
     background-color: var(--app-bg-silver);
-    color: var(--gray-900);
+
+    /* CRITICAL CHANGE: Default color is now Secondary, not Primary */
+    /* This makes the app feel "softer" by default. We only brighten headers. */
+    color: var(--text-secondary);
+
     margin: 0;
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased; /* Makes text look thinner/premium */
+}
+
+/* --- HIERARCHY RULES --- */
+
+/* Make Headings Pop */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary); /* Headings get the bright color */
+    letter-spacing: -0.02em;    /* Tighter spacing looks more modern */
+    margin-top: 0;
+}
+
+/* Make your specific "Welcome Back" title look expensive */
+h1 {
+    font-weight: 700;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block; /* Required for gradient text */
+}
+
+/* Links & Buttons */
+a { color: var(--blue-accent); text-decoration: none; }
+strong, b { color: var(--text-primary); } /* Bold text should be bright */
+
+/* --- LETTER SPACING ADJUSTMENTS --- */
+
+/* Make small text wider (easier to read) */
+.text-small, .nav-link, .btn-primary {
+    letter-spacing: 0.01em;
+}
+
+/* Make large text tighter (looks tighter/cleaner) */
+h1, h2, h3 {
+    letter-spacing: -0.025em;
 }
 
 /* --- NAVIGATION BAR --- */
@@ -32,7 +88,7 @@ body {
 .nav-brand {
     font-size: 24px;
     font-weight: 800;
-    color: var(--gray-900);
+    color: var(--text-primary);
     text-decoration: none;
     display: flex;
     align-items: center;
@@ -45,15 +101,15 @@ body {
 }
 
 .nav-link {
-    color: var(--gray-500);
+    color: var(--text-secondary); /* Use the new variable */
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 500; /* Inter looks better at 500 than 600 for menu */
     font-size: 15px;
     transition: color 0.2s;
 }
 
 .nav-link:hover, .nav-link.active {
-    color: var(--blue-accent);
+    color: var(--text-primary); /* Light up on hover */
 }
 
 /* --- BUTTONS --- */
@@ -93,7 +149,7 @@ body {
 
 .hero-subtitle {
     font-size: 20px;
-    color: var(--gray-500);
+    color: var(--text-secondary);
     max-width: 600px;
     margin: 0 auto;
 }
