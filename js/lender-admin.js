@@ -20,16 +20,20 @@ class LenderAdmin {
         console.log('🏛️ Opening Lender Management Dashboard...');
 
         let modal = document.getElementById('lenderManagementModal');
+
+        // REFACTOR: Create clean modal structure if it doesn't exist
         if (!modal) {
-            // MATCHING STRUCTURE: Using 'lender-submission-modal' class for exact size match
             const modalHTML = `
-                <div id="lenderManagementModal" class="modal" style="display:none; z-index: 2000;">
+                <div id="lenderManagementModal" class="modal hidden" style="z-index: 2000;">
                     <div class="modal-content lender-submission-modal">
                         <div class="modal-header">
                             <h3>Manage Lender Network</h3>
                             <button class="modal-close" onclick="document.getElementById('lenderManagementModal').style.display='none'">×</button>
                         </div>
-                        <div class="modal-body submission-body" id="lenderManagementContent" style="padding: 0; display: flex; flex-direction: column; overflow: hidden;"></div>
+
+                        <div class="modal-body submission-body" id="lenderManagementContent"
+                             style="padding: 0 !important; display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+                        </div>
                     </div>
                 </div>
             `;
@@ -42,27 +46,33 @@ class LenderAdmin {
             contentArea.innerHTML = this.createManagementTemplate();
         }
 
+        // Show modal (flex centers it)
         modal.style.display = 'flex';
         this.loadLendersList();
     }
 
     createManagementTemplate() {
-        // REMOVED THE OUTER WRAPPER DIV to allow direct flex growth
+        // LAYOUT FIX: Direct edge-to-edge structure
+        // 1. Header is flush with top (no rounded corners, no borders except bottom)
+        // 2. List container uses flex:1 to consume all remaining height
         return `
-            <div class="submission-col-header" style="border-radius: 0; border-left: none; border-right: none; border-top: none; flex-shrink: 0;">
-                <div class="submission-col-title">Network Directory</div>
+            <div class="submission-col-header" style="border: none; border-bottom: 1px solid #30363d; border-radius: 0; padding: 12px 20px; flex-shrink: 0; background: #161b22;">
+                <div class="submission-col-title" style="font-size: 12px;">Network Directory</div>
                 <div class="header-actions">
-                    <button onclick="window.commandCenter.lenderAdmin.showAddModal()" class="action-link" style="font-size: 11px;">
-                        ➕ Add New Lender
+                    <button onclick="window.commandCenter.lenderAdmin.showAddModal()" class="action-link" style="font-size: 11px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-plus"></i> Add New Lender
                     </button>
-                    <button onclick="window.commandCenter.lenderAdmin.loadLendersList()" class="action-link" style="font-size: 11px;">
-                        🔄 Refresh
+                    <button onclick="window.commandCenter.lenderAdmin.loadLendersList()" class="action-link" style="font-size: 11px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-sync"></i> Refresh
                     </button>
                 </div>
             </div>
 
-            <div id="adminLendersTableContainer" class="selection-list" style="flex: 1; border: none; background: #0d1117; border-radius: 0; overflow-y: auto;">
-                <div class="loading-state">Loading lenders...</div>
+            <div id="adminLendersTableContainer" class="selection-list"
+                 style="flex: 1; border: none; border-radius: 0; padding: 0; background: #0d1117; overflow-y: auto;">
+                <div class="loading-state" style="padding: 20px;">
+                    <div class="loading-spinner"></div> Loading Network...
+                </div>
             </div>
         `;
     }
@@ -94,29 +104,38 @@ class LenderAdmin {
 
     displayLendersList(lenders) {
         const container = document.getElementById('adminLendersTableContainer');
+
         if (!lenders || lenders.length === 0) {
             container.innerHTML = `
-                <div class="empty-state-card" style="border: none; background: transparent;">
+                <div class="empty-state-card" style="border: none; background: transparent; height: 100%; justify-content: center;">
+                    <div class="empty-state-icon"><i class="fas fa-users-slash"></i></div>
                     <h4>No Lenders Found</h4>
-                    <p>Start by adding your first lender.</p>
+                    <p>Start by adding your first lender to the network.</p>
                 </div>`;
             return;
         }
 
         const sorted = [...lenders].sort((a, b) => a.name.localeCompare(b.name));
 
+        // RENDER FIX: Rows now define the spacing since the container is flush
         container.innerHTML = sorted.map(lender => `
-            <div class="lender-list-row" style="padding: 10px 16px; border-bottom: 1px solid #21262d; display: flex; align-items: center; justify-content: space-between;">
+            <div class="lender-list-row" style="padding: 16px 24px; border-bottom: 1px solid #21262d; display: flex; align-items: center; justify-content: space-between; background: #0d1117;">
                 <div class="lender-name-wrapper" style="display: flex; align-items: center;">
-                    <div class="lender-avatar" style="width: 28px; height: 28px; font-size: 12px; margin-right: 12px;">${lender.name.charAt(0).toUpperCase()}</div>
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-weight:600; font-size: 13px; color: #e6edf3;">${lender.name}</span>
-                        <span style="font-size:11px; color:#64748b;">${lender.email || 'No Email'}</span>
+                    <div class="lender-avatar" style="width: 36px; height: 36px; font-size: 14px; margin-right: 16px; border-radius: 10px;">
+                        ${lender.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap: 2px;">
+                        <span style="font-weight:600; font-size: 14px; color: #e6edf3;">${lender.name}</span>
+                        <span style="font-size:12px; color:#64748b;">${lender.email || 'No Email'}</span>
                     </div>
                 </div>
-                <div class="lender-actions" style="display: flex; gap: 8px;">
-                    <button onclick="window.commandCenter.lenderAdmin.editLender('${lender.id}')" class="action-link" title="Edit">EDIT</button>
-                    <button onclick="window.commandCenter.lenderAdmin.deleteLender('${lender.id}', '${lender.name}')" class="action-link" style="color: #ef4444;" title="Delete">DELETE</button>
+                <div class="lender-actions" style="display: flex; gap: 12px;">
+                    <button onclick="window.commandCenter.lenderAdmin.editLender('${lender.id}')" class="btn-icon-action" title="Edit">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <button onclick="window.commandCenter.lenderAdmin.deleteLender('${lender.id}', '${lender.name}')" class="btn-icon-action delete" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </div>
         `).join('');
