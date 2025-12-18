@@ -93,36 +93,41 @@ class FCSService {
             await this.initializeDocumentAI();
             if (!this.documentAI) throw new Error('Document AI client not initialized');
 
-            const request = {
-                name: this.processorName,
-                rawDocument: {
-                    content: documentBuffer.toString('base64'),
-                    mimeType: 'application/pdf'
-                },
-                fieldMask: { paths: ['text'] },
-                processOptions: {
-                    individualPageSelector: {
-                        pages: Array.from({ length: 30 }, (_, i) => i + 1)
-                    },
-                    ocrConfig: {
-                        enableImageQualityScores: false,
-                        enableSymbol: false,
-                        enableNativePdfParsing: true,
-                        computeStyleInfo: false,
-                        disableCharacterBoxesDetection: true  // IMAGELESS MODE: Enables 30-page processing
-                    }
-                },
-                skipHumanReview: true
-            };
+            // Check page count to determine if we need to chunk
+            const pdfDoc = await PDFDocument.load(documentBuffer);
+            const pageCount = pdfDoc.getPageCount();
+            console.log(`📄 Document has ${pageCount} pages`);
 
-            const [result] = await this.documentAI.processDocument(request);
-
-            if (!result || !result.document || !result.document.text) {
-                throw new Error('Document AI returned no text');
+            // If 30 pages or less, process normally
+            if (pageCount <= 30) {
+                return await this.processDocumentChunk(documentBuffer, 1, pageCount);
             }
 
-            const text = result.document.text;
-            return text;
+            // If more than 30 pages, process in chunks
+            console.log(`📑 Document exceeds 30 pages, processing in chunks...`);
+            const chunkSize = 30;
+            const chunks = Math.ceil(pageCount / chunkSize);
+            const textResults = [];
+
+            for (let i = 0; i < chunks; i++) {
+                const startPage = i * chunkSize + 1;
+                const endPage = Math.min((i + 1) * chunkSize, pageCount);
+
+                console.log(`🔄 Processing chunk ${i + 1}/${chunks} (pages ${startPage}-${endPage})`);
+
+                // Create a new PDF with only the chunk pages
+                const chunkPdf = await PDFDocument.create();
+                const pages = await chunkPdf.copyPages(pdfDoc, Array.from({ length: endPage - startPage + 1 }, (_, idx) => startPage - 1 + idx));
+                pages.forEach(page => chunkPdf.addPage(page));
+
+                const chunkBuffer = Buffer.from(await chunkPdf.save());
+                const chunkText = await this.processDocumentChunk(chunkBuffer, startPage, endPage);
+
+                textResults.push(chunkText);
+            }
+
+            console.log(`✅ Successfully processed ${chunks} chunks`);
+            return textResults.join('\n\n--- PAGE BREAK ---\n\n');
 
         } catch (error) {
             console.error('❌ Document AI Failure:', error.message);
@@ -135,6 +140,41 @@ class FCSService {
 
             return `PROCESSING ERROR: Could not extract text from ${document.filename}. Error: ${error.message}`;
         }
+    }
+
+    // --- HELPER: Process a single chunk/page range ---
+    async processDocumentChunk(pdfBuffer, startPage, endPage) {
+        const pageCount = endPage - startPage + 1;
+
+        const request = {
+            name: this.processorName,
+            rawDocument: {
+                content: pdfBuffer.toString('base64'),
+                mimeType: 'application/pdf'
+            },
+            fieldMask: { paths: ['text'] },
+            processOptions: {
+                individualPageSelector: {
+                    pages: Array.from({ length: pageCount }, (_, i) => i + 1)
+                },
+                ocrConfig: {
+                    enableImageQualityScores: false,
+                    enableSymbol: false,
+                    enableNativePdfParsing: true,
+                    computeStyleInfo: false,
+                    disableCharacterBoxesDetection: true  // IMAGELESS MODE: Enables 30-page processing
+                }
+            },
+            skipHumanReview: true
+        };
+
+        const [result] = await this.documentAI.processDocument(request);
+
+        if (!result || !result.document || !result.document.text) {
+            throw new Error('Document AI returned no text');
+        }
+
+        return result.document.text;
     }
 
     async generateAndSaveFCS(conversationId, businessName, db) {
