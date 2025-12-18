@@ -1,5 +1,5 @@
 // services/fcsService.js
-// UPDATED: Added 'imagelessMode: true' to enable 30-page processing via Document AI
+// FIXED: Enabled 'imagelessMode' for 30-page limit & restored Gemini 3 Preview
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -25,8 +25,8 @@ class FCSService {
         this.isGeminiInitialized = false;
         this.isDocumentAIInitialized = false;
 
-        // Configuration
-        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+        // Configuration - RESTORED YOUR REQUESTED MODEL
+        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
     }
 
     async initializeGemini() {
@@ -107,7 +107,7 @@ class FCSService {
                 fieldMask: { paths: ['text'] },
                 processOptions: {
                     individualPageSelector: {
-                        // Request up to 30 pages explicitly
+                        // Request up to 30 pages explicitly (Google's new sync limit)
                         pages: Array.from({ length: 30 }, (_, i) => i + 1)
                     },
                     ocrConfig: {
