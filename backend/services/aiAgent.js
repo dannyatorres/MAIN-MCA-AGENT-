@@ -357,9 +357,23 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 }
 
                 else if (tool.function.name === 'trigger_drive_sync') {
-                    console.log(`📂 AI DECISION: Syncing Drive for "${businessName}"...`);
-                    syncDriveFiles(conversationId, businessName);
-                    toolResult = "Drive sync started in background.";
+                    // Check if already synced
+                    const stateCheck = await db.query(
+                        `SELECT state FROM conversations WHERE id = $1`,
+                        [conversationId]
+                    );
+
+                    const currentState = stateCheck.rows[0]?.state;
+
+                    // Don't re-sync if already past this stage
+                    if (['FCS_READY', 'FCS_COMPLETE', 'STRATEGIZED', 'HOT_LEAD', 'OFFER_READY'].includes(currentState)) {
+                        console.log(`⏭️ Skipping drive sync - already in state: ${currentState}`);
+                        toolResult = "Documents already synced. No need to sync again.";
+                    } else {
+                        console.log(`📂 AI DECISION: Syncing Drive for "${businessName}"...`);
+                        syncDriveFiles(conversationId, businessName);
+                        toolResult = "Drive sync started in background.";
+                    }
                 }
 
                 else if (tool.function.name === 'consult_analyst') {
