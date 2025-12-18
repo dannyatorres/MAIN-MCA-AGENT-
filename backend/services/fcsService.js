@@ -152,11 +152,7 @@ class FCSService {
                 content: pdfBuffer.toString('base64'),
                 mimeType: 'application/pdf'
             },
-            fieldMask: { paths: ['text'] },
             processOptions: {
-                individualPageSelector: {
-                    pages: Array.from({ length: pageCount }, (_, i) => i + 1)
-                },
                 ocrConfig: {
                     enableImageQualityScores: false,
                     enableSymbol: false,
