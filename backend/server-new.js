@@ -401,6 +401,30 @@ app.get('/api/fix/add-credit-score', async (req, res) => {
 });
 // =========================================================
 
+// =========================================================
+// 🔧 FIX: Add funding_status column
+// URL: https://mcagent.io/api/fix/add-funding-status
+// =========================================================
+app.get('/api/fix/add-funding-status', async (req, res) => {
+    try {
+        const db = getDatabase();
+
+        await db.query(`
+            ALTER TABLE conversations
+            ADD COLUMN IF NOT EXISTS funding_status VARCHAR(50);
+        `);
+
+        res.json({
+            success: true,
+            message: "✅ funding_status column added to conversations"
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
 // --- TRUST PROXY ---
 app.set('trust proxy', 1);
 
