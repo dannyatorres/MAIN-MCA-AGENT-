@@ -985,20 +985,85 @@ select.form-input {
    [MODAL] Qualified Lenders Modal - Size & Scrollbar Fix
    ========================================================================== */
 
-/* 1. Ensure the modal container stays within the viewport height */
+/* We target .modal-dialog this time, which usually controls the width */
+#qualifiedLendersModal .modal-dialog {
+    max-width: 900px !important; /* Forces the wider size */
+    width: 95%; /* Responsive fallback */
+    margin: 1.75rem auto; /* Centers it nicely */
+}
+
+/* Ensure the content fills that new width */
 #qualifiedLendersModal .modal-content {
-    max-width: 800px; /* Increased from the likely default of 500px */
-    width: 90%;       /* Ensures it's responsive on smaller screens */
-    margin: 0 auto;   /* Centers it */
+    width: 100%;
     max-height: 85vh; /* Limits height to 85% of the viewport */
     display: flex;
     flex-direction: column; /* Stacks header, body, footer */
     overflow: hidden; /* Hides the outer scrollbar */
 }
 
-/* 2. Apply the scroll ONLY to the body section */
+/* Apply the scroll ONLY to the body section */
 #qualifiedLendersModal .modal-body {
     overflow-y: auto; /* Adds scrollbar only when content overflows */
     flex: 1; /* Takes up remaining space between header and footer */
     padding: 20px; /* Optional: Keep your padding consistent */
+}
+
+/* ==========================================================================
+   [MODAL] Send to Lenders - Tighter Layout Fix
+   ========================================================================== */
+
+/* 1. Tighten the main grid layout */
+.submission-grid {
+    gap: 12px !important; /* Reduced from 20px */
+    margin-bottom: 12px !important; /* Reduced from 15px */
+}
+
+/* 2. Compact the Selection Boxes (Lenders & Docs) */
+.submission-col {
+    padding: 0; /* Remove any default padding */
+}
+
+/* 3. Make the lists scrollable but compact */
+.selection-list {
+    max-height: 280px; /* Caps the height so it doesn't get too tall */
+    padding: 6px !important; /* Tighter padding inside lists */
+}
+
+/* 4. Fix the Email Section spacing */
+.submission-message-area {
+    padding-top: 8px !important; /* Reduced from 12px */
+}
+
+.submission-textarea {
+    min-height: 50px !important; /* Even smaller default for more space */
+    max-height: 120px !important; /* Reduced max height */
+}
+
+/* ==========================================================================
+   [GLOBAL] Custom Scrollbars - Blue Theme
+   ========================================================================== */
+
+/* Apply sleek scrollbars to all scrollable areas */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1e293b; /* Dark background matching modal */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #475569; /* Sleek grey thumb */
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #0ea5e9; /* Vibrant blue on hover */
+}
+
+/* Firefox scrollbar styling */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #475569 #1e293b;
 }
