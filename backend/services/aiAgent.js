@@ -12,6 +12,16 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
+// Format name to Title Case (SABRINA → Sabrina)
+function formatName(name) {
+    if (!name) return '';
+    return name
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
 // 📊 TRAINING DATA TRACKER
 async function trackResponseForTraining(conversationId, leadMessage, humanResponse, responseSource) {
     const db = getDatabase();
@@ -157,7 +167,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         `, [conversationId]);
 
         const lead = leadRes.rows[0];
-        const nameToUse = lead?.first_name || lead?.business_name || "there";
+        const rawName = lead?.first_name || lead?.business_name || "there";
+        const nameToUse = formatName(rawName);
         const businessName = lead?.business_name || "Unknown Business";
 
         // 2. TEMPLATE MODE (The "Free" Drip Campaign)
