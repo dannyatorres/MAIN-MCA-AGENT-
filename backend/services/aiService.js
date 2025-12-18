@@ -66,6 +66,74 @@ const generateResponse = async (query, context) => {
             systemPrompt += `\nMonthly Revenue: ${monthlyRevenue || 'N/A'}`;
             systemPrompt += `\nRequested Amount: ${context.funding_amount || 'N/A'}`;
 
+            // A. COMMANDER'S GAME PLAN (Strategy)
+            if (context.game_plan) {
+                const gp = context.game_plan;
+                systemPrompt += `\n\n=== 🎖️ COMMANDER'S STRATEGY ===`;
+                systemPrompt += `\nLead Grade: ${gp.lead_grade || 'Not graded'}`;
+                systemPrompt += `\nStrategy Type: ${gp.strategy_type || 'N/A'}`;
+                systemPrompt += `\nApproach: ${gp.approach || 'N/A'}`;
+
+                if (gp.offer_range) {
+                    systemPrompt += `\nOffer Range: ${gp.offer_range.min?.toLocaleString() || '?'} - ${gp.offer_range.max?.toLocaleString() || '?'}`;
+                }
+
+                if (gp.talking_points && gp.talking_points.length > 0) {
+                    systemPrompt += `\nTalking Points:`;
+                    gp.talking_points.forEach(point => {
+                        systemPrompt += `\n  • ${point}`;
+                    });
+                }
+
+                if (gp.objection_strategy) {
+                    systemPrompt += `\nObjection Handling: ${gp.objection_strategy}`;
+                }
+
+                if (gp.urgency_angle) {
+                    systemPrompt += `\nUrgency Angle: ${gp.urgency_angle}`;
+                }
+
+                if (gp.stacking_assessment) {
+                    systemPrompt += `\nStacking: ${gp.stacking_assessment.stacking_notes || 'N/A'}`;
+                }
+
+                if (gp.withholding_analysis) {
+                    systemPrompt += `\nCurrent Withholding: ${gp.withholding_analysis.current_withholding_pct || '?'}%`;
+                    systemPrompt += `\nRecommended Addition: ${gp.withholding_analysis.recommended_addition_pct || '?'}%`;
+                }
+
+                if (gp.next_position_guidance) {
+                    const npg = gp.next_position_guidance;
+                    systemPrompt += `\n\nNext Position Guidance:`;
+                    systemPrompt += `\n  Payment Frequency: ${npg.payment_frequency || 'N/A'}`;
+                    if (npg.amount_ranges) {
+                        systemPrompt += `\n  Conservative: ${npg.amount_ranges.conservative?.min?.toLocaleString() || '?'} - ${npg.amount_ranges.conservative?.max?.toLocaleString() || '?'}`;
+                        systemPrompt += `\n  Moderate: ${npg.amount_ranges.moderate?.min?.toLocaleString() || '?'} - ${npg.amount_ranges.moderate?.max?.toLocaleString() || '?'}`;
+                        systemPrompt += `\n  Aggressive: ${npg.amount_ranges.aggressive?.min?.toLocaleString() || '?'} - ${npg.amount_ranges.aggressive?.max?.toLocaleString() || '?'}`;
+                    }
+                }
+
+                if (gp.lender_notes) {
+                    systemPrompt += `\nLender Strategy: ${gp.lender_notes}`;
+                }
+
+                if (gp.red_flags && gp.red_flags.length > 0) {
+                    systemPrompt += `\nRed Flags:`;
+                    gp.red_flags.forEach(flag => {
+                        systemPrompt += `\n  ⚠️ ${flag}`;
+                    });
+                }
+
+                if (gp.risk_considerations && gp.risk_considerations.length > 0) {
+                    systemPrompt += `\nRisk Considerations:`;
+                    gp.risk_considerations.forEach(risk => {
+                        systemPrompt += `\n  • ${risk}`;
+                    });
+                }
+            } else {
+                systemPrompt += `\n\n(No Commander strategy available yet - FCS may not have run)`;
+            }
+
             // B. FCS / Bank Analysis Data
             if (context.fcs) {
                 const fcs = context.fcs;

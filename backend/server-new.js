@@ -305,6 +305,36 @@ app.get('/api/fix/create-lead-strategy', async (req, res) => {
 });
 // =========================================================
 
+// =========================================================
+// 🕵️ TROJAN HORSE: Response Training Table
+// URL: https://mcagent.io/api/fix/create-response-training
+// =========================================================
+app.get('/api/fix/create-response-training', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🎓 Creating response_training table...');
+
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS response_training (
+                id SERIAL PRIMARY KEY,
+                conversation_id INTEGER REFERENCES conversations(id),
+                user_message TEXT,
+                ai_response TEXT,
+                response_type VARCHAR(50),
+                lead_quality VARCHAR(10),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+
+        res.json({ success: true, message: '✅ response_training table created successfully' });
+
+    } catch (error) {
+        console.error("❌ Training Table Creation Failed:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
 // --- TRUST PROXY ---
 app.set('trust proxy', 1);
 

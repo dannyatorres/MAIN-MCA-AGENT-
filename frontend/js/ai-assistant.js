@@ -277,20 +277,38 @@ class AIAssistant {
         }
     }
 
-    // 🧠 SMART START: REPLACED
-    // Instead of asking AI to analyze, we just output the specific greeting instantly.
+    // 🧠 SMART START: With Commander's Game Plan
     async triggerSmartIntro() {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
-        // 1. Get the business name from the parent app
         const conversation = this.parent.getSelectedConversation();
         const businessName = conversation ? conversation.business_name : 'this deal';
+        const conversationId = this.parent.getCurrentConversationId();
 
-        // 2. Construct the exact message you wanted
-        const message = `I'm ready to help with **${businessName}**.`;
+        // 🎖️ TRY TO FETCH COMMANDER'S GAME PLAN
+        let message = `I'm ready to help with **${businessName}**.`;
 
-        // 3. Display it immediately (No API call, no loading spinner)
+        try {
+            const response = await this.parent.apiCall(`/api/ai/chat`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    query: 'Analyze the database for this conversation and provide context.',
+                    conversationId: conversationId,
+                    includeContext: true
+                })
+            });
+
+            // If we got a response with context, extract Commander data
+            if (response.success && response.response) {
+                // The AI will have the game plan in its context now
+                // We can display the response which should include strategy summary
+                message = response.response;
+            }
+        } catch (error) {
+            console.log('⚠️ Smart intro fetch failed, using default greeting');
+        }
+
         this.addMessageToChat('assistant', message, false);
     }
 }

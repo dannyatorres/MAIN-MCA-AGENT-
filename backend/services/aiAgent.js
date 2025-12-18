@@ -12,6 +12,29 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
+// 📊 TRAINING DATA TRACKER
+async function trackResponseForTraining(conversationId, userMessage, aiResponse, responseType) {
+    const db = getDatabase();
+
+    try {
+        // Detect Lead Quality based on conversation state
+        const leadQualityCheck = await db.query(`
+            SELECT state FROM conversations WHERE id = $1
+        `, [conversationId]);
+
+        const leadQuality = leadQualityCheck.rows[0]?.state === 'HOT_LEAD' ? 'HOT' : 'NORMAL';
+
+        await db.query(`
+            INSERT INTO response_training (conversation_id, user_message, ai_response, response_type, lead_quality)
+            VALUES ($1, $2, $3, $4, $5)
+        `, [conversationId, userMessage, aiResponse, responseType, leadQuality]);
+
+        console.log(`📊 Training data saved: ${responseType}`);
+    } catch (err) {
+        console.error('⚠️ Training tracking failed:', err.message);
+    }
+}
+
 // 🛠️ TOOLS
 const TOOLS = [
     {
@@ -123,22 +146,34 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 2. TEMPLATE MODE (The "Free" Drip Campaign)
         // Checks instructions from index.js and returns text instantly.
         if (systemInstruction.includes("Underwriter Hook")) {
-            return { shouldReply: true, content: `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?` };
+            const content = `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
+            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_HOOK');
+            return { shouldReply: true, content };
         }
         if (systemInstruction.includes("Did you get funded already?")) {
-            return { shouldReply: true, content: "Did you get funded already?" };
+            const content = "Did you get funded already?";
+            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_FUNDED');
+            return { shouldReply: true, content };
         }
         if (systemInstruction.includes("The money is expensive as is")) {
-            return { shouldReply: true, content: "The money is expensive as is let me compete." };
+            const content = "The money is expensive as is let me compete.";
+            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_COMPETE');
+            return { shouldReply: true, content };
         }
         if (systemInstruction.includes("should i close the file out?")) {
-            return { shouldReply: true, content: "Hey just following up again, should i close the file out?" };
+            const content = "Hey just following up again, should i close the file out?";
+            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE1');
+            return { shouldReply: true, content };
         }
         if (systemInstruction.includes("any response would be appreciated")) {
-            return { shouldReply: true, content: "hey any response would be appreciated here, close this out?" };
+            const content = "hey any response would be appreciated here, close this out?";
+            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE2');
+            return { shouldReply: true, content };
         }
         if (systemInstruction.includes("closing out the file")) {
-            return { shouldReply: true, content: "Hey just wanted to follow up again, will be closing out the file if i dont hear a response today, ty" };
+            const content = "Hey just wanted to follow up again, will be closing out the file if i dont hear a response today, ty";
+            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE3');
+            return { shouldReply: true, content };
         }
 
         // 🟢 F. THE HAIL MARY (Ballpark Offer)
@@ -182,6 +217,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             } else {
                 offerText = "I haven't heard back—I'm assuming you found capital elsewhere? I'll go ahead and close the file.";
             }
+
+            // 📊 TRACK BALLPARK OFFER
+            await trackResponseForTraining(conversationId, systemInstruction, offerText, 'BALLPARK_OFFER');
 
             return { shouldReply: true, content: offerText };
         }
@@ -356,6 +394,16 @@ Send this message to the lead: "${offer.pitch_message}"`;
         }
 
         if (responseContent) {
+            // 📊 TRACK AI MODE RESPONSE
+            const lastMsgRes = await db.query(`
+                SELECT content FROM messages
+                WHERE conversation_id = $1 AND direction = 'inbound'
+                ORDER BY timestamp DESC LIMIT 1
+            `, [conversationId]);
+            const userMessage = lastMsgRes.rows[0]?.content || 'N/A';
+
+            await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE');
+
             return { shouldReply: true, content: responseContent };
         }
         return { shouldReply: false };
@@ -366,4 +414,4 @@ Send this message to the lead: "${offer.pitch_message}"`;
     }
 }
 
-module.exports = { processLeadWithAI };
+module.exports = { processLeadWithAI, trackResponseForTraining };

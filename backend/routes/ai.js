@@ -96,6 +96,24 @@ router.post('/chat', async (req, res) => {
                     `, [conversationId]);
                 } catch (e) { console.log('History fetch error', e.message); }
 
+                // 🎖️ 7. FETCH COMMANDER'S GAME PLAN (NEW)
+                let strategyResult = { rows: [] };
+                try {
+                    strategyResult = await db.query(`
+                        SELECT game_plan, lead_grade, strategy_type
+                        FROM lead_strategy
+                        WHERE conversation_id = $1
+                    `, [conversationId]);
+
+                    if (strategyResult.rows.length > 0) {
+                        console.log(`   🎖️ [AI Route] ✅ COMMANDER STRATEGY FOUND:`);
+                        console.log(`       - Grade: ${strategyResult.rows[0].lead_grade}`);
+                        console.log(`       - Strategy: ${strategyResult.rows[0].strategy_type}`);
+                    } else {
+                        console.log(`   🎖️ [AI Route] ❌ NO COMMANDER STRATEGY YET.`);
+                    }
+                } catch (e) { console.log('   ⚠️ Strategy fetch error', e.message); }
+
                 // 6. Pack it all up
                 conversationContext = {
                     // Standard Info
@@ -125,7 +143,12 @@ router.post('/chat', async (req, res) => {
                     recent_messages: smsResult.rows,
                     lender_submissions: lenderResult.rows,
                     fcs: fcsResult.rows[0] || null,
-                    chat_history: historyResult.rows.reverse()
+                    chat_history: historyResult.rows.reverse(),
+
+                    // 🎖️ COMMANDER'S GAME PLAN (NEW)
+                    game_plan: strategyResult.rows[0]?.game_plan || null,
+                    lead_grade: strategyResult.rows[0]?.lead_grade || null,
+                    strategy_type: strategyResult.rows[0]?.strategy_type || null
                 };
                 console.log('   📦 [AI Route] Context Package ready for Service.');
             }
