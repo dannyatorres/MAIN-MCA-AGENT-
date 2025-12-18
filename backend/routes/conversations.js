@@ -347,380 +347,96 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update conversation (comprehensive version with lead_details support)
+// Update conversation (simplified version)
 router.put('/:id', async (req, res) => {
     try {
-        const conversationId = req.params.id;
-        const data = req.body;
+        const { id } = req.params;
+        const updates = req.body;
         const db = getDatabase();
 
-        // --- SANITIZATION BLOCK ---
+        console.log(`📝 Updating conversation ${id}:`, Object.keys(updates));
 
-        // 1. Convert Empty Strings to NULL (Fixes: invalid input syntax for type numeric)
-        Object.keys(data).forEach(key => {
-            if (data[key] === '') data[key] = null;
+        // Sanitize: Convert empty strings to null
+        Object.keys(updates).forEach(key => {
+            if (updates[key] === '') updates[key] = null;
         });
 
-        // 2. Strip dashes/symbols from IDs and Phones (Fixes: 400 Bad Request / invalid format)
-        const keysToClean = [
-            'federalTaxId', 'federal_tax_id', 'tax_id',
-            'ownerSSN', 'owner_ssn', 'ssn',
-            'owner2SSN', 'owner2_ssn',
-            'primaryPhone', 'lead_phone',
-            'cellPhone', 'cell_phone',
-            'ownerPhone', 'owner_phone',
-            'owner2Phone', 'owner2_phone'
+        // Map camelCase to snake_case for common fields
+        const fieldMap = {
+            creditScore: 'credit_score',
+            fundingStatus: 'funding_status',
+            recentFunding: 'recent_funding',
+            businessName: 'business_name',
+            firstName: 'first_name',
+            lastName: 'last_name',
+            ownerFirstName: 'first_name',
+            ownerLastName: 'last_name'
+        };
+
+        // Convert incoming keys
+        const mapped = {};
+        for (const [key, value] of Object.entries(updates)) {
+            const dbKey = fieldMap[key] || key;
+            mapped[dbKey] = value;
+        }
+
+        // Allowed fields to update
+        const allowedFields = [
+            'credit_score',
+            'recent_funding',
+            'funding_status',
+            'state',
+            'priority',
+            'first_name',
+            'last_name',
+            'business_name',
+            'email',
+            'address',
+            'city',
+            'us_state',
+            'zip',
+            'cell_phone',
+            'industry'
         ];
 
-        keysToClean.forEach(key => {
-            if (data[key] && typeof data[key] === 'string') {
-                data[key] = data[key].replace(/\D/g, ''); // Removes everything except numbers
-            }
-        });
+        const setClauses = [];
+        const values = [];
+        let paramIndex = 1;
 
-        // 3. Clean Currency Fields (Remove $ and commas)
-        const currencyKeys = ['annualRevenue', 'monthlyRevenue', 'requestedAmount', 'funding_amount'];
-        currencyKeys.forEach(key => {
-            if (data[key] && typeof data[key] === 'string') {
-                const clean = data[key].replace(/[^0-9.]/g, '');
-                data[key] = clean === '' ? null : clean;
-            }
-        });
-
-        // --- END SANITIZATION BLOCK ---
-
-        console.log('=== UPDATE REQUEST DEBUG ===');
-        console.log('📝 Conversation ID:', conversationId);
-        console.log('📥 Received fields:', Object.keys(data));
-
-        // Map frontend field names to database tables and columns
-        const conversationsFields = {
-            // Business information
-            businessName: 'business_name',
-            business_name: 'business_name',
-            businessAddress: 'address',
-            business_address: 'address',
-            address: 'address',
-            businessCity: 'city',
-            business_city: 'city',
-            city: 'city',
-            businessState: 'us_state',
-            business_state: 'us_state',
-            us_state: 'us_state',
-            businessZip: 'zip',
-            business_zip: 'zip',
-            zip: 'zip',
-
-            // Phone numbers
-            primaryPhone: 'lead_phone',
-            primary_phone: 'lead_phone',
-            lead_phone: 'lead_phone',
-            phone: 'lead_phone',
-            cellPhone: 'cell_phone',
-            cell_phone: 'cell_phone',
-
-            // Email
-            businessEmail: 'email',
-            business_email: 'email',
-            email: 'email',
-
-            // Lead tracking
-            leadSource: 'lead_source',
-            lead_source: 'lead_source',
-            leadStatus: 'state',
-            lead_status: 'state',
-            state: 'state',
-
-            // Owner information
-            ownerFirstName: 'first_name',
-            owner_first_name: 'first_name',
-            first_name: 'first_name',
-            ownerLastName: 'last_name',
-            owner_last_name: 'last_name',
-            last_name: 'last_name',
-
-            // Other fields
-            notes: 'notes',
-            entityType: 'entity_type',
-            entity_type: 'entity_type',
-            dba_name: 'dba_name',
-            dbaName: 'dba_name',
-            ownershipPercent: 'ownership_percent',
-            ownership_percent: 'ownership_percent',
-            ownership_percentage: 'ownership_percent', // ADDED: Frontend sends this
-            ownerHomeAddress: 'owner_home_address',
-            owner_home_address: 'owner_home_address',
-            owner_address: 'owner_home_address', // ADDED: Frontend sends this
-            ownerHomeAddress2: 'owner_home_address2',
-            owner_home_address2: 'owner_home_address2',
-            ownerHomeCity: 'owner_home_city',
-            owner_home_city: 'owner_home_city',
-            owner_city: 'owner_home_city', // ADDED: Frontend sends this
-            ownerHomeState: 'owner_home_state',
-            owner_home_state: 'owner_home_state',
-            owner_state: 'owner_home_state', // ADDED: Frontend sends this
-            ownerHomeZip: 'owner_home_zip',
-            owner_home_zip: 'owner_home_zip',
-            owner_zip: 'owner_home_zip', // ADDED: Frontend sends this
-            ownerHomeCountry: 'owner_home_country',
-            owner_home_country: 'owner_home_country',
-            ownerEmail: 'owner_email',
-            owner_email: 'owner_email',
-
-            // Owner 1 Phone & Ownership
-            ownerPhone: 'owner_phone',
-            owner_phone: 'owner_phone',
-            ownerOwnershipPercentage: 'owner_ownership_percent',
-            owner_ownership_percentage: 'owner_ownership_percent',
-            owner_ownership_percent: 'owner_ownership_percent',
-
-            // --- PARTNER / OWNER 2 INFO ---
-            owner2FirstName: 'owner2_first_name',
-            owner2_first_name: 'owner2_first_name',
-            owner2LastName: 'owner2_last_name',
-            owner2_last_name: 'owner2_last_name',
-            owner2Email: 'owner2_email',
-            owner2_email: 'owner2_email',
-            owner2Phone: 'owner2_phone',
-            owner2_phone: 'owner2_phone',
-            owner2OwnershipPercent: 'owner2_ownership_percent',
-            owner2_ownership_percent: 'owner2_ownership_percent',
-            owner2_ownership_percentage: 'owner2_ownership_percent',
-            owner2HomeAddress: 'owner2_address',
-            owner2_home_address: 'owner2_address',
-            owner2_address: 'owner2_address',
-            owner2Address: 'owner2_address',
-            owner2HomeCity: 'owner2_city',
-            owner2_home_city: 'owner2_city',
-            owner2_city: 'owner2_city',
-            owner2City: 'owner2_city',
-            owner2HomeState: 'owner2_state',
-            owner2_home_state: 'owner2_state',
-            owner2_state: 'owner2_state',
-            owner2State: 'owner2_state',
-            owner2HomeZip: 'owner2_zip',
-            owner2_home_zip: 'owner2_zip',
-            owner2_zip: 'owner2_zip',
-            owner2Zip: 'owner2_zip',
-            owner2SSN: 'owner2_ssn',
-            owner2_ssn: 'owner2_ssn',
-            owner2_s_s_n: 'owner2_ssn',
-            owner2DOB: 'owner2_dob',
-            owner2_dob: 'owner2_dob',
-            owner2_d_o_b: 'owner2_dob',
-
-            // Credit & Funding
-            creditScore: 'credit_score',
-            credit_score: 'credit_score',
-            fundingStatus: 'funding_status',
-            funding_status: 'funding_status',
-            recentFunding: 'recent_funding',
-            recent_funding: 'recent_funding'
-        };
-
-        const leadDetailsFields = {
-            // Dates
-            ownerDOB: 'date_of_birth',
-            owner_dob: 'date_of_birth',
-            owner_d_o_b: 'date_of_birth',
-            owner_date_of_birth: 'date_of_birth',
-            date_of_birth: 'date_of_birth',
-
-            // SSN field mappings
-            ownerSSN: 'ssn_encrypted',
-            owner_ssn: 'ssn_encrypted',
-            owner_s_s_n: 'ssn_encrypted',
-            ssn: 'ssn_encrypted',
-            ssn_encrypted: 'ssn_encrypted',
-
-            // Tax ID / EIN field mappings
-            federalTaxId: 'tax_id_encrypted',
-            federal_tax_id: 'tax_id_encrypted',
-            taxId: 'tax_id_encrypted',
-            tax_id: 'tax_id_encrypted',
-            tax_id_encrypted: 'tax_id_encrypted',
-
-            businessStartDate: 'business_start_date',
-            business_start_date: 'business_start_date',
-            fundingDate: 'funding_date',
-            funding_date: 'funding_date',
-
-            // Business details
-            industryType: 'business_type',
-            industry_type: 'business_type',
-            industry: 'business_type',
-            business_type: 'business_type',
-
-            // Financial information
-            annualRevenue: 'annual_revenue',
-            annual_revenue: 'annual_revenue',
-            requestedAmount: 'funding_amount',
-            requested_amount: 'funding_amount',
-            funding_amount: 'funding_amount',
-            factorRate: 'factor_rate',
-            factor_rate: 'factor_rate',
-            termMonths: 'term_months',
-            term_months: 'term_months',
-            campaign: 'campaign'
-        };
-
-        // Separate fields for conversations and lead_details tables
-        const conversationsUpdateFields = [];
-        const conversationsValues = [];
-        const leadDetailsUpdateFields = [];
-        const leadDetailsValues = [];
-        let conversationsParamCounter = 1;
-        let leadDetailsParamCounter = 1;
-
-        // Track which database columns have been assigned to prevent duplicates
-        const assignedConversationFields = new Set();
-        const assignedLeadDetailFields = new Set();
-
-        // Build update queries for both tables
-        for (const [frontendField, value] of Object.entries(data)) {
-            if (frontendField === 'id') continue; // Skip the ID field
-
-            if (conversationsFields[frontendField]) {
-                const dbField = conversationsFields[frontendField];
-
-                // Skip if this database field has already been assigned
-                if (assignedConversationFields.has(dbField)) {
-                    console.log(`⚠️ Skipping duplicate: ${frontendField} -> ${dbField}`);
-                    continue;
-                }
-
-                conversationsUpdateFields.push(`${dbField} = $${conversationsParamCounter}`);
-                conversationsValues.push(value);
-                conversationsParamCounter++;
-                assignedConversationFields.add(dbField);
-                console.log(`✅ Mapped: ${frontendField} -> ${dbField}`);
-            } else if (leadDetailsFields[frontendField]) {
-                const dbField = leadDetailsFields[frontendField];
-
-                // Skip if this database field has already been assigned
-                if (assignedLeadDetailFields.has(dbField)) {
-                    console.log(`⚠️ Skipping duplicate: ${frontendField} -> ${dbField}`);
-                    continue;
-                }
-
-                leadDetailsUpdateFields.push(`${dbField} = $${leadDetailsParamCounter}`);
-                leadDetailsValues.push(value);
-                leadDetailsParamCounter++;
-                assignedLeadDetailFields.add(dbField);
-                console.log(`✅ Mapped: ${frontendField} -> ${dbField}`);
-            } else {
-                console.log(`⚠️ Skipping unmapped field: ${frontendField}`);
+        for (const [key, value] of Object.entries(mapped)) {
+            if (allowedFields.includes(key)) {
+                setClauses.push(`${key} = $${paramIndex++}`);
+                values.push(value);
             }
         }
 
-        // Update conversations table if there are fields to update
-        if (conversationsUpdateFields.length > 0) {
-            // Add updated timestamp
-            conversationsUpdateFields.push(`updated_at = $${conversationsParamCounter}`);
-            conversationsValues.push(new Date().toISOString());
-            conversationsParamCounter++;
-
-            // Add conversation ID for WHERE clause
-            conversationsValues.push(conversationId);
-
-            const conversationsQuery = `
-                UPDATE conversations
-                SET ${conversationsUpdateFields.join(', ')}
-                WHERE id = $${conversationsParamCounter}
-            `;
-
-            console.log('🔍 Conversations query:', conversationsQuery);
-            console.log('🔍 Conversations values:', conversationsValues);
-
-            await db.query(conversationsQuery, conversationsValues);
+        if (setClauses.length === 0) {
+            console.log('⚠️ No valid fields to update. Received:', Object.keys(updates));
+            return res.status(400).json({ error: 'No valid fields to update' });
         }
 
-        // Update lead_details table if there are fields to update
-        if (leadDetailsUpdateFields.length > 0) {
-            // First, check if lead_details record exists
-            const existingDetails = await db.query(
-                'SELECT id FROM lead_details WHERE conversation_id = $1',
-                [conversationId]
-            );
+        setClauses.push(`last_activity = NOW()`);
+        values.push(id);
 
-            if (existingDetails.rows.length > 0) {
-                // Update existing record
-                leadDetailsUpdateFields.push(`updated_at = $${leadDetailsParamCounter}`);
-                leadDetailsValues.push(new Date().toISOString());
-                leadDetailsParamCounter++;
+        const query = `
+            UPDATE conversations
+            SET ${setClauses.join(', ')}
+            WHERE id = $${paramIndex}
+            RETURNING *
+        `;
 
-                leadDetailsValues.push(conversationId);
+        const result = await db.query(query, values);
 
-                const leadDetailsQuery = `
-                    UPDATE lead_details
-                    SET ${leadDetailsUpdateFields.join(', ')}
-                    WHERE conversation_id = $${leadDetailsParamCounter}
-                `;
-
-                console.log('🔍 Lead details query:', leadDetailsQuery);
-                console.log('🔍 Lead details values:', leadDetailsValues);
-
-                await db.query(leadDetailsQuery, leadDetailsValues);
-            } else {
-                // Insert new record
-                const insertFields = ['conversation_id', ...leadDetailsUpdateFields.map(f => f.split(' = ')[0])];
-                const insertValues = [conversationId, ...leadDetailsValues];
-                const insertParams = insertValues.map((_, i) => `$${i + 1}`);
-
-                const insertQuery = `
-                    INSERT INTO lead_details (${insertFields.join(', ')}, created_at)
-                    VALUES (${insertParams.join(', ')}, NOW())
-                `;
-
-                console.log('🔍 Lead details insert query:', insertQuery);
-                console.log('🔍 Lead details insert values:', insertValues);
-
-                await db.query(insertQuery, insertValues);
-            }
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Conversation not found' });
         }
 
-        // Get the updated conversation with lead details
-        const finalResult = await db.query(`
-            SELECT c.*, ld.date_of_birth, ld.business_start_date,
-                   ld.business_type, ld.annual_revenue, ld.funding_amount, ld.campaign,
-                   ld.ssn_encrypted, ld.tax_id_encrypted, ld.factor_rate, ld.term_months, ld.funding_date
-            FROM conversations c
-            LEFT JOIN lead_details ld ON c.id = ld.conversation_id
-            WHERE c.id = $1
-        `, [conversationId]);
-
-        if (finalResult.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Conversation not found' });
-        }
-
-        const updatedConversation = finalResult.rows[0];
-
-        console.log('=== UPDATE RESPONSE DEBUG ===');
-        console.log('✅ Updated conversation ID:', updatedConversation.id);
-
-        res.json({
-            success: true,
-            message: 'Conversation updated successfully',
-            data: updatedConversation
-        });
+        console.log(`✅ Conversation ${id} updated - fields: ${setClauses.length - 1}`);
+        res.json({ success: true, conversation: result.rows[0] });
 
     } catch (error) {
-        console.error('❌ Database error:', error.message);
-
-        // Parse the error to find which field is problematic
-        const errorMatch = error.message?.match(/column "([^"]+)" of relation "([^"]+)" does not exist/);
-        if (errorMatch) {
-            console.error(`❌ Missing column: "${errorMatch[1]}" in table "${errorMatch[2]}"`);
-            console.log('💡 Suggestion: Either add this column to the database or map it to a different table');
-        }
-
-        res.status(400).json({
-            success: false,
-            error: error.message,
-            details: error.stack,
-            problematicField: errorMatch ? errorMatch[1] : null,
-            problematicTable: errorMatch ? errorMatch[2] : null
-        });
+        console.error('❌ Update error:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

@@ -620,6 +620,8 @@ export class LeadFormController {
             credit_score: data.creditScore,
             funding_status: data.fundingStatus,
             recent_funding: data.recentFunding,
+            first_name: data.ownerFirstName,
+            last_name: data.ownerLastName,
             ...data
         };
     }
