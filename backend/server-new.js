@@ -123,6 +123,29 @@ app.get('/api/fix/fcs-schema', async (req, res) => {
 // =========================================================
 
 // =========================================================
+// 🕵️ TROJAN HORSE: Conversations Schema Inspector
+// URL: https://mcagent.io/api/fix/conversations-schema
+// =========================================================
+app.get('/api/fix/conversations-schema', async (req, res) => {
+    try {
+        const db = getDatabase();
+        const result = await db.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'conversations'
+            ORDER BY ordinal_position;
+        `);
+        res.json({
+            success: true,
+            columns: result.rows.map(r => `${r.column_name} (${r.data_type})`)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
+// =========================================================
 // 🚀 BULK LENDER IMPORT
 // URL: https://mcagent.io/api/fix/bulk-import-lenders
 // =========================================================

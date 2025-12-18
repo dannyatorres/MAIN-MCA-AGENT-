@@ -111,8 +111,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
     try {
         // 1. GET LEAD DETAILS + STATE
         const leadRes = await db.query(`
-            SELECT first_name, business_name, state, email,
-                   credit_score, recent_funding
+            SELECT first_name, business_name, state, email
             FROM conversations
             WHERE id = $1
         `, [conversationId]);
