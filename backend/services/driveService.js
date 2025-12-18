@@ -92,6 +92,9 @@ async function syncDriveFiles(conversationId, businessName) {
             3. Return ONLY the exact folder name. If no match, return "NO_MATCH".
         `;
 
+        // 🧠 DEBUG: Log the input prompt
+        console.log(`🧠 [DEBUG] GPT-4 Input Prompt:\n${prompt}`);
+
         const completion = await openai.chat.completions.create({
             model: "gpt-4-turbo",
             messages: [{ role: "system", content: prompt }],
@@ -99,6 +102,14 @@ async function syncDriveFiles(conversationId, businessName) {
         });
 
         const matchedName = completion.choices[0].message.content.trim().replace(/['"]/g, "");
+
+        // 🧠 DEBUG: Log the raw AI response
+        console.log(`🧠 [DEBUG] GPT-4 Raw Response: "${matchedName}"`);
+
+        // 🎟️ TOKEN USAGE: Log input/output tokens and total
+        if (completion.usage) {
+            console.log(`🎟️ [TOKENS] Input: ${completion.usage.prompt_tokens} | Output: ${completion.usage.completion_tokens} | Total: ${completion.usage.total_tokens}`);
+        }
 
         if (matchedName === "NO_MATCH") {
             console.log(`⚠️ AI could not link "${businessName}" to any folder.`);
