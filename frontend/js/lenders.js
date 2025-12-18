@@ -121,15 +121,15 @@ class LendersModule {
 
         const modalHtml = `
             <div id="lenderSubmissionModal" class="modal hidden">
-                <div class="modal-content lender-submission-modal" style="position: relative; overflow: hidden; max-height: 90vh;">
+                <div class="modal-content lender-submission-modal">
 
-                    <div id="submissionOverlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(4px); z-index: 100; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease;">
-                         <div style="background: white; padding: 40px 30px; border-radius: 16px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15); border: 1px solid #f1f5f9; text-align: center; width: 300px;">
-                            <div class="loading-spinner" style="width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; margin: 0 auto 15px auto;"></div>
-                            <h3 style="color: #1e293b; font-size: 16px; font-weight: 700; margin: 0 0 5px 0;">Sending...</h3>
-                            <p id="submissionStatusText" style="color: #64748b; font-size: 13px; margin: 0 0 15px 0;">Preparing files...</p>
-                            <div style="width: 100%; height: 4px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
-                                <div id="submissionProgressBar" style="width: 5%; height: 100%; background: #3b82f6; transition: width 0.3s ease;"></div>
+                    <div id="submissionOverlay" class="submission-loading-overlay">
+                         <div class="submission-loading-card">
+                            <div class="submission-spinner"></div>
+                            <h3 style="color: #e6edf3; font-size: 16px; font-weight: 700; margin: 0 0 5px 0;">Sending...</h3>
+                            <p id="submissionStatusText" class="status-text">Preparing files...</p>
+                            <div class="submission-progress-track">
+                                <div id="submissionProgressBar" class="submission-progress-bar"></div>
                             </div>
                         </div>
                     </div>
@@ -142,10 +142,10 @@ class LendersModule {
                     <div class="modal-body submission-body">
                         <div class="submission-grid">
                             <div class="submission-col">
-                                <div class="submission-col-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <span style="font-weight: 600; color: #1e293b;">Select Lenders</span>
+                                <div class="submission-col-header">
+                                    <span class="submission-col-title">Select Lenders</span>
                                     <div style="display:flex; align-items:center; gap: 12px;">
-                                        <label style="font-size:11px; color:#64748b; cursor:pointer; display:flex; align-items:center; gap:4px; user-select:none;">
+                                        <label class="toggle-override-label">
                                             <input type="checkbox" id="showAllLendersToggle"> Override Filters
                                         </label>
                                         <button id="toggleAllLendersBtn" class="action-link">DESELECT ALL</button>
@@ -154,24 +154,24 @@ class LendersModule {
                                 <div class="submission-search-container">
                                     <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders..." autocomplete="off">
                                 </div>
-                                <div id="lenderSelectionList" class="selection-list custom-scrollbar"></div>
+                                <div id="lenderSelectionList" class="selection-list"></div>
                             </div>
 
                             <div class="submission-col">
-                                <div class="submission-col-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <span style="font-weight: 600; color: #1e293b;">Select Documents</span>
+                                <div class="submission-col-header">
+                                    <span class="submission-col-title">Select Documents</span>
                                     <button id="toggleAllDocumentsBtn" class="action-link">SELECT ALL</button>
                                 </div>
                                 <div class="submission-search-container" style="visibility: hidden;">
                                     <input type="text" class="submission-search-input">
                                 </div>
-                                <div id="submissionDocumentList" class="selection-list custom-scrollbar"></div>
+                                <div id="submissionDocumentList" class="selection-list"></div>
                             </div>
                         </div>
 
                         <div class="submission-message-area">
-                            <label class="field-label" style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px; display:block;">Email Message</label>
-                            <textarea id="submissionMessage" class="form-textarea" placeholder="Enter your message to lenders..." style="min-height: 80px;"></textarea>
+                            <label class="field-label" style="margin-bottom: 8px;">EMAIL MESSAGE</label>
+                            <textarea id="submissionMessage" class="submission-textarea" placeholder="Enter your message to lenders..."></textarea>
                         </div>
                     </div>
 
@@ -182,62 +182,6 @@ class LendersModule {
                         </button>
                     </div>
                 </div>
-
-                <style>
-                    /* ✨ NEW STYLES FOR SLEEKER UI */
-
-                    /* The Action Link Button */
-                    .action-link {
-                        background: none;
-                        border: none;
-                        color: #3b82f6;
-                        font-size: 10px;
-                        font-weight: 700;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                        cursor: pointer;
-                        padding: 4px 0;
-                        transition: color 0.2s;
-                    }
-                    .action-link:hover {
-                        color: #1d4ed8;
-                        text-decoration: underline;
-                    }
-
-                    /* The List Item "Card" Look */
-                    .selection-item {
-                        display: flex;
-                        align-items: center;
-                        padding: 10px 12px;
-                        background: #f8fafc; /* Light Gray Background */
-                        border: 1px solid #e2e8f0; /* Subtle Border */
-                        border-radius: 6px;
-                        margin-bottom: 6px;
-                        cursor: pointer;
-                        transition: all 0.15s ease;
-                    }
-
-                    .selection-item:hover {
-                        background: #ffffff;
-                        border-color: #cbd5e1;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-                        transform: translateY(-1px);
-                    }
-
-                    /* Checkbox styling adjustment */
-                    .selection-item input[type="checkbox"] {
-                        accent-color: #3b82f6;
-                        margin-right: 12px;
-                        transform: scale(1.1);
-                        cursor: pointer;
-                    }
-
-                    .list-text {
-                        font-size: 13px;
-                        color: #334155;
-                        font-weight: 500;
-                    }
-                </style>
             </div>
         `;
 

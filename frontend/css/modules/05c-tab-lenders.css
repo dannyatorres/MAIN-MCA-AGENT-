@@ -773,3 +773,164 @@ select.form-input {
     justify-content: flex-end;
     gap: 12px;
 }
+
+/* ==========================================================================
+   [MODAL] Lender Submission - Cleaned & Refactored
+   ========================================================================== */
+
+/* 1. Main Modal Frame */
+.modal-content.lender-submission-modal {
+    position: relative;
+    overflow: hidden;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    background: #161b22;
+    border: 1px solid #30363d;
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    color: #e6edf3;
+}
+
+/* 2. Loading Overlay (Replaces inline JS styles) */
+.submission-loading-overlay {
+    display: none; /* Toggled via JS */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(22, 27, 34, 0.95);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.submission-loading-card {
+    background: #0d1117;
+    padding: 40px 30px;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    border: 1px solid #30363d;
+    text-align: center;
+    width: 320px;
+}
+
+.submission-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #30363d;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    margin: 0 auto 15px auto;
+    animation: spin 1s linear infinite;
+}
+
+.submission-progress-track {
+    width: 100%;
+    height: 4px;
+    background: #21262d;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 15px;
+}
+
+.submission-progress-bar {
+    width: 5%;
+    height: 100%;
+    background: #3b82f6;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+/* 3. Header & Grid Layout */
+.submission-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    flex: 1;
+    min-height: 0; /* Critical for scrolling */
+    margin-bottom: 20px;
+}
+
+.submission-col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 0 2px;
+}
+
+.submission-col-title {
+    font-weight: 600;
+    color: #e6edf3;
+    font-size: 14px;
+}
+
+/* 4. Scrollable Lists (Fixes the ugly white scrollbar) */
+.selection-list {
+    flex: 1;
+    overflow-y: auto;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 8px;
+
+    /* Custom Scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: #30363d transparent;
+}
+
+.selection-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.selection-list::-webkit-scrollbar-thumb {
+    background-color: #30363d;
+    border-radius: 3px;
+}
+
+.selection-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* 5. Message Area */
+.submission-message-area {
+    flex-shrink: 0;
+    padding-top: 16px;
+    border-top: 1px solid #30363d;
+}
+
+.submission-textarea {
+    min-height: 100px;
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 12px;
+    color: #e6edf3;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    font-family: inherit;
+}
+
+.submission-textarea:focus {
+    border-color: #3b82f6;
+}
+
+/* 6. Utility Text */
+.toggle-override-label {
+    font-size: 11px;
+    color: #8b949e;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+}
+.toggle-override-label:hover { color: #e6edf3; }
+
+.status-text { color: #8b949e; font-size: 13px; margin: 0; }
