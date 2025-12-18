@@ -191,8 +191,16 @@ async function syncDriveFiles(conversationId, businessName) {
             try {
                 await fcsService.generateAndSaveFCS(conversationId, businessName, db);
                 console.log("✅ Auto-FCS Completed Successfully.");
+
+                // --- 🧠 AUTO-TRIGGER COMMANDER ---
+                const commanderService = require('./commanderService');
+                console.log("🧠 Triggering Commander Strategy Analysis...");
+                const gamePlan = await commanderService.analyzeAndStrategize(conversationId);
+                if (gamePlan) {
+                    console.log(`🎖️ Commander Verdict: Grade ${gamePlan.lead_grade} | ${gamePlan.strategy_type}`);
+                }
             } catch (fcsErr) {
-                console.error("⚠️ Auto-FCS Trigger Failed:", fcsErr.message);
+                console.error("⚠️ Auto-FCS/Commander Failed:", fcsErr.message);
             }
         }
 
