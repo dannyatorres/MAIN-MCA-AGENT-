@@ -109,34 +109,16 @@ async function processLeadWithAI(conversationId, systemInstruction) {
     console.log(`🧠 AI Agent Processing Lead: ${conversationId}`);
 
     try {
-        // 1. GET LEAD DETAILS + STATE
+        // 1. GET LEAD DETAILS (simple - for templates)
         const leadRes = await db.query(`
             SELECT first_name, business_name, state, email
             FROM conversations
             WHERE id = $1
         `, [conversationId]);
+
         const lead = leadRes.rows[0];
         const nameToUse = lead?.first_name || lead?.business_name || "there";
         const businessName = lead?.business_name || "Unknown Business";
-        const leadState = lead?.state || 'NEW';
-
-        // 1.5 GET COMMANDER'S GAME PLAN (if exists)
-        let gamePlan = null;
-        const strategyRes = await db.query(`
-            SELECT game_plan, lead_grade, strategy_type
-            FROM lead_strategy
-            WHERE conversation_id = $1
-        `, [conversationId]);
-
-        if (strategyRes.rows[0]) {
-            gamePlan = strategyRes.rows[0].game_plan;
-            if (typeof gamePlan === 'string') {
-                gamePlan = JSON.parse(gamePlan);
-            }
-            console.log(`🎖️ Commander Orders Loaded: Grade ${strategyRes.rows[0].lead_grade} | ${strategyRes.rows[0].strategy_type}`);
-        } else {
-            console.log(`📋 No Commander strategy yet - using default prompts`);
-        }
 
         // 2. TEMPLATE MODE (The "Free" Drip Campaign)
         // Checks instructions from index.js and returns text instantly.
@@ -157,12 +139,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         }
 
         // 🟢 F. THE HAIL MARY (Ballpark Offer)
-        // Handles "Generate Ballpark Offer" instruction from scheduler
         if (systemInstruction.includes("Generate Ballpark Offer")) {
             console.log(`🏈 AI MODE: Generating Gemini Ballpark Offer (Hail Mary)...`);
 
             const fcsRes = await db.query(`
-                SELECT average_revenue, average_daily_balance 
+                SELECT average_revenue, average_daily_balance
                 FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1
             `, [conversationId]);
 
@@ -176,16 +157,16 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                 const prompt = `
                     You are Dan Torres. This client has ghosted you.
-                    
+
                     DATA:
-                    - Their Monthly Revenue: $${rev}
-                    
+                    - Their Monthly Revenue: ${rev}
+
                     TASK:
                     Write a text to wake them up.
-                    - State clearly: "I haven't heard back, but looking at the statements, I see about $${rev} in revenue."
-                    - Make a BLIND OFFER: "I can probably get you $${blindOffer} landed today if we move now."
+                    - State clearly: "I haven't heard back, but looking at the statements, I see about ${rev} in revenue."
+                    - Make a BLIND OFFER: "I can probably get you ${blindOffer} landed today if we move now."
                     - End with: "Want me to lock that in?"
-                    
+
                     Keep it short and punchy.
                 `;
 
@@ -193,7 +174,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     const result = await geminiModel.generateContent(prompt);
                     offerText = result.response.text().replace(/"/g, '').trim();
                 } catch (e) {
-                    offerText = `I haven't heard back, but looking at the $${rev} revenue, I can probably get you funded today. Do you want me to finalize the offer?`;
+                    offerText = `I haven't heard back, but looking at the ${rev} revenue, I can probably get you funded today. Do you want me to finalize the offer?`;
                 }
             } else {
                 offerText = "I haven't heard back—I'm assuming you found capital elsewhere? I'll go ahead and close the file.";
@@ -202,12 +183,35 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             return { shouldReply: true, content: offerText };
         }
 
-        // 3. AI MODE (GPT-4o)
+        // 3. AI MODE (GPT-4o) - Only runs if no template matched
         console.log("🤖 AI MODE: Reading Strategy...");
-        
-        const history = await db.query(`SELECT direction, content FROM messages WHERE conversation_id = $1 ORDER BY timestamp ASC LIMIT 20`, [conversationId]);
-        
-        // Build system prompt
+
+        // 3.5 GET COMMANDER'S GAME PLAN (only needed for AI mode)
+        let gamePlan = null;
+        const strategyRes = await db.query(`
+            SELECT game_plan, lead_grade, strategy_type
+            FROM lead_strategy
+            WHERE conversation_id = $1
+        `, [conversationId]);
+
+        if (strategyRes.rows[0]) {
+            gamePlan = strategyRes.rows[0].game_plan;
+            if (typeof gamePlan === 'string') {
+                gamePlan = JSON.parse(gamePlan);
+            }
+            console.log(`🎖️ Commander Orders Loaded: Grade ${strategyRes.rows[0].lead_grade} | ${strategyRes.rows[0].strategy_type}`);
+        } else {
+            console.log(`📋 No Commander strategy yet - using default prompts`);
+        }
+
+        // 4. BUILD CONVERSATION HISTORY
+        const history = await db.query(`
+            SELECT direction, content FROM messages
+            WHERE conversation_id = $1
+            ORDER BY timestamp ASC LIMIT 20
+        `, [conversationId]);
+
+        // 5. BUILD SYSTEM PROMPT
         let systemPrompt = getGlobalPrompt();
 
         // Inject Commander's orders if available
@@ -226,7 +230,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
 
             if (gamePlan.offer_range) {
-                systemPrompt += `**Offer Range:** $${gamePlan.offer_range.min.toLocaleString()} - $${gamePlan.offer_range.max.toLocaleString()}\n\n`;
+                systemPrompt += `**Offer Range:** ${gamePlan.offer_range.min.toLocaleString()} - ${gamePlan.offer_range.max.toLocaleString()}\n\n`;
             }
 
             if (gamePlan.objection_strategy) {
@@ -250,8 +254,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
         }
 
+        // Build the Message Chain
         let messages = [{ role: "system", content: systemPrompt }];
-        
+
         history.rows.forEach(msg => {
             messages.push({ role: msg.direction === 'outbound' ? 'assistant' : 'user', content: msg.content });
         });
@@ -267,9 +272,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const aiMsg = completion.choices[0].message;
         let responseContent = aiMsg.content;
 
-        // 4. HANDLE TOOLS & RE-THINK
+        // 6. HANDLE TOOLS & RE-THINK
         if (aiMsg.tool_calls) {
-            
+
             // Add the AI's tool decision to history
             messages.push(aiMsg);
 
@@ -284,7 +289,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                 else if (tool.function.name === 'trigger_drive_sync') {
                     console.log(`📂 AI DECISION: Syncing Drive for "${businessName}"...`);
-                    syncDriveFiles(conversationId, businessName); 
+                    syncDriveFiles(conversationId, businessName);
                     toolResult = "Drive sync started in background.";
                 }
 
@@ -292,7 +297,12 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     const args = JSON.parse(tool.function.arguments);
                     console.log(`🎓 HANDOFF: GPT-4o -> Gemini 2.5 Pro`);
 
-                    const fcsRes = await db.query(`SELECT average_revenue, total_negative_days FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1`, [conversationId]);
+                    const fcsRes = await db.query(`
+                        SELECT average_revenue, total_negative_days
+                        FROM fcs_analyses
+                        WHERE conversation_id = $1
+                        ORDER BY created_at DESC LIMIT 1
+                    `, [conversationId]);
 
                     if (fcsRes.rows.length > 0) {
                         const fcs = fcsRes.rows[0];
@@ -300,7 +310,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                         const analystPrompt = `
                             You are the Senior Analyst at JMS Global.
-                            DATA: Revenue: $${rev}/mo, Negatives: ${fcs.total_negative_days}, Credit: ${args.credit_score}, Funding: ${args.recent_funding}
+                            DATA: Revenue: ${rev}/mo, Negatives: ${fcs.total_negative_days}, Credit: ${args.credit_score}, Funding: ${args.recent_funding}
                             TASK: Write the CLOSING text message. Mention revenue. Give a "Soft Offer". End with: "I'm generating the PDF now."
                         `;
                         try {
@@ -318,7 +328,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     console.log(`💰 AI DECISION: Generating formal offer...`);
                     const offer = await commanderService.generateOffer(conversationId);
                     if (offer) {
-                        toolResult = `OFFER READY: $${offer.offer_amount.toLocaleString()} at ${offer.factor_rate} factor rate. Term: ${offer.term} ${offer.term_unit}. Payment: $${offer.payment_amount} ${offer.payment_frequency}.
+                        toolResult = `OFFER READY: ${offer.offer_amount.toLocaleString()} at ${offer.factor_rate} factor rate. Term: ${offer.term} ${offer.term_unit}. Payment: ${offer.payment_amount} ${offer.payment_frequency}.
 
 Send this message to the lead: "${offer.pitch_message}"`;
                     } else {
