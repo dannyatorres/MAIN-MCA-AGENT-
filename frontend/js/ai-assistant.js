@@ -277,38 +277,15 @@ class AIAssistant {
         }
     }
 
-    // 🧠 SMART START: With Commander's Game Plan
     async triggerSmartIntro() {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
         const conversation = this.parent.getSelectedConversation();
         const businessName = conversation ? conversation.business_name : 'this deal';
-        const conversationId = this.parent.getCurrentConversationId();
 
-        // 🎖️ TRY TO FETCH COMMANDER'S GAME PLAN
-        let message = `I'm ready to help with **${businessName}**.`;
-
-        try {
-            const response = await this.parent.apiCall(`/api/ai/chat`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    query: 'Analyze the database for this conversation and provide context.',
-                    conversationId: conversationId,
-                    includeContext: true
-                })
-            });
-
-            // If we got a response with context, extract Commander data
-            if (response.success && response.response) {
-                // The AI will have the game plan in its context now
-                // We can display the response which should include strategy summary
-                message = response.response;
-            }
-        } catch (error) {
-            console.log('⚠️ Smart intro fetch failed, using default greeting');
-        }
-
+        // Simple welcome message - no API call
+        const message = `How can I help you with **${businessName}** today?`;
         this.addMessageToChat('assistant', message, false);
     }
 }
