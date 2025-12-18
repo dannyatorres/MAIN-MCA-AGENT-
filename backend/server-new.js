@@ -246,34 +246,26 @@ app.get('/api/fix/create-lead-strategy', async (req, res) => {
         const db = getDatabase();
         console.log('🧠 Creating lead_strategy table...');
 
-        // Create the table
         await db.query(`
             CREATE TABLE IF NOT EXISTS lead_strategy (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
+                conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
 
-                -- Commander's Analysis
                 lead_grade VARCHAR(1),
                 strategy_type VARCHAR(50),
-
-                -- The Game Plan (JSON)
                 game_plan JSONB,
 
-                -- Offer tracking
                 offer_amount INTEGER,
                 offer_generated_at TIMESTAMP,
                 offer_sent_at TIMESTAMP,
 
-                -- Timestamps
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW(),
 
-                -- One strategy per lead
                 CONSTRAINT unique_conversation_strategy UNIQUE (conversation_id)
             );
         `);
 
-        // Create index for faster lookups
         await db.query(`
             CREATE INDEX IF NOT EXISTS idx_lead_strategy_conversation
             ON lead_strategy(conversation_id);
@@ -284,7 +276,6 @@ app.get('/api/fix/create-lead-strategy', async (req, res) => {
             ON lead_strategy(lead_grade);
         `);
 
-        // Verify it was created
         const result = await db.query(`
             SELECT column_name, data_type
             FROM information_schema.columns
@@ -306,30 +297,76 @@ app.get('/api/fix/create-lead-strategy', async (req, res) => {
 // =========================================================
 
 // =========================================================
-// 🕵️ TROJAN HORSE: Response Training Table
-// URL: https://mcagent.io/api/fix/create-response-training
+// 🧠 TRAINING: Create response_training Table
+// URL: https://mcagent.io/api/fix/create-training-table
 // =========================================================
-app.get('/api/fix/create-response-training', async (req, res) => {
+app.get('/api/fix/create-training-table', async (req, res) => {
     try {
         const db = getDatabase();
-        console.log('🎓 Creating response_training table...');
+        console.log('🧠 Creating response_training table...');
 
         await db.query(`
             CREATE TABLE IF NOT EXISTS response_training (
-                id SERIAL PRIMARY KEY,
-                conversation_id INTEGER REFERENCES conversations(id),
-                user_message TEXT,
-                ai_response TEXT,
-                response_type VARCHAR(50),
-                lead_quality VARCHAR(10),
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+
+                lead_message TEXT,
+                lead_message_timestamp TIMESTAMP,
+
+                commander_suggestion JSONB,
+                commander_grade VARCHAR(1),
+                commander_strategy VARCHAR(50),
+
+                human_response TEXT,
+                human_response_timestamp TIMESTAMP,
+                response_source VARCHAR(20),
+                response_delay_seconds INTEGER,
+
+                lead_replied BOOLEAN DEFAULT FALSE,
+                lead_reply_content TEXT,
+                outcome VARCHAR(50),
+
+                similarity_score FLOAT,
+
                 created_at TIMESTAMP DEFAULT NOW()
-            )
+            );
         `);
 
-        res.json({ success: true, message: '✅ response_training table created successfully' });
+        await db.query(`
+            CREATE INDEX IF NOT EXISTS idx_response_training_conversation
+            ON response_training(conversation_id);
+        `);
+
+        const result = await db.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'response_training'
+            ORDER BY ordinal_position;
+        `);
+
+        res.json({
+            success: true,
+            message: "✅ response_training table created",
+            columns: result.rows.map(r => `${r.column_name} (${r.data_type})`)
+        });
 
     } catch (error) {
-        console.error("❌ Training Table Creation Failed:", error);
+        console.error("❌ Migration Failed:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
+// =========================================================
+// 🧠 VECTOR: Enable pgvector Extension
+// URL: https://mcagent.io/api/fix/enable-pgvector
+// =========================================================
+app.get('/api/fix/enable-pgvector', async (req, res) => {
+    try {
+        const db = getDatabase();
+        await db.query(`CREATE EXTENSION IF NOT EXISTS vector;`);
+        res.json({ success: true, message: "✅ pgvector enabled" });
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });

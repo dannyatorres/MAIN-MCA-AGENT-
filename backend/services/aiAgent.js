@@ -13,23 +13,40 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
 // 📊 TRAINING DATA TRACKER
-async function trackResponseForTraining(conversationId, userMessage, aiResponse, responseType) {
+async function trackResponseForTraining(conversationId, leadMessage, humanResponse, responseSource) {
     const db = getDatabase();
 
     try {
-        // Detect Lead Quality based on conversation state
-        const leadQualityCheck = await db.query(`
-            SELECT state FROM conversations WHERE id = $1
+        // Fetch Commander's game plan
+        const strategyRes = await db.query(`
+            SELECT game_plan, lead_grade, strategy_type FROM lead_strategy WHERE conversation_id = $1
         `, [conversationId]);
 
-        const leadQuality = leadQualityCheck.rows[0]?.state === 'HOT_LEAD' ? 'HOT' : 'NORMAL';
+        const strategy = strategyRes.rows[0];
 
         await db.query(`
-            INSERT INTO response_training (conversation_id, user_message, ai_response, response_type, lead_quality)
-            VALUES ($1, $2, $3, $4, $5)
-        `, [conversationId, userMessage, aiResponse, responseType, leadQuality]);
+            INSERT INTO response_training (
+                conversation_id,
+                lead_message,
+                lead_message_timestamp,
+                commander_suggestion,
+                commander_grade,
+                commander_strategy,
+                human_response,
+                human_response_timestamp,
+                response_source
+            ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, NOW(), $7)
+        `, [
+            conversationId,
+            leadMessage,
+            strategy?.game_plan || null,
+            strategy?.lead_grade || null,
+            strategy?.strategy_type || null,
+            humanResponse,
+            responseSource
+        ]);
 
-        console.log(`📊 Training data saved: ${responseType}`);
+        console.log(`📊 Training data saved: ${responseSource}`);
     } catch (err) {
         console.error('⚠️ Training tracking failed:', err.message);
     }
