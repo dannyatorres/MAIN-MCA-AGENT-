@@ -102,7 +102,7 @@ class EmailService {
         }
 
         // Subject Line: Clean and professional
-        const subject = `New Submission: ${businessData.businessName} - Deal Submission`;
+        const subject = `New Submission: ${businessData.businessName}`;
 
         // Process documents - they can either be file buffers (new format) or URLs (old format)
         const validAttachments = [];
