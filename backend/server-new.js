@@ -177,6 +177,73 @@ app.get('/api/fix/bulk-import-lenders', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// =========================================================
+// 🧠 COMMANDER: Create lead_strategy Table
+// URL: https://mcagent.io/api/fix/create-lead-strategy
+// =========================================================
+app.get('/api/fix/create-lead-strategy', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🧠 Creating lead_strategy table...');
+
+        // Create the table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS lead_strategy (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
+
+                -- Commander's Analysis
+                lead_grade VARCHAR(1),
+                strategy_type VARCHAR(50),
+
+                -- The Game Plan (JSON)
+                game_plan JSONB,
+
+                -- Offer tracking
+                offer_amount INTEGER,
+                offer_generated_at TIMESTAMP,
+                offer_sent_at TIMESTAMP,
+
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW(),
+
+                -- One strategy per lead
+                CONSTRAINT unique_conversation_strategy UNIQUE (conversation_id)
+            );
+        `);
+
+        // Create index for faster lookups
+        await db.query(`
+            CREATE INDEX IF NOT EXISTS idx_lead_strategy_conversation
+            ON lead_strategy(conversation_id);
+        `);
+
+        await db.query(`
+            CREATE INDEX IF NOT EXISTS idx_lead_strategy_grade
+            ON lead_strategy(lead_grade);
+        `);
+
+        // Verify it was created
+        const result = await db.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'lead_strategy'
+            ORDER BY ordinal_position;
+        `);
+
+        res.json({
+            success: true,
+            message: "✅ lead_strategy table created successfully",
+            columns: result.rows.map(r => `${r.column_name} (${r.data_type})`)
+        });
+
+    } catch (error) {
+        console.error("❌ Migration Failed:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
 // =========================================================
 
 // --- TRUST PROXY ---
