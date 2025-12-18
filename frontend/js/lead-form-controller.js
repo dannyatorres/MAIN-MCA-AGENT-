@@ -583,8 +583,7 @@ export class LeadFormController {
 
                     document.getElementById('leadModalWrapper')?.remove();
 
-                    if (this.parent.conversationUI) {
-                        this.parent.conversationUI.reloadConversationDetails();
+                    if (this.parent.conversationUI.showConversationDetails) {
                         this.parent.conversationUI.showConversationDetails();
                     }
                     this.parent.utils.showNotification('Lead updated successfully!', 'success');
