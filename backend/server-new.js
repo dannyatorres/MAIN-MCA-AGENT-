@@ -372,6 +372,35 @@ app.get('/api/fix/enable-pgvector', async (req, res) => {
 });
 // =========================================================
 
+// =========================================================
+// 🔧 FIX: Add credit_score to conversations
+// URL: https://mcagent.io/api/fix/add-credit-score
+// =========================================================
+app.get('/api/fix/add-credit-score', async (req, res) => {
+    try {
+        const db = getDatabase();
+
+        await db.query(`
+            ALTER TABLE conversations
+            ADD COLUMN IF NOT EXISTS credit_score VARCHAR(20);
+        `);
+
+        await db.query(`
+            ALTER TABLE conversations
+            ADD COLUMN IF NOT EXISTS recent_funding TEXT;
+        `);
+
+        res.json({
+            success: true,
+            message: "✅ credit_score and recent_funding columns added to conversations"
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
 // --- TRUST PROXY ---
 app.set('trust proxy', 1);
 
