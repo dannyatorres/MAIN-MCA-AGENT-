@@ -21,7 +21,6 @@ class LenderAdmin {
 
         let modal = document.getElementById('lenderManagementModal');
 
-        // REFACTOR: Create clean modal structure if it doesn't exist
         if (!modal) {
             const modalHTML = `
                 <div id="lenderManagementModal" class="modal hidden" style="z-index: 2000;">
@@ -31,9 +30,7 @@ class LenderAdmin {
                             <button class="modal-close" onclick="document.getElementById('lenderManagementModal').style.display='none'">×</button>
                         </div>
 
-                        <div class="modal-body submission-body" id="lenderManagementContent"
-                             style="padding: 0 !important; display: flex; flex-direction: column; overflow: hidden; height: 100%;">
-                        </div>
+                        <div class="modal-body admin-directory" id="lenderManagementContent"></div>
                     </div>
                 </div>
             `;
@@ -46,17 +43,13 @@ class LenderAdmin {
             contentArea.innerHTML = this.createManagementTemplate();
         }
 
-        // Show modal (flex centers it)
         modal.style.display = 'flex';
         this.loadLendersList();
     }
 
     createManagementTemplate() {
-        // LAYOUT FIX: Direct edge-to-edge structure
-        // 1. Header is flush with top (no rounded corners, no borders except bottom)
-        // 2. List container uses flex:1 to consume all remaining height
         return `
-            <div class="submission-col-header" style="border: none; border-bottom: 1px solid #30363d; border-radius: 0; padding: 12px 20px; flex-shrink: 0; background: #161b22;">
+            <div class="section-header flush-header">
                 <div class="submission-col-title" style="font-size: 12px;">Network Directory</div>
                 <div class="header-actions">
                     <button onclick="window.commandCenter.lenderAdmin.showAddModal()" class="action-link" style="font-size: 11px; display: flex; align-items: center; gap: 6px;">
@@ -68,8 +61,7 @@ class LenderAdmin {
                 </div>
             </div>
 
-            <div id="adminLendersTableContainer" class="selection-list"
-                 style="flex: 1; border: none; border-radius: 0; padding: 0; background: #0d1117; overflow-y: auto;">
+            <div id="adminLendersTableContainer" class="directory-list-container">
                 <div class="loading-state" style="padding: 20px;">
                     <div class="loading-spinner"></div> Loading Network...
                 </div>
@@ -117,9 +109,9 @@ class LenderAdmin {
 
         const sorted = [...lenders].sort((a, b) => a.name.localeCompare(b.name));
 
-        // RENDER FIX: Rows now define the spacing since the container is flush
+        // CLEAN CSS CLASS: .directory-item handles the spacing
         container.innerHTML = sorted.map(lender => `
-            <div class="lender-list-row" style="padding: 16px 24px; border-bottom: 1px solid #21262d; display: flex; align-items: center; justify-content: space-between; background: #0d1117;">
+            <div class="directory-item">
                 <div class="lender-name-wrapper" style="display: flex; align-items: center;">
                     <div class="lender-avatar" style="width: 36px; height: 36px; font-size: 14px; margin-right: 16px; border-radius: 10px;">
                         ${lender.name.charAt(0).toUpperCase()}

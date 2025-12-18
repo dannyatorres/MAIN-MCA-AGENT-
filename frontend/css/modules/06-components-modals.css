@@ -596,3 +596,47 @@
     max-height: 75vh;
     overflow-y: auto;
 }
+
+/* ==========================================================================
+   [ADDITION] Admin Directory View - Full Height & Flush
+   ========================================================================== */
+
+/* Admin Directory View - Full Height & Flush */
+.modal-body.admin-directory {
+    padding: 0;                /* Removes the 20px padding */
+    display: flex;             /* Enables column layout */
+    flex-direction: column;    /* Stacks Header and List */
+    height: 100%;              /* Fills the modal height */
+    overflow: hidden;          /* Prevents double scrollbars */
+    background: #0d1117;       /* Dark background */
+}
+
+/* The scrollable list container */
+.directory-list-container {
+    flex: 1;                   /* Takes all remaining height */
+    overflow-y: auto;          /* Scroll happens here */
+    border: none;              /* Removes 'selection-list' borders */
+}
+
+/* The individual list rows */
+.directory-item {
+    padding: 16px 24px;        /* Adds the breathing room back inside the item */
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.2s;
+}
+
+.directory-item:hover {
+    background: #161b22;
+}
+
+/* Header variant for full width */
+.section-header.flush-header {
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid #30363d;
+    padding: 12px 20px;
+    background: #161b22;
+}
