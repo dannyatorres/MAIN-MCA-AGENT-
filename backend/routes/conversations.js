@@ -1432,7 +1432,9 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                 ]);
 
                 // 2c. Send Email
+                // ✅ UPDATE: Pass 'lenderName' as the FIRST argument
                 const emailResult = await emailService.sendLenderSubmission(
+                    lenderName,      // <--- Added this
                     lenderEmail,
                     businessData,
                     fileAttachments,

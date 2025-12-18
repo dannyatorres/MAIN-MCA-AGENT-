@@ -95,13 +95,14 @@ class EmailService {
         }
     }
 
-    // ✅ FIX: Add ccEmail as the 4th argument (default to null)
-    async sendLenderSubmission(lenderEmail, businessData, documents = [], ccEmail = null) {
+    // ✅ UPDATE: Now accepts 'lenderName' as the 1st argument
+    async sendLenderSubmission(lenderName, lenderEmail, businessData, documents = [], ccEmail = null) {
         if (!this.transporter) {
             throw new Error('Email service not configured or failed to initialize');
         }
 
-        const subject = `New MCA Application - ${businessData.businessName}`;
+        // Subject Line: Clean and professional
+        const subject = `New Submission: ${businessData.businessName} - Deal Submission`;
 
         // Process documents - they can either be file buffers (new format) or URLs (old format)
         const validAttachments = [];
@@ -152,8 +153,9 @@ class EmailService {
 
         console.log(`📎 Valid attachments: ${validAttachments.length}, Invalid: ${invalidDocuments.length}`);
 
-        const htmlContent = this.generateLenderEmailHtml(businessData, documents);
-        const textContent = this.generateLenderEmailText(businessData, documents);
+        // Generate Content with Dynamic Lender Name
+        const htmlContent = this.generateLenderEmailHtml(lenderName, businessData, documents);
+        const textContent = this.generateLenderEmailText(lenderName, businessData, documents);
 
         const mailOptions = {
             from: process.env.EMAIL_FROM || getEnvVar('EMAIL_USER'),
@@ -170,61 +172,19 @@ class EmailService {
 
         try {
             const result = await this.transporter.sendMail(mailOptions);
-            console.log(`Email sent successfully to ${lenderEmail}:`, result.messageId);
-
-            let warningMessage = '';
-            if (invalidDocuments.length > 0) {
-                warningMessage = ` (${invalidDocuments.length} documents skipped due to invalid paths)`;
-            }
-
-            return {
-                success: true,
-                messageId: result.messageId,
-                recipient: lenderEmail,
-                // ✅ LOGGING: Useful to see if CC worked
-                cc: ccEmail,
-                attachmentsSkipped: invalidDocuments.length,
-                warning: warningMessage
-            };
+            console.log(`Email sent successfully to ${lenderName} (${lenderEmail})`);
+            return { success: true, messageId: result.messageId };
         } catch (error) {
-            console.error(`Failed to send email to ${lenderEmail}:`, error);
-
-            // If it's an attachment-related error, try sending without attachments
-            if (error.message.includes('Invalid status code') && validAttachments.length > 0) {
-                console.warn(`🔄 Retrying email without attachments due to attachment error`);
-
-                const fallbackMailOptions = {
-                    ...mailOptions,
-                    attachments: []
-                };
-
-                try {
-                    const fallbackResult = await this.transporter.sendMail(fallbackMailOptions);
-                    console.log(`Email sent successfully WITHOUT attachments to ${lenderEmail}:`, fallbackResult.messageId);
-                    return {
-                        success: true,
-                        messageId: fallbackResult.messageId,
-                        recipient: lenderEmail,
-                        attachmentsSkipped: documents.length,
-                        warning: ` (All ${documents.length} attachments skipped due to fetch errors)`
-                    };
-                } catch (fallbackError) {
-                    console.error(`Failed to send fallback email to ${lenderEmail}:`, fallbackError);
-                    throw new Error(`Email delivery failed even without attachments: ${fallbackError.message}`);
-                }
-            }
-
-            throw new Error(`Email delivery failed: ${error.message}`);
+            console.error(`Failed to send email to ${lenderName}:`, error);
+            throw error;
         }
     }
 
-    generateLenderEmailHtml(businessData, documents) {
-        // 🛠️ SMART HELPER: Hides empty rows & fixes "ARCHIVED" bug
+    // ✅ NEW LAYOUT & VERBIAGE
+    generateLenderEmailHtml(lenderName, businessData, documents) {
         const renderRow = (label, value, isCurrency = false) => {
             if (!value || value === 'N/A' || value === 'ARCHIVED' || value === 'null') return '';
-
             const displayValue = isCurrency ? `${Number(value).toLocaleString()}` : value;
-
             return `
                 <div class="info-row">
                     <span class="label">${label}:</span>
@@ -233,58 +193,59 @@ class EmailService {
         };
 
         const documentsHtml = documents.length > 0
-            ? `
-                <div class="docs-section">
-                    <h3>Attached Documents:</h3>
-                    <ul>
-                        ${documents.map(doc => `<li>${doc.filename || doc.name || 'Document'}</li>`).join('')}
-                    </ul>
-                </div>`
+            ? `<div class="docs-section">
+                <h3>Attached Documents</h3>
+                <ul>${documents.map(doc => `<li>${doc.filename || doc.name}</li>`).join('')}</ul>
+               </div>`
             : '';
 
-        // ✅ RESTORED: Classic Blue Header & "Business Information" Section
         return `
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>New MCA Application Submission</title>
                 <style>
-                    body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f9f9f9; margin: 0; padding: 0; }
-                    .container { max-width: 650px; margin: 20px auto; background: #ffffff; overflow: hidden; border: 1px solid #ddd; }
-                    /* Classic Dark Blue Header */
-                    .header { background: #2c3e50; color: white; padding: 30px; text-align: center; }
-                    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
-                    .content { padding: 40px 30px; }
+                    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                    /* ✅ FIX: Wider Container (850px) */
+                    .container { max-width: 850px; margin: 0 auto; background: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-                    /* The Gray Box from your screenshot */
-                    .business-info-box { background: #f8f9fa; padding: 25px; border-radius: 4px; margin-top: 10px; margin-bottom: 25px; }
+                    /* ✅ FIX: Header Branding - JMS GLOBAL */
+                    .header { background: #1e293b; color: white; padding: 35px 40px; }
+                    .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px; }
+                    .header p { margin: 5px 0 0 0; font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; }
 
-                    .info-row { margin-bottom: 10px; }
-                    .label { font-weight: 700; color: #2c3e50; font-size: 15px; margin-right: 5px; }
-                    .value { font-weight: 400; color: #333; font-size: 15px; }
+                    .content { padding: 40px; }
+                    .greeting { font-size: 16px; margin-bottom: 20px; color: #1e293b; font-weight: 600; }
+                    .intro { font-size: 15px; line-height: 1.6; color: #475569; margin-bottom: 30px; }
 
-                    .section-title { font-size: 20px; font-weight: 700; color: #2c3e50; margin-bottom: 15px; margin-top: 0; }
+                    /* Data Box */
+                    .business-info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 25px; margin-bottom: 30px; }
+                    .info-row { display: flex; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+                    .info-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+                    .label { width: 180px; font-weight: 600; color: #64748b; font-size: 14px; }
+                    .value { font-weight: 500; color: #0f172a; font-size: 15px; }
 
-                    .docs-section { margin-top: 30px; }
-                    .docs-section h3 { font-size: 18px; color: #2c3e50; margin-bottom: 10px; }
-                    .docs-section ul { padding-left: 20px; }
-                    .docs-section li { margin-bottom: 5px; color: #555; }
+                    .docs-section h3 { font-size: 16px; color: #1e293b; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: inline-block; }
+                    .docs-section ul { list-style: none; padding: 0; }
+                    .docs-section li { background: #f1f5f9; padding: 10px 15px; margin-bottom: 8px; border-radius: 4px; font-size: 14px; color: #334155; display: flex; align-items: center; }
+                    .docs-section li:before { content: "📄"; margin-right: 10px; }
 
-                    .footer { padding: 20px; text-align: left; font-size: 14px; color: #333; }
+                    .footer { background: #f8fafc; padding: 25px 40px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; text-align: center; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>New MCA Application Submission</h1>
+                        <h1>JMS GLOBAL</h1>
+                        <p>Deal Submission</p>
                     </div>
 
                     <div class="content">
-                        <p>Dear Lender,</p>
-                        <p>We have a new Merchant Cash Advance application that matches your lending criteria. Please find the business details below:</p>
+                        <div class="greeting">Dear ${lenderName},</div>
 
-                        <h2 class="section-title">Business Information</h2>
+                        <p class="intro">
+                            Please review the file below for funding consideration. This merchant has been pre-qualified against your specific lending parameters and matches your current buy box.
+                        </p>
 
                         <div class="business-info-box">
                             ${renderRow('Business Name', businessData.businessName)}
@@ -293,16 +254,20 @@ class EmailService {
                             ${renderRow('Monthly Revenue', businessData.monthlyRevenue, true)}
                             ${renderRow('FICO Score', businessData.fico)}
                             ${renderRow('Time in Business', businessData.tib ? businessData.tib + ' months' : null)}
-                            ${renderRow('Requested Position', businessData.position || businessData.requestedPosition)}
+                            ${renderRow('Requested Position', businessData.position)}
                             ${renderRow('Negative Days', businessData.negativeDays)}
                         </div>
 
                         ${documentsHtml}
 
-                        <p>This application has been pre-qualified based on your lending criteria. Please review the attached documentation and let us know if you would like to proceed with an offer.</p>
+                        <p class="intro" style="margin-top: 30px; margin-bottom: 0;">
+                            We look forward to your offer.
+                        </p>
+                    </div>
 
-                        <p>Best regards,<br>
-                        <strong>MCA Command Center</strong></p>
+                    <div class="footer">
+                        &copy; ${new Date().getFullYear()} JMS GLOBAL. All rights reserved.<br>
+                        Confidential Submission.
                     </div>
                 </div>
             </body>
@@ -310,24 +275,29 @@ class EmailService {
         `;
     }
 
-    generateLenderEmailText(businessData, documents) {
-        const documentsText = documents.length > 0
-            ? `\nAttached Documents:\n${documents.map(doc => `- ${doc.filename || doc.name || 'Document'}`).join('\n')}\n`
-            : '\n(No documents attached)\n';
-
-        const field = (label, val) => (!val || val === 'N/A' || val === 'ARCHIVED') ? '' : `- ${label}: ${val}\n`;
-
+    generateLenderEmailText(lenderName, businessData, documents) {
         return `
-NEW SUBMISSION - JMS GLOBAL
+JMS GLOBAL | Deal Submission
 
-Please review the details below for a new opportunity.
+Dear ${lenderName},
 
-${field('Business Name', businessData.businessName)}${field('Industry', businessData.industry)}${field('State', businessData.state)}${field('Monthly Revenue', businessData.monthlyRevenue ? '$' + businessData.monthlyRevenue.toLocaleString() : null)}${field('FICO Score', businessData.fico)}${field('Time in Business', businessData.tib ? businessData.tib + ' months' : null)}${field('Requested Position', businessData.position || businessData.requestedPosition)}${field('Negative Days', businessData.negativeDays)}
-${documentsText}
-Let us know if you can provide an offer on this file.
+Please review the file below for funding consideration. This merchant has been pre-qualified against your specific lending parameters.
+
+BUSINESS OVERVIEW
+-----------------
+Business Name: ${businessData.businessName}
+Revenue: ${businessData.monthlyRevenue}
+Industry: ${businessData.industry}
+State: ${businessData.state}
+
+DOCUMENTS ATTACHED
+------------------
+${documents.map(d => `- ${d.filename || d.name}`).join('\n')}
+
+We look forward to your offer.
 
 Best regards,
-JMS GLOBAL Team
+JMS GLOBAL
         `;
     }
 
@@ -337,12 +307,13 @@ JMS GLOBAL Team
 
         for (const lender of lenders) {
             try {
-                // ✅ FIX: Pass 'lender.cc_email' as the 4th argument
+                // ✅ UPDATE: Pass lenderName as 1st argument, then email, then cc_email
                 const result = await this.sendLenderSubmission(
+                    lender.name || lender.lender_name,
                     lender.email,
                     businessData,
                     documents,
-                    lender.cc_email // <--- Pass the CC data here!
+                    lender.cc_email
                 );
 
                 results.push({
