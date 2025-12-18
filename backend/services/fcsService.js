@@ -108,7 +108,8 @@ class FCSService {
                         enableImageQualityScores: false,
                         enableSymbol: false,
                         enableNativePdfParsing: true,
-                        computeStyleInfo: false
+                        computeStyleInfo: false,
+                        disableCharacterBoxesDetection: true  // IMAGELESS MODE: Enables 30-page processing
                     }
                 },
                 skipHumanReview: true
