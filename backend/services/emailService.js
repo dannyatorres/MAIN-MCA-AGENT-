@@ -95,75 +95,40 @@ class EmailService {
         }
     }
 
-    // ✅ UPDATE: Now accepts 'lenderName' as the 1st argument
+    // ✅ UPDATE: Accepts 'lenderName', sends wider "Report Style" email
     async sendLenderSubmission(lenderName, lenderEmail, businessData, documents = [], ccEmail = null) {
         if (!this.transporter) {
             throw new Error('Email service not configured or failed to initialize');
         }
 
-        // Subject Line: Clean and professional
-        const subject = `New Submission: ${businessData.businessName}`;
+        // ✅ FIXED SUBJECT: Includes JMS GLOBAL branding
+        const subject = `New Submission from JMS GLOBAL : ${businessData.businessName}`;
 
-        // Process documents - they can either be file buffers (new format) or URLs (old format)
+        // Process documents
         const validAttachments = [];
-        const invalidDocuments = [];
-
         for (const doc of documents) {
-            // Debug log each document being processed
-            console.log('📎 Processing document for attachment:', {
-                name: doc.name,
-                filename: doc.filename,
-                type: doc.type || doc.mimeType || doc.contentType,
-                hasContent: !!doc.content,
-                hasPath: !!(doc.s3_url || doc.file_path || doc.path || doc.url)
-            });
-
-            // New format: Document with actual file buffer content
             if (doc.content) {
                 validAttachments.push({
-                    filename: doc.filename || doc.name || doc.originalFilename || 'document.pdf',
-                    content: doc.content, // Direct file buffer
-                    contentType: doc.contentType || doc.type || doc.mimeType || 'application/pdf'
+                    filename: doc.filename || doc.name || 'document.pdf',
+                    content: doc.content,
+                    contentType: doc.contentType || 'application/pdf'
                 });
-                console.log(`✅ Using file buffer: ${doc.filename} (${doc.content.length} bytes)`);
-            }
-            // Old format: Document with path/URL to fetch
-            else if (doc.s3_url || doc.file_path || doc.path || doc.url) {
-                const docPath = doc.s3_url || doc.file_path || doc.path || doc.url;
-
-                // Check if it's a test/mock URL that doesn't exist
-                if (docPath.includes('example-bucket') || docPath.includes('/local/docs/')) {
-                    console.warn(`⚠️ Skipping mock/test document: ${docPath}`);
-                    invalidDocuments.push(doc);
-                    continue;
-                }
-
-                // Add to valid attachments (Nodemailer will fetch the file)
+            } else if (doc.s3_url || doc.file_path || doc.path || doc.url) {
                 validAttachments.push({
-                    filename: doc.filename || doc.name || doc.originalFilename || 'document.pdf',
-                    path: docPath,
-                    contentType: doc.type || doc.mimeType || 'application/pdf'
+                    filename: doc.filename || doc.name || 'document.pdf',
+                    path: doc.s3_url || doc.file_path || doc.path || doc.url,
+                    contentType: doc.contentType || 'application/pdf'
                 });
-                console.log(`✅ Using file path: ${docPath}`);
-            } else {
-                console.warn(`⚠️ Document missing both content and path: ${doc.name || doc.filename || 'unknown'}`);
-                invalidDocuments.push(doc);
             }
         }
 
-        console.log(`📎 Valid attachments: ${validAttachments.length}, Invalid: ${invalidDocuments.length}`);
-
-        // Generate Content with Dynamic Lender Name
         const htmlContent = this.generateLenderEmailHtml(lenderName, businessData, documents);
         const textContent = this.generateLenderEmailText(lenderName, businessData, documents);
 
         const mailOptions = {
             from: process.env.EMAIL_FROM || getEnvVar('EMAIL_USER'),
             to: lenderEmail,
-
-            // ✅ FIX: Add the CC field here
             cc: ccEmail,
-
             subject: subject,
             text: textContent,
             html: htmlContent,
@@ -180,22 +145,18 @@ class EmailService {
         }
     }
 
-    // ✅ NEW LAYOUT & VERBIAGE
+    // ✅ NEW LAYOUT: 1000px Width + 2-Column Data Grid
     generateLenderEmailHtml(lenderName, businessData, documents) {
-        const renderRow = (label, value, isCurrency = false) => {
-            if (!value || value === 'N/A' || value === 'ARCHIVED' || value === 'null') return '';
-            const displayValue = isCurrency ? `${Number(value).toLocaleString()}` : value;
-            return `
-                <div class="info-row">
-                    <span class="label">${label}:</span>
-                    <span class="value">${displayValue}</span>
-                </div>`;
+        // Helper to format currency/nulls
+        const fmt = (val, isCurrency) => {
+            if (!val || val === 'N/A' || val === 'null') return '-';
+            return isCurrency ? `${Number(val).toLocaleString()}` : val;
         };
 
         const documentsHtml = documents.length > 0
-            ? `<div class="docs-section">
-                <h3>Attached Documents</h3>
-                <ul>${documents.map(doc => `<li>${doc.filename || doc.name}</li>`).join('')}</ul>
+            ? `<div class="section-title">Attached Documents</div>
+               <div class="docs-grid">
+                  ${documents.map(doc => `<div class="doc-item">📄 ${doc.filename || doc.name}</div>`).join('')}
                </div>`
             : '';
 
@@ -205,69 +166,107 @@ class EmailService {
             <head>
                 <meta charset="UTF-8">
                 <style>
-                    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
-                    /* ✅ FIX: Wider Container (850px) */
-                    .container { max-width: 850px; margin: 0 auto; background: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; }
 
-                    /* ✅ FIX: Header Branding - JMS GLOBAL */
-                    .header { background: #1e293b; color: white; padding: 35px 40px; }
-                    .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px; }
-                    .header p { margin: 5px 0 0 0; font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; }
+                    /* ✅ WIDER CONTAINER (1000px) for "Full Page" feel */
+                    .email-wrapper { width: 100%; background-color: #f0f2f5; padding: 40px 0; }
+                    .container { max-width: 1000px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
-                    .content { padding: 40px; }
-                    .greeting { font-size: 16px; margin-bottom: 20px; color: #1e293b; font-weight: 600; }
-                    .intro { font-size: 15px; line-height: 1.6; color: #475569; margin-bottom: 30px; }
+                    /* HEADER */
+                    .header { background: #1e293b; color: white; padding: 40px 50px; border-bottom: 4px solid #3b82f6; }
+                    .header h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 0.5px; }
+                    .header p { margin: 8px 0 0 0; opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
 
-                    /* Data Box */
-                    .business-info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 25px; margin-bottom: 30px; }
-                    .info-row { display: flex; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
-                    .info-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-                    .label { width: 180px; font-weight: 600; color: #64748b; font-size: 14px; }
-                    .value { font-weight: 500; color: #0f172a; font-size: 15px; }
+                    /* CONTENT */
+                    .content { padding: 50px; }
+                    .greeting { font-size: 18px; color: #1e293b; font-weight: 700; margin-bottom: 20px; }
+                    .intro { font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 40px; max-width: 800px; }
 
-                    .docs-section h3 { font-size: 16px; color: #1e293b; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: inline-block; }
-                    .docs-section ul { list-style: none; padding: 0; }
-                    .docs-section li { background: #f1f5f9; padding: 10px 15px; margin-bottom: 8px; border-radius: 4px; font-size: 14px; color: #334155; display: flex; align-items: center; }
-                    .docs-section li:before { content: "📄"; margin-right: 10px; }
+                    /* ✅ 2-COLUMN DATA GRID (Uses Table for Email Compatibility) */
+                    .data-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+                    .data-table td { width: 50%; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+                    .data-table tr:last-child td { border-bottom: none; }
 
-                    .footer { background: #f8fafc; padding: 25px 40px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; text-align: center; }
+                    .label { display: block; font-size: 12px; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 5px; letter-spacing: 0.5px; }
+                    .value { display: block; font-size: 16px; color: #0f172a; font-weight: 500; }
+
+                    /* DOCUMENT SECTION */
+                    .section-title { font-size: 14px; font-weight: 700; color: #1e293b; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px; }
+                    .docs-grid { display: block; }
+                    .doc-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 16px; margin-bottom: 8px; border-radius: 6px; color: #334155; font-size: 14px; font-weight: 500; }
+
+                    /* FOOTER */
+                    .footer { background: #1e293b; padding: 30px; text-align: center; color: #94a3b8; font-size: 13px; }
                 </style>
             </head>
             <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>JMS GLOBAL</h1>
-                        <p>Deal Submission</p>
-                    </div>
-
-                    <div class="content">
-                        <div class="greeting">Dear ${lenderName},</div>
-
-                        <p class="intro">
-                            Please review the file below for funding consideration. This merchant has been pre-qualified against your specific lending parameters and matches your current buy box.
-                        </p>
-
-                        <div class="business-info-box">
-                            ${renderRow('Business Name', businessData.businessName)}
-                            ${renderRow('Industry', businessData.industry)}
-                            ${renderRow('State', businessData.state)}
-                            ${renderRow('Monthly Revenue', businessData.monthlyRevenue, true)}
-                            ${renderRow('FICO Score', businessData.fico)}
-                            ${renderRow('Time in Business', businessData.tib ? businessData.tib + ' months' : null)}
-                            ${renderRow('Requested Position', businessData.position)}
-                            ${renderRow('Negative Days', businessData.negativeDays)}
+                <div class="email-wrapper">
+                    <div class="container">
+                        <div class="header">
+                            <h1>JMS GLOBAL</h1>
+                            <p>Deal Submission</p>
                         </div>
 
-                        ${documentsHtml}
+                        <div class="content">
+                            <div class="greeting">Dear ${lenderName},</div>
+                            <p class="intro">
+                                We are submitting the following file for your review. The merchant below has been pre-qualified against your specific lending criteria.
+                            </p>
 
-                        <p class="intro" style="margin-top: 30px; margin-bottom: 0;">
-                            We look forward to your offer.
-                        </p>
-                    </div>
+                            <table class="data-table">
+                                <tr>
+                                    <td>
+                                        <span class="label">Business Name</span>
+                                        <span class="value">${fmt(businessData.businessName)}</span>
+                                    </td>
+                                    <td>
+                                        <span class="label">Industry</span>
+                                        <span class="value">${fmt(businessData.industry)}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="label">Monthly Revenue</span>
+                                        <span class="value">${fmt(businessData.monthlyRevenue, true)}</span>
+                                    </td>
+                                    <td>
+                                        <span class="label">State</span>
+                                        <span class="value">${fmt(businessData.state)}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="label">FICO Score</span>
+                                        <span class="value">${fmt(businessData.fico)}</span>
+                                    </td>
+                                    <td>
+                                        <span class="label">Time in Business</span>
+                                        <span class="value">${businessData.tib ? businessData.tib + ' Months' : '-'}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="label">Requested Position</span>
+                                        <span class="value">${fmt(businessData.position)}</span>
+                                    </td>
+                                    <td>
+                                        <span class="label">Negative Days</span>
+                                        <span class="value">${fmt(businessData.negativeDays)}</span>
+                                    </td>
+                                </tr>
+                            </table>
 
-                    <div class="footer">
-                        &copy; ${new Date().getFullYear()} JMS GLOBAL. All rights reserved.<br>
-                        Confidential Submission.
+                            ${documentsHtml}
+
+                            <p class="intro" style="margin-top: 40px; margin-bottom: 0;">
+                                We look forward to your offer.
+                            </p>
+                        </div>
+
+                        <div class="footer">
+                            &copy; ${new Date().getFullYear()} JMS GLOBAL. All rights reserved.<br>
+                            Confidential Submission.
+                        </div>
                     </div>
                 </div>
             </body>
@@ -281,17 +280,19 @@ JMS GLOBAL | Deal Submission
 
 Dear ${lenderName},
 
-Please review the file below for funding consideration. This merchant has been pre-qualified against your specific lending parameters.
+Please review the file below for funding consideration.
 
-BUSINESS OVERVIEW
------------------
-Business Name: ${businessData.businessName}
-Revenue: ${businessData.monthlyRevenue}
-Industry: ${businessData.industry}
-State: ${businessData.state}
+BUSINESS PROFILE
+----------------
+Business Name:      ${businessData.businessName}
+Industry:           ${businessData.industry}
+Revenue:            ${businessData.monthlyRevenue}
+State:              ${businessData.state}
+FICO:               ${businessData.fico}
+Position:           ${businessData.position}
 
-DOCUMENTS ATTACHED
-------------------
+DOCUMENTS
+---------
 ${documents.map(d => `- ${d.filename || d.name}`).join('\n')}
 
 We look forward to your offer.
