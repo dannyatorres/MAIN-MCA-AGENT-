@@ -319,6 +319,70 @@
 
     <div class="notifications" id="notifications"></div>
 
+    <div id="lenderSubmissionModal" class="modal hidden">
+        <div class="modal-content lender-submission-modal">
+
+            <div id="submissionOverlay" class="submission-loading-overlay">
+                 <div class="submission-loading-card">
+                    <div class="submission-spinner"></div>
+                    <h3>Sending...</h3>
+                    <p id="submissionStatusText" class="status-text">Preparing files...</p>
+                    <div class="submission-progress-track">
+                        <div id="submissionProgressBar" class="submission-progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-header">
+                <h3>Send to Lenders</h3>
+                <button id="closeLenderSubmissionModal" class="modal-close">&times;</button>
+            </div>
+
+            <div class="modal-body submission-body">
+                <div class="submission-grid">
+                    <div class="submission-col">
+                        <div class="submission-col-header">
+                            <span class="submission-col-title">Select Lenders</span>
+                            <div class="header-actions">
+                                <label class="toggle-override-label">
+                                    <input type="checkbox" id="showAllLendersToggle"> Override Filters
+                                </label>
+                                <button id="toggleAllLendersBtn" class="action-link">DESELECT ALL</button>
+                            </div>
+                        </div>
+                        <div class="submission-search-container">
+                            <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders..." autocomplete="off">
+                        </div>
+                        <div id="lenderSelectionList" class="selection-list"></div>
+                    </div>
+
+                    <div class="submission-col">
+                        <div class="submission-col-header">
+                            <span class="submission-col-title">Select Documents</span>
+                            <button id="toggleAllDocumentsBtn" class="action-link">SELECT ALL</button>
+                        </div>
+                        <div class="submission-search-container hidden">
+                            <input type="text" class="submission-search-input">
+                        </div>
+                        <div id="submissionDocumentList" class="selection-list documents-list"></div>
+                    </div>
+                </div>
+
+                <div class="submission-message-area">
+                    <label class="field-label">EMAIL MESSAGE (OPTIONAL)</label>
+                    <textarea id="submissionMessage" class="submission-textarea" placeholder="Enter a message to include with the submission..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancelLenderSubmission" class="btn btn-secondary">Cancel</button>
+                <button id="confirmLenderSubmission" class="btn btn-primary">
+                    <span id="sendSubmissionsText">Send Emails</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>

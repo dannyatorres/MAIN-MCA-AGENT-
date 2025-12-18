@@ -115,84 +115,6 @@ class LendersModule {
         }
     }
 
-    // Add this new function to create the modal HTML
-    injectSubmissionModal() {
-        if (document.getElementById('lenderSubmissionModal')) return;
-
-        // CSS classes now handle the layout structure.
-        // Key changes in HTML below:
-        // 1. Removed inline styles from headers.
-        // 2. Changed the document column spacer from visibility:hidden to display:none.
-
-        const modalHtml = `
-            <div id="lenderSubmissionModal" class="modal hidden">
-                <div class="modal-content lender-submission-modal">
-
-                    <div id="submissionOverlay" class="submission-loading-overlay">
-                         <div class="submission-loading-card">
-                            <div class="submission-spinner"></div>
-                            <h3 style="color: #e6edf3; font-size: 16px; font-weight: 700; margin: 0 0 5px 0;">Sending...</h3>
-                            <p id="submissionStatusText" class="status-text">Preparing files...</p>
-                            <div class="submission-progress-track">
-                                <div id="submissionProgressBar" class="submission-progress-bar"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-header">
-                        <h3>Send to Lenders</h3>
-                        <button id="closeLenderSubmissionModal" class="modal-close">&times;</button>
-                    </div>
-
-                    <div class="modal-body submission-body">
-                        <div class="submission-grid">
-                            <div class="submission-col">
-                                <div class="submission-col-header">
-                                    <span class="submission-col-title">Select Lenders</span>
-                                    <div style="display:flex; align-items:center; gap: 12px;">
-                                        <label class="toggle-override-label">
-                                            <input type="checkbox" id="showAllLendersToggle"> Override Filters
-                                        </label>
-                                        <button id="toggleAllLendersBtn" class="action-link">DESELECT ALL</button>
-                                    </div>
-                                </div>
-                                <div class="submission-search-container">
-                                    <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders..." autocomplete="off">
-                                </div>
-                                <div id="lenderSelectionList" class="selection-list"></div>
-                            </div>
-
-                            <div class="submission-col">
-                                <div class="submission-col-header">
-                                    <span class="submission-col-title">Select Documents</span>
-                                    <button id="toggleAllDocumentsBtn" class="action-link">SELECT ALL</button>
-                                </div>
-                                <div class="submission-search-container" style="display: none;">
-                                    <input type="text" class="submission-search-input">
-                                </div>
-                                <div id="submissionDocumentList" class="selection-list documents-list"></div>
-                            </div>
-                        </div>
-
-                        <div class="submission-message-area">
-                            <label class="field-label" style="margin-bottom: 6px; font-size: 11px;">EMAIL MESSAGE (OPTIONAL)</label>
-                            <textarea id="submissionMessage" class="submission-textarea" placeholder="Enter a message to include with the submission..."></textarea>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button id="cancelLenderSubmission" class="btn btn-secondary">Cancel</button>
-                        <button id="confirmLenderSubmission" class="btn btn-primary">
-                            <span id="sendSubmissionsText">Send Emails</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-    }
-
     showLenderModal() {
         this.utils.showModal('lenderModal');
     }
@@ -1017,9 +939,6 @@ class LendersModule {
     // Lender Submission Modal
     async showLenderSubmissionModal() {
         console.log('=== showLenderSubmissionModal called ===');
-
-        // 1. Ensure modal HTML exists
-        this.injectSubmissionModal();
 
         const modal = document.getElementById('lenderSubmissionModal');
 
