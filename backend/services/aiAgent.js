@@ -112,6 +112,14 @@ const TOOLS = [
             description: "Call this when the lead says they want to see the offer, or agrees to move forward. Examples: 'ok let's see it', 'send me the offer', 'what can you do for me'",
             parameters: { type: "object", properties: {} }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "no_response_needed",
+            description: "Call this when the lead's message doesn't need a response. Use when they say: 'ok', 'sounds good', 'cool', 'thanks', 'got it', 'k', 'okay', 'alright', 'perfect', 'great', 'sure', 'yep', 'yes', 'no problem'. DO NOT respond to these - just stay silent and wait.",
+            parameters: { type: "object", properties: {} }
+        }
     }
 ];
 
@@ -417,6 +425,11 @@ Send this message to the lead: "${offer.pitch_message}"`;
                     } else {
                         toolResult = "Offer generation failed. Tell the lead you're finalizing numbers and will text back in a few minutes.";
                     }
+                }
+
+                else if (tool.function.name === 'no_response_needed') {
+                    console.log(`🤫 AI DECISION: No response needed - staying silent`);
+                    return { shouldReply: false };
                 }
 
                 messages.push({
