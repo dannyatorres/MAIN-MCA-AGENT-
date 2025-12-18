@@ -507,7 +507,15 @@ router.put('/:id', async (req, res) => {
             owner2_s_s_n: 'owner2_ssn',
             owner2DOB: 'owner2_dob',
             owner2_dob: 'owner2_dob',
-            owner2_d_o_b: 'owner2_dob'
+            owner2_d_o_b: 'owner2_dob',
+
+            // Credit & Funding
+            creditScore: 'credit_score',
+            credit_score: 'credit_score',
+            fundingStatus: 'funding_status',
+            funding_status: 'funding_status',
+            recentFunding: 'recent_funding',
+            recent_funding: 'recent_funding'
         };
 
         const leadDetailsFields = {

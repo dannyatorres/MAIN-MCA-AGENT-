@@ -186,6 +186,35 @@ export class LeadFormController {
                                 </div>
                             </div>
                         </div>
+
+                        <div class="form-grid col-3" style="margin-top: 12px;">
+                            <div class="form-group">
+                                <label>Credit Score</label>
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-credit-card')}
+                                    <input type="text" name="creditScore" value="${val('credit_score', 'creditScore')}" class="form-input" placeholder="e.g., 650">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Funding Status</label>
+                                <div class="select-wrapper">
+                                    <select name="fundingStatus" class="form-select">
+                                        <option value="" ${!val('funding_status', 'fundingStatus') ? 'selected' : ''}>-- Select --</option>
+                                        <option value="none" ${val('funding_status', 'fundingStatus') === 'none' ? 'selected' : ''}>No Funding</option>
+                                        <option value="1_position" ${val('funding_status', 'fundingStatus') === '1_position' ? 'selected' : ''}>1 Position</option>
+                                        <option value="2_positions" ${val('funding_status', 'fundingStatus') === '2_positions' ? 'selected' : ''}>2 Positions</option>
+                                        <option value="3_plus" ${val('funding_status', 'fundingStatus') === '3_plus' ? 'selected' : ''}>3+ Positions</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Funding Details</label>
+                                <div class="input-wrapper">
+                                    ${iconInput('fas fa-info-circle')}
+                                    <input type="text" name="recentFunding" value="${val('recent_funding', 'recentFunding')}" class="form-input" placeholder="e.g., $50k last month">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -588,6 +617,9 @@ export class LeadFormController {
             email: data.businessEmail,
             us_state: data.businessState,
             business_address: data.businessAddress,
+            credit_score: data.creditScore,
+            funding_status: data.fundingStatus,
+            recent_funding: data.recentFunding,
             ...data
         };
     }
@@ -695,7 +727,7 @@ export class LeadFormController {
             ownerSSN: this.formatSSN(data.ownerSSN),
             ownerDOB: this.formatDateUS(data.ownerDOB),
             ownershipPercentage: data.ownershipPercent,
-            creditScore: 'N/A',
+            creditScore: data.creditScore || 'N/A',
 
             // Owner 2 (Partner)
             owner2FirstName: data.owner2FirstName || '',
