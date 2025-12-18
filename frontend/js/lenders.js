@@ -119,6 +119,11 @@ class LendersModule {
     injectSubmissionModal() {
         if (document.getElementById('lenderSubmissionModal')) return;
 
+        // CSS classes now handle the layout structure.
+        // Key changes in HTML below:
+        // 1. Removed inline styles from headers.
+        // 2. Changed the document column spacer from visibility:hidden to display:none.
+
         const modalHtml = `
             <div id="lenderSubmissionModal" class="modal hidden">
                 <div class="modal-content lender-submission-modal">
@@ -162,16 +167,16 @@ class LendersModule {
                                     <span class="submission-col-title">Select Documents</span>
                                     <button id="toggleAllDocumentsBtn" class="action-link">SELECT ALL</button>
                                 </div>
-                                <div class="submission-search-container" style="visibility: hidden;">
+                                <div class="submission-search-container" style="display: none;">
                                     <input type="text" class="submission-search-input">
                                 </div>
-                                <div id="submissionDocumentList" class="selection-list"></div>
+                                <div id="submissionDocumentList" class="selection-list documents-list"></div>
                             </div>
                         </div>
 
                         <div class="submission-message-area">
-                            <label class="field-label" style="margin-bottom: 8px;">EMAIL MESSAGE</label>
-                            <textarea id="submissionMessage" class="submission-textarea" placeholder="Enter your message to lenders..."></textarea>
+                            <label class="field-label" style="margin-bottom: 6px; font-size: 11px;">EMAIL MESSAGE (OPTIONAL)</label>
+                            <textarea id="submissionMessage" class="submission-textarea" placeholder="Enter a message to include with the submission..."></textarea>
                         </div>
                     </div>
 

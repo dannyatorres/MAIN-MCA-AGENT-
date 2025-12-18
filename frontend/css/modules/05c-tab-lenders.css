@@ -844,37 +844,63 @@ select.form-input {
     box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
 }
 
-/* 3. Header & Grid Layout */
+/* 3. Header & Grid Layout (REVISED) */
 .submission-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
-    flex: 1;
-    min-height: 0; /* Critical for scrolling */
-    margin-bottom: 20px;
+    flex: 1; /* Takes all available remaining space */
+    min-height: 0; /* Crucial for allowing scrolling inside flex children */
+    margin-bottom: 15px; /* Reduced bottom margin */
 }
 
+.submission-col {
+    display: flex;
+    flex-direction: column;
+    /* This ensures the column takes full height and forces internal scrolling */
+    height: 100%;
+    min-height: 0;
+}
+
+/* New Header Styling - Makes them look less "plain" */
 .submission-col-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    padding: 0 2px;
+    background: #161b22; /* Slight contrast background */
+    padding: 10px 12px;
+    border: 1px solid #30363d;
+    border-bottom: none; /* Connect to the element below */
+    border-radius: 8px 8px 0 0; /* Round top corners only */
+    flex-shrink: 0; /* Don't let header shrink */
 }
 
 .submission-col-title {
     font-weight: 600;
     color: #e6edf3;
-    font-size: 14px;
+    font-size: 13px;
+    text-transform: uppercase; /* Makes it feel more like a header */
+    letter-spacing: 0.5px;
 }
 
-/* 4. Scrollable Lists (Fixes the ugly white scrollbar) */
-.selection-list {
-    flex: 1;
-    overflow-y: auto;
-    background: #0d1117;
+/* Search container connects header to list */
+.submission-search-container {
     border: 1px solid #30363d;
-    border-radius: 8px;
+    border-top: none;
+    border-bottom: none;
+    background: #161b22;
+    padding: 8px 12px 4px 12px;
+    flex-shrink: 0;
+}
+
+/* 4. Scrollable Lists (REVISED) */
+.selection-list {
+    flex: 1; /* Take remaining height in the column */
+    overflow-y: auto;
+    background: #0d1117; /* Darker background for list area */
+    border: 1px solid #30363d;
+    /* Connect physically to header/search above */
+    border-radius: 0 0 8px 8px;
     padding: 8px;
 
     /* Custom Scrollbar */
@@ -895,15 +921,16 @@ select.form-input {
     background: transparent;
 }
 
-/* 5. Message Area */
+/* 5. Message Area (REVISED - The anti-cramping fix) */
 .submission-message-area {
-    flex-shrink: 0;
-    padding-top: 16px;
-    border-top: 1px solid #30363d;
+    flex-shrink: 0; /* Don't shrink below min-height */
+    padding-top: 12px;
+    /* Removed border-top to save visual space */
 }
 
 .submission-textarea {
-    min-height: 100px;
+    min-height: 60px; /* MUCH smaller default height. Fixes cramping. */
+    max-height: 150px; /* Let user expand it if they need to */
     width: 100%;
     background: #0d1117;
     border: 1px solid #30363d;
@@ -912,7 +939,7 @@ select.form-input {
     color: #e6edf3;
     font-size: 13px;
     line-height: 1.5;
-    resize: none;
+    resize: vertical; /* Allow user to resize vertically only */
     outline: none;
     font-family: inherit;
 }
@@ -921,16 +948,57 @@ select.form-input {
     border-color: #3b82f6;
 }
 
-/* 6. Utility Text */
+/* 6. Utility Text & Toggles (REVISED) */
+/* Styling the "Override Filters" pill */
 .toggle-override-label {
-    font-size: 11px;
-    color: #8b949e;
+    font-size: 12px;
+    font-weight: 500;
+    color: #c9d1d9;
     cursor: pointer;
     display: flex;
-    align-items: center;
-    gap: 6px;
+    align-items: center; /* Perfect vertical centering */
+    gap: 8px;
     user-select: none;
+    background: rgba(48, 54, 61, 0.4); /* Subtle pill background */
+    padding: 4px 10px;
+    border-radius: 12px;
+    transition: background 0.2s, color 0.2s;
 }
-.toggle-override-label:hover { color: #e6edf3; }
+
+.toggle-override-label:hover {
+    color: #e6edf3;
+    background: rgba(48, 54, 61, 0.8);
+}
+
+/* Fix the "very white" checkboxes */
+.toggle-override-label input[type="checkbox"] {
+    margin: 0;
+    accent-color: #3b82f6; /* Makes the checkbox blue, not glaring white */
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
 
 .status-text { color: #8b949e; font-size: 13px; margin: 0; }
+
+/* ==========================================================================
+   [MODAL] Qualified Lenders Modal - Size & Scrollbar Fix
+   ========================================================================== */
+
+/* 1. Ensure the modal container stays within the viewport height */
+#qualifiedLendersModal .modal-content {
+    max-width: 800px; /* Increased from the likely default of 500px */
+    width: 90%;       /* Ensures it's responsive on smaller screens */
+    margin: 0 auto;   /* Centers it */
+    max-height: 85vh; /* Limits height to 85% of the viewport */
+    display: flex;
+    flex-direction: column; /* Stacks header, body, footer */
+    overflow: hidden; /* Hides the outer scrollbar */
+}
+
+/* 2. Apply the scroll ONLY to the body section */
+#qualifiedLendersModal .modal-body {
+    overflow-y: auto; /* Adds scrollbar only when content overflows */
+    flex: 1; /* Takes up remaining space between header and footer */
+    padding: 20px; /* Optional: Keep your padding consistent */
+}
