@@ -19,26 +19,31 @@ class LenderAdmin {
     openManagementModal() {
         console.log('🏛️ Opening Lender Management Dashboard...');
 
-        let modal = document.getElementById('lenderManagementModal');
+        // 1. NUCLEAR RESET: If the modal exists, destroy it.
+        // This forces the browser to redraw it with your new code.
+        const existing = document.getElementById('lenderManagementModal');
+        if (existing) existing.remove();
 
-        if (!modal) {
-            const modalHTML = `
-                <div id="lenderManagementModal" class="modal hidden" style="z-index: 2000;">
-                    <div class="modal-content lender-submission-modal">
-                        <div class="modal-header">
-                            <h3>Manage Lender Network</h3>
-                            <button class="modal-close" onclick="document.getElementById('lenderManagementModal').style.display='none'">×</button>
-                        </div>
+        // 2. BUILD NEW MODAL (Note the !important padding override)
+        const modalHTML = `
+            <div id="lenderManagementModal" class="modal" style="display:none; z-index: 2000;">
+                <div class="modal-content lender-submission-modal" style="display: flex; flex-direction: column; overflow: hidden;">
+                    <div class="modal-header">
+                        <h3>Manage Lender Network</h3>
+                        <button class="modal-close" onclick="document.getElementById('lenderManagementModal').remove()">×</button>
+                    </div>
 
-                        <div class="modal-body admin-directory" id="lenderManagementContent"></div>
+                    <div class="modal-body" id="lenderManagementContent"
+                         style="padding: 0 !important; flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0d1117;">
                     </div>
                 </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            modal = document.getElementById('lenderManagementModal');
-        }
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
 
+        const modal = document.getElementById('lenderManagementModal');
         const contentArea = document.getElementById('lenderManagementContent');
+
         if (contentArea) {
             contentArea.innerHTML = this.createManagementTemplate();
         }
@@ -49,20 +54,20 @@ class LenderAdmin {
 
     createManagementTemplate() {
         return `
-            <div class="section-header flush-header">
-                <div class="submission-col-title" style="font-size: 12px;">Network Directory</div>
-                <div class="header-actions">
+            <div style="padding: 12px 20px; background: #161b22; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                <div style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Network Directory</div>
+                <div style="display: flex; gap: 15px;">
                     <button onclick="window.commandCenter.lenderAdmin.showAddModal()" class="action-link" style="font-size: 11px; display: flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-plus"></i> Add New Lender
+                        <i class="fas fa-plus"></i> ADD NEW LENDER
                     </button>
                     <button onclick="window.commandCenter.lenderAdmin.loadLendersList()" class="action-link" style="font-size: 11px; display: flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-sync"></i> Refresh
+                        <i class="fas fa-sync"></i> REFRESH
                     </button>
                 </div>
             </div>
 
-            <div id="adminLendersTableContainer" class="directory-list-container">
-                <div class="loading-state" style="padding: 20px;">
+            <div id="adminLendersTableContainer" style="flex: 1; overflow-y: auto; padding: 0;">
+                <div class="loading-state" style="padding: 20px; text-align: center; color: #8b949e;">
                     <div class="loading-spinner"></div> Loading Network...
                 </div>
             </div>
