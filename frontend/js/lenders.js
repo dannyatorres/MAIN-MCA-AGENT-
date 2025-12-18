@@ -121,68 +121,15 @@ class LendersModule {
 
         const modalHtml = `
             <div id="lenderSubmissionModal" class="modal hidden">
-                <div class="modal-content lender-submission-modal" style="position: relative; overflow: hidden;">
+                <div class="modal-content lender-submission-modal" style="position: relative; overflow: hidden; max-height: 90vh;">
 
-                    <div id="submissionOverlay" style="
-                        display: none;
-                        position: absolute;
-                        top: 0; left: 0; width: 100%; height: 100%;
-                        background: rgba(255, 255, 255, 0.7);
-                        backdrop-filter: blur(8px);
-                        -webkit-backdrop-filter: blur(8px);
-                        z-index: 100;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        transition: all 0.3s ease;
-                    ">
-                        <div style="
-                            background: white;
-                            padding: 40px 30px;
-                            border-radius: 20px;
-                            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-                            border: 1px solid #f1f5f9;
-                            text-align: center;
-                            max-width: 320px;
-                            width: 90%;
-                            animation: slideUp 0.3s ease-out;
-                        ">
-                            <div class="loading-spinner" style="
-                                width: 40px; height: 40px;
-                                border: 3px solid #e2e8f0;
-                                border-top-color: #3b82f6;
-                                border-radius: 50%;
-                                margin: 0 auto 20px auto;
-                            "></div>
-
-                            <h3 style="
-                                color: #1e293b;
-                                font-size: 18px;
-                                font-weight: 700;
-                                margin: 0 0 8px 0;
-                            ">Sending Applications</h3>
-
-                            <p id="submissionStatusText" style="
-                                color: #64748b;
-                                font-size: 14px;
-                                margin: 0 0 24px 0;
-                                line-height: 1.5;
-                            ">Preparing files...</p>
-
-                            <div style="
-                                width: 100%;
-                                height: 6px;
-                                background: #f1f5f9;
-                                border-radius: 10px;
-                                overflow: hidden;
-                            ">
-                                <div id="submissionProgressBar" style="
-                                    width: 5%;
-                                    height: 100%;
-                                    background: linear-gradient(90deg, #3b82f6, #60a5fa);
-                                    border-radius: 10px;
-                                    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                                "></div>
+                    <div id="submissionOverlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(4px); z-index: 100; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                         <div style="background: white; padding: 40px 30px; border-radius: 16px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15); border: 1px solid #f1f5f9; text-align: center; width: 300px;">
+                            <div class="loading-spinner" style="width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; margin: 0 auto 15px auto;"></div>
+                            <h3 style="color: #1e293b; font-size: 16px; font-weight: 700; margin: 0 0 5px 0;">Sending...</h3>
+                            <p id="submissionStatusText" style="color: #64748b; font-size: 13px; margin: 0 0 15px 0;">Preparing files...</p>
+                            <div style="width: 100%; height: 4px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+                                <div id="submissionProgressBar" style="width: 5%; height: 100%; background: #3b82f6; transition: width 0.3s ease;"></div>
                             </div>
                         </div>
                     </div>
@@ -195,25 +142,25 @@ class LendersModule {
                     <div class="modal-body submission-body">
                         <div class="submission-grid">
                             <div class="submission-col">
-                                <div class="submission-col-header">
-                                    <span>Select Lenders</span>
-                                    <div style="display:flex; align-items:center; gap: 10px;">
+                                <div class="submission-col-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <span style="font-weight: 600; color: #1e293b;">Select Lenders</span>
+                                    <div style="display:flex; align-items:center; gap: 12px;">
                                         <label style="font-size:11px; color:#64748b; cursor:pointer; display:flex; align-items:center; gap:4px; user-select:none;">
                                             <input type="checkbox" id="showAllLendersToggle"> Override Filters
                                         </label>
-                                        <button id="toggleAllLendersBtn" class="btn-link">Deselect All</button>
+                                        <button id="toggleAllLendersBtn" class="action-link">DESELECT ALL</button>
                                     </div>
                                 </div>
                                 <div class="submission-search-container">
-                                    <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders...">
+                                    <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders..." autocomplete="off">
                                 </div>
                                 <div id="lenderSelectionList" class="selection-list custom-scrollbar"></div>
                             </div>
 
                             <div class="submission-col">
-                                <div class="submission-col-header">
-                                    <span>Select Documents</span>
-                                    <button id="toggleAllDocumentsBtn" class="btn-link">Select All</button>
+                                <div class="submission-col-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <span style="font-weight: 600; color: #1e293b;">Select Documents</span>
+                                    <button id="toggleAllDocumentsBtn" class="action-link">SELECT ALL</button>
                                 </div>
                                 <div class="submission-search-container" style="visibility: hidden;">
                                     <input type="text" class="submission-search-input">
@@ -223,8 +170,8 @@ class LendersModule {
                         </div>
 
                         <div class="submission-message-area">
-                            <label class="field-label" style="font-size: 12px; margin-bottom: 6px; display:block; color: #8b949e;">Email Message</label>
-                            <textarea id="submissionMessage" class="form-textarea" placeholder="Enter your message to lenders..."></textarea>
+                            <label class="field-label" style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px; display:block;">Email Message</label>
+                            <textarea id="submissionMessage" class="form-textarea" placeholder="Enter your message to lenders..." style="min-height: 80px;"></textarea>
                         </div>
                     </div>
 
@@ -232,14 +179,63 @@ class LendersModule {
                         <button id="cancelLenderSubmission" class="btn btn-secondary">Cancel</button>
                         <button id="confirmLenderSubmission" class="btn btn-primary">
                             <span id="sendSubmissionsText">Send Emails</span>
-                            <span id="sendSubmissionsLoading" class="hidden">Sending...</span>
                         </button>
                     </div>
                 </div>
+
                 <style>
-                    @keyframes slideUp {
-                        from { transform: translateY(20px); opacity: 0; }
-                        to { transform: translateY(0); opacity: 1; }
+                    /* ✨ NEW STYLES FOR SLEEKER UI */
+
+                    /* The Action Link Button */
+                    .action-link {
+                        background: none;
+                        border: none;
+                        color: #3b82f6;
+                        font-size: 10px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        cursor: pointer;
+                        padding: 4px 0;
+                        transition: color 0.2s;
+                    }
+                    .action-link:hover {
+                        color: #1d4ed8;
+                        text-decoration: underline;
+                    }
+
+                    /* The List Item "Card" Look */
+                    .selection-item {
+                        display: flex;
+                        align-items: center;
+                        padding: 10px 12px;
+                        background: #f8fafc; /* Light Gray Background */
+                        border: 1px solid #e2e8f0; /* Subtle Border */
+                        border-radius: 6px;
+                        margin-bottom: 6px;
+                        cursor: pointer;
+                        transition: all 0.15s ease;
+                    }
+
+                    .selection-item:hover {
+                        background: #ffffff;
+                        border-color: #cbd5e1;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+                        transform: translateY(-1px);
+                    }
+
+                    /* Checkbox styling adjustment */
+                    .selection-item input[type="checkbox"] {
+                        accent-color: #3b82f6;
+                        margin-right: 12px;
+                        transform: scale(1.1);
+                        cursor: pointer;
+                    }
+
+                    .list-text {
+                        font-size: 13px;
+                        color: #334155;
+                        font-weight: 500;
                     }
                 </style>
             </div>
@@ -1408,6 +1404,12 @@ class LendersModule {
             return;
         }
 
+        // ✅ FIX: Clear the search input so previous searches don't persist
+        const searchInput = document.getElementById('lenderSearchInput');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+
         console.log('✅ Modal found, loading documents...');
 
         // Load documents
@@ -1433,7 +1435,7 @@ class LendersModule {
 
         // Show modal (use classList)
         modal.classList.remove('hidden');
-        modal.style.display = ''; // <--- ADD THIS LINE (Fixes the stuck hidden state)
+        modal.style.display = '';
         console.log('✅ Modal displayed successfully');
     }
 
@@ -1605,24 +1607,25 @@ class LendersModule {
         });
 
         sortedTiers.forEach(tier => {
-            html += `<div style="margin-bottom: 12px;">`;
+            html += `<div style="margin-bottom: 16px;">`;
 
             // Tier Header with color for Restricted
-            const headerColor = tier === 'Restricted' ? '#ef4444' : '#8b949e';
-            html += `<div style="font-size: 11px; font-weight: 700; color: ${headerColor}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Tier ${tier}</div>`;
+            const headerColor = tier === 'Restricted' ? '#ef4444' : '#64748b';
+            html += `<div style="font-size: 11px; font-weight: 700; color: ${headerColor}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; padding-left: 2px;">Tier ${tier}</div>`;
 
             lendersByTier[tier].forEach(lender => {
                 const lenderName = lender['Lender Name'] || lender.name;
                 const isPreferred = lender.isPreferred;
                 const reason = lender.blockingRule ? `(${lender.blockingRule})` : '';
 
+                // ✅ APPLIED: "selection-item" class for the card look
                 html += `
-                    <label>
-                        <input type="checkbox" class="lender-checkbox" value="${lenderName}">
+                    <label class="selection-item">
+                        <input type="checkbox" class="lender-checkbox" value="${lenderName}" checked>
                         <div class="list-text">
                             ${lenderName}
                             ${isPreferred ? '<span style="color:#3b82f6; margin-left:6px;">★</span>' : ''}
-                            ${reason ? `<span style="color:#ef4444; font-size:10px; margin-left:6px;">${reason}</span>` : ''}
+                            ${reason ? `<span style="color:#ef4444; font-size:11px; margin-left:6px;">${reason}</span>` : ''}
                         </div>
                     </label>
                 `;
@@ -1635,8 +1638,8 @@ class LendersModule {
         // Reset button text
         const toggleBtn = document.getElementById('toggleAllLendersBtn');
         if (toggleBtn) {
-            toggleBtn.textContent = 'Select All';
-            toggleBtn.className = 'btn-link';
+            toggleBtn.textContent = 'DESELECT ALL'; // Caps to match new style
+            toggleBtn.className = 'action-link';
         }
     }
 
@@ -1657,39 +1660,31 @@ class LendersModule {
                               doc.documentType === 'Signed Application' ||
                               name.toLowerCase().includes('application');
 
-            // Determine Icon
             let iconClass = 'fas fa-file-alt';
-            let colorClass = '';
-
+            let colorStyle = 'color: #64748b;';
             const lowerName = name.toLowerCase();
-            if (lowerName.endsWith('.pdf')) {
-                iconClass = 'fas fa-file-pdf';
-                colorClass = 'pdf';
-            } else if (lowerName.match(/\.(jpg|jpeg|png|gif)$/)) {
-                iconClass = 'fas fa-file-image';
-                colorClass = 'img';
-            } else if (lowerName.match(/\.(xls|xlsx|csv)$/)) {
-                iconClass = 'fas fa-file-excel';
-                colorClass = 'xls';
-            }
 
+            if (lowerName.endsWith('.pdf')) { iconClass = 'fas fa-file-pdf'; colorStyle = 'color: #ef4444;'; }
+            else if (lowerName.match(/\.(jpg|jpeg|png)$/)) { iconClass = 'fas fa-file-image'; colorStyle = 'color: #3b82f6;'; }
+            else if (lowerName.match(/\.(xls|xlsx|csv)$/)) { iconClass = 'fas fa-file-excel'; colorStyle = 'color: #10b981;'; }
+
+            // ✅ APPLIED: "selection-item" class
             html += `
-                <label>
+                <label class="selection-item">
                     <input type="checkbox" class="document-checkbox" value="${doc.id}" ${isImportant ? 'checked' : ''}>
-                    <div class="list-icon ${colorClass}"><i class="${iconClass}"></i></div>
-                    <div class="list-text">${name}</div>
+                    <div style="margin-right: 10px; font-size: 16px; ${colorStyle}"><i class="${iconClass}"></i></div>
+                    <div class="list-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
                 </label>
             `;
         });
 
         docList.innerHTML = html;
 
-        // Update button text logic
         const toggleBtn = document.getElementById('toggleAllDocumentsBtn');
         if (toggleBtn) {
             const checkboxes = docList.querySelectorAll('input[type="checkbox"]');
             const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-            toggleBtn.textContent = checkedCount === checkboxes.length ? 'Deselect All' : 'Select All';
+            toggleBtn.textContent = checkedCount === checkboxes.length ? 'DESELECT ALL' : 'SELECT ALL';
         }
     }
 
