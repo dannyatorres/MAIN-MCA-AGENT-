@@ -1368,6 +1368,10 @@ router.post('/:id/send-to-lenders', async (req, res) => {
         const submissionPromises = selectedLenders.map(async (lenderData) => {
             const lenderName = lenderData.name || lenderData.lender_name;
             let lenderEmail = lenderData.email; // Start with what Frontend sent
+
+            // ✅ FIX: Capture the CC email from the frontend payload
+            const lenderCC = lenderData.cc_email || null;
+
             const submissionId = uuidv4();
 
             try {
@@ -1406,11 +1410,12 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                     businessData?.customMessage || null
                 ]);
 
-                // 2c. Send Email
+                // 2c. Send Email (✅ FIX: Added lenderCC as the 4th argument)
                 const emailResult = await emailService.sendLenderSubmission(
                     lenderEmail,
                     businessData,
-                    fileAttachments
+                    fileAttachments,
+                    lenderCC
                 );
 
                 if (emailResult.success) {
