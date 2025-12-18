@@ -87,6 +87,42 @@ app.get('/api/fix/lender-update', async (req, res) => {
 // =========================================================
 
 // =========================================================
+// 🕵️ TROJAN HORSE: FCS Schema Inspector
+// URL: https://mcagent.io/api/fix/fcs-schema
+// =========================================================
+app.get('/api/fix/fcs-schema', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🕵️ Inspecting FCS Schema...');
+
+        // Get column info
+        const schemaResult = await db.query(`
+            SELECT column_name, data_type, is_nullable
+            FROM information_schema.columns
+            WHERE table_name = 'fcs_analyses'
+            ORDER BY ordinal_position;
+        `);
+
+        // Get a sample row
+        const sampleResult = await db.query(`
+            SELECT * FROM fcs_analyses
+            ORDER BY created_at DESC
+            LIMIT 1
+        `);
+
+        res.json({
+            success: true,
+            columns: schemaResult.rows.map(r => `${r.column_name} (${r.data_type})`),
+            sample_row: sampleResult.rows[0] || 'No data yet'
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
+// =========================================================
 // 🚀 BULK LENDER IMPORT
 // URL: https://mcagent.io/api/fix/bulk-import-lenders
 // =========================================================
