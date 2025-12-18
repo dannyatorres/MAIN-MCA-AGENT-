@@ -137,6 +137,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         if (systemInstruction.includes("any response would be appreciated")) {
             return { shouldReply: true, content: "hey any response would be appreciated here, close this out?" };
         }
+        if (systemInstruction.includes("closing out the file")) {
+            return { shouldReply: true, content: "Hey just wanted to follow up again, will be closing out the file if i dont hear a response today, ty" };
+        }
 
         // 🟢 F. THE HAIL MARY (Ballpark Offer)
         if (systemInstruction.includes("Generate Ballpark Offer")) {
