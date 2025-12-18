@@ -1364,42 +1364,63 @@ router.post('/:id/send-to-lenders', async (req, res) => {
             fileAttachments.push(...results.filter(f => f !== null));
         }
 
-        // --- STEP 2: PARALLEL SUBMISSION (WITH FAIL-SAFE) ---
+        // --- STEP 2: PARALLEL SUBMISSION (WITH LOGGING) ---
         const submissionPromises = selectedLenders.map(async (lenderData) => {
             const lenderName = lenderData.name || lenderData.lender_name;
-            let lenderEmail = lenderData.email; // Start with what Frontend sent
-
-            // ✅ FIX: Capture the CC email from the frontend payload
-            const lenderCC = lenderData.cc_email || null;
+            let lenderEmail = lenderData.email;
+            let lenderCC = lenderData.cc_email || null; // 1. Try to get CC from Frontend
 
             const submissionId = uuidv4();
+
+            // 🕵️ DEBUG LOG: What did Frontend send?
+            console.log(`🕵️ PROCESSING LENDER: "${lenderName}"`);
+            console.log(`   👉 Frontend Email: ${lenderEmail}`);
+            console.log(`   📧 Frontend CC:    ${lenderCC}`);
 
             try {
                 if (!lenderName) throw new Error('Missing lender name');
 
                 // 2a. Find/Create Lender Record (Quick Lookup)
                 let lenderId = null;
+
+                // ✅ QUERY: Explicitly ask for cc_email to see if DB has it
                 const lenderResult = await db.query(
-                    'SELECT id, email FROM lenders WHERE name ILIKE $1 LIMIT 1',
+                    'SELECT id, email, cc_email FROM lenders WHERE name ILIKE $1 LIMIT 1',
                     [lenderName]
                 );
 
                 if (lenderResult.rows.length > 0) {
-                    lenderId = lenderResult.rows[0].id;
+                    const dbLender = lenderResult.rows[0];
+                    lenderId = dbLender.id;
 
-                    // 🛡️ FAIL-SAFE: If Frontend sent null, use the Database Email
+                    console.log(`   🏦 DB FOUND MATCH: ID ${dbLender.id}`);
+                    console.log(`   🏦 DB Email: ${dbLender.email}`);
+                    console.log(`   🏦 DB CC:    ${dbLender.cc_email}`);
+
+                    // 🛡️ FAIL-SAFE 1: If Frontend missing email, use DB email
                     if (!lenderEmail || !lenderEmail.includes('@')) {
-                        console.log(`⚠️ Frontend missing email for ${lenderName}. Using DB email: ${lenderResult.rows[0].email}`);
-                        lenderEmail = lenderResult.rows[0].email;
+                        console.log(`   ⚠️ Frontend missing email. Using DB: ${dbLender.email}`);
+                        lenderEmail = dbLender.email;
                     }
+
+                    // 🛡️ FAIL-SAFE 2: If Frontend missing CC, use DB CC
+                    if (!lenderCC && dbLender.cc_email) {
+                        console.log(`   ⚠️ Frontend missing CC. Using DB: ${dbLender.cc_email}`);
+                        lenderCC = dbLender.cc_email;
+                    }
+                } else {
+                    console.log(`   ❌ NO DATABASE MATCH for "${lenderName}"`);
                 }
 
-                // 🚨 Final Check: If STILL no email, then we fail
+                // Final check before sending
+                console.log(`   🚀 FINAL SENDING TO: To: ${lenderEmail}, CC: ${lenderCC}`);
+
+                // 🚨 Final Validation
                 if (!lenderEmail || !lenderEmail.includes('@')) {
-                    throw new Error(`No valid email address found for ${lenderName} (checked Payload & Database)`);
+                    throw new Error(`No valid email address found for ${lenderName}`);
                 }
 
-                // 2b. Create DB Record (Mark as 'processing')
+                // 2b. Create DB Record
                 await db.query(`
                     INSERT INTO lender_submissions (
                         id, conversation_id, lender_id, lender_name, status,
@@ -1410,7 +1431,7 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                     businessData?.customMessage || null
                 ]);
 
-                // 2c. Send Email (✅ FIX: Added lenderCC as the 4th argument)
+                // 2c. Send Email
                 const emailResult = await emailService.sendLenderSubmission(
                     lenderEmail,
                     businessData,
@@ -1428,18 +1449,11 @@ router.post('/:id/send-to-lenders', async (req, res) => {
             } catch (error) {
                 console.error(`❌ Failed to send to ${lenderName}:`, error.message);
 
-                // Update DB to show failure if record was created
                 if (submissionId) {
-                    try {
-                        await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['failed', submissionId]);
-                    } catch (e) { /* Ignore DB error if insert failed */ }
+                    try { await db.query('UPDATE lender_submissions SET status = $1 WHERE id = $2', ['failed', submissionId]); } catch (e) {}
                 }
 
-                return {
-                    status: 'rejected',
-                    lenderName,
-                    reason: error.message
-                };
+                return { status: 'rejected', lenderName, reason: error.message };
             }
         });
 
