@@ -580,3 +580,53 @@
 .step-dot.active {
     background: #2dd4bf;
 }
+
+/* ==========================================================================
+   [MODAL SPECIFIC OVERRIDES] Qualified Lenders & Send to Lenders
+   ========================================================================== */
+
+/* Force Qualified Lenders modal to be wider */
+#qualifiedLendersModal .modal-content {
+    max-width: 900px !important; /* Overrides the 600px limit */
+    width: 95%;
+}
+
+/* Fix the double scrollbar issue */
+#qualifiedLendersModal .modal-body {
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+/* === SEND TO LENDERS COMPACT STYLES === */
+
+/* 1. Reduce the outer padding (Standard is 20px, reducing to 12px) */
+#lenderSubmissionModal .modal-body {
+    padding: 12px 16px;
+}
+
+/* 2. Tighten the gap between the two main columns */
+#lenderSubmissionModal .form-row,
+#lenderSubmissionModal .form-row-six {
+    gap: 10px; /* Reduced from 16px */
+    margin-bottom: 10px; /* Reduced from 16px */
+    align-items: stretch; /* Makes sure both boxes are same height */
+}
+
+/* 3. Compact the inner selection boxes (Lenders/Docs) */
+#lenderSubmissionModal .form-section {
+    margin-bottom: 10px; /* Tighter spacing between sections */
+    display: flex;
+    flex-direction: column;
+}
+
+#lenderSubmissionModal .section-content {
+    padding: 10px; /* Less padding inside the dark boxes */
+    max-height: 300px; /* Prevent it from getting too tall */
+    overflow-y: auto;  /* Scroll inside the box, not the page */
+}
+
+/* 4. Fix the "Email Message" area to take less space */
+#lenderSubmissionModal textarea.form-textarea {
+    min-height: 100px; /* Smaller default height */
+    padding: 8px;
+}
