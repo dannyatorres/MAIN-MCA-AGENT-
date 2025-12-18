@@ -1,11 +1,11 @@
-// services/fcsService.js - FIXED: Output Cleaner Added
+// services/fcsService.js
+// UPDATED: Added 'imagelessMode: true' to enable 30-page processing via Document AI
 
 const fs = require('fs').promises;
 const path = require('path');
 const AWS = require('aws-sdk');
 const { DocumentProcessorServiceClient } = require('@google-cloud/documentai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { PDFDocument } = require('pdf-lib');
 
 // Load environment variables
 require('dotenv').config();
@@ -25,8 +25,8 @@ class FCSService {
         this.isGeminiInitialized = false;
         this.isDocumentAIInitialized = false;
 
-        // Gemini Configuration
-        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
+        // Configuration
+        this.geminiModel = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
     }
 
     async initializeGemini() {
@@ -93,84 +93,50 @@ class FCSService {
             await this.initializeDocumentAI();
             if (!this.documentAI) throw new Error('Document AI client not initialized');
 
-            // Check page count to determine if we need to chunk
-            const pdfDoc = await PDFDocument.load(documentBuffer);
-            const pageCount = pdfDoc.getPageCount();
-            console.log(`📄 Document has ${pageCount} pages`);
+            // Construct the request with the 30-page Imageless Mode enabled
+            const request = {
+                name: this.processorName,
+                rawDocument: {
+                    content: documentBuffer.toString('base64'),
+                    mimeType: 'application/pdf'
+                },
 
-            // If 30 pages or less, process normally
-            if (pageCount <= 30) {
-                return await this.processDocumentChunk(documentBuffer, 1, pageCount);
+                // ✅ CRITICAL FIX: Enable Imageless Mode to support up to 30 pages
+                imagelessMode: true,
+
+                fieldMask: { paths: ['text'] },
+                processOptions: {
+                    individualPageSelector: {
+                        // Request up to 30 pages explicitly
+                        pages: Array.from({ length: 30 }, (_, i) => i + 1)
+                    },
+                    ocrConfig: {
+                        enableImageQualityScores: false,
+                        enableSymbol: false,
+                        enableNativePdfParsing: true, // Reinforces use of text layer
+                        computeStyleInfo: false
+                    }
+                },
+                skipHumanReview: true
+            };
+
+            const [result] = await this.documentAI.processDocument(request);
+
+            if (!result || !result.document || !result.document.text) {
+                throw new Error('Document AI returned no text');
             }
 
-            // If more than 30 pages, process in chunks
-            console.log(`📑 Document exceeds 30 pages, processing in chunks...`);
-            const chunkSize = 30;
-            const chunks = Math.ceil(pageCount / chunkSize);
-            const textResults = [];
-
-            for (let i = 0; i < chunks; i++) {
-                const startPage = i * chunkSize + 1;
-                const endPage = Math.min((i + 1) * chunkSize, pageCount);
-
-                console.log(`🔄 Processing chunk ${i + 1}/${chunks} (pages ${startPage}-${endPage})`);
-
-                // Create a new PDF with only the chunk pages
-                const chunkPdf = await PDFDocument.create();
-                const pages = await chunkPdf.copyPages(pdfDoc, Array.from({ length: endPage - startPage + 1 }, (_, idx) => startPage - 1 + idx));
-                pages.forEach(page => chunkPdf.addPage(page));
-
-                const chunkBuffer = Buffer.from(await chunkPdf.save());
-                const chunkText = await this.processDocumentChunk(chunkBuffer, startPage, endPage);
-
-                textResults.push(chunkText);
-            }
-
-            console.log(`✅ Successfully processed ${chunks} chunks`);
-            return textResults.join('\n\n--- PAGE BREAK ---\n\n');
+            console.log(`✅ Extracted text length: ${result.document.text.length} chars`);
+            return result.document.text;
 
         } catch (error) {
-            console.error('❌ Document AI Failure:', error.message);
-            // Simple fallback
-            try {
-                const pdfParse = require('pdf-parse');
-                const data = await pdfParse(documentBuffer);
-                if (data.text && data.text.length > 50) return data.text;
-            } catch (e) { console.error('Fallback failed:', e.message); }
-
+            console.error('❌ Extraction Failure:', error.message);
+            // If it failed because of page limit even with imageless mode, provide a clear error
+            if (error.message.includes('page limit')) {
+                return `PROCESSING ERROR: Document exceeds page limit even with imageless mode. Error: ${error.message}`;
+            }
             return `PROCESSING ERROR: Could not extract text from ${document.filename}. Error: ${error.message}`;
         }
-    }
-
-    // --- HELPER: Process a single chunk/page range ---
-    async processDocumentChunk(pdfBuffer, startPage, endPage) {
-        const pageCount = endPage - startPage + 1;
-
-        const request = {
-            name: this.processorName,
-            rawDocument: {
-                content: pdfBuffer.toString('base64'),
-                mimeType: 'application/pdf'
-            },
-            processOptions: {
-                ocrConfig: {
-                    enableImageQualityScores: false,
-                    enableSymbol: false,
-                    enableNativePdfParsing: true,
-                    computeStyleInfo: false,
-                    disableCharacterBoxesDetection: true  // IMAGELESS MODE: Enables 30-page processing
-                }
-            },
-            skipHumanReview: true
-        };
-
-        const [result] = await this.documentAI.processDocument(request);
-
-        if (!result || !result.document || !result.document.text) {
-            throw new Error('Document AI returned no text');
-        }
-
-        return result.document.text;
     }
 
     async generateAndSaveFCS(conversationId, businessName, db) {
@@ -275,7 +241,7 @@ class FCSService {
     async generateFCSAnalysis(extractedData, businessName) {
         await this.initializeGemini();
 
-        const allText = extractedData.map(d => `=== ${d.filename} ===\n${d.text.substring(0, 25000)}`).join('\n\n');
+        const allText = extractedData.map(d => `=== ${d.filename} ===\n${d.text.substring(0, 100000)}`).join('\n\n'); // Expanded context
 
         let promptTemplate;
         try {
@@ -310,21 +276,10 @@ class FCSService {
         if (!text) return '';
 
         let clean = text;
-
-        // 1. Remove Markdown code block syntax (```text, ```markdown, ```)
         clean = clean.replace(/^```[a-z]*\n?/im, '').replace(/```$/im, '');
-
-        // 2. Remove the specific "text" label if it appears alone at start
         clean = clean.replace(/^text\s*$/im, '');
-
-        // 3. Remove the echoed header instructions
         clean = clean.replace(/Month Year\s+Deposits:.*#Dep:\s*#/gi, '');
-
-        // 4. ⚡ TOP TRIM: Forcefully remove ALL whitespace from the very start
-        // This kills the giant gap at the top
         clean = clean.replace(/^\s+/, '');
-
-        // 5. GAP CRUSHER: Replace 3+ newlines with just 2 (Standardizes spacing elsewhere)
         clean = clean.replace(/\n{3,}/g, '\n\n');
 
         return clean.trim();
