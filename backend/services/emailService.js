@@ -145,14 +145,46 @@ class EmailService {
         }
     }
 
-    // ✅ NEW LAYOUT: 1000px Width + 2-Column Data Grid
+    // ✅ NEW COMPACT LAYOUT + SMART LOGIC
     generateLenderEmailHtml(lenderName, businessData, documents) {
-        // Helper to format currency/nulls
-        const fmt = (val, isCurrency) => {
-            if (!val || val === 'N/A' || val === 'null') return '-';
-            return isCurrency ? `${Number(val).toLocaleString()}` : val;
-        };
+        // 1. Prepare Data: Filter out bad values first
+        const fields = [
+            { label: 'Business Name', value: businessData.businessName },
+            { label: 'Industry', value: businessData.industry },
+            { label: 'Monthly Revenue', value: businessData.monthlyRevenue, isCurrency: true },
+            { label: 'State', value: businessData.state },
+            { label: 'FICO Score', value: businessData.fico },
+            { label: 'Time in Business', value: businessData.tib ? `${businessData.tib} Months` : null },
+            { label: 'Requested Position', value: businessData.position },
+            { label: 'Negative Days', value: businessData.negativeDays }
+        ].filter(f => f.value && f.value !== 'N/A' && f.value !== 'ARCHIVED' && f.value !== 'null' && String(f.value).trim() !== '-');
 
+        // 2. Build Grid Rows (Pairs of 2)
+        let gridHtml = '<table class="data-table">';
+        for (let i = 0; i < fields.length; i += 2) {
+            const item1 = fields[i];
+            const item2 = fields[i + 1];
+
+            // Format values
+            const val1 = item1.isCurrency ? `${Number(item1.value).toLocaleString()}` : item1.value;
+            const val2 = item2 ? (item2.isCurrency ? `${Number(item2.value).toLocaleString()}` : item2.value) : '';
+
+            gridHtml += `
+                <tr>
+                    <td width="50%">
+                        <span class="label">${item1.label}</span>
+                        <span class="value">${val1}</span>
+                    </td>
+                    ${item2 ? `
+                    <td width="50%">
+                        <span class="label">${item2.label}</span>
+                        <span class="value">${val2}</span>
+                    </td>` : '<td></td>'}
+                </tr>`;
+        }
+        gridHtml += '</table>';
+
+        // 3. Document List
         const documentsHtml = documents.length > 0
             ? `<div class="section-title">Attached Documents</div>
                <div class="docs-grid">
@@ -168,35 +200,34 @@ class EmailService {
                 <style>
                     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; }
 
-                    /* ✅ WIDER CONTAINER (1000px) for "Full Page" feel */
-                    .email-wrapper { width: 100%; background-color: #f0f2f5; padding: 40px 0; }
-                    .container { max-width: 1000px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+                    /* ✅ COMPACT CONTAINER */
+                    .email-wrapper { width: 100%; background-color: #f0f2f5; padding: 20px 0; }
+                    .container { max-width: 800px; margin: 0 auto; background: #ffffff; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 
-                    /* HEADER */
-                    .header { background: #1e293b; color: white; padding: 40px 50px; border-bottom: 4px solid #3b82f6; }
-                    .header h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 0.5px; }
-                    .header p { margin: 8px 0 0 0; opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
+                    /* HEADER - Slimmer */
+                    .header { background: #1e293b; color: white; padding: 25px 35px; border-bottom: 3px solid #3b82f6; display: flex; justify-content: space-between; align-items: center; }
+                    .header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
+                    .header p { margin: 0; opacity: 0.8; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 500; }
 
-                    /* CONTENT */
-                    .content { padding: 50px; }
-                    .greeting { font-size: 18px; color: #1e293b; font-weight: 700; margin-bottom: 20px; }
-                    .intro { font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 40px; max-width: 800px; }
+                    /* CONTENT - Tighter Padding */
+                    .content { padding: 30px 35px; }
+                    .greeting { font-size: 16px; color: #1e293b; font-weight: 700; margin-bottom: 15px; }
+                    .intro { font-size: 14px; line-height: 1.5; color: #475569; margin-bottom: 25px; max-width: 700px; }
 
-                    /* ✅ 2-COLUMN DATA GRID (Uses Table for Email Compatibility) */
-                    .data-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-                    .data-table td { width: 50%; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+                    /* DATA GRID - Compact */
+                    .data-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+                    .data-table td { padding: 10px 0; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
                     .data-table tr:last-child td { border-bottom: none; }
 
-                    .label { display: block; font-size: 12px; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 5px; letter-spacing: 0.5px; }
-                    .value { display: block; font-size: 16px; color: #0f172a; font-weight: 500; }
+                    .label { display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 3px; letter-spacing: 0.5px; }
+                    .value { display: block; font-size: 15px; color: #0f172a; font-weight: 600; }
 
-                    /* DOCUMENT SECTION */
-                    .section-title { font-size: 14px; font-weight: 700; color: #1e293b; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px; }
-                    .docs-grid { display: block; }
-                    .doc-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 16px; margin-bottom: 8px; border-radius: 6px; color: #334155; font-size: 14px; font-weight: 500; }
+                    /* DOCS - Slimmer */
+                    .section-title { font-size: 12px; font-weight: 700; color: #1e293b; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }
+                    .doc-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; color: #334155; font-size: 13px; font-weight: 500; display: inline-block; margin-right: 8px; }
 
                     /* FOOTER */
-                    .footer { background: #1e293b; padding: 30px; text-align: center; color: #94a3b8; font-size: 13px; }
+                    .footer { background: #f8fafc; padding: 20px; text-align: center; color: #94a3b8; font-size: 11px; border-top: 1px solid #e2e8f0; }
                 </style>
             </head>
             <body>
@@ -210,62 +241,20 @@ class EmailService {
                         <div class="content">
                             <div class="greeting">Dear ${lenderName},</div>
                             <p class="intro">
-                                We are submitting the following file for your review. The merchant below has been pre-qualified against your specific lending criteria.
+                                Please review the file below for funding consideration. This merchant has been pre-qualified against your specific lending criteria.
                             </p>
 
-                            <table class="data-table">
-                                <tr>
-                                    <td>
-                                        <span class="label">Business Name</span>
-                                        <span class="value">${fmt(businessData.businessName)}</span>
-                                    </td>
-                                    <td>
-                                        <span class="label">Industry</span>
-                                        <span class="value">${fmt(businessData.industry)}</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span class="label">Monthly Revenue</span>
-                                        <span class="value">${fmt(businessData.monthlyRevenue, true)}</span>
-                                    </td>
-                                    <td>
-                                        <span class="label">State</span>
-                                        <span class="value">${fmt(businessData.state)}</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span class="label">FICO Score</span>
-                                        <span class="value">${fmt(businessData.fico)}</span>
-                                    </td>
-                                    <td>
-                                        <span class="label">Time in Business</span>
-                                        <span class="value">${businessData.tib ? businessData.tib + ' Months' : '-'}</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span class="label">Requested Position</span>
-                                        <span class="value">${fmt(businessData.position)}</span>
-                                    </td>
-                                    <td>
-                                        <span class="label">Negative Days</span>
-                                        <span class="value">${fmt(businessData.negativeDays)}</span>
-                                    </td>
-                                </tr>
-                            </table>
+                            ${gridHtml}
 
                             ${documentsHtml}
 
-                            <p class="intro" style="margin-top: 40px; margin-bottom: 0;">
+                            <p class="intro" style="margin-top: 25px; margin-bottom: 0;">
                                 We look forward to your offer.
                             </p>
                         </div>
 
                         <div class="footer">
-                            &copy; ${new Date().getFullYear()} JMS GLOBAL. All rights reserved.<br>
-                            Confidential Submission.
+                            &copy; ${new Date().getFullYear()} JMS GLOBAL. Confidential Submission.
                         </div>
                     </div>
                 </div>
