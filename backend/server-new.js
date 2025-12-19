@@ -546,7 +546,8 @@ const requireAuth = (req, res, next) => {
         '/api/calling/status',
         '/api/calling/recording-status',
         '/api/contact',
-        '/api/agent/trigger'      // Dispatcher AI Agent endpoint
+        '/api/agent/trigger',      // Dispatcher AI Agent endpoint
+        '/api/tracer-test/test-ssn'  // Tracers SSN Test
     ];
 
     // Allow exact matches or any calling webhook paths
