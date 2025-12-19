@@ -361,7 +361,25 @@ function normalizeDataFromBraintrust2(data) {
 
 function normalizeDataFromOriginal(data) {
     return data.map(row => {
-        // Try to get name from "Owner Name" OR direct columns
+        // 1. TRACERS PRIORITY CHECK
+        // If we have "Verified Mobile", use it. Otherwise look for standard Phone columns.
+        const cleanMobile = getColumnValue(row, ['Verified Mobile', 'Verified Phone']);
+        const rawPhone = cleanMobile || getColumnValue(row, ['Phone Number', 'phone', 'Mobile', 'cell phone']) || '';
+
+        // Same for Address (Use "Home Address" if present, else standard "Address")
+        const cleanAddress = getColumnValue(row, ['Home Address', 'Owner Home Address']);
+        const rawAddress = cleanAddress || getColumnValue(row, ['Address', 'address', 'Address1']) || '';
+
+        const cleanCity = getColumnValue(row, ['Home City', 'Owner Home City']);
+        const rawCity = cleanCity || getColumnValue(row, ['City', 'city']) || '';
+
+        const cleanState = getColumnValue(row, ['Home State', 'Owner Home State']);
+        const rawState = cleanState || getColumnValue(row, ['State', 'state']) || '';
+
+        const cleanZip = getColumnValue(row, ['Home Zip', 'Owner Home Zip']);
+        const rawZip = cleanZip || getColumnValue(row, ['Zip', 'zip', 'Zip Code']) || '';
+
+        // Standard Name/Company parsing
         const ownerName = getColumnValue(row, ['Owner Name', 'owner name']) || '';
         let firstName = getColumnValue(row, ['First Name', 'first name']);
         let lastName = getColumnValue(row, ['Last Name', 'last name']);
@@ -372,12 +390,19 @@ function normalizeDataFromOriginal(data) {
             lastName = parts.length > 1 ? parts[parts.length - 1] : '';
         }
 
-        const phone = formatPhoneNumber(getColumnValue(row, ['Phone Number', 'phone', 'Mobile', 'cell phone']) || '');
+        const phone = formatPhoneNumber(rawPhone);
         const company = getColumnValue(row, ['Company Name', 'company']) || '';
         const email = getColumnValue(row, ['Email', 'email']) || '';
 
-        // Pass the WHOLE row so createStandardRow can find other fields like Address/City if they exist
-        return createStandardRow(firstName, lastName, phone, company, email, row);
+        // Pass our prioritized values to the creator
+        return createStandardRow(firstName, lastName, phone, company, email, {
+            ...row,
+            // Override the lookups with our chosen "Clean" values
+            'Address': rawAddress,
+            'City': rawCity,
+            'State': rawState,
+            'Zip': rawZip
+        });
     });
 }
 
