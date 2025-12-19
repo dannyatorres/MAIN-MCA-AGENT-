@@ -81,22 +81,14 @@
                             <h1>Welcome back, Agent</h1>
                             <p>Here is what's happening with your pipeline today.</p>
                         </div>
-                        <div class="dashboard-toolbar">
-                            <button
-                                class="btn btn-secondary dashboard-action-btn"
-                                id="dashFormatterBtn"
-                                onclick="window.open('/lead_reformatter.html', '_blank')"
-                            >
+                        <div class="dashboard-toolbar" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button class="btn btn-secondary dashboard-action-btn" onclick="window.open('/lead_reformatter.html', '_blank')">
                                 <i class="fas fa-table"></i> Formatter
                             </button>
-                            <button
-                                class="btn btn-secondary dashboard-action-btn"
-                                id="dashLenderBtn"
-                                onclick="if(window.openLenderManagementModal) window.openLenderManagementModal(); else alert('System loading...');"
-                            >
+                            <button class="btn btn-secondary dashboard-action-btn" onclick="if(window.openLenderManagementModal) window.openLenderManagementModal(); else alert('System loading...');">
                                 <i class="fas fa-university"></i> Manage Lenders
                             </button>
-                            <button class="btn btn-secondary dashboard-action-btn" onclick="openCleanerModal()" style="background: #28a745; color: white;">
+                            <button class="btn btn-secondary dashboard-action-btn" onclick="openCleanerModal()">
                                 <i class="fas fa-user-check"></i> Background Verification
                             </button>
                             <button class="btn btn-secondary dashboard-action-btn">
