@@ -18,7 +18,7 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         const rawSsn = ssn ? ssn.replace(/\D/g, '') : '';
 
         if (rawSsn.length === 9) {
-            const formattedSsn = `${rawSsn.slice(0,3)}-${rawSsn.slice(3,5)}-${rawSsn.slice(5)}`;
+            const formattedSsn = rawSsn;
             console.log(`[Tracers] Attempt 1: Searching by SSN (${formattedSsn}) ONLY...`);
 
             // CRITICAL FIX: We send BLANK names here.
