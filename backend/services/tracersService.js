@@ -21,27 +21,21 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
 
             candidates = await callTracers({
                 Ssn: cleanSsn,
-                // CRITICAL FIX: The "Magic Key" to unlock SSN search
                 Includes: [
-                    'Addresses',
-                    'PhoneNumbers',
-                    'EmailAddresses',
-                    'Akas',
-                    'AllowSearchBySsn'
+                    'Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas',
+                    'AllowSearchBySsn' // The flag we suspect is the issue
                 ],
                 ResultsPerPage: 5
-            });
+            }, "SSN_SEARCH");
 
             if (candidates.length > 0) {
                 console.log(`   > SSN Search Successful. Found ${candidates.length} candidates.`);
                 searchMethod = 'SSN';
-            } else {
-                console.log(`   > SSN Search returned 0 results (Check permissions with Tracers support).`);
             }
         }
 
         // ==========================================
-        // ATTEMPT 2: FALLBACK (Only if SSN fails)
+        // ATTEMPT 2: FALLBACK (Name + Address)
         // ==========================================
         if (candidates.length === 0 && address && state) {
             console.log(`[Tracers] Fallback: Searching by Name + Address...`);
@@ -56,7 +50,7 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
             if (city) searchPayload.City = city;
             if (zip) searchPayload.Zip = zip;
 
-            candidates = await callTracers(searchPayload);
+            candidates = await callTracers(searchPayload, "ADDRESS_SEARCH");
             if (candidates.length > 0) searchMethod = 'ADDRESS';
         }
 
@@ -71,8 +65,6 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         const targetName = `${firstName} ${lastName}`;
 
         if (searchMethod === 'SSN') {
-            // If SSN match found, we trust it.
-            // We check with AI just to log if the name is weird.
             if (firstName) {
                 const aiCheck = await aiMatcher.pickBestMatch(targetName, address, candidates);
                 bestMatch = aiCheck || candidates[0];
@@ -80,7 +72,6 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
                 bestMatch = candidates[0];
             }
         } else {
-            // Address match requires strict AI check
             bestMatch = await aiMatcher.pickBestMatch(targetName, address, candidates);
         }
 
@@ -94,7 +85,10 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
     }
 }
 
-async function callTracers(payload) {
+// ------------------------------------------
+// THE UPDATED API CALLER (With X-Ray Logging)
+// ------------------------------------------
+async function callTracers(payload, contextTag) {
     try {
         const response = await axios.post(TRACERS_URL, payload, {
             headers: {
@@ -105,10 +99,35 @@ async function callTracers(payload) {
                 'galaxy-search-type': 'Person'
             }
         });
-        return response.data?.PersonSearchResults || [];
+
+        const data = response.data;
+
+        // X-RAY LOGS: Look here to see if they are blocking us!
+        if (!data.PersonSearchResults || data.PersonSearchResults.length === 0) {
+            console.log(`[Tracers X-RAY] ${contextTag} returned 0 results.`);
+
+            // Check for hidden Warnings or Errors
+            if (data.Warnings && data.Warnings.length > 0) {
+                console.log(`   API WARNINGS:`, JSON.stringify(data.Warnings));
+            }
+            if (data.Errors && data.Errors.length > 0) {
+                console.log(`   API ERRORS:`, JSON.stringify(data.Errors));
+            }
+            // Sometimes it's inside an 'Error' object
+            if (data.Error) {
+                console.log(`   API ERROR OBJ:`, JSON.stringify(data.Error));
+            }
+        }
+
+        return data.PersonSearchResults || [];
+
     } catch (error) {
         if (error.response) {
-            console.error(`[Tracers API Error]: ${error.response.status}`, JSON.stringify(error.response.data));
+            console.error(`[Tracers API Crash]: ${error.response.status}`);
+            console.error(`   Payload sent:`, JSON.stringify(payload));
+            console.error(`   Server Response:`, JSON.stringify(error.response.data));
+        } else {
+            console.error(`[Tracers Network Error]:`, error.message);
         }
         return [];
     }
