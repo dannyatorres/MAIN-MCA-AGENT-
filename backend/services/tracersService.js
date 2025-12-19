@@ -27,16 +27,15 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
                 SSN: formattedSsn
             });
 
-            // FIXED: Removed spaces in "SocialSecurityNumbers" based on API Error Log
+            // FIXED: "SocialSecurityNumbers" (No spaces) and added "AllowSearchBySsn"
             payload.Includes = [
                 'Addresses',
                 'PhoneNumbers',
                 'EmailAddresses',
                 'Akas',
-                'SocialSecurityNumbers', // <--- CHANGED (No spaces)
-                'AllowSearchBySsn'       // <--- ADDED (Confirmed valid by error log)
+                'SocialSecurityNumbers',
+                'AllowSearchBySsn'
             ];
-
             payload.IncludeFullSsnValues = true;
 
             candidates = await callTracers(payload, "SSN_SEARCH");
@@ -154,6 +153,7 @@ async function callTracers(payload, contextTag) {
 
         const data = response.data;
 
+        // Verify structure based on your logs
         if (!data.PersonSearchResults || data.PersonSearchResults.length === 0) {
             console.log(`[Tracers X-RAY] ${contextTag} returned 0 results.`);
             if (data.Warnings) console.log(`   WARNINGS:`, JSON.stringify(data.Warnings));
@@ -175,19 +175,45 @@ async function callTracers(payload, contextTag) {
     }
 }
 
+// ------------------------------------------
+// RESPONSE PARSER (UPDATED FOR YOUR JSON)
+// ------------------------------------------
 function parseTracersResponse(person) {
     const clean = (str) => (str || '').trim();
+
+    // 1. PHONE LOGIC
+    // Use "PhoneOrder" or "LastReportedDate" to find the best phone.
     let mobile = null;
-    if (person.MobilePhones?.length) {
-        mobile = person.MobilePhones.find(p => p.LastSeenDate?.includes('Current'))?.PhoneNumber || person.MobilePhones[0].PhoneNumber;
+    if (person.PhoneNumbers && person.PhoneNumbers.length > 0) {
+        // Try to find one marked "IsConnected": true, otherwise default to the first one
+        const connected = person.PhoneNumbers.find(p => p.IsConnected === true);
+        const bestPhone = connected || person.PhoneNumbers[0];
+        mobile = bestPhone.PhoneNumber;
     }
+
+    // 2. ADDRESS LOGIC
+    // The JSON does NOT have AddressLine1. It has "FullAddress" or individual parts.
     let addr = null;
-    if (person.Addresses?.length) {
-        addr = person.Addresses.find(a => a.LastSeenDate?.includes('Current')) || person.Addresses[0];
+    let streetAddress = null;
+
+    if (person.Addresses && person.Addresses.length > 0) {
+        // Default to the first address (AddressOrder: 1)
+        addr = person.Addresses[0];
+
+        if (addr.FullAddress) {
+            // Format: "3030 Main Way; Shingle Springs, CA 95682-8879"
+            // Split by semicolon to extract the street part
+            streetAddress = addr.FullAddress.split(';')[0];
+        } else {
+            // Fallback: Construct manually if FullAddress is missing
+            streetAddress = [addr.HouseNumber, addr.StreetPreDirection, addr.StreetName, addr.StreetType, addr.Unit]
+                .filter(Boolean).join(' ');
+        }
     }
+
     return {
         phone: mobile ? mobile.replace(/\D/g, '') : null,
-        address: clean(addr?.AddressLine1),
+        address: clean(streetAddress),
         city: clean(addr?.City),
         state: clean(addr?.State),
         zip: clean(addr?.Zip)
