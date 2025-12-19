@@ -13,21 +13,23 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         let searchMethod = '';
 
         // ==========================================
-        // ATTEMPT 1: SEARCH BY SSN
+        // ATTEMPT 1: SEARCH BY SSN ONLY (Force Loose Search)
         // ==========================================
         const rawSsn = ssn ? ssn.replace(/\D/g, '') : '';
 
         if (rawSsn.length === 9) {
             const formattedSsn = `${rawSsn.slice(0,3)}-${rawSsn.slice(3,5)}-${rawSsn.slice(5)}`;
-            console.log(`[Tracers] Attempt 1: Searching by SSN (${formattedSsn})...`);
+            console.log(`[Tracers] Attempt 1: Searching by SSN (${formattedSsn}) ONLY...`);
 
+            // CRITICAL FIX: We send BLANK names here.
+            // This tells the API: "Find this SSN, I don't care what the name is."
             const payload = createPayload({
-                FirstName: firstName || "",
-                LastName: lastName || "",
+                FirstName: "",
+                LastName: "",
                 SSN: formattedSsn
             });
 
-            // FIXED: "SocialSecurityNumbers" (No spaces) and added "AllowSearchBySsn"
+            // "SocialSecurityNumbers" (No spaces) is the correct include per your logs
             payload.Includes = [
                 'Addresses',
                 'PhoneNumbers',
@@ -72,9 +74,11 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         }
 
         let bestMatch = null;
+        // The target name is what we are looking for (e.g. "Steven Pearish")
         const targetName = `${firstName} ${lastName}`;
 
         if (searchMethod === 'SSN') {
+            // We found the SSN owner (e.g. "Steve"). Now we use AI to see if "Steve" == "Steven Pearish"
             if (firstName) {
                 const aiCheck = await aiMatcher.pickBestMatch(targetName, address, candidates);
                 bestMatch = aiCheck || candidates[0];
@@ -121,9 +125,10 @@ function createPayload(overrides = {}) {
         "ResultsPerPage": "100"
     };
 
-    if (overrides.SSN) template.SSN = overrides.SSN;
-    if (overrides.FirstName) template.FirstName = overrides.FirstName;
-    if (overrides.LastName) template.LastName = overrides.LastName;
+    // Only set these if they are passed in `overrides`
+    if (overrides.SSN !== undefined) template.SSN = overrides.SSN;
+    if (overrides.FirstName !== undefined) template.FirstName = overrides.FirstName;
+    if (overrides.LastName !== undefined) template.LastName = overrides.LastName;
 
     if (overrides.Addressline1 || overrides.addressLine2) {
         template.Addresses[0].Addressline1 = overrides.Addressline1 || "";
