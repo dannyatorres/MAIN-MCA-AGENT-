@@ -419,80 +419,32 @@
     <script type="module" src="js/app-bootstrap.js"></script>
 
     <!-- Background Verification Modal -->
-    <div id="cleanerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;">
-        <div style="background:white; padding:30px; border-radius:10px; width:500px; text-align:center;">
-            <h3 style="margin-bottom:20px;"><i class="fas fa-user-check"></i> Background Verification</h3>
-            <p style="color:#666; margin-bottom:20px;">Upload a CSV to enrich with verified mobile numbers and home addresses.</p>
+    <div id="cleanerModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 class="modal-title"><i class="fas fa-user-check"></i> Background Verification</h3>
+            <p class="modal-description">Upload a CSV to enrich with verified mobile numbers and home addresses.</p>
 
-            <input type="file" id="cleanerFileInput" accept=".csv" style="margin-bottom:20px;">
+            <input type="file" id="cleanerFileInput" class="file-input" accept=".csv">
 
-            <div id="cleanerProgress" style="display:none; margin:20px 0;">
-                <div style="background:#eee; border-radius:5px; height:20px; overflow:hidden;">
-                    <div id="cleanerProgressBar" style="background:#28a745; height:100%; width:0%; transition:width 0.3s;"></div>
+            <div id="cleanerProgress" class="progress-container hidden">
+                <div class="progress-bar-track">
+                    <div id="cleanerProgressBar" class="progress-bar-fill"></div>
                 </div>
-                <p id="cleanerStatus" style="margin-top:10px; color:#666;">Processing...</p>
+                <p id="cleanerStatus" class="progress-status">Verifying records...</p>
             </div>
 
-            <div style="margin-top:20px;">
-                <button onclick="runCleaner()" style="background:#28a745; color:white; border:none; padding:10px 30px; border-radius:5px; cursor:pointer; margin-right:10px;">
-                    <i class="fas fa-play"></i> Clean File
+            <div class="modal-actions">
+                <button onclick="runCleaner()" class="btn btn-primary">
+                    <i class="fas fa-play"></i> Verify File
                 </button>
-                <button onclick="document.getElementById('cleanerModal').style.display='none'" style="background:#6c757d; color:white; border:none; padding:10px 30px; border-radius:5px; cursor:pointer;">
+                <button onclick="closeCleanerModal()" class="btn btn-secondary">
                     Cancel
                 </button>
             </div>
         </div>
     </div>
 
-    <script>
-    function openCleanerModal() {
-        document.getElementById('cleanerModal').style.display = 'flex';
-        document.getElementById('cleanerFileInput').value = '';
-        document.getElementById('cleanerProgress').style.display = 'none';
-    }
-
-    async function runCleaner() {
-        const fileInput = document.getElementById('cleanerFileInput');
-        if (!fileInput.files[0]) {
-            alert('Please select a CSV file first.');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('csvFile', fileInput.files[0]);
-
-        document.getElementById('cleanerProgress').style.display = 'block';
-        document.getElementById('cleanerProgressBar').style.width = '50%';
-        document.getElementById('cleanerStatus').textContent = 'Verifying records...';
-
-        try {
-            const response = await fetch('/api/cleaner/process-file', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) throw new Error('Processing failed');
-
-            document.getElementById('cleanerProgressBar').style.width = '100%';
-            document.getElementById('cleanerStatus').textContent = 'Complete! Downloading...';
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'CLEANED_' + fileInput.files[0].name;
-            a.click();
-
-            setTimeout(() => {
-                document.getElementById('cleanerModal').style.display = 'none';
-            }, 1500);
-
-        } catch (error) {
-            document.getElementById('cleanerStatus').textContent = 'Error: ' + error.message;
-            document.getElementById('cleanerProgressBar').style.background = '#dc3545';
-        }
-    }
-    </script>
+    <script src="js/background-verification.js"></script>
 
 </body>
 </html>
