@@ -9,30 +9,96 @@ const AP_PASSWORD = process.env.TRACERS_AP_PASSWORD;
 
 async function searchBySsn(ssn, firstName, lastName, address = null, state = null) {
     try {
-        // 1. CLEAN THE SSN
         const cleanSsn = ssn ? ssn.replace(/\D/g, '') : '';
+        let candidates = [];
+        let searchMethod = '';
 
-        // 2. BUILD PAYLOAD
-        let payload = {
-            // FIX: Changed 'Aliases' to 'Akas' based on error log
-            Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas'],
-            ResultsPerPage: 5
-        };
-
-        // STRATEGY: Send SSN ONLY for the search (Safest method)
+        // ==========================================
+        // ATTEMPT 1: SEARCH BY SSN
+        // ==========================================
         if (cleanSsn.length === 9) {
-            payload.Ssn = cleanSsn;
-        }
-        else if (address && state) {
-            payload.AddressLine1 = address;
-            payload.State = state;
-            if (firstName) payload.FirstName = firstName;
-            if (lastName) payload.LastName = lastName;
-        } else {
-            return { success: false, error: 'Skipped: No valid SSN or Address' };
+            console.log(`[Tracers] Attempt 1: Searching by SSN (${cleanSsn})...`);
+
+            const ssnResults = await callTracers({
+                Ssn: cleanSsn,
+                // CRITICAL FIX: Added 'AllowSearchBySsn' permission flag
+                Includes: [
+                    'Addresses',
+                    'PhoneNumbers',
+                    'EmailAddresses',
+                    'Akas',
+                    'AllowSearchBySsn'
+                ],
+                ResultsPerPage: 5
+            });
+
+            if (ssnResults && ssnResults.length > 0) {
+                console.log(`   > SSN Search Successful. Found ${ssnResults.length} candidates.`);
+                candidates = ssnResults;
+                searchMethod = 'SSN';
+            } else {
+                console.log(`   > SSN Search returned 0 results.`);
+            }
         }
 
-        // 3. EXECUTE SEARCH
+        // ==========================================
+        // ATTEMPT 2: SEARCH BY NAME + ADDRESS (Fallback)
+        // ==========================================
+        if (candidates.length === 0 && address && state && firstName) {
+            console.log(`[Tracers] Fallback: Searching by Name + Address...`);
+            const addrResults = await callTracers({
+                FirstName: firstName,
+                LastName: lastName,
+                AddressLine1: address,
+                State: state,
+                Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas'],
+                ResultsPerPage: 5
+            });
+
+            if (addrResults && addrResults.length > 0) {
+                candidates = addrResults;
+                searchMethod = 'ADDRESS';
+            }
+        }
+
+        // ==========================================
+        // THE VERDICT (AI Judge)
+        // ==========================================
+        if (candidates.length === 0) {
+            return { success: false, error: 'No results found (SSN or Name/Address)' };
+        }
+
+        let bestMatch = null;
+        const targetName = `${firstName} ${lastName}`;
+
+        if (searchMethod === 'SSN') {
+            // If we found them by SSN, we trust it.
+            // But we pass it to AI to log if the name is totally different (e.g. Spouse).
+            if (firstName) {
+                const aiCheck = await aiMatcher.pickBestMatch(targetName, address, candidates);
+                // We prioritize the SSN match even if AI is unsure, because SSN is unique.
+                bestMatch = aiCheck || candidates[0];
+            } else {
+                bestMatch = candidates[0];
+            }
+        } else {
+            // If we searched by Address, we MUST use AI to confirm it's the right person.
+            bestMatch = await aiMatcher.pickBestMatch(targetName, address, candidates);
+        }
+
+        if (!bestMatch) return { success: false, error: `AI Mismatch: Candidates found but didn't match "${targetName}"` };
+
+        return { success: true, match: parseTracersResponse(bestMatch) };
+
+    } catch (error) {
+        console.error(`[Tracers Logic Error]:`, error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// Helper: Handles the API call and Error Logging
+async function callTracers(payload) {
+    try {
         const response = await axios.post(TRACERS_URL, payload, {
             headers: {
                 'Content-Type': 'application/json',
@@ -42,35 +108,15 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
                 'galaxy-search-type': 'Person'
             }
         });
-
-        const data = response.data;
-        if (!data || !data.PersonSearchResults || data.PersonSearchResults.length === 0) {
-            return { success: false, error: 'No results' };
-        }
-
-        const candidates = data.PersonSearchResults;
-
-        // 4. THE AI JUDGE (Verification)
-        let bestMatch = null;
-        const targetName = `${firstName} ${lastName}`;
-
-        if (firstName && lastName) {
-             bestMatch = await aiMatcher.pickBestMatch(targetName, address, candidates);
-        } else {
-             bestMatch = candidates[0];
-        }
-
-        if (!bestMatch) return { success: false, error: `AI Mismatch: Name didn't match "${targetName}"` };
-
-        return { success: true, match: parseTracersResponse(bestMatch) };
-
+        return response.data?.PersonSearchResults || [];
     } catch (error) {
         if (error.response) {
-            console.error(`[Tracers API Error]:`, JSON.stringify(error.response.data));
+            // Detailed API Error Log
+            console.error(`[Tracers API Error]: ${error.response.status}`, JSON.stringify(error.response.data));
         } else {
-            console.error(`[Tracers Error]:`, error.message);
+            console.error(`[Tracers Network Error]:`, error.message);
         }
-        return { success: false, error: error.message };
+        return [];
     }
 }
 
