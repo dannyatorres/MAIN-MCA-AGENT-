@@ -546,8 +546,7 @@ const requireAuth = (req, res, next) => {
         '/api/calling/status',
         '/api/calling/recording-status',
         '/api/contact',
-        '/api/agent/trigger',      // Dispatcher AI Agent endpoint
-        '/api/tracer-test/test-ssn'  // Tracers SSN Test
+        '/api/agent/trigger'       // Dispatcher AI Agent endpoint
     ];
 
     // Allow exact matches or any calling webhook paths
@@ -584,8 +583,7 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 app.use('/api/email', emailRoutes);
 app.use('/api/agent', require('./routes/agent')); // AI Agent for Dispatcher
-app.use('/api/cleaner', require('./routes/cleaner')); // Lead Laundromat
-app.use('/api/tracer-test', require('./routes/test-tracers-route')); // Tracers SSN Test
+app.use('/api/cleaner', require('./routes/cleaner')); // Background Verification
 
 // --- CONTACT FORM ROUTE (LOG ONLY) ---
 app.post('/api/contact', (req, res) => {

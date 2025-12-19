@@ -126,7 +126,7 @@ async function callTracers(payload) {
         return data.persons;
 
     } catch (error) {
-        console.error(`[Tracers Error]:`, error.message);
+        console.error(`[Lookup Error]:`, error.message);
         return [];
     }
 }

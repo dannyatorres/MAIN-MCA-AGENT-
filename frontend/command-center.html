@@ -463,7 +463,7 @@
 
         document.getElementById('cleanerProgress').style.display = 'block';
         document.getElementById('cleanerProgressBar').style.width = '50%';
-        document.getElementById('cleanerStatus').textContent = 'Sending to Tracers API...';
+        document.getElementById('cleanerStatus').textContent = 'Verifying records...';
 
         try {
             const response = await fetch('/api/cleaner/process-file', {
