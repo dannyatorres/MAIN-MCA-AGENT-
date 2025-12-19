@@ -149,14 +149,14 @@ async function callTracers(payload, contextTag) {
         console.log(`[RAW RESPONSE]:`, JSON.stringify(data, null, 2));
 
         // Verify structure based on your logs
-        if (!data.PersonSearchResults || data.PersonSearchResults.length === 0) {
+        if (!data.persons || data.persons.length === 0) {
             console.log(`[Tracers X-RAY] ${contextTag} returned 0 results.`);
             if (data.Warnings) console.log(`   WARNINGS:`, JSON.stringify(data.Warnings));
             if (data.Errors) console.log(`   ERRORS:`, JSON.stringify(data.Errors));
             return [];
         } else {
-            console.log(`[Tracers] Success! Found ${data.PersonSearchResults.length} matches.`);
-            return data.PersonSearchResults;
+            console.log(`[Tracers] Success! Found ${data.persons.length} matches.`);
+            return data.persons;
         }
 
     } catch (error) {
