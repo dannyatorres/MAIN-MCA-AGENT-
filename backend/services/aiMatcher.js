@@ -8,20 +8,17 @@ const openai = new OpenAI({
 
 async function pickBestMatch(csvName, csvAddress, candidates) {
     try {
-        // 1. Simplify the candidates to save tokens (money)
         const simplifiedCandidates = candidates.map((c, index) => ({
             id: index,
             name: `${c.FirstName} ${c.LastName}`,
-            // FIX: Look for Akas OR Aliases
             aliases: c.Akas || c.Aliases || [],
             age: c.Age,
             address: c.Addresses?.[0]?.AddressLine1 || 'N/A',
             state: c.Addresses?.[0]?.State || 'N/A'
         }));
 
-        // 2. The Prompt
         const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini", // Cheap and smart enough
+            model: "gpt-4o-mini",
             messages: [
                 {
                     role: "system",
@@ -49,20 +46,20 @@ async function pickBestMatch(csvName, csvAddress, candidates) {
             temperature: 0
         });
 
-        // 3. Parse Answer
         const result = JSON.parse(response.choices[0].message.content);
 
         if (result.matchId !== -1) {
-            console.log(`[AI Judge] Matched "${csvName}" to Candidate #${result.matchId} (${simplifiedCandidates[result.matchId].name})`);
-            return candidates[result.matchId]; // Return the full Tracers object
+            const matchedName = simplifiedCandidates[result.matchId]?.name || 'Unknown';
+            console.log(`[AI] Matching "${csvName}" → Best match: "${matchedName}" (${result.reason})`);
+            return candidates[result.matchId];
         } else {
-            console.log(`[AI Judge] No match found for "${csvName}"`);
+            console.log(`[AI] Matching "${csvName}" → No match found`);
             return null;
         }
 
     } catch (error) {
-        console.error("[AI Judge] Error:", error.message);
-        return candidates[0]; // Fallback to first result if AI fails
+        console.error("[AI Error]:", error.message);
+        return candidates[0];
     }
 }
 

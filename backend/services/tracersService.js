@@ -12,34 +12,22 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         let candidates = [];
         let searchMethod = '';
 
-        // ==========================================
         // ATTEMPT 1: SEARCH BY SSN ONLY (Force Loose Search)
-        // ==========================================
         const rawSsn = ssn ? ssn.replace(/\D/g, '') : '';
 
         if (rawSsn.length === 9) {
-            const formattedSsn = rawSsn;
-            console.log(`[Tracers] Attempt 1: Searching by SSN (${formattedSsn}) ONLY...`);
-
-            // CRITICAL FIX: We send BLANK names here.
-            // This tells the API: "Find this SSN, I don't care what the name is."
             const payload = createPayload({
                 FirstName: "",
                 LastName: "",
-                SSN: formattedSsn
+                SSN: rawSsn
             });
 
-            candidates = await callTracers(payload, "SSN_SEARCH");
-
+            candidates = await callTracers(payload);
             if (candidates.length > 0) searchMethod = 'SSN';
         }
 
-        // ==========================================
         // ATTEMPT 2: FALLBACK (Name + Address)
-        // ==========================================
         if (candidates.length === 0 && address && state) {
-            console.log(`[Tracers] Fallback: Searching by Name + Address...`);
-
             const fullLine2 = `${city || ''} ${state || ''} ${zip || ''}`.trim();
 
             const payload = createPayload({
@@ -49,23 +37,19 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
                 addressLine2: fullLine2
             });
 
-            candidates = await callTracers(payload, "ADDRESS_SEARCH");
+            candidates = await callTracers(payload);
             if (candidates.length > 0) searchMethod = 'ADDRESS';
         }
 
-        // ==========================================
         // AI VERIFICATION
-        // ==========================================
         if (candidates.length === 0) {
             return { success: false, error: 'No results found (SSN or Name/Address)' };
         }
 
         let bestMatch = null;
-        // The target name is what we are looking for (e.g. "Steven Pearish")
         const targetName = `${firstName} ${lastName}`;
 
         if (searchMethod === 'SSN') {
-            // We found the SSN owner (e.g. "Steve"). Now we use AI to see if "Steve" == "Steven Pearish"
             if (firstName) {
                 const aiCheck = await aiMatcher.pickBestMatch(targetName, address, candidates);
                 bestMatch = aiCheck || candidates[0];
@@ -81,14 +65,10 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         return { success: true, match: parseTracersResponse(bestMatch) };
 
     } catch (error) {
-        console.error(`[Tracers Logic Error]:`, error.message);
         return { success: false, error: error.message };
     }
 }
 
-/**
- * Helper to build the strict payload format required by the email support.
- */
 function createPayload(overrides = {}) {
     const template = {
         "FirstName": "",
@@ -112,7 +92,6 @@ function createPayload(overrides = {}) {
         "ResultsPerPage": "100"
     };
 
-    // Only set these if they are passed in `overrides`
     if (overrides.SSN !== undefined) template.SSN = overrides.SSN;
     if (overrides.FirstName !== undefined) template.FirstName = overrides.FirstName;
     if (overrides.LastName !== undefined) template.LastName = overrides.LastName;
@@ -125,13 +104,8 @@ function createPayload(overrides = {}) {
     return template;
 }
 
-// ------------------------------------------
-// API CALLER
-// ------------------------------------------
-async function callTracers(payload, contextTag) {
+async function callTracers(payload) {
     try {
-        console.log(`[Payload for ${contextTag}]:`, JSON.stringify(payload));
-
         const response = await axios.post(TRACERS_URL, payload, {
             headers: {
                 'Content-Type': 'application/json',
@@ -145,62 +119,39 @@ async function callTracers(payload, contextTag) {
 
         const data = response.data;
 
-        // Log the ENTIRE raw response
-        console.log(`[RAW RESPONSE]:`, JSON.stringify(data, null, 2));
-
-        // Verify structure based on your logs
         if (!data.persons || data.persons.length === 0) {
-            console.log(`[Tracers X-RAY] ${contextTag} returned 0 results.`);
-            if (data.Warnings) console.log(`   WARNINGS:`, JSON.stringify(data.Warnings));
-            if (data.Errors) console.log(`   ERRORS:`, JSON.stringify(data.Errors));
             return [];
-        } else {
-            console.log(`[Tracers] Success! Found ${data.persons.length} matches.`);
-            return data.persons;
         }
+
+        return data.persons;
 
     } catch (error) {
-        if (error.response) {
-            console.error(`[Tracers API Crash]: ${error.response.status}`);
-            console.error(`   Server Response:`, JSON.stringify(error.response.data));
-        } else {
-            console.error(`[Tracers Network Error]:`, error.message);
-        }
+        console.error(`[Tracers Error]:`, error.message);
         return [];
     }
 }
 
-// ------------------------------------------
-// RESPONSE PARSER (UPDATED FOR YOUR JSON)
-// ------------------------------------------
 function parseTracersResponse(person) {
     const clean = (str) => (str || '').trim();
 
-    // 1. PHONE LOGIC
-    // Use "PhoneOrder" or "LastReportedDate" to find the best phone.
+    // PHONE LOGIC
     let mobile = null;
     if (person.PhoneNumbers && person.PhoneNumbers.length > 0) {
-        // Try to find one marked "IsConnected": true, otherwise default to the first one
         const connected = person.PhoneNumbers.find(p => p.IsConnected === true);
         const bestPhone = connected || person.PhoneNumbers[0];
         mobile = bestPhone.PhoneNumber;
     }
 
-    // 2. ADDRESS LOGIC
-    // The JSON does NOT have AddressLine1. It has "FullAddress" or individual parts.
+    // ADDRESS LOGIC
     let addr = null;
     let streetAddress = null;
 
     if (person.Addresses && person.Addresses.length > 0) {
-        // Default to the first address (AddressOrder: 1)
         addr = person.Addresses[0];
 
         if (addr.FullAddress) {
-            // Format: "3030 Main Way; Shingle Springs, CA 95682-8879"
-            // Split by semicolon to extract the street part
             streetAddress = addr.FullAddress.split(';')[0];
         } else {
-            // Fallback: Construct manually if FullAddress is missing
             streetAddress = [addr.HouseNumber, addr.StreetPreDirection, addr.StreetName, addr.StreetType, addr.Unit]
                 .filter(Boolean).join(' ');
         }

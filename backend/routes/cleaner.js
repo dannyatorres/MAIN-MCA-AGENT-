@@ -15,8 +15,6 @@ const randomPause = (min, max) => new Promise(resolve => {
 });
 
 router.post('/process-file', upload.single('csvFile'), async (req, res) => {
-    console.log(`[Laundromat] Processing file: ${req.file.originalname}`);
-
     const results = [];
     const rows = [];
 
@@ -27,7 +25,7 @@ router.post('/process-file', upload.single('csvFile'), async (req, res) => {
             .on('end', resolve);
     });
 
-    console.log(`Found ${rows.length} rows.`);
+    console.log(`[Cleaner] Starting: ${req.file.originalname} (${rows.length} rows)`);
 
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -38,13 +36,6 @@ router.post('/process-file', upload.single('csvFile'), async (req, res) => {
         const nameKey = keys.find(k => k.match(/owner|first/i));
         const addrKey = keys.find(k => k.match(/address/i));
         const stateKey = keys.find(k => k.match(/state/i));
-
-        // DEBUG LOG (Only for the first row to check columns)
-        if (i === 0) {
-            console.log(`[Row 1 Analysis]`);
-            console.log(`   Keys Found: SSN='${ssnKey}', Name='${nameKey}', Addr='${addrKey}'`);
-            console.log(`   Values: SSN='${row[ssnKey]}', Name='${row[nameKey]}'`);
-        }
 
         let cleanRow = { ...row, 'Verified Mobile': '', 'Home Address': '', 'Home City': '', 'Home State': '', 'Home Zip': '' };
 
@@ -57,27 +48,26 @@ router.post('/process-file', upload.single('csvFile'), async (req, res) => {
                 row[stateKey]
             );
 
-            // RESULT LOG
             if (result.success && result.match) {
-                console.log(`   > Match found for row ${i}`);
                 cleanRow['Verified Mobile'] = result.match.phone || '';
                 cleanRow['Home Address'] = result.match.address || '';
                 cleanRow['Home City'] = result.match.city || '';
                 cleanRow['Home State'] = result.match.state || '';
                 cleanRow['Home Zip'] = result.match.zip || '';
+
+                // Only log successes with what we found
+                console.log(`[Row ${i}] ✅ ${row[nameKey]} → Phone: ${result.match.phone || 'N/A'} | Address: ${result.match.address || 'N/A'}, ${result.match.city || ''} ${result.match.state || ''}`);
             } else {
-                // Log WHY it failed
-                console.log(`   > Row ${i} Skipped: ${result.error}`);
+                console.log(`[Row ${i}] ❌ ${row[nameKey]} → ${result.error}`);
             }
-        } else {
-            console.log(`   > Row ${i} Skipped: Could not find SSN or Name columns.`);
         }
 
         results.push(cleanRow);
-
-        // STEALTH DELAY (1-3 seconds)
         await randomPause(1000, 3000);
     }
+
+    const successCount = results.filter(r => r['Verified Mobile'] || r['Home Address']).length;
+    console.log(`[Cleaner] Done: ${successCount}/${rows.length} enriched`);
 
     const headers = Object.keys(results[0]);
     const csvContent = [
