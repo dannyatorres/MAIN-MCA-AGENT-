@@ -145,6 +145,9 @@ async function callTracers(payload, contextTag) {
 
         const data = response.data;
 
+        // Log the ENTIRE raw response
+        console.log(`[RAW RESPONSE]:`, JSON.stringify(data, null, 2));
+
         // Verify structure based on your logs
         if (!data.PersonSearchResults || data.PersonSearchResults.length === 0) {
             console.log(`[Tracers X-RAY] ${contextTag} returned 0 results.`);
