@@ -1,5 +1,6 @@
 // backend/services/tracersService.js
 const axios = require('axios');
+const aiMatcher = require('./aiMatcher'); // Import the Judge
 require('dotenv').config();
 
 const TRACERS_URL = 'https://api.galaxysearchapi.com/PersonSearch';
@@ -11,8 +12,8 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
         let payload = {
             FirstName: firstName,
             LastName: lastName,
-            Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses'],
-            ResultsPerPage: 5
+            Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Aliases'], // Ask for Aliases too
+            ResultsPerPage: 5 // Get Top 5 for the AI to choose from
         };
 
         // PRIORITY 1: SSN Search
@@ -27,6 +28,7 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
             return { success: false, error: 'Not enough data' };
         }
 
+        // 1. Call Tracers
         const response = await axios.post(TRACERS_URL, payload, {
             headers: {
                 'Content-Type': 'application/json',
@@ -42,7 +44,22 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
             return { success: false, error: 'No results' };
         }
 
-        return { success: true, match: parseTracersResponse(data.PersonSearchResults[0]) };
+        const candidates = data.PersonSearchResults;
+
+        // 2. THE AI HANDOFF
+        // If we used SSN, we trust Tracers #1. If we used Name/Address, we ask AI.
+        let bestMatch;
+        if (payload.Ssn) {
+            bestMatch = candidates[0]; // SSN is exact, no AI needed
+        } else {
+            // Fuzzy Match! Ask the Judge.
+            const targetName = `${firstName} ${lastName}`;
+            bestMatch = await aiMatcher.pickBestMatch(targetName, address, candidates);
+        }
+
+        if (!bestMatch) return { success: false, error: 'AI Verification Failed' };
+
+        return { success: true, match: parseTracersResponse(bestMatch) };
 
     } catch (error) {
         console.error(`[Tracers] Error:`, error.message);
