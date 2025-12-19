@@ -1,6 +1,6 @@
 // backend/services/tracersService.js
 const axios = require('axios');
-const aiMatcher = require('./aiMatcher'); // Import the Judge
+const aiMatcher = require('./aiMatcher');
 require('dotenv').config();
 
 const TRACERS_URL = 'https://api.galaxysearchapi.com/PersonSearch';
@@ -9,26 +9,30 @@ const AP_PASSWORD = process.env.TRACERS_AP_PASSWORD;
 
 async function searchBySsn(ssn, firstName, lastName, address = null, state = null) {
     try {
+        // 1. CLEAN THE SSN (Remove dashes)
+        const cleanSsn = ssn ? ssn.replace(/\D/g, '') : '';
+
+        // 2. BUILD PAYLOAD
         let payload = {
-            FirstName: firstName,
-            LastName: lastName,
-            Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Aliases'], // Ask for Aliases too
-            ResultsPerPage: 5 // Get Top 5 for the AI to choose from
+            Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Aliases'],
+            ResultsPerPage: 5
         };
 
-        // PRIORITY 1: SSN Search
-        if (ssn && ssn.replace(/\D/g, '').length === 9) {
-            payload.Ssn = ssn.replace(/\D/g, '');
+        // STRATEGY: Send SSN ONLY for the search (Safest method)
+        if (cleanSsn.length === 9) {
+            payload.Ssn = cleanSsn;
+            // We intentionally do NOT send names to Tracers to prevent 400 errors
         }
-        // PRIORITY 2: Address Fallback
         else if (address && state) {
             payload.AddressLine1 = address;
             payload.State = state;
+            if (firstName) payload.FirstName = firstName;
+            if (lastName) payload.LastName = lastName;
         } else {
-            return { success: false, error: 'Not enough data' };
+            return { success: false, error: 'Skipped: No valid SSN or Address' };
         }
 
-        // 1. Call Tracers
+        // 3. EXECUTE SEARCH
         const response = await axios.post(TRACERS_URL, payload, {
             headers: {
                 'Content-Type': 'application/json',
@@ -46,23 +50,30 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
 
         const candidates = data.PersonSearchResults;
 
-        // 2. THE AI HANDOFF
-        // If we used SSN, we trust Tracers #1. If we used Name/Address, we ask AI.
-        let bestMatch;
-        if (payload.Ssn) {
-            bestMatch = candidates[0]; // SSN is exact, no AI needed
+        // 4. THE AI JUDGE (Verification)
+        // Even if we searched by SSN, we want to ensure the name matches your CSV.
+        // This catches cases where the SSN might belong to a spouse or partner.
+        let bestMatch = null;
+        const targetName = `${firstName} ${lastName}`;
+
+        if (firstName && lastName) {
+             // We have a name from CSV, so let's ask AI to confirm the SSN result matches it
+             bestMatch = await aiMatcher.pickBestMatch(targetName, address, candidates);
         } else {
-            // Fuzzy Match! Ask the Judge.
-            const targetName = `${firstName} ${lastName}`;
-            bestMatch = await aiMatcher.pickBestMatch(targetName, address, candidates);
+             // No name in CSV? Trust the SSN result blindly.
+             bestMatch = candidates[0];
         }
 
-        if (!bestMatch) return { success: false, error: 'AI Verification Failed' };
+        if (!bestMatch) return { success: false, error: `AI Mismatch: SSN found result, but name didn't match "${targetName}"` };
 
         return { success: true, match: parseTracersResponse(bestMatch) };
 
     } catch (error) {
-        console.error(`[Tracers] Error:`, error.message);
+        if (error.response) {
+            console.error(`[Tracers API Error]:`, JSON.stringify(error.response.data));
+        } else {
+            console.error(`[Tracers Error]:`, error.message);
+        }
         return { success: false, error: error.message };
     }
 }
@@ -70,13 +81,14 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
 function parseTracersResponse(person) {
     const clean = (str) => (str || '').trim();
 
-    // Find Best Mobile
+    // Get Best Mobile
     let mobile = null;
     if (person.MobilePhones?.length) {
+        // Look for 'Current' or 'Mobile' tags
         mobile = person.MobilePhones.find(p => p.LastSeenDate?.includes('Current'))?.PhoneNumber || person.MobilePhones[0].PhoneNumber;
     }
 
-    // Find Best Address
+    // Get Best Address
     let addr = null;
     if (person.Addresses?.length) {
         addr = person.Addresses.find(a => a.LastSeenDate?.includes('Current')) || person.Addresses[0];
