@@ -7,6 +7,12 @@ const path = require('path');
 const csvParser = require('csv-parser');
 const tracersService = require('../services/tracersService');
 
+// Helper: Pauses for a random time between min and max milliseconds
+const randomPause = (min, max) => new Promise(resolve => {
+    const time = Math.floor(Math.random() * (max - min + 1) + min);
+    setTimeout(resolve, time);
+});
+
 // Ensure uploads directory exists
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -77,10 +83,9 @@ router.post('/process-file', upload.single('csvFile'), async (req, res) => {
             }
             results.push(cleanRow);
 
-            // STEALTH MODE: Random delay between 5 to 7 seconds every row
-            // This prevents the server from blocking us.
-            const randomDelay = Math.floor(Math.random() * (7000 - 5000 + 1) + 5000);
-            await new Promise(r => setTimeout(r, randomDelay));
+            // THROTTLE: Wait 1 to 3 seconds (Random)
+            // This looks like human usage but isn't so slow that the connection times out.
+            await randomPause(1000, 3000);
         }
 
         // 3. Download CSV
