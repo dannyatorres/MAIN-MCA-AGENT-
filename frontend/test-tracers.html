@@ -59,7 +59,7 @@
             resultsDiv.innerHTML = '<span class="label">Searching...</span>';
 
             try {
-                const response = await fetch('/api/tracer-test/test-ssn', {
+                const response = await fetch('https://mcagent.io/api/tracer-test/test-ssn', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ssn })
