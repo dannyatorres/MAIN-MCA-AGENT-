@@ -13,46 +13,49 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         let searchMethod = '';
 
         // ==========================================
-        // ATTEMPT 1: SEARCH BY SSN (Formatted)
+        // ATTEMPT 1: SEARCH BY SSN
         // ==========================================
+        // Format SSN to ###-##-####
         const rawSsn = ssn ? ssn.replace(/\D/g, '') : '';
-        if (rawSsn.length === 9) {
-            // Docs Require Format: ###-##-####
-            const formattedSsn = `${rawSsn.slice(0,3)}-${rawSsn.slice(3,5)}-${rawSsn.slice(5)}`;
 
+        if (rawSsn.length === 9) {
+            const formattedSsn = `${rawSsn.slice(0,3)}-${rawSsn.slice(3,5)}-${rawSsn.slice(5)}`;
             console.log(`[Tracers] Attempt 1: Searching by SSN (${formattedSsn})...`);
 
-            candidates = await callTracers({
-                Ssn: formattedSsn,
-                Includes: [
-                    'Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas',
-                    'AllowSearchBySsn' // The Permission Flag
-                ],
-                ResultsPerPage: 5
-            }, "SSN_SEARCH");
+            // Construct payload EXACTLY as per email template
+            const payload = createPayload({
+                FirstName: firstName || "",
+                LastName: lastName || "",
+                SSN: formattedSsn
+            });
+
+            // Add Includes explicitly for this search
+            payload.Includes = ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas', 'Social Security Numbers'];
+            payload.IncludeFullSsnValues = true;
+
+            candidates = await callTracers(payload, "SSN_SEARCH");
 
             if (candidates.length > 0) searchMethod = 'SSN';
         }
 
         // ==========================================
-        // ATTEMPT 2: FALLBACK (Formatted Address)
+        // ATTEMPT 2: FALLBACK (Name + Address)
         // ==========================================
         if (candidates.length === 0 && address && state) {
             console.log(`[Tracers] Fallback: Searching by Name + Address...`);
 
+            // Construct Line 2 (City State Zip)
             const fullLine2 = `${city || ''} ${state || ''} ${zip || ''}`.trim();
-            const payload = {
-                FirstName: firstName,
-                LastName: lastName,
-                Addresses: [
-                    {
-                        AddressLine1: address,
-                        AddressLine2: fullLine2 // "City State Zip"
-                    }
-                ],
-                Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas'],
-                ResultsPerPage: 5
-            };
+
+            const payload = createPayload({
+                FirstName: firstName || "",
+                LastName: lastName || "",
+                Addressline1: address || "",
+                addressLine2: fullLine2
+            });
+
+            // Add Includes explicitly for this search
+            payload.Includes = ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas'];
 
             candidates = await callTracers(payload, "ADDRESS_SEARCH");
             if (candidates.length > 0) searchMethod = 'ADDRESS';
@@ -89,12 +92,53 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
     }
 }
 
+/**
+ * Helper to build the strict payload format required by the email support.
+ * Ensures all keys exist and are strictly casing-compliant.
+ */
+function createPayload(overrides = {}) {
+    // Default template based strictly on the email provided
+    const template = {
+        "FirstName": "",
+        "MiddleName": "",
+        "LastName": "",
+        "clientid": "",
+        "Phone": "",
+        "Email": "",
+        "tahoeId": "",
+        "DriverLicenseNumber": "",
+        "Dob": "",
+        "AgeRange": "",
+        "SSN": "", // Capitalized per email
+        "Addresses": [
+            {
+                "Addressline1": "", // PascalCase with lowercase 'l' per email
+                "addressLine2": ""  // camelCase per email
+            }
+        ],
+        "Page": 1,
+        "ResultsPerPage": "100" // String "100" per email
+    };
+
+    // Merge logic
+    if (overrides.SSN) template.SSN = overrides.SSN;
+    if (overrides.FirstName) template.FirstName = overrides.FirstName;
+    if (overrides.LastName) template.LastName = overrides.LastName;
+
+    // Handle Address mapping specifically
+    if (overrides.Addressline1 || overrides.addressLine2) {
+        template.Addresses[0].Addressline1 = overrides.Addressline1 || "";
+        template.Addresses[0].addressLine2 = overrides.addressLine2 || "";
+    }
+
+    return template;
+}
+
 // ------------------------------------------
-// API CALLER (Now Sends Correct Headers)
+// API CALLER
 // ------------------------------------------
 async function callTracers(payload, contextTag) {
     try {
-        // DEBUG: Print the exact JSON we are sending
         console.log(`[Payload for ${contextTag}]:`, JSON.stringify(payload));
 
         const response = await axios.post(TRACERS_URL, payload, {
@@ -103,8 +147,8 @@ async function callTracers(payload, contextTag) {
                 'Accept': 'application/json',
                 'galaxy-ap-name': AP_NAME,
                 'galaxy-ap-password': AP_PASSWORD,
-                'galaxy-search-type': 'Person',
-                'galaxy-client-type': 'Api' // ADDED: Required by Docs for JS clients
+                'galaxy-search-type': 'Person', // 'Person' for detailed, 'EfTeaser' for basic
+                'galaxy-client-type': 'Api'
             }
         });
 
@@ -114,11 +158,11 @@ async function callTracers(payload, contextTag) {
             console.log(`[Tracers X-RAY] ${contextTag} returned 0 results.`);
             if (data.Warnings) console.log(`   WARNINGS:`, JSON.stringify(data.Warnings));
             if (data.Errors) console.log(`   ERRORS:`, JSON.stringify(data.Errors));
+            return [];
         } else {
             console.log(`[Tracers] Success! Found ${data.PersonSearchResults.length} matches.`);
+            return data.PersonSearchResults;
         }
-
-        return data.PersonSearchResults || [];
 
     } catch (error) {
         if (error.response) {
@@ -143,7 +187,7 @@ function parseTracersResponse(person) {
     }
     return {
         phone: mobile ? mobile.replace(/\D/g, '') : null,
-        address: clean(addr?.AddressLine1),
+        address: clean(addr?.AddressLine1), // Note: Response format might still use standard casing
         city: clean(addr?.City),
         state: clean(addr?.State),
         zip: clean(addr?.Zip)
