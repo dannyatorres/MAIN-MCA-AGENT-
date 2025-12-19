@@ -347,92 +347,134 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update conversation (simplified version)
+// Update conversation (SMART UPDATE - Updates both tables)
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
         const db = getDatabase();
 
-        console.log(`📝 Updating conversation ${id}:`, Object.keys(updates));
+        console.log(`📝 Updating conversation ${id} (Smart Update)...`);
 
-        // Sanitize: Convert empty strings to null
+        // 1. Sanitize: Convert empty strings to null
         Object.keys(updates).forEach(key => {
             if (updates[key] === '') updates[key] = null;
         });
 
-        // Map camelCase to snake_case for common fields
-        const fieldMap = {
-            creditScore: 'credit_score',
-            fundingStatus: 'funding_status',
-            recentFunding: 'recent_funding',
-            businessName: 'business_name',
-            firstName: 'first_name',
-            lastName: 'last_name',
-            ownerFirstName: 'first_name',
-            ownerLastName: 'last_name'
-        };
-
-        // Convert incoming keys
-        const mapped = {};
-        for (const [key, value] of Object.entries(updates)) {
-            const dbKey = fieldMap[key] || key;
-            mapped[dbKey] = value;
-        }
-
-        // Allowed fields to update
-        const allowedFields = [
-            'credit_score',
-            'recent_funding',
-            'funding_status',
-            'state',
-            'priority',
-            'first_name',
-            'last_name',
-            'business_name',
-            'email',
-            'address',
-            'city',
-            'us_state',
-            'zip',
-            'cell_phone',
-            'industry'
+        // 2. Define Field Mappings
+        // Fields that belong to the 'conversations' table
+        const convFields = [
+            'business_name', 'state', 'priority', 'first_name', 'last_name',
+            'email', 'address', 'city', 'us_state', 'zip', 'lead_phone', 'cell_phone',
+            'credit_score', 'recent_funding', 'funding_status', 'lead_source', 'notes'
         ];
 
-        const setClauses = [];
-        const values = [];
-        let paramIndex = 1;
+        // Fields that belong to the 'lead_details' table
+        const detailFields = {
+            // Financials
+            'annual_revenue': 'annual_revenue',
+            'annualRevenue': 'annual_revenue',
+            'monthly_revenue': 'monthly_revenue',
+            'funding_amount': 'funding_amount',
+            'requestedAmount': 'funding_amount',
 
-        for (const [key, value] of Object.entries(mapped)) {
-            if (allowedFields.includes(key)) {
-                setClauses.push(`${key} = $${paramIndex++}`);
-                values.push(value);
+            // Business Info
+            'business_start_date': 'business_start_date',
+            'businessStartDate': 'business_start_date',
+            'business_type': 'business_type',
+            'industry': 'business_type',
+            'tax_id': 'tax_id_encrypted',
+            'federalTaxId': 'tax_id_encrypted',
+
+            // Owner 1
+            'ssn': 'ssn_encrypted',
+            'ownerSSN': 'ssn_encrypted',
+            'date_of_birth': 'date_of_birth',
+            'ownerDOB': 'date_of_birth',
+            'owner_ownership_percent': 'owner_ownership_percent',
+            'owner_home_address': 'owner_home_address',
+            'ownerHomeAddress': 'owner_home_address',
+            'owner_home_city': 'owner_home_city',
+            'ownerHomeCity': 'owner_home_city',
+            'owner_home_state': 'owner_home_state',
+            'ownerHomeState': 'owner_home_state',
+            'owner_home_zip': 'owner_home_zip',
+            'ownerHomeZip': 'owner_home_zip',
+
+            // Owner 2
+            'owner2_first_name': 'owner2_first_name',
+            'owner2_last_name': 'owner2_last_name',
+            'owner2_email': 'owner2_email',
+            'owner2_phone': 'owner2_phone',
+            'owner2_ssn': 'owner2_ssn',
+            'owner2_dob': 'owner2_dob',
+            'owner2_address': 'owner2_address',
+            'owner2_city': 'owner2_city',
+            'owner2_state': 'owner2_state',
+            'owner2_zip': 'owner2_zip'
+        };
+
+        // 3. Separate the Updates
+        const convUpdates = {};
+        const detailUpdates = {};
+
+        for (const [key, value] of Object.entries(updates)) {
+            // Check Conversations Table
+            if (convFields.includes(key)) {
+                convUpdates[key] = value;
+            }
+            // Check Lead Details Table (using map for camelCase support)
+            else if (detailFields[key]) {
+                detailUpdates[detailFields[key]] = value;
+            }
+            // Allow direct snake_case pass-through for details if not in map but valid
+            else if (key.startsWith('owner_') || key.startsWith('business_')) {
+                 // specific fallback if needed, or ignore
             }
         }
 
-        if (setClauses.length === 0) {
-            console.log('⚠️ No valid fields to update. Received:', Object.keys(updates));
-            return res.status(400).json({ error: 'No valid fields to update' });
+        // 4. Update 'conversations' Table
+        if (Object.keys(convUpdates).length > 0) {
+            const setClauses = Object.keys(convUpdates).map((k, i) => `${k} = $${i + 2}`);
+            const values = [id, ...Object.values(convUpdates)];
+
+            await db.query(`
+                UPDATE conversations
+                SET ${setClauses.join(', ')}, last_activity = NOW()
+                WHERE id = $1
+            `, values);
+            console.log(`✅ Updated conversations table (${Object.keys(convUpdates).length} fields)`);
         }
 
-        setClauses.push(`last_activity = NOW()`);
-        values.push(id);
+        // 5. Update 'lead_details' Table
+        if (Object.keys(detailUpdates).length > 0) {
+            const setClauses = Object.keys(detailUpdates).map((k, i) => `${k} = $${i + 2}`);
+            const values = [id, ...Object.values(detailUpdates)];
 
-        const query = `
-            UPDATE conversations
-            SET ${setClauses.join(', ')}
-            WHERE id = $${paramIndex}
-            RETURNING *
-        `;
+            // Try UPDATE first
+            const result = await db.query(`
+                UPDATE lead_details
+                SET ${setClauses.join(', ')}
+                WHERE conversation_id = $1
+                RETURNING conversation_id
+            `, values);
 
-        const result = await db.query(query, values);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Conversation not found' });
+            // If no row existed, INSERT it (Upsert logic)
+            if (result.rowCount === 0) {
+                console.log('⚠️ No lead_details found, inserting new record...');
+                const cols = ['conversation_id', ...Object.keys(detailUpdates)];
+                const placeholders = cols.map((_, i) => `$${i + 1}`);
+                await db.query(`
+                    INSERT INTO lead_details (${cols.join(', ')}, created_at)
+                    VALUES (${placeholders.join(', ')}, NOW())
+                `, [id, ...Object.values(detailUpdates)]);
+            }
+            console.log(`✅ Updated lead_details table (${Object.keys(detailUpdates).length} fields)`);
         }
 
-        console.log(`✅ Conversation ${id} updated - fields: ${setClauses.length - 1}`);
-        res.json({ success: true, conversation: result.rows[0] });
+        // Return updated object
+        const finalRes = await db.query('SELECT * FROM conversations WHERE id = $1', [id]);
+        res.json({ success: true, conversation: finalRes.rows[0] });
 
     } catch (error) {
         console.error('❌ Update error:', error);
