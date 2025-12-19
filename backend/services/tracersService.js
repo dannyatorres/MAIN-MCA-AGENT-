@@ -13,47 +13,41 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         let searchMethod = '';
 
         // ==========================================
-        // ATTEMPT 1: SEARCH BY SSN (Formatted ###-##-####)
+        // ATTEMPT 1: SEARCH BY SSN (Formatted)
         // ==========================================
         const rawSsn = ssn ? ssn.replace(/\D/g, '') : '';
         if (rawSsn.length === 9) {
-            // FIX 1: Format SSN with dashes as per Docs (###-##-####)
+            // Docs Require Format: ###-##-####
             const formattedSsn = `${rawSsn.slice(0,3)}-${rawSsn.slice(3,5)}-${rawSsn.slice(5)}`;
 
             console.log(`[Tracers] Attempt 1: Searching by SSN (${formattedSsn})...`);
 
             candidates = await callTracers({
-                Ssn: formattedSsn, // Docs require dashes
+                Ssn: formattedSsn,
                 Includes: [
                     'Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas',
-                    'AllowSearchBySsn' // Valid flag per your error logs
+                    'AllowSearchBySsn' // The Permission Flag
                 ],
                 ResultsPerPage: 5
             }, "SSN_SEARCH");
 
-            if (candidates.length > 0) {
-                console.log(`   > SSN Search Successful. Found ${candidates.length} candidates.`);
-                searchMethod = 'SSN';
-            }
+            if (candidates.length > 0) searchMethod = 'SSN';
         }
 
         // ==========================================
-        // ATTEMPT 2: FALLBACK (Formatted Address Array)
+        // ATTEMPT 2: FALLBACK (Formatted Address)
         // ==========================================
         if (candidates.length === 0 && address && state) {
             console.log(`[Tracers] Fallback: Searching by Name + Address...`);
 
-            // FIX 2: Structure Address as an Array per Docs
-            // Docs say: AddressLine2 = "State or City and State Or Zip"
             const fullLine2 = `${city || ''} ${state || ''} ${zip || ''}`.trim();
-
-            let payload = {
+            const payload = {
                 FirstName: firstName,
                 LastName: lastName,
                 Addresses: [
                     {
                         AddressLine1: address,
-                        AddressLine2: fullLine2 // "City State Zip" combined
+                        AddressLine2: fullLine2 // "City State Zip"
                     }
                 ],
                 Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas'],
@@ -96,17 +90,21 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
 }
 
 // ------------------------------------------
-// API CALLER (With X-Ray Logging)
+// API CALLER (Now Sends Correct Headers)
 // ------------------------------------------
 async function callTracers(payload, contextTag) {
     try {
+        // DEBUG: Print the exact JSON we are sending
+        console.log(`[Payload for ${contextTag}]:`, JSON.stringify(payload));
+
         const response = await axios.post(TRACERS_URL, payload, {
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'galaxy-ap-name': AP_NAME,
                 'galaxy-ap-password': AP_PASSWORD,
-                'galaxy-search-type': 'Person'
+                'galaxy-search-type': 'Person',
+                'galaxy-client-type': 'Api' // ADDED: Required by Docs for JS clients
             }
         });
 
@@ -114,11 +112,10 @@ async function callTracers(payload, contextTag) {
 
         if (!data.PersonSearchResults || data.PersonSearchResults.length === 0) {
             console.log(`[Tracers X-RAY] ${contextTag} returned 0 results.`);
-
-            // Log any warnings (e.g., "Invalid SSN format" or "Permission Denied")
-            if (data.Warnings && data.Warnings.length > 0) console.log(`   API WARNINGS:`, JSON.stringify(data.Warnings));
-            if (data.Errors && data.Errors.length > 0) console.log(`   API ERRORS:`, JSON.stringify(data.Errors));
-            if (data.Error) console.log(`   API ERROR OBJ:`, JSON.stringify(data.Error));
+            if (data.Warnings) console.log(`   WARNINGS:`, JSON.stringify(data.Warnings));
+            if (data.Errors) console.log(`   ERRORS:`, JSON.stringify(data.Errors));
+        } else {
+            console.log(`[Tracers] Success! Found ${data.PersonSearchResults.length} matches.`);
         }
 
         return data.PersonSearchResults || [];
@@ -126,7 +123,6 @@ async function callTracers(payload, contextTag) {
     } catch (error) {
         if (error.response) {
             console.error(`[Tracers API Crash]: ${error.response.status}`);
-            console.error(`   Payload sent:`, JSON.stringify(payload));
             console.error(`   Server Response:`, JSON.stringify(error.response.data));
         } else {
             console.error(`[Tracers Network Error]:`, error.message);
