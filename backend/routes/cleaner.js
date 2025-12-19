@@ -77,8 +77,10 @@ router.post('/process-file', upload.single('csvFile'), async (req, res) => {
             }
             results.push(cleanRow);
 
-            // Throttle (5 rows per second)
-            if (i % 5 === 0) await new Promise(r => setTimeout(r, 200));
+            // STEALTH MODE: Random delay between 5 to 7 seconds every row
+            // This prevents the server from blocking us.
+            const randomDelay = Math.floor(Math.random() * (7000 - 5000 + 1) + 5000);
+            await new Promise(r => setTimeout(r, randomDelay));
         }
 
         // 3. Download CSV
