@@ -29,17 +29,6 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
                 SSN: formattedSsn
             });
 
-            // "SocialSecurityNumbers" (No spaces) is the correct include per your logs
-            payload.Includes = [
-                'Addresses',
-                'PhoneNumbers',
-                'EmailAddresses',
-                'Akas',
-                'SocialSecurityNumbers',
-                'AllowSearchBySsn'
-            ];
-            payload.IncludeFullSsnValues = true;
-
             candidates = await callTracers(payload, "SSN_SEARCH");
 
             if (candidates.length > 0) searchMethod = 'SSN';
@@ -59,8 +48,6 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
                 Addressline1: address || "",
                 addressLine2: fullLine2
             });
-
-            payload.Includes = ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas'];
 
             candidates = await callTracers(payload, "ADDRESS_SEARCH");
             if (candidates.length > 0) searchMethod = 'ADDRESS';
