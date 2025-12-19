@@ -12,7 +12,8 @@ async function pickBestMatch(csvName, csvAddress, candidates) {
         const simplifiedCandidates = candidates.map((c, index) => ({
             id: index,
             name: `${c.FirstName} ${c.LastName}`,
-            aliases: c.Aliases || [],
+            // FIX: Look for Akas OR Aliases
+            aliases: c.Akas || c.Aliases || [],
             age: c.Age,
             address: c.Addresses?.[0]?.AddressLine1 || 'N/A',
             state: c.Addresses?.[0]?.State || 'N/A'
