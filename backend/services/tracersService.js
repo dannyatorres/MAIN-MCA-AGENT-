@@ -7,21 +7,21 @@ const TRACERS_URL = 'https://api.galaxysearchapi.com/PersonSearch';
 const AP_NAME = process.env.TRACERS_AP_NAME;
 const AP_PASSWORD = process.env.TRACERS_AP_PASSWORD;
 
-async function searchBySsn(ssn, firstName, lastName, address = null, state = null) {
+async function searchBySsn(ssn, firstName, lastName, address = null, city = null, state = null, zip = null) {
     try {
         const cleanSsn = ssn ? ssn.replace(/\D/g, '') : '';
         let candidates = [];
         let searchMethod = '';
 
         // ==========================================
-        // ATTEMPT 1: SEARCH BY SSN
+        // ATTEMPT 1: SEARCH BY SSN (The Priority)
         // ==========================================
         if (cleanSsn.length === 9) {
             console.log(`[Tracers] Attempt 1: Searching by SSN (${cleanSsn})...`);
 
-            const ssnResults = await callTracers({
+            candidates = await callTracers({
                 Ssn: cleanSsn,
-                // CRITICAL FIX: Added 'AllowSearchBySsn' permission flag
+                // CRITICAL FIX: The "Magic Key" to unlock SSN search
                 Includes: [
                     'Addresses',
                     'PhoneNumbers',
@@ -32,37 +32,36 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
                 ResultsPerPage: 5
             });
 
-            if (ssnResults && ssnResults.length > 0) {
-                console.log(`   > SSN Search Successful. Found ${ssnResults.length} candidates.`);
-                candidates = ssnResults;
+            if (candidates.length > 0) {
+                console.log(`   > SSN Search Successful. Found ${candidates.length} candidates.`);
                 searchMethod = 'SSN';
             } else {
-                console.log(`   > SSN Search returned 0 results.`);
+                console.log(`   > SSN Search returned 0 results (Check permissions with Tracers support).`);
             }
         }
 
         // ==========================================
-        // ATTEMPT 2: SEARCH BY NAME + ADDRESS (Fallback)
+        // ATTEMPT 2: FALLBACK (Only if SSN fails)
         // ==========================================
-        if (candidates.length === 0 && address && state && firstName) {
+        if (candidates.length === 0 && address && state) {
             console.log(`[Tracers] Fallback: Searching by Name + Address...`);
-            const addrResults = await callTracers({
+            let searchPayload = {
                 FirstName: firstName,
                 LastName: lastName,
                 AddressLine1: address,
                 State: state,
                 Includes: ['Addresses', 'PhoneNumbers', 'EmailAddresses', 'Akas'],
                 ResultsPerPage: 5
-            });
+            };
+            if (city) searchPayload.City = city;
+            if (zip) searchPayload.Zip = zip;
 
-            if (addrResults && addrResults.length > 0) {
-                candidates = addrResults;
-                searchMethod = 'ADDRESS';
-            }
+            candidates = await callTracers(searchPayload);
+            if (candidates.length > 0) searchMethod = 'ADDRESS';
         }
 
         // ==========================================
-        // THE VERDICT (AI Judge)
+        // AI VERIFICATION
         // ==========================================
         if (candidates.length === 0) {
             return { success: false, error: 'No results found (SSN or Name/Address)' };
@@ -72,17 +71,16 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
         const targetName = `${firstName} ${lastName}`;
 
         if (searchMethod === 'SSN') {
-            // If we found them by SSN, we trust it.
-            // But we pass it to AI to log if the name is totally different (e.g. Spouse).
+            // If SSN match found, we trust it.
+            // We check with AI just to log if the name is weird.
             if (firstName) {
                 const aiCheck = await aiMatcher.pickBestMatch(targetName, address, candidates);
-                // We prioritize the SSN match even if AI is unsure, because SSN is unique.
                 bestMatch = aiCheck || candidates[0];
             } else {
                 bestMatch = candidates[0];
             }
         } else {
-            // If we searched by Address, we MUST use AI to confirm it's the right person.
+            // Address match requires strict AI check
             bestMatch = await aiMatcher.pickBestMatch(targetName, address, candidates);
         }
 
@@ -96,7 +94,6 @@ async function searchBySsn(ssn, firstName, lastName, address = null, state = nul
     }
 }
 
-// Helper: Handles the API call and Error Logging
 async function callTracers(payload) {
     try {
         const response = await axios.post(TRACERS_URL, payload, {
@@ -111,10 +108,7 @@ async function callTracers(payload) {
         return response.data?.PersonSearchResults || [];
     } catch (error) {
         if (error.response) {
-            // Detailed API Error Log
             console.error(`[Tracers API Error]: ${error.response.status}`, JSON.stringify(error.response.data));
-        } else {
-            console.error(`[Tracers Network Error]:`, error.message);
         }
         return [];
     }
@@ -122,19 +116,14 @@ async function callTracers(payload) {
 
 function parseTracersResponse(person) {
     const clean = (str) => (str || '').trim();
-
-    // Get Best Mobile
     let mobile = null;
     if (person.MobilePhones?.length) {
         mobile = person.MobilePhones.find(p => p.LastSeenDate?.includes('Current'))?.PhoneNumber || person.MobilePhones[0].PhoneNumber;
     }
-
-    // Get Best Address
     let addr = null;
     if (person.Addresses?.length) {
         addr = person.Addresses.find(a => a.LastSeenDate?.includes('Current')) || person.Addresses[0];
     }
-
     return {
         phone: mobile ? mobile.replace(/\D/g, '') : null,
         address: clean(addr?.AddressLine1),
