@@ -8,15 +8,17 @@ const openai = new OpenAI({
 
 async function pickBestMatch(csvName, csvAddress, candidates) {
     try {
+        // 1. Simplify the candidates - FIXED field names to match Tracers response
         const simplifiedCandidates = candidates.map((c, index) => ({
             id: index,
-            name: `${c.FirstName} ${c.LastName}`,
-            aliases: c.Akas || c.Aliases || [],
-            age: c.Age,
-            address: c.Addresses?.[0]?.AddressLine1 || 'N/A',
-            state: c.Addresses?.[0]?.State || 'N/A'
+            name: c.name ? `${c.name.firstName} ${c.name.lastName}` : 'Unknown',
+            aliases: (c.akas || []).map(a => `${a.firstName} ${a.lastName}`),
+            age: c.age,
+            address: c.addresses?.[0]?.fullAddress || 'N/A',
+            state: c.addresses?.[0]?.state || 'N/A'
         }));
 
+        // 2. The Prompt
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
@@ -46,20 +48,20 @@ async function pickBestMatch(csvName, csvAddress, candidates) {
             temperature: 0
         });
 
+        // 3. Parse Answer
         const result = JSON.parse(response.choices[0].message.content);
 
-        if (result.matchId !== -1) {
-            const matchedName = simplifiedCandidates[result.matchId]?.name || 'Unknown';
-            console.log(`[AI] Matching "${csvName}" → Best match: "${matchedName}" (${result.reason})`);
+        if (result.matchId !== -1 && result.matchId < candidates.length) {
+            console.log(`[AI] ✅ "${csvName}" → ${simplifiedCandidates[result.matchId].name} (${result.reason})`);
             return candidates[result.matchId];
         } else {
-            console.log(`[AI] Matching "${csvName}" → No match found`);
+            console.log(`[AI] ❌ "${csvName}" → No match`);
             return null;
         }
 
     } catch (error) {
-        console.error("[AI Error]:", error.message);
-        return candidates[0];
+        console.error("[AI] Error:", error.message);
+        return candidates[0]; // Fallback
     }
 }
 

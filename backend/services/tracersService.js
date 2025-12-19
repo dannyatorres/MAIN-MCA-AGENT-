@@ -132,37 +132,38 @@ async function callTracers(payload) {
 }
 
 function parseTracersResponse(person) {
-    const clean = (str) => (str || '').trim();
-
-    // PHONE LOGIC
+    // 1. Get best phone (wireless preferred, must be connected)
     let mobile = null;
-    if (person.PhoneNumbers && person.PhoneNumbers.length > 0) {
-        const connected = person.PhoneNumbers.find(p => p.IsConnected === true);
-        const bestPhone = connected || person.PhoneNumbers[0];
-        mobile = bestPhone.PhoneNumber;
+    if (person.phoneNumbers && person.phoneNumbers.length > 0) {
+        // Prefer wireless + connected
+        const wireless = person.phoneNumbers.find(p => p.phoneType === 'Wireless' && p.isConnected);
+        const connected = person.phoneNumbers.find(p => p.isConnected);
+        const bestPhone = wireless || connected || person.phoneNumbers[0];
+        mobile = bestPhone.phoneNumber;
     }
 
-    // ADDRESS LOGIC
+    // 2. Get current address (addressOrder: 1 is most current)
     let addr = null;
     let streetAddress = null;
 
-    if (person.Addresses && person.Addresses.length > 0) {
-        addr = person.Addresses[0];
+    if (person.addresses && person.addresses.length > 0) {
+        addr = person.addresses[0]; // Already sorted by addressOrder
 
-        if (addr.FullAddress) {
-            streetAddress = addr.FullAddress.split(';')[0];
+        if (addr.fullAddress) {
+            // "107 Covert Ave; Elmont, NY 11003-1115" → "107 Covert Ave"
+            streetAddress = addr.fullAddress.split(';')[0];
         } else {
-            streetAddress = [addr.HouseNumber, addr.StreetPreDirection, addr.StreetName, addr.StreetType, addr.Unit]
+            streetAddress = [addr.houseNumber, addr.streetPreDirection, addr.streetName, addr.streetType, addr.unit]
                 .filter(Boolean).join(' ');
         }
     }
 
     return {
         phone: mobile ? mobile.replace(/\D/g, '') : null,
-        address: clean(streetAddress),
-        city: clean(addr?.City),
-        state: clean(addr?.State),
-        zip: clean(addr?.Zip)
+        address: streetAddress?.trim() || null,
+        city: addr?.city || null,
+        state: addr?.state || null,
+        zip: addr?.zip || null
     };
 }
 
