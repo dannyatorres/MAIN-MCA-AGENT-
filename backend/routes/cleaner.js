@@ -83,9 +83,16 @@ router.post('/process-file', upload.single('csvFile'), async (req, res) => {
             }
             results.push(cleanRow);
 
-            // THROTTLE: Wait 1 to 3 seconds (Random)
-            // This looks like human usage but isn't so slow that the connection times out.
-            await randomPause(1000, 3000);
+            // STEALTH MODE (The Human Delay)
+            // We wait 1 to 3 seconds. Enough to be safe, fast enough to finish.
+            const delay = Math.floor(Math.random() * (3000 - 1000 + 1) + 1000);
+
+            // Log progress every 5 rows so you know it's working
+            if (i % 5 === 0) {
+                console.log(`   > Processed ${i}/${rows.length} (Waiting ${delay}ms...)`);
+            }
+
+            await new Promise(r => setTimeout(r, delay));
         }
 
         // 3. Download CSV
