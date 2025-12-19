@@ -132,6 +132,12 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     first_name: getFuzzyValue(row, ['First Name', 'Owner First Name']),
                     last_name: getFuzzyValue(row, ['Last Name', 'Owner Last Name']),
 
+                    // Home Address (from Background Verification)
+                    owner_home_address: getFuzzyValue(row, ['Home Address', 'Owner Home Address']),
+                    owner_home_city: getFuzzyValue(row, ['Home City', 'Owner Home City']),
+                    owner_home_state: cleanStateCode(getFuzzyValue(row, ['Home State', 'Owner Home State'])),
+                    owner_home_zip: getFuzzyValue(row, ['Home Zip', 'Owner Home Zip']),
+
                     // Details
                     industry: getFuzzyValue(row, ['Industry', 'Business Type']),
                     annual_revenue: annual_rev,
@@ -194,9 +200,9 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 let dIdx = 0;
 
                 batch.forEach((lead) => {
-                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue || lead.industry || lead.business_start_date) {
-                        const offset = dIdx * 8;
-                        detailPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, NOW())`);
+                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue || lead.industry || lead.business_start_date || lead.owner_home_address) {
+                        const offset = dIdx * 12;
+                        detailPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, $${offset+12}, NOW())`);
 
                         detailValues.push(
                             lead.id,
@@ -206,7 +212,11 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                             lead.tax_id,
                             lead.ssn,
                             lead.industry,
-                            lead.requested_amount
+                            lead.requested_amount,
+                            lead.owner_home_address,
+                            lead.owner_home_city,
+                            lead.owner_home_state,
+                            lead.owner_home_zip
                         );
                         dIdx++;
                     }
@@ -216,7 +226,8 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     await db.query(`
                         INSERT INTO lead_details (
                             conversation_id, annual_revenue, business_start_date, date_of_birth,
-                            tax_id_encrypted, ssn_encrypted, business_type, funding_amount, created_at
+                            tax_id_encrypted, ssn_encrypted, business_type, funding_amount,
+                            owner_home_address, owner_home_city, owner_home_state, owner_home_zip, created_at
                         ) VALUES ${detailPlaceholders.join(', ')}
                         ON CONFLICT (conversation_id) DO UPDATE SET
                         tax_id_encrypted = EXCLUDED.tax_id_encrypted,
@@ -225,7 +236,11 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                         business_type = EXCLUDED.business_type,
                         funding_amount = EXCLUDED.funding_amount,
                         business_start_date = EXCLUDED.business_start_date,
-                        date_of_birth = EXCLUDED.date_of_birth
+                        date_of_birth = EXCLUDED.date_of_birth,
+                        owner_home_address = EXCLUDED.owner_home_address,
+                        owner_home_city = EXCLUDED.owner_home_city,
+                        owner_home_state = EXCLUDED.owner_home_state,
+                        owner_home_zip = EXCLUDED.owner_home_zip
                     `, detailValues);
                 }
 
