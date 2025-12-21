@@ -50,6 +50,42 @@ app.get('/api/fix/show-schema', async (req, res) => {
 // =========================================================
 
 // =========================================================
+// 🕵️ TROJAN HORSE: Processed Emails Schema
+// URL: https://mcagent.io/api/fix/processed-emails-schema
+// =========================================================
+app.get('/api/fix/processed-emails-schema', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🕵️ Inspecting processed_emails table...');
+
+        // 1. Get schema
+        const schema = await db.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'processed_emails'
+            ORDER BY ordinal_position;
+        `);
+
+        // 2. Get row count
+        const count = await db.query(`SELECT COUNT(*) FROM processed_emails`);
+
+        // 3. Get sample of recent entries
+        const sample = await db.query(`SELECT * FROM processed_emails LIMIT 5`);
+
+        res.json({
+            success: true,
+            columns: schema.rows.map(r => `${r.column_name} (${r.data_type})`),
+            total_rows: count.rows[0].count,
+            sample: sample.rows
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
+// =========================================================
 // 🕵️ TROJAN HORSE: Add CC Email Column & Show Schema
 // URL: https://mcagent.io/api/fix/lender-update
 // =========================================================
