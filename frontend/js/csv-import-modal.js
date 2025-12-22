@@ -391,6 +391,10 @@ function normalizeDataFromOriginal(data) {
         }
 
         const phone = formatPhoneNumber(rawPhone);
+
+        // Skip rows with no phone
+        if (!phone) return null;
+
         const company = getColumnValue(row, ['Company Name', 'company']) || '';
         const email = getColumnValue(row, ['Email', 'email']) || '';
 
@@ -403,7 +407,7 @@ function normalizeDataFromOriginal(data) {
             'State': rawState,
             'Zip': rawZip
         });
-    });
+    }).filter(Boolean); // Remove nulls
 }
 
 // Helper to build the internal object structure
