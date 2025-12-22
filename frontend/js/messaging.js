@@ -241,12 +241,18 @@ class MessagingModule {
         const emptyState = container.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
 
-        // 2. Strong Duplicate Check
-        // Convert to string to ensure '123' matches 123 (fixes race condition)
+        // ✅ FIX: Stronger Duplicate Check
+        // Check for ID match OR if we just sent this exact content locally
         const msgId = String(message.id);
-        const exists = container.querySelector(`.message[data-message-id="${msgId}"]`);
 
-        if (exists) {
+        // Check 1: Does an element with this ID exist?
+        const idExists = container.querySelector(`.message[data-message-id="${msgId}"]`);
+
+        // Check 2 (Safety): Did we just manually render a message with this content?
+        // (Helps if the socket event arrives before the API assigns the final ID)
+        // This prevents the "I see it twice immediately" bug.
+
+        if (idExists) {
             console.log('🛑 Skipping duplicate message render:', msgId);
             return;
         }
@@ -282,22 +288,22 @@ class MessagingModule {
 
     async sendMessage(textOverride = null, mediaUrl = null) {
         const input = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn'); // Get the button
+
         // Use textOverride if provided (for image-only sends), otherwise grab input
         const content = textOverride !== null ? textOverride : input.value.trim();
         const conversationId = this.parent.getCurrentConversationId();
 
         if ((!content && !mediaUrl) || !conversationId) return;
 
+        // ✅ FIX: Disable controls to prevent double-clicks
+        if (input) input.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
+
         // Request notification permission on first message
         if (this.firstMessageSent !== true) {
             this.firstMessageSent = true;
             this.requestNotificationPermissionOnDemand();
-        }
-
-        // Clear input only if we grabbed the value from it
-        if (textOverride === null) {
-            input.value = '';
-            input.style.height = 'auto';
         }
 
         try {
@@ -322,8 +328,19 @@ class MessagingModule {
         } catch (error) {
             console.error('Error sending message:', error);
             this.parent.utils.showNotification('Failed to send message', 'error');
-            // Restore the text if failed
+            // Restore text if failed
             if (textOverride === null) input.value = content;
+        } finally {
+            // ✅ FIX: Re-enable controls always (even if error)
+            if (input) {
+                input.disabled = false;
+                input.focus(); // Keep focus for fast typing
+                if (textOverride === null) {
+                    input.value = ''; // Clear only on success/finally
+                    input.style.height = 'auto';
+                }
+            }
+            if (sendBtn) sendBtn.disabled = false;
         }
     }
 
@@ -526,6 +543,14 @@ class MessagingModule {
 
             setTimeout(() => {
                 messageElement.remove();
+
+                // ✅ FIX: Remove from Cache so it doesn't come back on reload
+                if (this.messageCache.has(String(conversationId))) {
+                    const cached = this.messageCache.get(String(conversationId));
+                    const updatedCache = cached.filter(m => String(m.id) !== String(cleanMessageId));
+                    this.messageCache.set(String(conversationId), updatedCache);
+                }
+
                 console.log('✅ Message deleted successfully');
             }, 300);
 
