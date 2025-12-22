@@ -51,8 +51,31 @@ function getSimilarity(s1, s2) {
     return (longer.length - costs[shorter.length]) / parseFloat(longer.length);
 }
 
+// Cleanup emails older than 7 days
+async function cleanupOldEmails() {
+    const db = getDatabase();
+    try {
+        const result = await db.query(`
+            DELETE FROM processed_emails
+            WHERE processed_at < NOW() - INTERVAL '7 days'
+        `);
+        if (result.rowCount > 0) {
+            console.log(`[Cleanup] Deleted ${result.rowCount} old email records`);
+        }
+    } catch (err) {
+        console.error('[Cleanup] Error:', err.message);
+    }
+}
+
 async function startProcessor() {
-    console.log('👩‍💼 Processor Agent: Online (Smart Ledger Mode)...');
+    console.log('[Processor] Online...');
+
+    // Cleanup old records on startup
+    await cleanupOldEmails();
+
+    // Then run weekly (every 7 days)
+    setInterval(cleanupOldEmails, 7 * 24 * 60 * 60 * 1000);
+
     runCheck();
 }
 
