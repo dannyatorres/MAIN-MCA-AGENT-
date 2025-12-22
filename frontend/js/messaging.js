@@ -13,11 +13,9 @@ class MessagingModule {
         this.firstMessageSent = false;
         this.socketRetries = 0; // Prevent infinite recursion
         this.socketListenersAttached = false; // Prevent multiple attachments
+        this.eventListenersAttached = false; // ✅ FIX: Prevent double listeners
 
-        // ✅ NEW: Message Cache Store
-        this.messageCache = new Map();
-
-        // ✅ NEW: Message Cache Store
+        // ✅ Message Cache Store
         this.messageCache = new Map();
 
         this.init();
@@ -58,18 +56,22 @@ class MessagingModule {
             this.socketListenersAttached = true;
             console.log('✅ WebSocket listeners active (Single Instance)');
         } else {
-            // Retry with limit to prevent infinite recursion
-            if (this.socketRetries < 10) {
+            // Retry with limit
+            if (this.socketRetries < 20) { // Increased to 20 attempts
                 this.socketRetries++;
-                console.warn(`⚠️ Socket not ready (Attempt ${this.socketRetries}/10)...`);
                 setTimeout(() => this.setupWebSocketListeners(), 1000);
             } else {
-                console.error('❌ Gave up connecting Messaging to WebSocket after 10 attempts.');
+                console.error('❌ WebSocket missing. Real-time updates paused. Will retry on next user action.');
+                // Reset retries so if the user clicks something later, we can try again
+                this.socketRetries = 0;
             }
         }
     }
 
     setupEventListeners() {
+        // ✅ FIX: Check if listeners are already attached
+        if (this.eventListenersAttached) return;
+
         // Message input and send
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
@@ -126,6 +128,11 @@ class MessagingModule {
             attachBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
         }
+
+        console.log('✅ Event listeners set up');
+
+        // ✅ FIX: Mark as attached so we don't do it again
+        this.eventListenersAttached = true;
     }
 
     // Handle file upload for MMS
@@ -211,14 +218,17 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 
-        // Sort messages by timestamp
-        if (messages.length > 0) {
-            messages.sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
+        // ✅ FIX: Create a shallow copy using [...messages] before sorting
+        // This protects your main cache from being mutated.
+        const messagesToRender = [...messages];
+
+        if (messagesToRender.length > 0) {
+            messagesToRender.sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
         }
 
-        container.innerHTML = this.templates.messagesList(messages);
+        container.innerHTML = this.templates.messagesList(messagesToRender);
 
-        // Scroll to bottom (Wrapped in timeout to ensure DOM paint)
+        // Scroll to bottom
         setTimeout(() => {
             container.scrollTop = container.scrollHeight;
         }, 50);
