@@ -151,10 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         <div class="chat-actions-group">
 
-                            <button id="aiToggleBtn" class="ai-toggle-btn" data-state="loading">
-                                <i class="fas fa-robot"></i>
-                                <span id="aiBtnText">AI</span>
-                            </button>
+                            <button id="aiToggleBtn" class="ai-toggle-btn" data-state="loading">AI</button>
 
                             <button id="callBtn" class="header-action-btn phone-btn" title="Call ${phoneNumber || 'No phone'}">
                                 <i class="fas fa-phone"></i>

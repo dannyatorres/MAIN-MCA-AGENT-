@@ -639,9 +639,8 @@ class MessagingModule {
     // 1. VISUAL PAINTER: Just sets data-state attribute, CSS handles the styling
     async updateAIButtonState(conversationId) {
         const btn = document.getElementById('aiToggleBtn');
-        const btnText = document.getElementById('aiBtnText');
 
-        if (!btn || !btnText) return;
+        if (!btn) return;
 
         try {
             const response = await this.parent.apiCall(`/api/conversations/${conversationId}`);
@@ -651,21 +650,12 @@ class MessagingModule {
 
             const isEnabled = conversation.ai_enabled !== false;
 
-            // ✅ SIMPLIFIED: Just set the data attribute, CSS handles colors!
-            if (isEnabled) {
-                btn.dataset.state = 'on';
-                btnText.textContent = 'AI: ON';
-            } else {
-                btn.dataset.state = 'off';
-                btnText.textContent = 'AI: OFF';
-            }
-
-            // Remove any leftover inline styles
+            // ✅ SIMPLIFIED: Only toggle the state attribute for color change
+            btn.dataset.state = isEnabled ? 'on' : 'off';
             btn.style = "";
 
         } catch (error) {
             console.error('Failed to sync AI button:', error);
-            btnText.textContent = 'Error';
         }
     }
 
@@ -675,11 +665,12 @@ class MessagingModule {
         if (!conversationId) return;
 
         const btn = document.getElementById('aiToggleBtn');
-        const btnText = document.getElementById('aiBtnText');
 
-        // Optimistic UI Update (Change it instantly before API responds)
-        if (btnText) btnText.textContent = 'Updating...';
-        if (btn) btn.style.opacity = '0.7';
+        // Optimistic UI Update
+        if (btn) {
+            btn.dataset.state = 'loading';
+            btn.style.opacity = '0.7';
+        }
 
         try {
             await this.parent.apiCall(`/api/conversations/${conversationId}/toggle-ai`, {

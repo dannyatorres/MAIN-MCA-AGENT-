@@ -906,27 +906,28 @@
 
 /* ==========================================================================
    [AI TOGGLE BUTTON]
-   Matches the aesthetic of the Phone Button
+   Minimalist Square Style (Matches Phone Button)
    ========================================================================== */
 
 .chat-actions-group {
     display: flex;
     align-items: center;
-    gap: 10px; /* Spacing between AI and Phone button */
-    margin-left: auto; /* Pushes group to the right */
+    gap: 10px;
+    margin-left: auto;
     z-index: 20;
 }
 
 .ai-toggle-btn {
-    height: 40px; /* Matches Phone Button Height */
-    padding: 0 16px;
+    width: 40px;  /* Fixed width like phone button */
+    height: 40px; /* Fixed height like phone button */
+    padding: 0;   /* Remove padding */
     border-radius: 12px;
-    font-weight: 600;
-    font-size: 13px;
+    font-weight: 700;
+    font-size: 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center; /* Center the text */
     transition: all 0.2s ease;
 
     /* Default / Loading State */
@@ -943,18 +944,16 @@
 
 /* 🟢 ACTIVE STATE (AI: ON) */
 .ai-toggle-btn[data-state="on"] {
-    background: rgba(46, 160, 67, 0.15); /* Subtle Green Background */
-    border-color: rgba(46, 160, 67, 0.4); /* Green Border */
-    color: #3fb950; /* Bright Green Text */
-    box-shadow: 0 4px 12px rgba(46, 160, 67, 0.15); /* Green Glow */
+    background: rgba(46, 160, 67, 0.2);
+    border-color: rgba(46, 160, 67, 0.5);
+    color: #3fb950; /* Bright Green */
 }
 
 /* 🔴 INACTIVE STATE (AI: OFF) */
 .ai-toggle-btn[data-state="off"] {
-    background: rgba(248, 81, 73, 0.15); /* Subtle Red Background */
-    border-color: rgba(248, 81, 73, 0.4); /* Red Border */
-    color: #f85149; /* Bright Red Text */
-    opacity: 0.9;
+    background: rgba(248, 81, 73, 0.2);
+    border-color: rgba(248, 81, 73, 0.5);
+    color: #f85149; /* Bright Red */
 }
 
 /* 🔄 LOADING STATE */
