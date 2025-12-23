@@ -109,6 +109,9 @@ class MessagingModule {
         // Dedup Check
         if (container.querySelector(`.message[data-message-id="${message.id}"]`)) return;
 
+        // SCROLL FIX: Check if user is near bottom BEFORE adding content
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
         // Render
         const html = this.parent.templates.messageItem(message);
         const list = container.querySelector('.messages-list');
@@ -122,8 +125,11 @@ class MessagingModule {
             this.messageCache.get(convId).push(message);
         }
 
-        // Scroll
-        container.scrollTop = container.scrollHeight;
+        // SCROLL FIX: Only auto-scroll if user was already at/near the bottom
+        // Prevents losing place when reading history
+        if (isNearBottom) {
+            container.scrollTop = container.scrollHeight;
+        }
     }
 
     // ============================================================

@@ -247,6 +247,12 @@ class AIAssistant {
             // 2. FETCH FROM API
             const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
 
+            // RACE CONDITION FIX: Check if user switched conversations during fetch
+            if (this.parent.getCurrentConversationId() !== conversationId) {
+                console.log('⚠️ AI History: User switched conversations, aborting render');
+                return;
+            }
+
             // Remove spinner before processing response
             if (spinner) spinner.remove();
 

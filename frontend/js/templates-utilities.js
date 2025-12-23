@@ -108,11 +108,21 @@ class Utilities {
     // Phone number formatting
     formatPhone(value) {
         if (!value) return '';
-        const digits = String(value).replace(/\D/g, '');
+        let digits = String(value).replace(/\D/g, '');
         if (!digits) return '';
+
+        // Handle 11-digit numbers with country code (e.g., 15551234567)
+        if (digits.length === 11 && digits.startsWith('1')) {
+            digits = digits.slice(1); // Remove leading country code
+        }
+
+        // Standard US formatting
         if (digits.length <= 3) return digits;
         if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-        return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+        if (digits.length <= 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+
+        // For numbers longer than 10 digits (international), return as-is with basic formatting
+        return `+${digits.slice(0, digits.length - 10)} (${digits.slice(-10, -7)}) ${digits.slice(-7, -4)}-${digits.slice(-4)}`;
     }
 
     // Modal utilities - REFACTORED: Use classes
@@ -235,6 +245,14 @@ class Utilities {
         e.stopPropagation();
     }
 
+    // XSS Protection: Escape HTML entities in user content
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // US States list
     getUSStates() {
         return [
@@ -332,6 +350,8 @@ class Templates {
             : '';
 
         const businessName = conversation.business_name || 'Unknown Business';
+        // XSS FIX: Escape business name
+        const safeBusinessName = this.utils.escapeHtml(businessName);
         const initials = businessName
             .split(' ')
             .filter(word => word.length > 0)
@@ -353,7 +373,7 @@ class Templates {
                 <div class="conversation-content">
                     <div class="conversation-header">
                         <h4 class="business-name">
-                            ${conversation.business_name || 'Unknown Business'}
+                            ${safeBusinessName}
                             ${hasUnread ? '<span class="new-message-dot"></span>' : ''}
                         </h4>
                         <span class="time-ago">${timeAgo}</span>
@@ -401,9 +421,11 @@ class Templates {
         }
 
         // 2. Handle Text Content - Only show bubble if there's actual text
+        // XSS FIX: Escape user content before rendering
         let contentHtml = '';
         if (message.content && message.content.trim().length > 0) {
-            contentHtml = `<div class="message-content">${message.content}</div>`;
+            const safeContent = this.utils.escapeHtml(message.content);
+            contentHtml = `<div class="message-content">${safeContent}</div>`;
         }
 
         // 3. Return combined HTML (no ghost bubble for image-only messages)

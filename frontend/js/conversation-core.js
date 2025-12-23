@@ -135,16 +135,23 @@ class ConversationCore {
 
         try {
             if (reset) {
-                this.conversations.clear();
                 this.paginationOffset = 0;
                 this.hasMoreConversations = true;
-                // CRITICAL: We DO NOT clear this.unreadCounts here.
+                // NOTE: Don't clear conversations yet - fetch first to prevent data loss
             }
 
-            if (!this.hasMoreConversations) return;
+            if (!this.hasMoreConversations) {
+                this.isLoadingMore = false;
+                return;
+            }
 
             const url = `/api/conversations?limit=${this.pageSize}&offset=${this.paginationOffset}`;
             const conversations = await this.parent.apiCall(url);
+
+            // DATA LOSS FIX: Only clear AFTER successful fetch
+            if (reset) {
+                this.conversations.clear();
+            }
 
             if (conversations.length < this.pageSize) this.hasMoreConversations = false;
             this.paginationOffset += conversations.length;
@@ -152,28 +159,33 @@ class ConversationCore {
             conversations.forEach(conv => {
                 const idStr = String(conv.id);
 
-                // MERGE LOGIC: Local Storage vs API
+                // BADGE SYNC: Server is source of truth for read/unread state
+                // LocalStorage is only for optimistic updates between page loads
                 const apiCount = conv.unread_count || 0;
                 const localCount = this.unreadCounts.get(idStr) || 0;
 
-                // If API says unread, trust API and update local
+                // Server says unread -> trust server
                 if (apiCount > 0) {
                     this.unreadCounts.set(idStr, apiCount);
                     conv.unread_count = apiCount;
                 }
-                // If API says 0 but Local says > 0, TRUST LOCAL (The Fix)
+                // Server says 0 AND we have local -> clear local (read on another device)
                 else if (localCount > 0) {
-                    conv.unread_count = localCount;
+                    // STICKY BADGE FIX: Trust server when it explicitly returns 0
+                    // User may have read on another device/tab
+                    this.unreadCounts.delete(idStr);
+                    conv.unread_count = 0;
                 }
 
                 this.conversations.set(conv.id, conv);
             });
 
-            this._saveBadgesToStorage(); // Sync back any API findings
+            this._saveBadgesToStorage();
             this.renderConversationsList();
 
         } catch (error) {
             console.error('Error in loadConversations:', error);
+            // DATA LOSS FIX: On error, existing data is preserved (not cleared)
         } finally {
             this.isLoadingMore = false;
         }
