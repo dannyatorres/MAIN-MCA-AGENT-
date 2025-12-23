@@ -20,6 +20,37 @@ const app = express();
 const server = http.createServer(app);
 
 // =========================================================
+// 🔔 Unread Tracking Migration
+// URL: https://mcagent.io/api/fix/add-unread-tracking
+// =========================================================
+app.get('/api/fix/add-unread-tracking', async (req, res) => {
+    try {
+        const db = getDatabase();
+
+        await db.query(`
+            ALTER TABLE conversations
+            ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMP WITH TIME ZONE;
+        `);
+
+        await db.query(`
+            UPDATE conversations
+            SET last_read_at = NOW()
+            WHERE last_read_at IS NULL;
+        `);
+
+        const result = await db.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'conversations' AND column_name = 'last_read_at';
+        `);
+
+        res.json({ success: true, message: "last_read_at added", details: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =========================================================
 // 🚦 TRAFFIC CONTROL: Add ai_enabled Column
 // URL: https://mcagent.io/api/fix/add-ai-enabled
 // =========================================================

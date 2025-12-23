@@ -14,9 +14,7 @@ class ConversationCore {
         this.selectedConversation = null;
         this.selectedForDeletion = new Set();
 
-        // STATE SOURCE OF TRUTH: Load from storage immediately
-        this.unreadCounts = this._loadBadgesFromStorage();
-        console.log('📦 Initialized with persistent badges:', Object.fromEntries(this.unreadCounts));
+        // Server handles badges now - no localStorage
 
         // Paging & UI State
         this.searchTimeout = null;
@@ -29,78 +27,54 @@ class ConversationCore {
     }
 
     // ============================================================
-    // 1. STATE MANAGEMENT (The "Real App" Logic)
+    // 1. STATE MANAGEMENT (Server-side unread tracking)
     // ============================================================
-
-    _loadBadgesFromStorage() {
-        try {
-            const stored = localStorage.getItem('mca_unread_badges');
-            if (stored) {
-                const obj = JSON.parse(stored);
-                // Force all keys to be Strings and filter invalid entries
-                const map = new Map();
-                Object.entries(obj).forEach(([key, value]) => {
-                    if (key && key !== 'undefined' && key !== 'null') {
-                        map.set(String(key), Number(value));
-                    }
-                });
-                console.log('📦 Loaded badges:', Object.fromEntries(map));
-                return map;
-            }
-        } catch (e) { console.error('Error loading badges', e); }
-        return new Map();
-    }
-
-    _saveBadgesToStorage() {
-        try {
-            const obj = Object.fromEntries(this.unreadCounts);
-            localStorage.setItem('mca_unread_badges', JSON.stringify(obj));
-        } catch (e) { console.error('Error saving badges', e); }
-    }
 
     // Call this when a socket event comes in
     incrementBadge(conversationId) {
-        if (!conversationId) return; // Guard against undefined/null
+        if (!conversationId) return;
         const id = String(conversationId);
 
-        // 1. If currently viewing this chat, do NOTHING (it's read instantly)
+        // If currently viewing this chat, do NOTHING
         if (String(this.currentConversationId) === id && !document.hidden) {
             return;
         }
 
-        // 2. Increment local count
-        const current = this.unreadCounts.get(id) || 0;
-        const newCount = current + 1;
-        this.unreadCounts.set(id, newCount);
-
-        // 3. Save Immediately
-        this._saveBadgesToStorage();
-
-        // 4. Update UI immediately
-        this.updateBadgeUI(id, newCount);
-
-        // 5. Update Memory Object
-        if (this.conversations.has(Number(id))) {
-            const conv = this.conversations.get(Number(id));
-            conv.unread_count = newCount;
+        // Update local cache
+        const conv = this.conversations.get(Number(id));
+        if (conv) {
+            conv.unread_count = (conv.unread_count || 0) + 1;
             this.conversations.set(Number(id), conv);
         }
+
+        // Update UI immediately
+        this.updateBadgeUI(id, conv?.unread_count || 1);
     }
 
     // Call this when user clicks a conversation
-    clearBadge(conversationId) {
+    async clearBadge(conversationId) {
         const id = String(conversationId);
-        if (this.unreadCounts.has(id)) {
-            this.unreadCounts.delete(id);
-            this._saveBadgesToStorage();
 
-            // Remove from UI immediately
-            const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
-            if (item) {
-                item.classList.remove('unread');
-                const badge = item.querySelector('.conversation-badge');
-                if (badge) badge.remove();
-            }
+        // Update local cache
+        const conv = this.conversations.get(Number(id));
+        if (conv) {
+            conv.unread_count = 0;
+            this.conversations.set(Number(id), conv);
+        }
+
+        // Update UI
+        const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
+        if (item) {
+            item.classList.remove('unread');
+            const badge = item.querySelector('.conversation-badge');
+            if (badge) badge.remove();
+        }
+
+        // Tell server (fire and forget)
+        try {
+            await this.parent.apiCall(`/api/conversations/${id}/mark-read`, { method: 'POST' });
+        } catch (e) {
+            console.error('Failed to mark read:', e);
         }
     }
 
@@ -163,27 +137,10 @@ class ConversationCore {
             this.paginationOffset += conversations.length;
 
             conversations.forEach(conv => {
-                const idStr = String(conv.id);
-
-                // MERGE LOGIC: MAX(Server, Local)
-                // Ensures if Server lags and says 0, but Local says 1, we keep 1
-                const apiCount = Number(conv.unread_count || 0);
-                const localCount = this.unreadCounts.get(idStr) || 0;
-
-                // If the API has a HIGHER count, trust the API and update local
-                if (apiCount > localCount) {
-                    this.unreadCounts.set(idStr, apiCount);
-                    conv.unread_count = apiCount;
-                }
-                // If Local is higher (or API is 0), trust Local
-                else if (localCount > 0) {
-                    conv.unread_count = localCount;
-                }
-
+                // Server provides unread_count - just store it
                 this.conversations.set(conv.id, conv);
             });
 
-            this._saveBadgesToStorage();
             this.renderConversationsList();
 
         } catch (error) {
@@ -293,7 +250,15 @@ class ConversationCore {
         const stateFilter = document.getElementById('stateFilter')?.value;
 
         let visible = conversations;
-        if (stateFilter) visible = visible.filter(c => c.state === stateFilter);
+        if (stateFilter) {
+            if (stateFilter === 'INTERESTED') {
+                visible = visible.filter(c => c.has_response);
+            } else if (stateFilter === 'UNREAD') {
+                visible = visible.filter(c => c.unread_count > 0);
+            } else {
+                visible = visible.filter(c => c.current_step === stateFilter);
+            }
+        }
         if (searchTerm && searchTerm.length >= 2) {
             visible = visible.filter(c =>
                 (c.business_name || '').toLowerCase().includes(searchTerm) ||
@@ -343,8 +308,8 @@ class ConversationCore {
         const isSelected = String(this.currentConversationId) === String(conv.id) ? 'selected' : '';
         const isChecked = this.selectedForDeletion.has(conv.id) ? 'checked' : '';
 
-        // TRUTH CHECK: Get unread from our robust map
-        const unread = this.unreadCounts.get(String(conv.id)) || 0;
+        // Get unread count from server-provided data
+        const unread = conv.unread_count || 0;
 
         let offerBadge = conv.has_offer ? `<span class="offer-badge-small">OFFER</span>` : '';
         let displayCid = conv.display_id || String(conv.id).slice(-6);

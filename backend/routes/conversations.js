@@ -78,17 +78,34 @@ const s3 = new AWS.S3({
 // Get all conversations
 router.get('/', async (req, res) => {
     try {
-        const { state, priority, limit = 50, offset = 0 } = req.query;
+        const { state, priority, limit = 50, offset = 0, filter } = req.query;
         const db = getDatabase();
 
-        console.log('📋 Fetching conversations...');
-
         let query = `
-            SELECT id, display_id, lead_phone, business_name, first_name, last_name,
-                   state, current_step, priority, has_offer,
-                   COALESCE(last_activity, created_at) as last_activity,
-                   created_at
-            FROM conversations
+            SELECT
+                c.id, c.display_id, c.lead_phone, c.business_name,
+                c.first_name, c.last_name, c.state, c.current_step,
+                c.priority, c.has_offer,
+                COALESCE(c.last_activity, c.created_at) as last_activity,
+                c.created_at,
+
+                COALESCE((
+                    SELECT COUNT(*) FROM messages m
+                    WHERE m.conversation_id = c.id
+                      AND m.direction = 'inbound'
+                      AND m.timestamp > COALESCE(c.last_read_at, '1970-01-01')
+                ), 0)::INTEGER as unread_count,
+
+                EXISTS (
+                    SELECT 1 FROM messages m
+                    WHERE m.conversation_id = c.id AND m.direction = 'inbound'
+                ) as has_response,
+
+                (SELECT content FROM messages m
+                 WHERE m.conversation_id = c.id
+                 ORDER BY m.timestamp DESC LIMIT 1) as last_message
+
+            FROM conversations c
             WHERE 1=1
         `;
 
@@ -96,27 +113,34 @@ router.get('/', async (req, res) => {
         let paramIndex = 1;
 
         if (state) {
-            query += ` AND state = $${paramIndex++}`;
+            query += ` AND c.state = $${paramIndex++}`;
             values.push(state);
         }
 
         if (priority) {
-            query += ` AND priority = $${paramIndex++}`;
+            query += ` AND c.priority = $${paramIndex++}`;
             values.push(priority);
         }
 
-        query += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
+        if (filter) {
+            if (filter === 'INTERESTED') {
+                query += ` AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound')`;
+            } else if (filter === 'UNREAD') {
+                query += ` AND (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound' AND m.timestamp > COALESCE(c.last_read_at, '1970-01-01')) > 0`;
+            } else {
+                query += ` AND c.current_step = $${paramIndex++}`;
+                values.push(filter);
+            }
+        }
+
+        query += ` ORDER BY c.last_activity DESC NULLS LAST LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
         values.push(parseInt(limit), parseInt(offset));
 
         const result = await db.query(query, values);
-
-        console.log(`✅ Found ${result.rows.length} conversations`);
-
-        // Return just the array (matching original server format)
         res.json(result.rows);
 
     } catch (error) {
-        console.error('❌ Get conversations error:', error);
+        console.error('Get conversations error:', error);
         res.status(500).json({ error: 'Failed to fetch conversations' });
     }
 });
@@ -1687,6 +1711,31 @@ router.post('/:id/reset-ai', async (req, res) => {
     } catch (err) {
         console.error("❌ Reset Error:", err);
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Mark conversation as read
+router.post('/:id/mark-read', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDatabase();
+
+        const isNumeric = /^\d+$/.test(id);
+
+        const result = await db.query(`
+            UPDATE conversations
+            SET last_read_at = NOW()
+            WHERE ${isNumeric ? 'display_id = $1' : 'id = $1'}
+            RETURNING id
+        `, [isNumeric ? parseInt(id) : id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Not found' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
