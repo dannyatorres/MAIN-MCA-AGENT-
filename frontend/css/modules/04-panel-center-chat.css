@@ -621,32 +621,77 @@
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-/* Ghost Metadata */
+/* ==========================================================================
+   [MESSAGE METADATA & DELETE CONTROLS]
+   ========================================================================== */
+
+/* The container for Time + Delete Button */
 .message-meta {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 2px;
+    gap: 8px; /* Space between time and trash can */
+    margin-top: 4px;
     padding: 0 4px;
-    height: 14px;
-    width: 100%;
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
+    height: 16px; /* Fixed height to prevent jumping */
+    opacity: 0; /* Hidden by default */
+    transform: translateY(-5px); /* Slide down slightly on reveal */
+    transition: all 0.2s ease-in-out;
 }
 
+/* Reveal smoothly on hover */
 .message-wrapper:hover .message-meta {
     opacity: 1;
+    transform: translateY(0);
 }
 
+/* 1. The Timestamp */
 .message-time {
-    font-size: 10px;
-    color: #9ca3af;
+    font-size: 11px;
+    color: #6b7280; /* Subtle Grey */
     font-weight: 500;
     white-space: nowrap;
+    letter-spacing: 0.3px;
 }
 
-.message.outbound .message-meta { justify-content: flex-end; }
-.message.inbound .message-meta { justify-content: flex-start; }
+/* 2. The Delete Button (Ghost Style) */
+.delete-message-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.4; /* Semi-transparent by default */
+    transition: all 0.2s ease;
+}
+
+/* The Icon itself */
+.delete-message-btn i {
+    font-size: 12px;
+    color: #9ca3af; /* Grey Icon */
+}
+
+/* Hovering the TRASH CAN specifically */
+.delete-message-btn:hover {
+    opacity: 1;
+    transform: scale(1.1); /* Slight pop */
+}
+
+.delete-message-btn:hover i {
+    color: #ef4444; /* Turns RED on hover */
+}
+
+/* alignment adjustments */
+.message.outbound .message-meta {
+    justify-content: flex-end; /* Align right for your messages */
+    flex-direction: row;       /* Time left, Trash right */
+}
+
+.message.inbound .message-meta {
+    justify-content: flex-start; /* Align left for their messages */
+    flex-direction: row-reverse; /* Trash left, Time right (optional, or keep standard) */
+}
 
 /* MMS / Image Messages */
 .message-media {
