@@ -31,12 +31,14 @@ class AIAssistant {
             return;
         }
 
-        // --- THE FIX: RESET STATE ---
-        // Since we are about to wipe the HTML container, we must force the
-        // logic to re-run, even if it's the same conversation ID.
-        this.isInitialized = false;
-        // ----------------------------
+        // CHECK: Is the DOM already setup for this conversation?
+        // If so, do NOT wipe innerHTML (prevents flicker)
+        if (this.currentConversationId === conversation.id && this.isInitialized) {
+            const existingChat = document.getElementById('aiChatMessages');
+            if (existingChat) return; // Already there!
+        }
 
+        // Only wipe if we are changing conversations or initializing
         container.innerHTML = `
             <div class="ai-assistant-section">
                 <div id="aiChatMessages" class="ai-chat-messages">

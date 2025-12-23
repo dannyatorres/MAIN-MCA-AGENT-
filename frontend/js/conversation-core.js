@@ -120,6 +120,22 @@ class ConversationCore {
         }
     }
 
+    // Helper to load badges from localStorage
+    _loadBadgesFromStorage() {
+        try {
+            const stored = localStorage.getItem('mca_unread_badges');
+            if (stored) {
+                const badges = JSON.parse(stored);
+                Object.entries(badges).forEach(([id, count]) => {
+                    if (count > 0) this.unreadMessages.set(id, count);
+                });
+                console.log('📦 Loaded badges from localStorage:', this.unreadMessages.size);
+            }
+        } catch (e) {
+            console.warn('Failed to load badges from storage:', e);
+        }
+    }
+
     async loadConversations(reset = false) {
         if (this.isLoadingMore) return;
         this.isLoadingMore = true;
@@ -130,6 +146,9 @@ class ConversationCore {
                 this.unreadMessages.clear();
                 this.paginationOffset = 0;
                 this.hasMoreConversations = true;
+
+                // Load persisted badges from localStorage FIRST
+                this._loadBadgesFromStorage();
             }
 
             if (!this.hasMoreConversations) return;
@@ -142,7 +161,15 @@ class ConversationCore {
 
             conversations.forEach(conv => {
                 this.conversations.set(conv.id, conv);
-                if (conv.unread_count > 0) this.unreadMessages.set(conv.id, conv.unread_count);
+                // Merge: API wins if it has data, but keep localStorage badges if API says 0
+                const storedBadge = this.unreadMessages.get(conv.id) || 0;
+                const apiBadge = conv.unread_count || 0;
+                if (apiBadge > 0) {
+                    this.unreadMessages.set(conv.id, apiBadge);
+                } else if (storedBadge > 0) {
+                    // Keep localStorage badge - API might be stale
+                    this.unreadMessages.set(conv.id, storedBadge);
+                }
             });
 
             this.renderConversationsList();

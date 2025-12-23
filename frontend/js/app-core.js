@@ -340,23 +340,14 @@ class CommandCenter {
             if (tabButton) {
                 const tabName = tabButton.getAttribute('data-tab');
 
-                // When switching to AI Assistant tab, force reload of AI messages
-                if (tabName === 'ai-assistant' && this.intelligence && this.currentConversationId) {
+                // When switching to AI Assistant tab, just re-initialize (use cache if available)
+                // FIX: Removed destructive cache clearing that caused flicker
+                if (tabName === 'ai-assistant' && this.ai && this.currentConversationId) {
                     setTimeout(() => {
-                        console.log('Tab switched to AI Assistant, clearing cache and reloading...');
-
-                        // Clear the cache for this conversation to force fresh reload
-                        if (this.intelligence.aiChatCache) {
-                            this.intelligence.aiChatCache.delete(this.currentConversationId);
-                            console.log('Cache cleared for conversation:', this.currentConversationId);
-                        }
-
-                        // Force re-initialize AI chat to load fresh messages
-                        if (this.ai) {
-                            console.log('Re-initializing AI chat...');
-                            this.ai.initializeAIChat();
-                        }
-                    }, 100); // Small delay to ensure tab is visible
+                        console.log('Tab switched to AI Assistant');
+                        // Let AI assistant handle caching - don't clear it
+                        this.ai.initializeAIChat();
+                    }, 100);
                 }
             }
         });
