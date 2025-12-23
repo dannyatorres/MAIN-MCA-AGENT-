@@ -482,6 +482,20 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// Toggle AI on/off for a conversation
+router.post('/:id/toggle-ai', async (req, res) => {
+    try {
+        const { enabled } = req.body; // true or false
+        const db = getDatabase();
+        await db.query('UPDATE conversations SET ai_enabled = $1 WHERE id = $2', [enabled, req.params.id]);
+        console.log(`🤖 AI ${enabled ? 'ENABLED' : 'DISABLED'} for conversation ${req.params.id}`);
+        res.json({ success: true, ai_enabled: enabled });
+    } catch (err) {
+        console.error('❌ Toggle AI error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Bulk delete conversations
 router.post('/bulk-delete', async (req, res) => {
     try {

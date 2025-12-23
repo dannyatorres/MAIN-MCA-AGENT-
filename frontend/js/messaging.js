@@ -195,7 +195,7 @@ class MessagingModule {
         try {
             // 2. BACKGROUND FETCH: Get fresh messages
             const data = await this.parent.apiCall(`/api/conversations/${convId}/messages`);
-            
+
             // Update Cache
             this.messageCache.set(convId, data || []);
 
@@ -204,6 +204,9 @@ class MessagingModule {
             if (this.parent.getCurrentConversationId() == convId) {
                 this.renderMessages(data || []);
             }
+
+            // 4. Update AI toggle button state
+            this.updateAIButtonState(convId);
         } catch (error) {
             // If cache existed, we still show the old messages, just warn about connection
             if (!this.messageCache.has(convId)) {
@@ -620,6 +623,68 @@ class MessagingModule {
 
             // 4. Clear data attributes
             delete conversationItem.dataset.unreadCount;
+        }
+    }
+
+    // AI Toggle Button - Update button state based on conversation setting
+    async updateAIButtonState(conversationId) {
+        const header = document.querySelector('.conversation-header');
+        let btn = document.getElementById('aiToggleBtn');
+
+        // Create button if it doesn't exist
+        if (!btn && header) {
+            btn = document.createElement('button');
+            btn.id = 'aiToggleBtn';
+            btn.style.marginLeft = '10px';
+            btn.style.padding = '5px 10px';
+            btn.style.borderRadius = '5px';
+            btn.style.cursor = 'pointer';
+            btn.style.fontWeight = 'bold';
+            btn.style.fontSize = '12px';
+
+            // Add click listener
+            btn.onclick = async () => {
+                const newState = btn.dataset.state === 'off'; // Toggle logic
+                await this.toggleAI(conversationId, newState);
+            };
+
+            header.appendChild(btn);
+        }
+
+        // Fetch current state
+        try {
+            const res = await this.parent.apiCall(`/api/conversations/${conversationId}`);
+            const isEnabled = res.conversation.ai_enabled !== false; // Default to true if null
+
+            // Update Visuals
+            if (btn) {
+                btn.dataset.state = isEnabled ? 'on' : 'off';
+                btn.innerText = isEnabled ? '🤖 AI: ON' : '💤 AI: OFF';
+                btn.style.backgroundColor = isEnabled ? '#d4edda' : '#f8d7da';
+                btn.style.color = isEnabled ? '#155724' : '#721c24';
+                btn.style.border = isEnabled ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
+            }
+        } catch (e) {
+            console.error('Failed to fetch AI state', e);
+        }
+    }
+
+    async toggleAI(conversationId, newState) {
+        const btn = document.getElementById('aiToggleBtn');
+        if (btn) btn.innerText = '...'; // Loading state
+
+        try {
+            await this.parent.apiCall(`/api/conversations/${conversationId}/toggle-ai`, {
+                method: 'POST',
+                body: JSON.stringify({ enabled: newState })
+            });
+
+            // Update UI immediately
+            this.updateAIButtonState(conversationId);
+            this.parent.utils.showNotification(`AI ${newState ? 'enabled' : 'disabled'}`, 'success');
+        } catch (e) {
+            console.error('Failed to toggle AI', e);
+            this.parent.utils.showNotification('Failed to toggle AI', 'error');
         }
     }
 }

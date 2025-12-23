@@ -160,11 +160,22 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
     try {
         // =================================================================
+        // 🚨 LAYER 0: THE MANUAL MASTER SWITCH
+        // =================================================================
+        const settingsRes = await db.query('SELECT ai_enabled, state FROM conversations WHERE id = $1', [conversationId]);
+
+        // If the switch is explicitly OFF, stop everything.
+        // (We allow it to run if 'systemInstruction' is present, assuming that means YOU clicked a button to force a run)
+        if (settingsRes.rows.length > 0 && settingsRes.rows[0].ai_enabled === false && !systemInstruction) {
+            console.log(`⛔ AI MANUALLY DISABLED for Conversation ${conversationId}`);
+            return { shouldReply: false };
+        }
+
+        // =================================================================
         // 🚨 LAYER 1: MISSION ACCOMPLISHED CHECK (Status Lock)
         // If the lead is already in a "Human" stage, DO NOT REPLY.
         // =================================================================
-        const statusCheck = await db.query(`SELECT state FROM conversations WHERE id = $1`, [conversationId]);
-        const currentState = statusCheck.rows[0]?.state;
+        const currentState = settingsRes.rows[0]?.state;
 
         // Add any statuses here where you want the AI to be completely dead
         const RESTRICTED_STATES = ['HUMAN_REVIEW', 'OFFER_SENT', 'NEGOTIATING', 'FCS_COMPLETE'];
