@@ -37,8 +37,15 @@ class ConversationCore {
             const stored = localStorage.getItem('mca_unread_badges');
             if (stored) {
                 const obj = JSON.parse(stored);
-                // Convert to Map, ensuring keys are Strings for consistency
-                return new Map(Object.entries(obj));
+                // Force all keys to be Strings and filter invalid entries
+                const map = new Map();
+                Object.entries(obj).forEach(([key, value]) => {
+                    if (key && key !== 'undefined' && key !== 'null') {
+                        map.set(String(key), Number(value));
+                    }
+                });
+                console.log('📦 Loaded badges:', Object.fromEntries(map));
+                return map;
             }
         } catch (e) { console.error('Error loading badges', e); }
         return new Map();
@@ -53,6 +60,7 @@ class ConversationCore {
 
     // Call this when a socket event comes in
     incrementBadge(conversationId) {
+        if (!conversationId) return; // Guard against undefined/null
         const id = String(conversationId);
 
         // 1. If currently viewing this chat, do NOTHING (it's read instantly)
@@ -60,16 +68,18 @@ class ConversationCore {
             return;
         }
 
-        // 2. Otherwise, increment local count
+        // 2. Increment local count
         const current = this.unreadCounts.get(id) || 0;
         const newCount = current + 1;
         this.unreadCounts.set(id, newCount);
+
+        // 3. Save Immediately
         this._saveBadgesToStorage();
 
-        // 3. Update UI immediately
+        // 4. Update UI immediately
         this.updateBadgeUI(id, newCount);
 
-        // 4. Also update the data model if it exists
+        // 5. Update Memory Object
         if (this.conversations.has(Number(id))) {
             const conv = this.conversations.get(Number(id));
             conv.unread_count = newCount;
@@ -135,9 +145,10 @@ class ConversationCore {
 
         try {
             if (reset) {
+                this.conversations.clear();
                 this.paginationOffset = 0;
                 this.hasMoreConversations = true;
-                // NOTE: Don't clear conversations yet - fetch first to prevent data loss
+                // NOTE: We do NOT clear this.unreadCounts here. We keep them!
             }
 
             if (!this.hasMoreConversations) {
@@ -148,33 +159,25 @@ class ConversationCore {
             const url = `/api/conversations?limit=${this.pageSize}&offset=${this.paginationOffset}`;
             const conversations = await this.parent.apiCall(url);
 
-            // DATA LOSS FIX: Only clear AFTER successful fetch
-            if (reset) {
-                this.conversations.clear();
-            }
-
             if (conversations.length < this.pageSize) this.hasMoreConversations = false;
             this.paginationOffset += conversations.length;
 
             conversations.forEach(conv => {
                 const idStr = String(conv.id);
 
-                // BADGE SYNC: Server is source of truth for read/unread state
-                // LocalStorage is only for optimistic updates between page loads
-                const apiCount = conv.unread_count || 0;
+                // MERGE LOGIC: MAX(Server, Local)
+                // Ensures if Server lags and says 0, but Local says 1, we keep 1
+                const apiCount = Number(conv.unread_count || 0);
                 const localCount = this.unreadCounts.get(idStr) || 0;
 
-                // Server says unread -> trust server
-                if (apiCount > 0) {
+                // If the API has a HIGHER count, trust the API and update local
+                if (apiCount > localCount) {
                     this.unreadCounts.set(idStr, apiCount);
                     conv.unread_count = apiCount;
                 }
-                // Server says 0 AND we have local -> clear local (read on another device)
+                // If Local is higher (or API is 0), trust Local
                 else if (localCount > 0) {
-                    // STICKY BADGE FIX: Trust server when it explicitly returns 0
-                    // User may have read on another device/tab
-                    this.unreadCounts.delete(idStr);
-                    conv.unread_count = 0;
+                    conv.unread_count = localCount;
                 }
 
                 this.conversations.set(conv.id, conv);
@@ -185,7 +188,6 @@ class ConversationCore {
 
         } catch (error) {
             console.error('Error in loadConversations:', error);
-            // DATA LOSS FIX: On error, existing data is preserved (not cleared)
         } finally {
             this.isLoadingMore = false;
         }

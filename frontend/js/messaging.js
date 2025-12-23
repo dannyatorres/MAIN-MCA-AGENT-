@@ -23,7 +23,15 @@ class MessagingModule {
     handleIncomingMessage(data) {
         // Handle nested objects
         const message = data.message || data;
-        const messageConversationId = String(data.conversation_id || message.conversation_id);
+
+        // FIX: Safe ID Extraction - prevent "undefined" being saved as ID
+        const rawId = data.conversation_id || message.conversation_id;
+        if (!rawId) {
+            console.warn('⚠️ handleIncomingMessage: No conversation ID found, ignoring');
+            return;
+        }
+
+        const messageConversationId = String(rawId);
         const currentConversationId = String(this.parent.getCurrentConversationId());
 
         const isCurrentChat = (messageConversationId === currentConversationId && !document.hidden);
