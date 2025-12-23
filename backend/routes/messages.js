@@ -70,7 +70,11 @@ router.get('/:conversationId', async (req, res) => {
 // Send a new message
 router.post('/send', async (req, res) => {
     try {
-        let { conversation_id, content, direction, message_type, sent_by, media_url } = req.body;
+        let { conversation_id, content, direction, message_type, sent_by, sender_type, media_url } = req.body;
+
+        // If sent_by is missing, use sender_type (backwards compatibility with frontend)
+        sent_by = sent_by || sender_type;
+
         const db = getDatabase();
 
         console.log('📤 Sending message:', { conversation_id, content, media_url });
