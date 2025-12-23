@@ -58,6 +58,7 @@ router.post('/trigger', async (req, res) => {
                         content: result.content,
                         direction: 'outbound',
                         sent_by: 'ai',
+                        is_drip: true,
                         timestamp: new Date().toISOString()
                     }
                 });

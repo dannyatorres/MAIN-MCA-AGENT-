@@ -34,13 +34,12 @@ class MessagingModule {
 
         const isCurrentChat = (messageConversationId === currentConversationId && !document.hidden);
 
-        // 1. BADGE LOGIC - Show badge for ANY message you haven't seen
+        // 1. BADGE LOGIC
         if (!isCurrentChat) {
-            // Badge for inbound (lead replied) OR outbound AI (so you know AI acted)
-            const isAiMessage = message.sent_by === 'ai' || message.sender_type === 'ai';
             const isLeadMessage = message.direction === 'inbound';
+            const isAiReply = message.sent_by === 'ai' && !message.is_drip;  // AI reply but NOT drip
 
-            if (isLeadMessage || isAiMessage) {
+            if (isLeadMessage || isAiReply) {
                 if (this.parent.conversationUI) {
                     this.parent.conversationUI.incrementBadge(messageConversationId);
                 }
