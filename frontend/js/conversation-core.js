@@ -41,10 +41,10 @@ class ConversationCore {
         }
 
         // Update local cache
-        const conv = this.conversations.get(Number(id));
+        const conv = this.conversations.get(id);
         if (conv) {
             conv.unread_count = (conv.unread_count || 0) + 1;
-            this.conversations.set(Number(id), conv);
+            this.conversations.set(id, conv);
         }
 
         // Update UI immediately
@@ -56,10 +56,10 @@ class ConversationCore {
         const id = String(conversationId);
 
         // Update local cache
-        const conv = this.conversations.get(Number(id));
+        const conv = this.conversations.get(id);
         if (conv) {
             conv.unread_count = 0;
-            this.conversations.set(Number(id), conv);
+            this.conversations.set(id, conv);
         }
 
         // Update UI
@@ -179,7 +179,7 @@ class ConversationCore {
         // 3. Fetch Data
         try {
             // Check cache for header info first
-            const cachedConv = this.conversations.get(Number(conversationId));
+            const cachedConv = this.conversations.get(conversationId);
             if (cachedConv) {
                 this.selectedConversation = cachedConv;
                 this.showConversationDetails();
@@ -198,7 +198,7 @@ class ConversationCore {
             if (this.currentConversationId !== conversationId) return;
 
             this.selectedConversation = data.conversation || data;
-            this.conversations.set(Number(conversationId), this.selectedConversation);
+            this.conversations.set(conversationId, this.selectedConversation);
             this.showConversationDetails();
 
             await msgPromise;
@@ -349,14 +349,14 @@ class ConversationCore {
     // ============================================================
 
     async updateConversationPreview(conversationId, message) {
-        let conv = this.conversations.get(Number(conversationId));
+        let conv = this.conversations.get(conversationId);
 
         if (!conv) {
             try {
                 const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
                 if (data && (data.conversation || data)) {
                     conv = data.conversation || data;
-                    this.conversations.set(Number(conversationId), conv);
+                    this.conversations.set(conversationId, conv);
                 } else {
                     return;
                 }
@@ -369,7 +369,7 @@ class ConversationCore {
         // Update data
         conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
         conv.last_activity = new Date().toISOString();
-        this.conversations.set(Number(conversationId), conv);
+        this.conversations.set(conversationId, conv);
 
         // Update sidebar DOM
         const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
@@ -411,7 +411,7 @@ class ConversationCore {
             // 2. Update the Source of Truth (The Map)
             // This overwrites the existing entry if present, preventing duplicates
             freshConv.last_activity = new Date().toISOString(); // Ensure it sorts to top
-            this.conversations.set(Number(freshConv.id), freshConv);
+            this.conversations.set(freshConv.id, freshConv);
 
             // 3. Re-render the list (auto-sorts by last_activity)
             this.renderConversationsList();
