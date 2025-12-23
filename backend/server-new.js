@@ -20,6 +20,41 @@ const app = express();
 const server = http.createServer(app);
 
 // =========================================================
+// 🚦 TRAFFIC CONTROL: Add ai_enabled Column
+// URL: https://mcagent.io/api/fix/add-ai-enabled
+// =========================================================
+app.get('/api/fix/add-ai-enabled', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🚦 Adding ai_enabled column...');
+
+        // 1. Add the column
+        await db.query(`
+            ALTER TABLE conversations
+            ADD COLUMN IF NOT EXISTS ai_enabled BOOLEAN DEFAULT true;
+        `);
+
+        // 2. Verify it exists
+        const result = await db.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'conversations' AND column_name = 'ai_enabled';
+        `);
+
+        res.json({
+            success: true,
+            message: "✅ 'ai_enabled' column added successfully.",
+            details: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error("Migration Failed:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
+// =========================================================
 // 🕵️ TROJAN HORSE: Schema Inspector
 // URL: https://mcagent.io/api/fix/show-schema
 // =========================================================
