@@ -640,34 +640,44 @@ class MessagingModule {
     async updateAIButtonState(conversationId) {
         const btn = document.getElementById('aiToggleBtn');
         const btnText = document.getElementById('aiBtnText');
-        if (!btn) return;
+
+        // Safety check: if button doesn't exist yet (e.g. during initial load), stop.
+        if (!btn || !btnText) return;
 
         try {
-            // Fetch the single field we need
+            // Fetch the conversation details
             const response = await this.parent.apiCall(`/api/conversations/${conversationId}`);
 
-            // Default to true if undefined
-            const isEnabled = response.conversation.ai_enabled !== false;
+            // ✅ FIX: Handle both response structures ({ conversation: ... } OR { ... })
+            const conversation = response.conversation || response;
+
+            if (!conversation) {
+                console.warn('⚠️ API returned empty conversation object');
+                return;
+            }
+
+            // Default to true if the column is null/undefined (legacy leads)
+            const isEnabled = conversation.ai_enabled !== false;
 
             // Apply Styles
             if (isEnabled) {
                 // 🟢 GREEN STATE (ON)
                 btn.dataset.state = 'on';
-                if (btnText) btnText.textContent = 'AI: ON';
+                btnText.textContent = 'AI: ON';
                 btn.style.backgroundColor = '#d4edda'; // Light Green
                 btn.style.color = '#155724';           // Dark Green
                 btn.style.borderColor = '#c3e6cb';
             } else {
                 // 🔴 RED STATE (OFF)
                 btn.dataset.state = 'off';
-                if (btnText) btnText.textContent = 'AI: OFF';
+                btnText.textContent = 'AI: OFF';
                 btn.style.backgroundColor = '#f8d7da'; // Light Red
                 btn.style.color = '#721c24';           // Dark Red
                 btn.style.borderColor = '#f5c6cb';
             }
         } catch (error) {
             console.error('Failed to sync AI button:', error);
-            if (btnText) btnText.textContent = 'AI Error';
+            btnText.textContent = 'AI Error';
         }
     }
 
