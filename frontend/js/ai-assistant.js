@@ -12,6 +12,7 @@ class AIAssistant {
         this.currentConversationId = null;
         this.isInitialized = false;
         this.aiChatCache = new Map();
+        this.maxCacheSize = 30;
 
         console.log('🔧 AI Assistant Module Loaded');
     }
@@ -167,7 +168,7 @@ class AIAssistant {
         }
     }
 
-    addMessageToChat(role, content, saveToDatabase = true, scrollToBottom = true) {
+    addMessageToChat(role, content, scrollToBottom = true) {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
@@ -236,7 +237,7 @@ class AIAssistant {
             const cachedMsgs = this.aiChatCache.get(conversationId);
             messagesContainer.innerHTML = '';
             cachedMsgs.forEach(msg => {
-                this.addMessageToChat(msg.role, msg.content, false, false);
+                this.addMessageToChat(msg.role, msg.content, false);
             });
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
@@ -257,13 +258,14 @@ class AIAssistant {
 
             if (data.messages && data.messages.length > 0) {
                 this.aiChatCache.set(conversationId, data.messages);
+                this._pruneCache();
 
                 // Double-check container existence
                 const currentContainer = document.getElementById('aiChatMessages');
                 if (currentContainer) {
                     currentContainer.innerHTML = '';
                     data.messages.forEach(msg => {
-                        this.addMessageToChat(msg.role, msg.content, false, false);
+                        this.addMessageToChat(msg.role, msg.content, false);
                     });
                     currentContainer.scrollTop = currentContainer.scrollHeight;
                 }
@@ -281,6 +283,14 @@ class AIAssistant {
                 if (activeSpinner) activeSpinner.remove();
                 this.triggerSmartIntro();
             }
+        }
+    }
+
+    _pruneCache() {
+        if (this.aiChatCache.size > this.maxCacheSize) {
+            const keysToDelete = Array.from(this.aiChatCache.keys())
+                .slice(0, this.aiChatCache.size - this.maxCacheSize);
+            keysToDelete.forEach(key => this.aiChatCache.delete(key));
         }
     }
 

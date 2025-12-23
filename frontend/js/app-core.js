@@ -11,13 +11,16 @@ class CommandCenter {
         // 🚀 LOCAL DEVELOPMENT: Point to Railway backend
         const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-        // Railway backend URL
-        const RAILWAY_BACKEND_URL = '';
+        // Railway backend URL - SET YOUR ACTUAL URL HERE
+        const RAILWAY_BACKEND_URL = 'https://your-app.railway.app'; // Or use environment variable
 
-        this.apiBaseUrl = isLocalDev ? RAILWAY_BACKEND_URL : window.location.origin;
-        this.wsUrl = isLocalDev ?
-            `wss://${RAILWAY_BACKEND_URL.replace('https://', '')}` :
-            `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}`;
+        this.apiBaseUrl = isLocalDev
+            ? (RAILWAY_BACKEND_URL || window.location.origin)
+            : window.location.origin;
+
+        this.wsUrl = isLocalDev
+            ? (RAILWAY_BACKEND_URL ? `wss://${RAILWAY_BACKEND_URL.replace('https://', '')}` : `ws://${window.location.host}`)
+            : `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}`;
 
         this.userId = 'default';
 

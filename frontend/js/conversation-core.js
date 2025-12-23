@@ -32,16 +32,41 @@ class ConversationCore {
     // 1. STATE MANAGEMENT (The "Real App" Logic)
     // ============================================================
 
+    // Normalize ID for consistent comparisons
+    _normalizeId(id) {
+        return id != null ? String(id) : null;
+    }
+
+    // Get from Map with type-safe lookup
+    _getConversation(id) {
+        // Try both Number and String keys for compatibility
+        return this.conversations.get(Number(id)) || this.conversations.get(String(id));
+    }
+
     _loadBadgesFromStorage() {
         try {
             const stored = localStorage.getItem('mca_unread_badges');
             if (stored) {
                 const obj = JSON.parse(stored);
-                // Force all keys to be Strings and filter invalid entries
+                // Ensure it's a plain object, not an array or null
+                if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+                    return new Map();
+                }
                 const map = new Map();
-                Object.entries(obj).forEach(([key, value]) => {
-                    if (key && key !== 'undefined' && key !== 'null') {
-                        map.set(String(key), Number(value));
+                // Use Object.keys to avoid prototype chain issues
+                Object.keys(obj).forEach((key) => {
+                    // Filter invalid entries and protect against prototype pollution
+                    if (key &&
+                        key !== 'undefined' &&
+                        key !== 'null' &&
+                        key !== '__proto__' &&
+                        key !== 'constructor' &&
+                        key !== 'prototype' &&
+                        Object.prototype.hasOwnProperty.call(obj, key)) {
+                        const value = Number(obj[key]);
+                        if (!isNaN(value) && isFinite(value)) {
+                            map.set(String(key), value);
+                        }
                     }
                 });
                 console.log('📦 Loaded badges:', Object.fromEntries(map));
@@ -80,8 +105,8 @@ class ConversationCore {
         this.updateBadgeUI(id, newCount);
 
         // 5. Update Memory Object
-        if (this.conversations.has(Number(id))) {
-            const conv = this.conversations.get(Number(id));
+        const conv = this._getConversation(id);
+        if (conv) {
             conv.unread_count = newCount;
             this.conversations.set(Number(id), conv);
         }
@@ -228,6 +253,9 @@ class ConversationCore {
                 this.showConversationDetails();
             }
 
+            // Store the ID we're loading for race condition checks
+            const loadingConversationId = conversationId;
+
             // Parallel fetch
             const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
             const msgPromise = this.parent.messaging ?
@@ -238,13 +266,21 @@ class ConversationCore {
             ]);
 
             const data = await dataPromise;
-            if (this.currentConversationId !== conversationId) return;
+
+            // Race condition check - user may have switched conversations
+            if (this.currentConversationId !== loadingConversationId) {
+                console.log('🛑 Aborting: User switched conversations during load');
+                return;
+            }
 
             this.selectedConversation = data.conversation || data;
             this.conversations.set(Number(conversationId), this.selectedConversation);
             this.showConversationDetails();
 
             await msgPromise;
+
+            // Final check after messages load
+            if (this.currentConversationId !== loadingConversationId) return;
 
         } catch (error) {
             console.error('Error selecting conversation:', error);
@@ -384,7 +420,7 @@ class ConversationCore {
     // ============================================================
 
     async updateConversationPreview(conversationId, message) {
-        let conv = this.conversations.get(Number(conversationId));
+        let conv = this._getConversation(conversationId);
 
         if (!conv) {
             try {

@@ -12,17 +12,22 @@ export const ApiService = {
         const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
         // Matches your server-new.js setup
-        const RAILWAY_BACKEND_URL = '';
+        const RAILWAY_BACKEND_URL = 'https://your-app.railway.app'; // Or use environment variable
 
         this.config.isLocal = isLocalDev;
         this.config.baseUrl = isLocalDev
-            ? RAILWAY_BACKEND_URL
+            ? (RAILWAY_BACKEND_URL || window.location.origin)
             : window.location.origin;
 
         console.log(`🔗 API Initialized: ${this.config.baseUrl} (${isLocalDev ? 'Local/Railway' : 'Production'})`);
     },
 
     async request(endpoint, options = {}) {
+        // Auto-initialize if not already done
+        if (!this.config.baseUrl) {
+            this.init();
+        }
+
         // Handle full URLs vs relative paths
         const url = endpoint.startsWith('http') ? endpoint : `${this.config.baseUrl}${endpoint}`;
 

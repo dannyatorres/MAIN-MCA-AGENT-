@@ -24,8 +24,14 @@ class WebSocketManager {
             // Ensure socket.io is loaded
             if (typeof io === 'undefined') {
                 console.warn('Socket.io not found, retrying...');
-                setTimeout(() => this.connect(), 1000);
                 this.isConnecting = false;
+                this.reconnectAttempts++;
+
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    setTimeout(() => this.connect(), this.reconnectDelay);
+                } else {
+                    console.error('WebSocketManager: Socket.io never loaded after max attempts');
+                }
                 return;
             }
 
@@ -33,7 +39,8 @@ class WebSocketManager {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionDelay: this.reconnectDelay,
-                reconnectionAttempts: this.maxReconnectAttempts
+                reconnectionAttempts: this.maxReconnectAttempts,
+                timeout: 10000
             });
 
             this.setupEventHandlers();
@@ -42,6 +49,12 @@ class WebSocketManager {
         } catch (error) {
             console.error('WebSocketManager: Connection error:', error);
             this.isConnecting = false;
+
+            // Attempt reconnection after error
+            this.reconnectAttempts++;
+            if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                setTimeout(() => this.connect(), this.reconnectDelay);
+            }
         }
     }
 
@@ -93,13 +106,18 @@ class WebSocketManager {
         this.socket.on('conversation_updated', (data) => {
             console.log('📋 WebSocket: conversation_updated', data);
 
+            if (!data || !data.conversation_id) {
+                console.warn('conversation_updated event missing conversation_id');
+                return;
+            }
+
             // If we are looking at it, refresh details
             if (String(this.app.currentConversationId) === String(data.conversation_id)) {
                 if (this.app.conversationUI) {
                     this.app.conversationUI.showConversationDetails();
                 }
                 if (this.app.messaging) {
-                    this.app.messaging.loadConversationMessages();
+                    this.app.messaging.loadConversationMessages(data.conversation_id);
                 }
             }
 

@@ -11,9 +11,11 @@ class DocumentsModule {
         this.currentDocuments = [];
         this.selectedFiles = [];
         this.documentsNeedRefresh = false;
-        
+        this.eventListenersAttached = false;
+
         // ✅ NEW: Cache Store
         this.documentsCache = new Map();
+        this.maxCacheSize = 30;
 
         this.init();
     }
@@ -22,7 +24,18 @@ class DocumentsModule {
         // Document-specific initialization
     }
 
+    _pruneCache() {
+        if (this.documentsCache.size > this.maxCacheSize) {
+            const keysToDelete = Array.from(this.documentsCache.keys())
+                .slice(0, this.documentsCache.size - this.maxCacheSize);
+            keysToDelete.forEach(key => this.documentsCache.delete(key));
+        }
+    }
+
     setupDocumentsEventListeners() {
+        if (this.eventListenersAttached) return;
+        this.eventListenersAttached = true;
+
         console.log('setupDocumentsEventListeners called');
 
         const dragDropZone = document.getElementById('dragDropZone');
@@ -115,6 +128,7 @@ class DocumentsModule {
                 
                 // Update Cache & Current State
                 this.documentsCache.set(targetId, freshDocs);
+                this._pruneCache();
                 this.currentDocuments = freshDocs;
                 
                 // Update UI (only if user is still on this tab)
