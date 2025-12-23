@@ -62,8 +62,8 @@ async function trackResponseForTraining(conversationId, leadMessage, humanRespon
     }
 }
 
-// 🛠️ TOOLS
-const TOOLS = [
+// 🛠️ BASE TOOLS - MODIFIED: Removed 'generate_offer' from the default list
+const BASE_TOOLS = [
     {
         type: "function",
         function: {
@@ -74,7 +74,7 @@ const TOOLS = [
                 properties: {
                     status: {
                         type: "string",
-                        enum: ["INTERESTED", "QUALIFIED", "FCS_RUNNING", "NEGOTIATING", "DEAD", "ARCHIVED"],
+                        enum: ["INTERESTED", "QUALIFIED", "FCS_RUNNING", "NEGOTIATING", "DEAD", "ARCHIVED", "HUMAN_REVIEW"],
                         description: "The new status."
                     }
                 },
@@ -87,30 +87,22 @@ const TOOLS = [
         function: {
             name: "trigger_drive_sync",
             description: "Call this immediately when you get an EMAIL address.",
-            parameters: { type: "object", properties: {} } 
+            parameters: { type: "object", properties: {} }
         }
     },
     {
         type: "function",
         function: {
             name: "consult_analyst",
-            description: "Call this ONLY when you have: 1. Email, 2. Funding Status, 3. Credit Score.",
-            parameters: { 
-                type: "object", 
+            description: "Call this ONLY when you have: 1. Email, 2. Funding Status, 3. Credit Score. This will notify the human underwriter.",
+            parameters: {
+                type: "object",
                 properties: {
                     credit_score: { type: "string", description: "The user's stated credit score" },
                     recent_funding: { type: "string", description: "Details on any new positions (or 'None')" }
                 },
                 required: ["credit_score", "recent_funding"]
-            } 
-        }
-    },
-    {
-        type: "function",
-        function: {
-            name: "generate_offer",
-            description: "Call this when the lead says they want to see the offer, or agrees to move forward. Examples: 'ok let's see it', 'send me the offer', 'what can you do for me'",
-            parameters: { type: "object", properties: {} }
+            }
         }
     },
     {
@@ -167,6 +159,67 @@ async function processLeadWithAI(conversationId, systemInstruction) {
     console.log(`🧠 AI Agent Processing Lead: ${conversationId}`);
 
     try {
+        // =================================================================
+        // 🚨 LAYER 1: MISSION ACCOMPLISHED CHECK (Status Lock)
+        // If the lead is already in a "Human" stage, DO NOT REPLY.
+        // =================================================================
+        const statusCheck = await db.query(`SELECT state FROM conversations WHERE id = $1`, [conversationId]);
+        const currentState = statusCheck.rows[0]?.state;
+
+        // Add any statuses here where you want the AI to be completely dead
+        const RESTRICTED_STATES = ['HUMAN_REVIEW', 'OFFER_SENT', 'NEGOTIATING', 'FCS_COMPLETE'];
+
+        // If it's a manual command (systemInstruction has value), we ignore the lock.
+        // If it's autonomous (systemInstruction is empty/null), we respect the lock.
+        const isManualCommand = systemInstruction && systemInstruction.length > 5;
+
+        if (RESTRICTED_STATES.includes(currentState) && !isManualCommand) {
+            console.log(`🔒 AI BLOCKED: Lead is in '${currentState}'. Waiting for human.`);
+            return { shouldReply: false };
+        }
+
+        // =================================================================
+        // 🚨 LAYER 2: HUMAN INTERRUPTION CHECK (The 15-Minute Timer)
+        // If a HUMAN sent a message recently, do not disturb.
+        // =================================================================
+        if (!isManualCommand) {
+            const lastOutbound = await db.query(`
+                SELECT timestamp, sender_type
+                FROM messages
+                WHERE conversation_id = $1 AND direction = 'outbound'
+                ORDER BY timestamp DESC LIMIT 1
+            `, [conversationId]);
+
+            if (lastOutbound.rows.length > 0) {
+                const lastMsg = lastOutbound.rows[0];
+                const timeDiff = (new Date() - new Date(lastMsg.timestamp)) / 1000 / 60; // Minutes
+
+                // If HUMAN sent the last message less than 15 mins ago -> SLEEP
+                if (lastMsg.sender_type === 'user' && timeDiff < 15) {
+                    console.log(`⏱️ AI PAUSED: Human replied ${Math.round(timeDiff)} mins ago. Backing off.`);
+                    return { shouldReply: false };
+                }
+            }
+        }
+
+        // =================================================================
+        // 🚨 LAYER 3: OFFER TOOL SECURITY
+        // Only inject the 'generate_offer' tool if explicitly authorized
+        // =================================================================
+        let availableTools = [...BASE_TOOLS];
+
+        // Only allow offer generation if YOU clicked a button that puts "Generate Offer" in the instructions
+        if (systemInstruction && systemInstruction.includes("Generate Offer")) {
+            availableTools.push({
+                type: "function",
+                function: {
+                    name: "generate_offer",
+                    description: "Generates the formal offer PDF and pitch.",
+                    parameters: { type: "object", properties: {} }
+                }
+            });
+        }
+
         // 1. GET LEAD DETAILS (simple - for templates)
         const leadRes = await db.query(`
             SELECT first_name, business_name, state, email
@@ -342,7 +395,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: messages,
-            tools: TOOLS,
+            tools: availableTools, // Use filtered tools list (Layer 3)
             tool_choice: "auto"
         });
 
@@ -387,6 +440,10 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 else if (tool.function.name === 'consult_analyst') {
                     const args = JSON.parse(tool.function.arguments);
                     console.log(`🎓 HANDOFF: GPT-4o -> Gemini 2.5 Pro`);
+
+                    // 🔒 LOCK: Update status to HUMAN_REVIEW so AI stops replying after this
+                    await db.query("UPDATE conversations SET state = 'HUMAN_REVIEW' WHERE id = $1", [conversationId]);
+                    console.log(`🔒 Lead locked to HUMAN_REVIEW - AI will stop autonomous replies`);
 
                     const fcsRes = await db.query(`
                         SELECT average_revenue, total_negative_days
