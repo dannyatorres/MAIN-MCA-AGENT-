@@ -1,6 +1,4 @@
 // js/ai-assistant.js
-// REFACTORED: Combined Controller (Logic) + View (Render)
-// FEATURES: Smart Welcome (Auto-detects offers on load)
 
 class AIAssistant {
     constructor(parent) {
@@ -13,7 +11,7 @@ class AIAssistant {
         this.isTyping = false;
         this.currentConversationId = null;
         this.isInitialized = false;
-        this.aiChatCache = new Map(); // ✅ NEW
+        this.aiChatCache = new Map();
 
         console.log('🔧 AI Assistant Module Loaded');
     }
@@ -32,7 +30,6 @@ class AIAssistant {
         }
 
         // CHECK: Is the DOM already setup for this conversation?
-        // If so, do NOT wipe innerHTML (prevents flicker)
         if (this.currentConversationId === conversation.id && this.isInitialized) {
             const existingChat = document.getElementById('aiChatMessages');
             if (existingChat) return; // Already there!
@@ -42,7 +39,7 @@ class AIAssistant {
         container.innerHTML = `
             <div class="ai-assistant-section">
                 <div id="aiChatMessages" class="ai-chat-messages">
-                    <div class="ai-loading-container">
+                    <div id="aiInitialSpinner" class="ai-loading-container">
                         <div class="ai-thinking ai-loading-spinner-center">
                             <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
                         </div>
@@ -89,8 +86,6 @@ class AIAssistant {
         this.currentConversationId = conversationId;
         this.isInitialized = true;
 
-        console.log('⚡ Initializing AI Logic for ID:', conversationId);
-
         this.setupEventHandlers();
         this.loadChatHistory();
     }
@@ -101,13 +96,11 @@ class AIAssistant {
 
         if (!chatInput || !sendButton) return;
 
-        // Auto-resize textarea
         chatInput.addEventListener('input', (e) => {
             e.target.style.height = 'auto';
             e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
         });
 
-        // Handle Enter key
         chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -115,7 +108,6 @@ class AIAssistant {
             }
         });
 
-        // Add click handler
         sendButton.onclick = (e) => {
             e.preventDefault();
             this.sendAIMessage();
@@ -138,6 +130,11 @@ class AIAssistant {
         // UI Updates
         input.value = '';
         input.style.height = 'auto';
+
+        // Remove intro message if it's the only thing there
+        const introMsg = document.querySelector('.ai-intro-message');
+        if (introMsg) introMsg.remove();
+
         this.addMessageToChat('user', message, false);
         this.showTypingIndicator();
 
@@ -154,7 +151,7 @@ class AIAssistant {
             this.hideTypingIndicator();
 
             if (data.success && (data.response || data.fallback)) {
-                this.addMessageToChat('assistant', data.response || data.fallback, true); // Save response to DB
+                this.addMessageToChat('assistant', data.response || data.fallback, true);
             } else {
                 throw new Error(data.error || 'Unknown error');
             }
@@ -186,7 +183,7 @@ class AIAssistant {
     }
 
     formatAIResponse(content) {
-        if(!content) return '';
+        if (!content) return '';
         let formatted = content
             .replace(/\n/g, '<br>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -223,90 +220,76 @@ class AIAssistant {
     async loadChatHistory() {
         const conversationId = this.parent.getCurrentConversationId();
         const messagesContainer = document.getElementById('aiChatMessages');
+        const spinner = document.getElementById('aiInitialSpinner');
+
         if (!messagesContainer) return;
 
-        const hadCache = this.aiChatCache.has(conversationId);
-
         // 1. CACHE CHECK
-        if (hadCache) {
+        if (this.aiChatCache.has(conversationId)) {
             console.log(`⚡ [Cache] Rendering AI history for ${conversationId}`);
 
-            // Hide container while rendering to prevent scroll flicker
-            messagesContainer.style.visibility = 'hidden';
+            // Remove spinner immediately if cache hit
+            if (spinner) spinner.remove();
 
-            messagesContainer.innerHTML = '';
+            // Render Cache
             const cachedMsgs = this.aiChatCache.get(conversationId);
+            messagesContainer.innerHTML = '';
             cachedMsgs.forEach(msg => {
                 this.addMessageToChat(msg.role, msg.content, false, false);
             });
-
-            // Scroll to bottom while still hidden
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-            // Reveal properly scrolled content after layout calculation
-            requestAnimationFrame(() => {
-                messagesContainer.style.visibility = 'visible';
-            });
         } else {
-            // Spinner only if no cache
-            messagesContainer.innerHTML = `
-                <div class="ai-loading-container">
-                    <div class="ai-thinking ai-loading-spinner-center">
-                        <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
-                    </div>
-                </div>`;
+            // Spinner is already there from render(), do nothing
         }
 
         try {
-            // 2. BACKGROUND SYNC
+            // 2. FETCH FROM API
             const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
-            
-            if (data.messages && data.messages.length > 0) {
-                this.aiChatCache.set(conversationId, data.messages); // Update Cache
-                
-                // Only redraw if we didn't have cache (prevent jitter)
-                if (!hadCache) {
-                    // Hide container while rendering to prevent scroll flicker
-                    messagesContainer.style.visibility = 'hidden';
 
+            // Remove spinner before processing response
+            if (spinner) spinner.remove();
+
+            if (data.messages && data.messages.length > 0) {
+                this.aiChatCache.set(conversationId, data.messages);
+
+                // Only re-render if we didn't just use cache
+                if (!this.aiChatCache.has(conversationId) || this.aiChatCache.get(conversationId).length !== data.messages.length) {
                     messagesContainer.innerHTML = '';
                     data.messages.forEach(msg => {
                         this.addMessageToChat(msg.role, msg.content, false, false);
                     });
-
-                    // Scroll to bottom while still hidden
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-                    // Reveal properly scrolled content after layout calculation
-                    requestAnimationFrame(() => {
-                        messagesContainer.style.visibility = 'visible';
-                    });
                 }
             } else {
-                if (!hadCache) {
-                     messagesContainer.innerHTML = ''; // Clear spinner before intro
-                     messagesContainer.style.visibility = 'visible'; // Ensure visible for intro
-                     this.triggerSmartIntro(); // No history ever? Do intro.
-                }
+                // Empty History -> Show Welcome
+                this.triggerSmartIntro();
             }
 
         } catch (error) {
             console.log('Error loading history:', error);
-            if (!this.aiChatCache.has(conversationId)) {
-                this.addMessageToChat('assistant', "I'm ready. (History load failed)", false);
-            }
+            // Remove spinner on error too
+            if (spinner) spinner.remove();
+
+            // Fallback to intro if history fails
+            this.triggerSmartIntro();
         }
     }
 
-    async triggerSmartIntro() {
+    triggerSmartIntro() {
         const messagesContainer = document.getElementById('aiChatMessages');
+        const spinner = document.getElementById('aiInitialSpinner');
+
         if (!messagesContainer) return;
+
+        // FIX: Force remove spinner if it still exists
+        if (spinner) spinner.remove();
 
         const conversation = this.parent.getSelectedConversation();
         const businessName = conversation ? conversation.business_name : 'this deal';
-
-        // Simple welcome message - no API call
         const message = `How can I help you with **${businessName}** today?`;
+
+        // Add welcome message
         this.addMessageToChat('assistant', message, false);
     }
 }
