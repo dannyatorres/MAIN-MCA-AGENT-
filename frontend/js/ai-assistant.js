@@ -228,12 +228,23 @@ class AIAssistant {
         // 1. CACHE CHECK
         if (hadCache) {
             console.log(`⚡ [Cache] Rendering AI history for ${conversationId}`);
+
+            // Hide container while rendering to prevent scroll flicker
+            messagesContainer.style.visibility = 'hidden';
+
             messagesContainer.innerHTML = '';
             const cachedMsgs = this.aiChatCache.get(conversationId);
             cachedMsgs.forEach(msg => {
                 this.addMessageToChat(msg.role, msg.content, false, false);
             });
+
+            // Scroll to bottom while still hidden
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Reveal properly scrolled content after layout calculation
+            requestAnimationFrame(() => {
+                messagesContainer.style.visibility = 'visible';
+            });
         } else {
             // Spinner only if no cache
             messagesContainer.innerHTML = `
@@ -253,21 +264,29 @@ class AIAssistant {
                 
                 // Only redraw if we didn't have cache (prevent jitter)
                 if (!hadCache) {
+                    // Hide container while rendering to prevent scroll flicker
+                    messagesContainer.style.visibility = 'hidden';
+
                     messagesContainer.innerHTML = '';
                     data.messages.forEach(msg => {
                         this.addMessageToChat(msg.role, msg.content, false, false);
                     });
+
+                    // Scroll to bottom while still hidden
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                    // Reveal properly scrolled content after layout calculation
+                    requestAnimationFrame(() => {
+                        messagesContainer.style.visibility = 'visible';
+                    });
                 }
             } else {
                 if (!hadCache) {
                      messagesContainer.innerHTML = ''; // Clear spinner before intro
+                     messagesContainer.style.visibility = 'visible'; // Ensure visible for intro
                      this.triggerSmartIntro(); // No history ever? Do intro.
                 }
             }
-            
-            // Clean up visual state
-            messagesContainer.style.visibility = 'visible';
 
         } catch (error) {
             console.log('Error loading history:', error);

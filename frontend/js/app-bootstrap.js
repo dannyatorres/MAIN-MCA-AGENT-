@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         function dragMouseDown(e) {
             if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-            e = e || window.event;
             e.preventDefault();
             pos3 = e.clientX;
             pos4 = e.clientY;
@@ -23,7 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         function elementDrag(e) {
-            e = e || window.event;
             e.preventDefault();
             pos1 = pos3 - e.clientX;
             pos2 = pos4 - e.clientY;
@@ -93,9 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (actions) actions.classList.add('hidden');
                     if (backBtn) backBtn.classList.add('hidden');
 
-                    // Set Global Flag (The Traffic Cop)
-                    window.appState = window.appState || {};
-                    window.appState.mode = 'dashboard';
+                    // Set Global Flag (Safe merge)
+                    Object.assign(window.appState, { mode: 'dashboard' });
                 } else {
                     // Show Chat, Hide Dashboard
                     if (dashboard) dashboard.classList.add('hidden');
@@ -104,12 +101,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (actions) actions.classList.remove('hidden');
                     if (backBtn) backBtn.classList.remove('hidden');
 
-                    window.appState = window.appState || {};
-                    window.appState.mode = 'chat';
+                    Object.assign(window.appState, { mode: 'chat' });
                 }
             };
 
             // 3. The Header Renderer (Targets #chatView only)
+            // Store current phone number for call button access
+            let currentPhoneNumber = null;
+            let currentConvId = null;
+            let headerListenersAttached = false;
+
             window.updateChatHeader = (businessName, ownerName, phoneNumber, conversationId) => {
                 // Force Chat Mode
                 window.setViewMode('chat');
@@ -117,6 +118,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const chatView = document.getElementById('chatView');
                 const header = chatView ? chatView.querySelector('.panel-header') : null;
                 if (!header) return;
+
+                // Store for listeners
+                currentPhoneNumber = phoneNumber;
+                currentConvId = conversationId;
 
                 let displayBusiness = businessName || 'Unknown Business';
                 let displayOwner = (ownerName || '').trim() || 'Business Contact';
@@ -126,89 +131,116 @@ document.addEventListener('DOMContentLoaded', async () => {
                     displayBusiness = 'Business Account';
                 }
 
-                // Call Protection Guard
+                // Check if header structure already exists
+                const existingHeader = header.querySelector('.chat-header-rich');
                 const existingCallBar = document.getElementById('callBar');
                 const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
-                const currentTitle = header.querySelector('.chat-business-title')?.textContent;
 
-                if (isCallActive && currentTitle === displayOwner) return;
+                if (existingHeader) {
+                    // UPDATE MODE: Just update text content, preserve call bar
+                    const titleEl = header.querySelector('.chat-business-title');
+                    const businessEl = header.querySelector('.chat-row-secondary span');
+                    const callNameEl = header.querySelector('.call-contact-name');
+                    const callBtnEl = document.getElementById('callBtn');
 
-                // ✅ NEW CLEAN LAYOUT
-                header.innerHTML = `
-                    <div class="chat-header-rich" style="display: flex; align-items: center; justify-content: space-between; width: 100%; position: relative;">
+                    if (titleEl) titleEl.textContent = displayOwner;
+                    if (businessEl) businessEl.textContent = displayBusiness;
+                    if (callNameEl) callNameEl.textContent = displayOwner;
+                    if (callBtnEl) callBtnEl.title = `Call ${phoneNumber || 'No phone'}`;
 
-                        <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard" style="z-index: 20;">
-                            <i class="fas fa-arrow-left"></i>
-                        </button>
+                    // Update AI Button state for new conversation
+                    if (window.commandCenter?.messaging) {
+                        window.commandCenter.messaging.updateAIButtonState(conversationId);
+                    }
+                } else {
+                    // CREATION MODE: First render - build full structure
+                    header.innerHTML = `
+                        <div class="chat-header-rich" style="display: flex; align-items: center; justify-content: space-between; width: 100%; position: relative;">
 
-                        <div class="chat-details-stack">
-                            <h2 class="chat-business-title">${displayOwner}</h2>
-                            <div class="chat-row-secondary">
-                                <i class="fas fa-building" style="font-size: 10px; margin-right: 4px;"></i>
-                                <span>${displayBusiness}</span>
-                            </div>
-                        </div>
-
-                        <div class="chat-actions-group">
-
-                            <button id="aiToggleBtn" class="ai-toggle-btn" data-state="loading">AI</button>
-
-                            <button id="callBtn" class="header-action-btn phone-btn" title="Call ${phoneNumber || 'No phone'}">
-                                <i class="fas fa-phone"></i>
+                            <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard" style="z-index: 20;">
+                                <i class="fas fa-arrow-left"></i>
                             </button>
-                        </div>
-                    </div>
 
-                    <div id="callBar" class="call-bar hidden">
-                        <div class="call-modal-content" id="callModalCard">
-                            <div class="drag-handle-icon"><i class="fas fa-grip-lines"></i></div>
-                            <div class="call-avatar-pulse"><i class="fas fa-phone"></i></div>
-                            <h3 class="call-contact-name">${displayOwner}</h3>
-                            <div class="call-timer" id="callTimer">00:00</div>
-                            <div class="call-actions-row">
-                                <button class="call-control-btn" id="muteBtn"><i class="fas fa-microphone"></i></button>
-                                <button class="call-control-btn end-call" id="endCallBtn"><i class="fas fa-phone-slash"></i></button>
+                            <div class="chat-details-stack">
+                                <h2 class="chat-business-title">${displayOwner}</h2>
+                                <div class="chat-row-secondary">
+                                    <i class="fas fa-building" style="font-size: 10px; margin-right: 4px;"></i>
+                                    <span>${displayBusiness}</span>
+                                </div>
+                            </div>
+
+                            <div class="chat-actions-group">
+                                <button id="aiToggleBtn" class="ai-toggle-btn" data-state="loading">AI</button>
+                                <button id="callBtn" class="header-action-btn phone-btn" title="Call ${phoneNumber || 'No phone'}">
+                                    <i class="fas fa-phone"></i>
+                                </button>
                             </div>
                         </div>
-                    </div>
-                `;
 
-                // Re-attach listeners
-                document.getElementById('backHomeBtn').addEventListener('click', window.loadDashboard);
+                        <div id="callBar" class="call-bar hidden">
+                            <div class="call-modal-content" id="callModalCard">
+                                <div class="drag-handle-icon"><i class="fas fa-grip-lines"></i></div>
+                                <div class="call-avatar-pulse"><i class="fas fa-phone"></i></div>
+                                <h3 class="call-contact-name">${displayOwner}</h3>
+                                <div class="call-timer" id="callTimer">00:00</div>
+                                <div class="call-actions-row">
+                                    <button class="call-control-btn" id="muteBtn"><i class="fas fa-microphone"></i></button>
+                                    <button class="call-control-btn end-call" id="endCallBtn"><i class="fas fa-phone-slash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
 
-                // Initialize AI Button
-                if (window.commandCenter && window.commandCenter.messaging) {
-                    window.commandCenter.messaging.updateAIButtonState(conversationId);
+                    // Attach listeners ONCE on first render
+                    if (!headerListenersAttached) {
+                        headerListenersAttached = true;
 
-                    const aiBtn = document.getElementById('aiToggleBtn');
-                    if (aiBtn) {
-                        aiBtn.onclick = () => {
-                            const isCurrentlyOn = aiBtn.dataset.state === 'on';
-                            window.commandCenter.messaging.toggleAI(!isCurrentlyOn);
-                        };
+                        // Back button - uses event delegation
+                        header.addEventListener('click', (e) => {
+                            if (e.target.closest('#backHomeBtn')) {
+                                window.loadDashboard();
+                            }
+                        });
+
+                        // AI Toggle - uses event delegation
+                        header.addEventListener('click', (e) => {
+                            const aiBtn = e.target.closest('#aiToggleBtn');
+                            if (aiBtn && window.commandCenter?.messaging) {
+                                const isCurrentlyOn = aiBtn.dataset.state === 'on';
+                                window.commandCenter.messaging.toggleAI(!isCurrentlyOn);
+                            }
+                        });
+
+                        // Call Button - uses event delegation with closure for phone
+                        header.addEventListener('click', async (e) => {
+                            if (e.target.closest('#callBtn')) {
+                                if (!currentPhoneNumber) return alert('No phone number available.');
+                                if (!window.callManager) return alert("Calling system failed to load.");
+                                const modal = document.getElementById('callBar');
+                                modal.classList.remove('hidden');
+                                modal.style.top = '15%';
+                                modal.style.left = '50%';
+                                modal.style.transform = 'translateX(-50%)';
+                                await window.callManager.startCall(currentPhoneNumber, currentConvId);
+                            }
+                        });
+
+                        // End Call Button - uses event delegation
+                        header.addEventListener('click', (e) => {
+                            if (e.target.closest('#endCallBtn')) {
+                                if (window.callManager) window.callManager.endCall();
+                                else document.getElementById('callBar')?.classList.add('hidden');
+                            }
+                        });
+                    }
+
+                    makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
+
+                    // Initialize AI Button state
+                    if (window.commandCenter?.messaging) {
+                        window.commandCenter.messaging.updateAIButtonState(conversationId);
                     }
                 }
-
-                // Initialize Call Button
-                const callBtn = document.getElementById('callBtn');
-                if (callBtn) {
-                    callBtn.addEventListener('click', async () => {
-                        if (!phoneNumber) return alert('No phone number available.');
-                        if (!window.callManager) return alert("Calling system failed to load.");
-                        const modal = document.getElementById('callBar');
-                        modal.classList.remove('hidden');
-                        modal.style.top = '15%';
-                        modal.style.left = '50%';
-                        modal.style.transform = 'translateX(-50%)';
-                        await window.callManager.startCall(phoneNumber, conversationId);
-                    });
-                }
-                document.getElementById('endCallBtn')?.addEventListener('click', () => {
-                    if (window.callManager) window.callManager.endCall();
-                    else document.getElementById('callBar').classList.add('hidden');
-                });
-
-                makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
 
                 const inputContainer = document.getElementById('messageInputContainer');
                 if (inputContainer) inputContainer.classList.remove('hidden');

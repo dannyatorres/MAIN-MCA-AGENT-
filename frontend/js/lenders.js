@@ -353,90 +353,88 @@ class LendersModule {
     }
 
     async populateLenderForm() {
-        const conversation = this.parent.getSelectedConversation();
-        if (!conversation) return;
-
         const conversationId = this.parent.getCurrentConversationId();
         console.log('🤖 Auto-filling lender form for:', conversationId);
 
         // Helper to safely set values
-        const populateField = (fieldId, value, force = false) => {
+        const populateField = (fieldId, value) => {
             const element = document.getElementById(fieldId);
-            if (element) {
-                if (force || !element.value) {
-                    element.value = value;
-                    // Trigger input event for TIB calculation
-                    if (fieldId === 'lenderStartDate') element.dispatchEvent(new Event('input'));
-                }
+            // Only set if we found a value AND the element exists
+            if (element && value) {
+                element.value = value;
+                // Trigger input event (updates TIB calculator, etc.)
+                if (fieldId === 'lenderStartDate') element.dispatchEvent(new Event('input'));
             }
         };
 
-        // --- 1. FILL BASIC CRM DATA ---
-        populateField('lenderBusinessName', conversation.business_name);
-        populateField('lenderState', conversation.state);
-        populateField('lenderIndustry', conversation.business_type); // CRM usually calls it business_type
-
-        if (conversation.annual_revenue) {
-            populateField('lenderRevenue', Math.round(conversation.annual_revenue / 12));
-        }
-
-        if (conversation.business_start_date) {
-            // Format date to MM/DD/YYYY
-            const date = new Date(conversation.business_start_date);
-            if (!isNaN(date.getTime())) {
-                const formatted = date.toLocaleDateString('en-US', {
-                    month: '2-digit', day: '2-digit', year: 'numeric'
-                });
-                populateField('lenderStartDate', formatted);
-            }
-        }
-
-        // --- 2. FETCH & FILL FCS DATA (The Smart Stuff) ---
+        // 1. Get the data
         const fcs = await this.fetchFCSData(conversationId);
 
-        if (fcs) {
-            console.log("✅ FCS Data Found! Filling missing fields...", fcs);
-
-            // 1. Industry & State (Force overwrite if FCS found them)
-            if (fcs.metrics && fcs.metrics.industry) populateField('lenderIndustry', fcs.metrics.industry, true);
-            if (fcs.metrics && fcs.metrics.state) populateField('lenderState', fcs.metrics.state, true);
-            if (fcs.businessName) populateField('lenderBusinessName', fcs.businessName, true);
-
-            // 2. Financial Metrics
-            if (fcs.metrics && fcs.metrics.averageRevenue) populateField('lenderRevenue', Math.round(fcs.metrics.averageRevenue), true);
-            if (fcs.metrics && fcs.metrics.totalNegativeDays !== undefined) populateField('lenderNegativeDays', fcs.metrics.totalNegativeDays, true);
-            if (fcs.average_deposit_count) populateField('lenderDepositsPerMonth', fcs.average_deposit_count, true);
-
-            // 3. Withholding (New Calculation)
-            if (fcs.withholding_percentage) {
-                 populateField('lenderWithholding', fcs.withholding_percentage + '%', true);
-
-                 // Visual Warning for High Withholding
-                 if (parseFloat(fcs.withholding_percentage) > 40) {
-                     const el = document.getElementById('lenderWithholding');
-                     if(el) el.style.borderColor = '#ef4444';
-                 }
-            }
-
-            // 4. Current Positions (Extract from Text Report)
-            // We look for the "Positions:" line in the full report
-            if (fcs.report) {
-                // regex: find "Positions: ... (newline)"
-                const positionsMatch = fcs.report.match(/Positions:\s*(.+?)(?:\n|$)/i);
-                if (positionsMatch) {
-                    const positionsList = positionsMatch[1].trim();
-                    if (positionsList.toLowerCase() !== 'none' && positionsList.toLowerCase() !== 'n/a') {
-                        populateField('lenderCurrentPositions', positionsList, true);
-                    }
-                }
-
-                // 5. Additional Notes (Extract Last MCA info)
-                const mcaMatch = fcs.report.match(/Last MCA Deposit:\s*(.+?)(?:\n|$)/i);
-                if (mcaMatch) {
-                    populateField('lenderAdditionalNotes', `Last MCA Deposit: ${mcaMatch[1].trim()}`, true);
+        if (!fcs || !fcs.report) {
+            console.warn('⚠️ No FCS Report found. Falling back to CRM defaults.');
+            // Fallback: Fill basic info from CRM if FCS fails
+            const conversation = this.parent.getSelectedConversation();
+            if (conversation) {
+                populateField('lenderBusinessName', conversation.business_name);
+                populateField('lenderState', conversation.state);
+                populateField('lenderIndustry', conversation.business_type);
+                if (conversation.annual_revenue) {
+                    populateField('lenderRevenue', Math.round(conversation.annual_revenue / 12));
                 }
             }
+            return;
         }
+
+        const report = fcs.report;
+        console.log("✅ FCS Text Report Found! Parsing...");
+
+        // --- 2. PARSE THE TEXT REPORT ---
+
+        // Business Name: "Business Name: COYOTE CONSTRUCTION..."
+        const nameMatch = report.match(/Business Name:\s*(.+?)(?:•|\n|$)/i);
+        if (nameMatch) populateField('lenderBusinessName', nameMatch[1].trim());
+
+        // Position: "Position: 0 active -> Looking for 1st"
+        // We look for "Looking for X" to get the number "1"
+        const posMatch = report.match(/Looking for\s*(\d+)/i);
+        if (posMatch) {
+            populateField('lenderPosition', posMatch[1]);
+        }
+
+        // Revenue: "Average True Revenue: $39,720"
+        const revMatch = report.match(/Average True Revenue:\s*\$([\d,]+)/i);
+        if (revMatch) {
+            // Remove commas to get raw number (39720)
+            populateField('lenderRevenue', revMatch[1].replace(/,/g, ''));
+        }
+
+        // Negative Days: "Average Negative Days: 3"
+        // (This skips the "Total Negative Days: 10" and grabs the Average instead)
+        const negMatch = report.match(/Average Negative Days:\s*(\d+)/i);
+        if (negMatch) {
+            populateField('lenderNegativeDays', negMatch[1]);
+        }
+
+        // Deposits: "Average Number of Deposits: 16"
+        const depMatch = report.match(/Average Number of Deposits:\s*(\d+)/i);
+        if (depMatch) {
+            populateField('lenderDepositsPerMonth', depMatch[1]);
+        }
+
+        // State: "State: TX"
+        const stateMatch = report.match(/State:\s*([A-Z]{2})/i);
+        if (stateMatch) {
+            populateField('lenderState', stateMatch[1]);
+        }
+
+        // Industry: "Industry: Construction"
+        const indMatch = report.match(/Industry:\s*(.+?)(?:•|\n|$)/i);
+        if (indMatch) {
+            populateField('lenderIndustry', indMatch[1].trim());
+        }
+
+        // We specifically DO NOT populate 'lenderWithholding' here,
+        // keeping it clean as you requested.
 
         console.log('✨ Lender form auto-population complete');
     }
