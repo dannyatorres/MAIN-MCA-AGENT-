@@ -181,33 +181,6 @@ class Utilities {
         }
     }
 
-    // Production-safe logging
-    log(message, data = null, level = 'debug') {
-        // Check if debug mode is enabled
-        const isDebug = this.parent?.debugMode ||
-                       window.location.hostname === 'localhost' ||
-                       localStorage.getItem('debug') === 'true';
-
-        if (!isDebug && level === 'debug') return;
-
-        const prefix = '[MCA]';
-        const timestamp = new Date().toISOString().substr(11, 8);
-
-        switch(level) {
-            case 'error':
-                console.error(`${prefix} ${timestamp}`, message, data || '');
-                break;
-            case 'warn':
-                console.warn(`${prefix} ${timestamp}`, message, data || '');
-                break;
-            case 'info':
-                console.info(`${prefix} ${timestamp}`, message, data || '');
-                break;
-            default:
-                console.log(`${prefix} ${timestamp}`, message, data || '');
-        }
-    }
-
     // Loading states
     showLoading(containerId = 'conversationsList') {
         const container = document.getElementById(containerId);
@@ -318,20 +291,12 @@ class Utilities {
         zip = zip.replace(/\D/g, '');
         if (!zip || zip.length !== 5) return;
 
-        const zipField = document.querySelector(`[name="${fieldPrefix}_zip"]`) ||
-                         document.querySelector(`[name="${fieldPrefix}Zip"]`);
-
         try {
+            const zipField = document.querySelector(`[name="${fieldPrefix}_zip"]`) ||
+                             document.querySelector(`[name="${fieldPrefix}Zip"]`);
             if (zipField) zipField.classList.add('input-highlight');
 
-            // Try primary API with timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-            const response = await fetch(`https://api.zippopotam.us/us/${zip}`, {
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
+            const response = await fetch(`https://api.zippopotam.us/us/${zip}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -356,20 +321,11 @@ class Utilities {
                         setTimeout(() => stateField.classList.remove('input-success'), 2000);
                     }
                 }
-            } else {
-                console.warn('ZIP lookup returned non-OK status:', response.status);
             }
+
+            if (zipField) setTimeout(() => zipField.classList.remove('input-highlight'), 2000);
         } catch (error) {
-            if (error.name === 'AbortError') {
-                console.warn('ZIP lookup timed out');
-            } else {
-                console.error('ZIP lookup failed:', error);
-            }
-            // Silently fail - user can still manually enter city/state
-        } finally {
-            if (zipField) {
-                setTimeout(() => zipField.classList.remove('input-highlight'), 2000);
-            }
+            console.error('ZIP lookup failed:', error);
         }
     }
 }
@@ -378,22 +334,6 @@ class Templates {
     constructor(parent) {
         this.parent = parent;
         this.utils = parent.utils;
-    }
-
-    // Sanitize media URL - only allow http/https/data protocols
-    sanitizeMediaUrl(url) {
-        if (!url) return null;
-        try {
-            const parsed = new URL(url, window.location.origin);
-            // Only allow http, https, and data URIs for images
-            if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'data:') {
-                // Escape any quotes in the URL
-                return parsed.href.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-            }
-            return null;
-        } catch {
-            return null;
-        }
     }
 
     conversationItem(conversation) {
@@ -470,17 +410,14 @@ class Templates {
             }
         }
 
-        // 1. Handle MMS images - Sanitize URL to prevent XSS
+        // 1. Handle MMS images
         let mediaHtml = '';
         if (message.media_url) {
-            const sanitizedUrl = this.sanitizeMediaUrl(message.media_url);
-            if (sanitizedUrl) {
-                mediaHtml = `
-                    <div class="message-media">
-                        <img src="${sanitizedUrl}" alt="Attachment" onclick="window.open(this.src, '_blank')">
-                    </div>
-                `;
-            }
+            mediaHtml = `
+                <div class="message-media">
+                    <img src="${message.media_url}" alt="Attachment" onclick="window.open(this.src, '_blank')">
+                </div>
+            `;
         }
 
         // 2. Handle Text Content - Only show bubble if there's actual text

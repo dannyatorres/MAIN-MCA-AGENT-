@@ -7,7 +7,6 @@ class MessagingModule {
         this.utils = parent.utils;
         this.templates = parent.templates;
         this.messageCache = new Map();
-        this.maxCacheSize = 50; // Maximum conversations to cache
         this.eventListenersAttached = false;
         this.init();
     }
@@ -81,7 +80,6 @@ class MessagingModule {
             // 2. Fetch Fresh
             const data = await this.parent.apiCall(`/api/conversations/${convId}/messages`);
             this.messageCache.set(convId, data || []);
-            this._pruneCache();
 
             // Render only if still active
             if (String(this.parent.getCurrentConversationId()) === convId) {
@@ -130,15 +128,6 @@ class MessagingModule {
         // Prevents losing place when reading history
         if (isNearBottom) {
             container.scrollTop = container.scrollHeight;
-        }
-    }
-
-    _pruneCache() {
-        if (this.messageCache.size > this.maxCacheSize) {
-            // Remove oldest entries (first inserted)
-            const keysToDelete = Array.from(this.messageCache.keys())
-                .slice(0, this.messageCache.size - this.maxCacheSize);
-            keysToDelete.forEach(key => this.messageCache.delete(key));
         }
     }
 
@@ -225,83 +214,35 @@ class MessagingModule {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Validate file type and size
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        const maxSize = 10 * 1024 * 1024; // 10MB
-
-        if (!allowedTypes.includes(file.type)) {
-            this.parent.utils.showNotification('Invalid file type. Please upload an image.', 'error');
-            e.target.value = '';
-            return;
-        }
-
-        if (file.size > maxSize) {
-            this.parent.utils.showNotification('File too large. Maximum size is 10MB.', 'error');
-            e.target.value = '';
-            return;
-        }
-
         const attachBtn = document.getElementById('attachmentBtn');
-        const originalIcon = attachBtn?.innerHTML;
-        if (attachBtn) {
-            attachBtn.innerHTML = '⏳';
-            attachBtn.disabled = true;
-        }
+        const originalIcon = attachBtn.innerHTML;
+        attachBtn.innerHTML = '⏳';
+        attachBtn.disabled = true;
 
         try {
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch(`${this.apiBaseUrl}/api/messages/upload`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Upload failed: ${response.status} ${errorText}`);
-            }
-
+            const response = await fetch('/api/messages/upload', { method: 'POST', body: formData });
             const data = await response.json();
 
             if (data.url) {
                 await this.sendMessage(null, data.url);
-            } else {
-                throw new Error('No URL returned from upload');
             }
         } catch (error) {
             console.error('Upload error:', error);
-            this.parent.utils.showNotification('Failed to upload image: ' + error.message, 'error');
+            alert('Failed to upload image');
         } finally {
-            if (attachBtn) {
-                attachBtn.innerHTML = originalIcon;
-                attachBtn.disabled = false;
-            }
+            attachBtn.innerHTML = originalIcon;
+            attachBtn.disabled = false;
             e.target.value = '';
         }
     }
 
     playNotificationSound() {
-        try {
-            // Use a simple audio file or Web Audio API beep
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.value = 800; // Hz
-            oscillator.type = 'sine';
-            gainNode.gain.value = 0.3;
-
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.15); // Short beep
-
-        } catch (error) {
-            console.debug('Notification sound not supported');
-        }
+        const audio = new Audio('data:audio/wav;base64,UklGRl9vT19SABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmFgU7k9n1unEiBC13yO/eizEIHWq+8+OZURE');
+        audio.volume = 0.5;
+        audio.play().catch(() => {});
     }
 
     showBrowserNotification(data) {
