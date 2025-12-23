@@ -126,51 +126,49 @@ document.addEventListener('DOMContentLoaded', async () => {
                     displayBusiness = 'Business Account';
                 }
 
-                // --- FIX STARTS HERE ---
-                // Check if we are already displaying this user. If so, DO NOT re-render HTML.
-                // This prevents wiping event listeners and flickering.
-                const currentTitle = header.querySelector('.chat-business-title')?.textContent;
-                const currentBusiness = header.querySelector('.chat-row-secondary span')?.textContent;
-
-                if (currentTitle === displayOwner && currentBusiness === displayBusiness) {
-                    // Just verify the phone button action is updated, then exit
-                    const callBtn = document.getElementById('callBtn');
-                    if (callBtn) {
-                        // Update title just in case
-                        callBtn.title = `Call ${phoneNumber || 'No phone'}`;
-                        // We can't easily update the event listener without recreating,
-                        // but this simple check saves 99% of UI redraws.
-                    }
-
-                    // Ensure input is visible
-                    const inputContainer = document.getElementById('messageInputContainer');
-                    if (inputContainer) inputContainer.classList.remove('hidden');
-
-                    return; // <--- EXIT EARLY
-                }
-                // --- FIX ENDS HERE ---
-
                 // Call Protection Guard
                 const existingCallBar = document.getElementById('callBar');
                 const isCallActive = existingCallBar && !existingCallBar.classList.contains('hidden');
+                const currentTitle = header.querySelector('.chat-business-title')?.textContent;
 
                 if (isCallActive && currentTitle === displayOwner) return;
 
-                // Render Header
+                // ✅ FIX: Added the AI Toggle Button to this HTML Template
                 header.innerHTML = `
-                    <div class="chat-header-rich">
-                        <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard">
-                            <i class="fas fa-arrow-left"></i>
-                        </button>
+                    <div class="chat-header-rich" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
 
-                        <div class="chat-details-stack">
-                            <h2 class="chat-business-title">${displayOwner}</h2>
-                            <div class="chat-row-secondary">
-                                <i class="fas fa-building" style="font-size: 10px; margin-right: 4px;"></i> <span>${displayBusiness}</span>
+                        <div style="display: flex; align-items: center; flex: 1; overflow: hidden;">
+                            <button id="backHomeBtn" class="icon-btn-small" title="Back to Dashboard" style="margin-right: 10px;">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+
+                            <div class="chat-details-stack" style="overflow: hidden; white-space: nowrap;">
+                                <h2 class="chat-business-title" style="margin: 0; font-size: 16px;">${displayOwner}</h2>
+                                <div class="chat-row-secondary" style="font-size: 12px; color: #666;">
+                                    <i class="fas fa-building" style="font-size: 10px; margin-right: 4px;"></i>
+                                    <span>${displayBusiness}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="chat-header-actions">
+                        <div class="chat-header-actions" style="display: flex; align-items: center; gap: 8px;">
+
+                            <button id="aiToggleBtn" class="ai-toggle-btn" style="
+                                padding: 5px 10px;
+                                border-radius: 6px;
+                                font-weight: 600;
+                                font-size: 12px;
+                                cursor: pointer;
+                                border: 1px solid #ccc;
+                                display: flex;
+                                align-items: center;
+                                gap: 6px;
+                                background: #f8f9fa;
+                            ">
+                                <i class="fas fa-robot"></i>
+                                <span id="aiBtnText">AI: ...</span>
+                            </button>
+
                             <button id="callBtn" class="header-action-btn phone-btn" title="Call ${phoneNumber || 'No phone'}">
                                 <i class="fas fa-phone"></i>
                             </button>
@@ -194,6 +192,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Re-attach listeners
                 document.getElementById('backHomeBtn').addEventListener('click', window.loadDashboard);
 
+                // ✅ FIX: Re-Initialize the AI Button Logic immediately
+                if (window.commandCenter && window.commandCenter.messaging) {
+                    // 1. Sync the Color/Text
+                    window.commandCenter.messaging.updateAIButtonState(conversationId);
+
+                    // 2. Attach the Click Listener
+                    const aiBtn = document.getElementById('aiToggleBtn');
+                    if (aiBtn) {
+                        aiBtn.onclick = () => {
+                            const isCurrentlyOn = aiBtn.dataset.state === 'on';
+                            window.commandCenter.messaging.toggleAI(!isCurrentlyOn);
+                        };
+                    }
+                }
+
                 const callBtn = document.getElementById('callBtn');
                 if (callBtn) {
                     callBtn.addEventListener('click', async () => {
@@ -212,10 +225,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     else document.getElementById('callBar').classList.add('hidden');
                 });
 
-                // Make draggable
                 makeDraggable(document.getElementById("callBar"), document.getElementById("callModalCard"));
 
-                // IMPORTANT: Ensure Input is visible
                 const inputContainer = document.getElementById('messageInputContainer');
                 if (inputContainer) inputContainer.classList.remove('hidden');
             };
