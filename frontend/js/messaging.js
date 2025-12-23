@@ -129,12 +129,13 @@ class MessagingModule {
 
     async sendMessage(textOverride = null, mediaUrl = null) {
         const input = document.getElementById('messageInput');
-        const content = textOverride !== null ? textOverride : input.value.trim();
+        const content = textOverride !== null ? textOverride : (input ? input.value.trim() : '');
         const convId = this.parent.getCurrentConversationId();
 
         if ((!content && !mediaUrl) || !convId) return;
 
         try {
+            // 1. Send to API
             const res = await this.parent.apiCall(`/api/conversations/${convId}/messages`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -145,13 +146,21 @@ class MessagingModule {
                 })
             });
 
+            // 2. Add bubble to chat immediately
             if (res && res.message) {
                 this.addMessage(res.message);
+
+                // 3. Update the Sidebar List (Preview + Move to Top)
+                if (this.parent.conversationUI) {
+                    this.parent.conversationUI.updateConversationPreview(convId, res.message);
+                }
             }
 
+            // 4. Clear input
             if (input && textOverride === null) input.value = '';
 
         } catch (e) {
+            console.error(e);
             this.parent.utils.showNotification('Failed to send', 'error');
         }
     }
