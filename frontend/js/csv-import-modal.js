@@ -361,25 +361,20 @@ function normalizeDataFromBraintrust2(data) {
 
 function normalizeDataFromOriginal(data) {
     return data.map(row => {
-        // 1. TRACERS PRIORITY CHECK
-        // If we have "Verified Mobile", use it. Otherwise look for standard Phone columns.
         const cleanMobile = getColumnValue(row, ['Verified Mobile', 'Verified Phone']);
         const rawPhone = cleanMobile || getColumnValue(row, ['Phone Number', 'phone', 'Mobile', 'cell phone']) || '';
 
-        // Same for Address (Use "Home Address" if present, else standard "Address")
-        const cleanAddress = getColumnValue(row, ['Home Address', 'Owner Home Address']);
-        const rawAddress = cleanAddress || getColumnValue(row, ['Address', 'address', 'Address1']) || '';
+        // Keep business and home addresses SEPARATE
+        const businessAddress = getColumnValue(row, ['Address', 'address', 'Address1']) || '';
+        const businessCity = getColumnValue(row, ['City', 'city']) || '';
+        const businessState = getColumnValue(row, ['State', 'state']) || '';
+        const businessZip = getColumnValue(row, ['Zip', 'zip', 'Zip Code']) || '';
 
-        const cleanCity = getColumnValue(row, ['Home City', 'Owner Home City']);
-        const rawCity = cleanCity || getColumnValue(row, ['City', 'city']) || '';
+        const homeAddress = getColumnValue(row, ['Home Address', 'Owner Home Address']) || '';
+        const homeCity = getColumnValue(row, ['Home City', 'Owner Home City']) || '';
+        const homeState = getColumnValue(row, ['Home State', 'Owner Home State']) || '';
+        const homeZip = getColumnValue(row, ['Home Zip', 'Owner Home Zip']) || '';
 
-        const cleanState = getColumnValue(row, ['Home State', 'Owner Home State']);
-        const rawState = cleanState || getColumnValue(row, ['State', 'state']) || '';
-
-        const cleanZip = getColumnValue(row, ['Home Zip', 'Owner Home Zip']);
-        const rawZip = cleanZip || getColumnValue(row, ['Zip', 'zip', 'Zip Code']) || '';
-
-        // Standard Name/Company parsing
         const ownerName = getColumnValue(row, ['Owner Name', 'owner name']) || '';
         let firstName = getColumnValue(row, ['First Name', 'first name']);
         let lastName = getColumnValue(row, ['Last Name', 'last name']);
@@ -391,23 +386,23 @@ function normalizeDataFromOriginal(data) {
         }
 
         const phone = formatPhoneNumber(rawPhone);
-
-        // Skip rows with no phone
         if (!phone) return null;
 
         const company = getColumnValue(row, ['Company Name', 'company']) || '';
         const email = getColumnValue(row, ['Email', 'email']) || '';
 
-        // Pass our prioritized values to the creator
         return createStandardRow(firstName, lastName, phone, company, email, {
             ...row,
-            // Override the lookups with our chosen "Clean" values
-            'Address': rawAddress,
-            'City': rawCity,
-            'State': rawState,
-            'Zip': rawZip
+            'Address': businessAddress,
+            'City': businessCity,
+            'State': businessState,
+            'Zip': businessZip,
+            'Home Address': homeAddress,
+            'Home City': homeCity,
+            'Home State': homeState,
+            'Home Zip': homeZip
         });
-    }).filter(Boolean); // Remove nulls
+    }).filter(Boolean);
 }
 
 // Helper to build the internal object structure
@@ -422,6 +417,10 @@ function createStandardRow(first, last, phone, company, email, originalRow) {
         'City': originalRow['City'] || getColumnValue(originalRow, ['City', 'city']) || '',
         'State': originalRow['State'] || getColumnValue(originalRow, ['State', 'state']) || '',
         'Zip': originalRow['Zip'] || getColumnValue(originalRow, ['Zip', 'zip', 'Zip Code']) || '',
+        'Home Address': originalRow['Home Address'] || '',
+        'Home City': originalRow['Home City'] || '',
+        'Home State': originalRow['Home State'] || '',
+        'Home Zip': originalRow['Home Zip'] || '',
         'Monthly Revenue': getColumnValue(originalRow, ['Monthly Revenue', 'Turnover', 'Annual Revenue']) || '',
         'DOB': getColumnValue(originalRow, ['DOB', 'dob', 'Date of Birth']) || '',
         'TaxID': getColumnValue(originalRow, ['TaxID', 'ein', 'Tax ID']) || '',
@@ -437,7 +436,8 @@ function createCRMFile(normalizedData) {
         'Company Name', 'Email', 'Lead Source', 'Address',
         'City', 'State', 'Zip', 'Business Type', 'Annual Revenue',
         'Funding', 'Factor Rate', 'Funding Date', 'Term', 'Notes',
-        'Campaign', 'TaxID', 'SSN', 'Business Start Date', 'DOB'
+        'Campaign', 'TaxID', 'SSN', 'Business Start Date', 'DOB',
+        'Home Address', 'Home City', 'Home State', 'Home Zip'
     ];
 
     const rows = [crmHeaders.join(',')];
@@ -451,17 +451,21 @@ function createCRMFile(normalizedData) {
             row['Company Name'],
             row['Email'],
             'WEB', // Default Source
-            row['Address'],
-            row['City'],
-            row['State'],
-            row['Zip'],
-            '', '', '', '', '', '', // Empty financial fields
-            row['Notes'] || row['Monthly Revenue'], // Put Revenue in notes if no explicit field
+            row['Address'],           // Business address
+            row['City'],              // Business city
+            row['State'],             // Business state
+            row['Zip'],               // Business zip
+            '', '', '', '', '', '',   // Empty financial fields
+            row['Notes'] || row['Monthly Revenue'],
             '',
             row['TaxID'],
             formatSSN(row['SSN']),
             formatDate(row['Business Start Date']),
-            formatDate(row['DOB'])
+            formatDate(row['DOB']),
+            row['Home Address'] || '',
+            row['Home City'] || '',
+            row['Home State'] || '',
+            row['Home Zip'] || ''
         ];
         rows.push(crmRow.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(','));
     });
