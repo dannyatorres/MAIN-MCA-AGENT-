@@ -165,8 +165,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const settingsRes = await db.query('SELECT ai_enabled, state FROM conversations WHERE id = $1', [conversationId]);
 
         // If the switch is explicitly OFF, stop everything.
-        // (We allow it to run if 'systemInstruction' is present, assuming that means YOU clicked a button to force a run)
-        if (settingsRes.rows.length > 0 && settingsRes.rows[0].ai_enabled === false && !systemInstruction) {
+        if (settingsRes.rows.length > 0 && settingsRes.rows[0].ai_enabled === false) {
             console.log(`⛔ AI MANUALLY DISABLED for Conversation ${conversationId}`);
             return { shouldReply: false };
         }
