@@ -58,6 +58,10 @@ class AIAssistant {
             </div>
         `;
 
+        // CRITICAL FIX: Since we just wiped the HTML, we must reset the init flag
+        // This ensures initializeAIChat() will actually run again for the new elements.
+        this.isInitialized = false;
+
         this.initializeAIChat();
     }
 
@@ -220,7 +224,8 @@ class AIAssistant {
     async loadChatHistory() {
         const conversationId = this.parent.getCurrentConversationId();
         const messagesContainer = document.getElementById('aiChatMessages');
-        const spinner = document.getElementById('aiInitialSpinner');
+
+        // Don't capture 'spinner' here - it might get deleted while we wait
 
         if (!messagesContainer) return;
 
@@ -228,10 +233,10 @@ class AIAssistant {
         if (this.aiChatCache.has(conversationId)) {
             console.log(`⚡ [Cache] Rendering AI history for ${conversationId}`);
 
-            // Remove spinner immediately if cache hit
-            if (spinner) spinner.remove();
+            // Remove CURRENT spinner if it exists
+            const currentSpinner = document.getElementById('aiInitialSpinner');
+            if (currentSpinner) currentSpinner.remove();
 
-            // Render Cache
             const cachedMsgs = this.aiChatCache.get(conversationId);
             messagesContainer.innerHTML = '';
             cachedMsgs.forEach(msg => {
@@ -253,19 +258,21 @@ class AIAssistant {
                 return;
             }
 
-            // Remove spinner before processing response
-            if (spinner) spinner.remove();
+            // CRITICAL FIX: Look for the spinner NOW, after the await finished
+            const activeSpinner = document.getElementById('aiInitialSpinner');
+            if (activeSpinner) activeSpinner.remove();
 
             if (data.messages && data.messages.length > 0) {
                 this.aiChatCache.set(conversationId, data.messages);
 
-                // Only re-render if we didn't just use cache
-                if (!this.aiChatCache.has(conversationId) || this.aiChatCache.get(conversationId).length !== data.messages.length) {
-                    messagesContainer.innerHTML = '';
+                // Verify container still exists before writing to it
+                const currentContainer = document.getElementById('aiChatMessages');
+                if (currentContainer) {
+                    currentContainer.innerHTML = '';
                     data.messages.forEach(msg => {
                         this.addMessageToChat(msg.role, msg.content, false, false);
                     });
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    currentContainer.scrollTop = currentContainer.scrollHeight;
                 }
             } else {
                 // Empty History -> Show Welcome
@@ -274,8 +281,10 @@ class AIAssistant {
 
         } catch (error) {
             console.log('Error loading history:', error);
+
             // Remove spinner on error too
-            if (spinner) spinner.remove();
+            const activeSpinner = document.getElementById('aiInitialSpinner');
+            if (activeSpinner) activeSpinner.remove();
 
             // Fallback to intro if history fails
             this.triggerSmartIntro();
