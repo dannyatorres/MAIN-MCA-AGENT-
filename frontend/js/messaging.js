@@ -28,33 +28,24 @@ class MessagingModule {
 
         const isCurrentChat = (messageConversationId === currentConversationId && !document.hidden);
 
-        // 1. BADGE LOGIC (Do this FIRST so the render picks it up)
+        // 1. BADGE LOGIC
         if (!isCurrentChat) {
-            // Only increment badge if we aren't looking at it
             if (this.parent.conversationUI) {
                 this.parent.conversationUI.incrementBadge(messageConversationId);
             }
         }
 
-        // 2. DATA LAYER UPDATE (Update preview text/time)
+        // 2. MOVE TO TOP & UPDATE PREVIEW
+        // Use the shared helper that handles "Move to Top" via list.prepend(item)
         if (this.parent.conversationUI) {
-            const conv = this.parent.conversationUI.conversations.get(Number(messageConversationId));
-            if (conv) {
-                conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
-                conv.last_activity = new Date().toISOString();
-                this.parent.conversationUI.conversations.set(Number(messageConversationId), conv);
-
-                // 3. RENDER LIST (Now includes both new Text AND new Badge)
-                this.parent.conversationUI.renderConversationsList();
-            }
+            this.parent.conversationUI.updateConversationPreview(messageConversationId, message);
         }
 
-        // 4. CHAT UI / NOTIFICATIONS
+        // 3. CHAT UI (If we are looking at this specific chat)
         if (isCurrentChat) {
-            // We are looking at it right now. Just render the bubble.
             this.addMessage(message);
         } else {
-            // Notify user (Only if NOT sent by 'user')
+            // Notification (Only if NOT sent by 'user')
             if (message.sender_type !== 'user') {
                 this.playNotificationSound();
                 this.showBrowserNotification(data);
