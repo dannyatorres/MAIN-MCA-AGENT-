@@ -260,6 +260,13 @@ router.post('/webhook/receive', async (req, res) => {
 
         const newMessage = msgResult.rows[0];
 
+        // 🔔 Auto-mark as INTERESTED when lead replies
+        await db.query(`
+            UPDATE conversations
+            SET state = 'INTERESTED', current_step = 'INTERESTED'
+            WHERE id = $1 AND state IN ('NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3')
+        `, [conversation.id]);
+
         // 3. Update Conversation & Notify Frontend
         await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversation.id]);
 
