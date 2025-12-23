@@ -6,6 +6,9 @@ const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { v4: uuidv4 } = require('uuid');
 
+// Helper to convert empty strings to NULL for numeric fields
+const toNum = (val) => (val === '' || val === undefined || val === null) ? null : val;
+
 // Get all lenders (main endpoint for lender management UI)
 router.get('/', async (req, res) => {
     try {
@@ -32,21 +35,13 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const {
-            name,
-            email,
-            cc_email, // <--- ✅ ADDED
-            phone,
-            company,
-            min_amount,
-            max_amount,
-            industries,
-            states,
-            credit_score_min,
-            time_in_business_min,
+            name, email, cc_email, phone, company,
+            min_amount, max_amount,
+            industries, states,
+            credit_score_min, time_in_business_min,
             notes
         } = req.body;
 
-        // ✅ LOGGING: See exactly what is being sent to the backend
         console.log('📝 CREATING LENDER:', { name, email, cc_email });
 
         if (!name || !email) {
@@ -56,7 +51,7 @@ router.post('/', async (req, res) => {
         const db = getDatabase();
         const lenderId = uuidv4();
 
-        // ✅ ADDED cc_email to SQL
+        // SANITIZED: Use toNum() helper on all numeric fields
         const result = await db.query(`
             INSERT INTO lenders (
                 id, name, email, cc_email, phone, company, min_amount, max_amount,
@@ -69,27 +64,24 @@ router.post('/', async (req, res) => {
             lenderId,
             name,
             email,
-            cc_email || null, // <--- $4
+            cc_email || null,
             phone,
             company,
-            min_amount,
-            max_amount,
+            toNum(min_amount),
+            toNum(max_amount),
             JSON.stringify(industries || []),
             JSON.stringify(states || []),
-            credit_score_min,
-            time_in_business_min,
+            toNum(credit_score_min),
+            toNum(time_in_business_min),
             notes
         ]);
 
         console.log(`✅ Lender created: ${name}`);
-
         res.status(201).json(result.rows[0]);
+
     } catch (error) {
         console.error('Error creating lender:', error);
-        res.status(500).json({
-            error: 'Failed to create lender',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Failed to create lender', details: error.message });
     }
 });
 
@@ -98,21 +90,13 @@ router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const {
-            name,
-            email,
-            cc_email, // <--- ✅ ADDED
-            phone,
-            company,
-            min_amount,
-            max_amount,
-            industries,
-            states,
-            credit_score_min,
-            time_in_business_min,
+            name, email, cc_email, phone, company,
+            min_amount, max_amount,
+            industries, states,
+            credit_score_min, time_in_business_min,
             notes
         } = req.body;
 
-        // ✅ LOGGING
         console.log(`📝 UPDATING LENDER [${id}]:`, { name, cc_email });
 
         if (!name || !email) {
@@ -121,7 +105,7 @@ router.put('/:id', async (req, res) => {
 
         const db = getDatabase();
 
-        // ✅ ADDED cc_email to SQL
+        // SANITIZED: Use toNum() helper here too
         const result = await db.query(`
             UPDATE lenders SET
                 name = $2,
@@ -143,15 +127,15 @@ router.put('/:id', async (req, res) => {
             id,
             name,
             email,
-            cc_email || null, // <--- $4
+            cc_email || null,
             phone,
             company,
-            min_amount,
-            max_amount,
+            toNum(min_amount),
+            toNum(max_amount),
             JSON.stringify(industries || []),
             JSON.stringify(states || []),
-            credit_score_min,
-            time_in_business_min,
+            toNum(credit_score_min),
+            toNum(time_in_business_min),
             notes
         ]);
 
@@ -159,15 +143,12 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Lender not found' });
         }
 
-        console.log(`✅ Lender updated: ${name} (CC: ${cc_email || 'None'})`);
-
+        console.log(`✅ Lender updated: ${name}`);
         res.json(result.rows[0]);
+
     } catch (error) {
         console.error('Error updating lender:', error);
-        res.status(500).json({
-            error: 'Failed to update lender',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Failed to update lender', details: error.message });
     }
 });
 
