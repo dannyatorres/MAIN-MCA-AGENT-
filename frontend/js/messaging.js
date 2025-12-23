@@ -666,28 +666,34 @@ class MessagingModule {
 
         const btn = document.getElementById('aiToggleBtn');
 
-        // Optimistic UI Update
-        if (btn) {
-            btn.dataset.state = 'loading';
-            btn.style.opacity = '0.7';
+        // 1. CAPTURE CURRENT STATE (In case we need to undo)
+        const oldState = btn.dataset.state;
+
+        // 2. OPTIMISTIC UPDATE (Instant Feedback)
+        // We set the visual state immediately, skipping the "Loading..." phase
+        if (newState) {
+            btn.dataset.state = 'on';
+        } else {
+            btn.dataset.state = 'off';
         }
 
         try {
+            // 3. SEND TO SERVER (Background)
+            // We await this just to catch errors, but the UI is already updated
             await this.parent.apiCall(`/api/conversations/${conversationId}/toggle-ai`, {
                 method: 'POST',
                 body: JSON.stringify({ enabled: newState })
             });
 
-            // Re-sync to confirm
-            await this.updateAIButtonState(conversationId);
+            // Success! We don't need to do anything else.
 
         } catch (error) {
             console.error('Toggle failed', error);
             this.parent.utils.showNotification('Failed to toggle AI', 'error');
-            // Revert state on error
-            await this.updateAIButtonState(conversationId);
-        } finally {
-            if (btn) btn.style.opacity = '1';
+
+            // 4. REVERT ON ERROR
+            // Only if the server crashes do we flip the switch back
+            btn.dataset.state = oldState;
         }
     }
 }
