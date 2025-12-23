@@ -1,14 +1,24 @@
 // frontend/js/background-verification.js
 
+let currentJobId = null;
+let pollInterval = null;
+
 function openCleanerModal() {
     document.getElementById('cleanerModal').classList.add('active');
     document.getElementById('cleanerFileInput').value = '';
     document.getElementById('cleanerProgress').classList.add('hidden');
+    document.getElementById('cleanerProgressBar').style.width = '0%';
     document.getElementById('cleanerProgressBar').classList.remove('error');
+    document.getElementById('cleanerStatus').textContent = '';
+    currentJobId = null;
 }
 
 function closeCleanerModal() {
     document.getElementById('cleanerModal').classList.remove('active');
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
 }
 
 async function runCleaner() {
@@ -26,8 +36,8 @@ async function runCleaner() {
     const status = document.getElementById('cleanerStatus');
 
     progressContainer.classList.remove('hidden');
-    progressBar.style.width = '50%';
-    status.textContent = 'Verifying records...';
+    progressBar.style.width = '5%';
+    status.textContent = 'Uploading file...';
 
     try {
         const response = await fetch('/api/cleaner/process-file', {
@@ -35,21 +45,49 @@ async function runCleaner() {
             body: formData
         });
 
-        if (!response.ok) throw new Error('Processing failed');
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to start job');
 
-        progressBar.style.width = '100%';
-        status.textContent = 'Complete! Downloading...';
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'VERIFIED_' + fileInput.files[0].name;
-        a.click();
-
-        setTimeout(() => closeCleanerModal(), 1500);
+        currentJobId = data.jobId;
+        status.textContent = 'Processing started...';
+        pollInterval = setInterval(() => pollJobStatus(currentJobId), 2000);
 
     } catch (error) {
+        status.textContent = 'Error: ' + error.message;
+        progressBar.classList.add('error');
+    }
+}
+
+async function pollJobStatus(jobId) {
+    const progressBar = document.getElementById('cleanerProgressBar');
+    const status = document.getElementById('cleanerStatus');
+
+    try {
+        const response = await fetch(`/api/cleaner/status/${jobId}`);
+        const data = await response.json();
+
+        if (!data.success) throw new Error(data.error || 'Job not found');
+
+        progressBar.style.width = `${data.progress}%`;
+        status.textContent = `Verifying records... ${data.completed}/${data.total} (${data.progress}%)`;
+
+        if (data.status === 'complete') {
+            clearInterval(pollInterval);
+            pollInterval = null;
+            status.textContent = 'Complete! Downloading...';
+            window.location.href = `/api/cleaner/download/${jobId}`;
+            setTimeout(() => closeCleanerModal(), 2000);
+        }
+
+        if (data.status === 'error') {
+            clearInterval(pollInterval);
+            pollInterval = null;
+            throw new Error(data.error);
+        }
+
+    } catch (error) {
+        clearInterval(pollInterval);
+        pollInterval = null;
         status.textContent = 'Error: ' + error.message;
         progressBar.classList.add('error');
     }
