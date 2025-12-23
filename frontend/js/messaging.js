@@ -129,6 +129,16 @@ class MessagingModule {
             fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
         }
 
+        // ✅ AI Toggle Button Listener
+        const aiToggleBtn = document.getElementById('aiToggleBtn');
+        if (aiToggleBtn) {
+            aiToggleBtn.addEventListener('click', () => {
+                // Read current state from the DOM data attribute to decide toggle direction
+                const isCurrentlyOn = aiToggleBtn.dataset.state === 'on';
+                this.toggleAI(!isCurrentlyOn); // Flip the switch
+            });
+        }
+
         console.log('✅ Event listeners set up');
 
         // ✅ FIX: Mark as attached so we don't do it again
@@ -626,52 +636,52 @@ class MessagingModule {
         }
     }
 
-    // AI Toggle Button - Update button state based on conversation setting
+    // 1. VISUAL PAINTER: Just colors the button Green or Red
     async updateAIButtonState(conversationId) {
-        const header = document.querySelector('.conversation-header');
-        let btn = document.getElementById('aiToggleBtn');
+        const btn = document.getElementById('aiToggleBtn');
+        const btnText = document.getElementById('aiBtnText');
+        if (!btn) return;
 
-        // Create button if it doesn't exist
-        if (!btn && header) {
-            btn = document.createElement('button');
-            btn.id = 'aiToggleBtn';
-            btn.style.marginLeft = '10px';
-            btn.style.padding = '5px 10px';
-            btn.style.borderRadius = '5px';
-            btn.style.cursor = 'pointer';
-            btn.style.fontWeight = 'bold';
-            btn.style.fontSize = '12px';
-
-            // Add click listener
-            btn.onclick = async () => {
-                const newState = btn.dataset.state === 'off'; // Toggle logic
-                await this.toggleAI(conversationId, newState);
-            };
-
-            header.appendChild(btn);
-        }
-
-        // Fetch current state
         try {
-            const res = await this.parent.apiCall(`/api/conversations/${conversationId}`);
-            const isEnabled = res.conversation.ai_enabled !== false; // Default to true if null
+            // Fetch the single field we need
+            const response = await this.parent.apiCall(`/api/conversations/${conversationId}`);
 
-            // Update Visuals
-            if (btn) {
-                btn.dataset.state = isEnabled ? 'on' : 'off';
-                btn.innerText = isEnabled ? '🤖 AI: ON' : '💤 AI: OFF';
-                btn.style.backgroundColor = isEnabled ? '#d4edda' : '#f8d7da';
-                btn.style.color = isEnabled ? '#155724' : '#721c24';
-                btn.style.border = isEnabled ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
+            // Default to true if undefined
+            const isEnabled = response.conversation.ai_enabled !== false;
+
+            // Apply Styles
+            if (isEnabled) {
+                // 🟢 GREEN STATE (ON)
+                btn.dataset.state = 'on';
+                if (btnText) btnText.textContent = 'AI: ON';
+                btn.style.backgroundColor = '#d4edda'; // Light Green
+                btn.style.color = '#155724';           // Dark Green
+                btn.style.borderColor = '#c3e6cb';
+            } else {
+                // 🔴 RED STATE (OFF)
+                btn.dataset.state = 'off';
+                if (btnText) btnText.textContent = 'AI: OFF';
+                btn.style.backgroundColor = '#f8d7da'; // Light Red
+                btn.style.color = '#721c24';           // Dark Red
+                btn.style.borderColor = '#f5c6cb';
             }
-        } catch (e) {
-            console.error('Failed to fetch AI state', e);
+        } catch (error) {
+            console.error('Failed to sync AI button:', error);
+            if (btnText) btnText.textContent = 'AI Error';
         }
     }
 
-    async toggleAI(conversationId, newState) {
+    // 2. ACTION TAKER: Calls the API
+    async toggleAI(newState) {
+        const conversationId = this.parent.getCurrentConversationId();
+        if (!conversationId) return;
+
         const btn = document.getElementById('aiToggleBtn');
-        if (btn) btn.innerText = '...'; // Loading state
+        const btnText = document.getElementById('aiBtnText');
+
+        // Optimistic UI Update (Change it instantly before API responds)
+        if (btnText) btnText.textContent = 'Updating...';
+        if (btn) btn.style.opacity = '0.7';
 
         try {
             await this.parent.apiCall(`/api/conversations/${conversationId}/toggle-ai`, {
@@ -679,12 +689,16 @@ class MessagingModule {
                 body: JSON.stringify({ enabled: newState })
             });
 
-            // Update UI immediately
-            this.updateAIButtonState(conversationId);
-            this.parent.utils.showNotification(`AI ${newState ? 'enabled' : 'disabled'}`, 'success');
-        } catch (e) {
-            console.error('Failed to toggle AI', e);
+            // Re-sync to confirm
+            await this.updateAIButtonState(conversationId);
+
+        } catch (error) {
+            console.error('Toggle failed', error);
             this.parent.utils.showNotification('Failed to toggle AI', 'error');
+            // Revert state on error
+            await this.updateAIButtonState(conversationId);
+        } finally {
+            if (btn) btn.style.opacity = '1';
         }
     }
 }
