@@ -21,10 +21,8 @@ class MessagingModule {
     // ============================================================
 
     handleIncomingMessage(data) {
-        // Handle nested objects
         const message = data.message || data;
 
-        // FIX: Safe ID Extraction - prevent "undefined" being saved as ID
         const rawId = data.conversation_id || message.conversation_id;
         if (!rawId) {
             console.warn('⚠️ handleIncomingMessage: No conversation ID found, ignoring');
@@ -36,15 +34,20 @@ class MessagingModule {
 
         const isCurrentChat = (messageConversationId === currentConversationId && !document.hidden);
 
-        // 1. BADGE LOGIC
+        // 1. BADGE LOGIC - Show badge for ANY message you haven't seen
         if (!isCurrentChat) {
-            if (this.parent.conversationUI) {
-                this.parent.conversationUI.incrementBadge(messageConversationId);
+            // Badge for inbound (lead replied) OR outbound AI (so you know AI acted)
+            const isAiMessage = message.sent_by === 'ai' || message.sender_type === 'ai';
+            const isLeadMessage = message.direction === 'inbound';
+
+            if (isLeadMessage || isAiMessage) {
+                if (this.parent.conversationUI) {
+                    this.parent.conversationUI.incrementBadge(messageConversationId);
+                }
             }
         }
 
         // 2. MOVE TO TOP & UPDATE PREVIEW
-        // Use the shared helper that handles "Move to Top" via list.prepend(item)
         if (this.parent.conversationUI) {
             this.parent.conversationUI.updateConversationPreview(messageConversationId, message);
         }
@@ -53,8 +56,8 @@ class MessagingModule {
         if (isCurrentChat) {
             this.addMessage(message);
         } else {
-            // Notification (Only if NOT sent by 'user')
-            if (message.sender_type !== 'user') {
+            // Notification sound for inbound only (not AI - that would be noisy)
+            if (message.direction === 'inbound') {
                 this.playNotificationSound();
                 this.showBrowserNotification(data);
             }

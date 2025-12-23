@@ -49,6 +49,20 @@ router.post('/trigger', async (req, res) => {
             await db.query("UPDATE messages SET status = 'sent' WHERE id = $1", [messageId]);
             await db.query("UPDATE conversations SET last_activity = NOW() WHERE id = $1", [conversation_id]);
 
+            // 🔔 Notify frontend of AI message
+            if (global.io) {
+                global.io.emit('new_message', {
+                    conversation_id: conversation_id,
+                    message: {
+                        id: messageId,
+                        content: result.content,
+                        direction: 'outbound',
+                        sent_by: 'ai',
+                        timestamp: new Date().toISOString()
+                    }
+                });
+            }
+
             console.log(`✅ AI Sent Message to ${phone}`);
         } catch (err) {
             console.error("❌ Failed to send AI SMS:", err.message);
