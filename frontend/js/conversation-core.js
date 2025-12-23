@@ -1,4 +1,4 @@
-// conversation-core.js - Complete core conversation management (Optimized)
+// conversation-core.js - Centralized State Management (The "Real App" Fix)
 
 class ConversationCore {
     constructor(parent, wsManager) {
@@ -8,15 +8,18 @@ class ConversationCore {
         this.utils = parent.utils;
         this.templates = parent.templates;
 
-        // Core state
+        // Core Data Stores
+        this.conversations = new Map();
         this.currentConversationId = null;
         this.selectedConversation = null;
-        this.conversations = new Map();
         this.selectedForDeletion = new Set();
-        this.unreadMessages = new Map();
+
+        // STATE SOURCE OF TRUTH: Load from storage immediately
+        this.unreadCounts = this._loadBadgesFromStorage();
+        console.log('📦 Initialized with persistent badges:', Object.fromEntries(this.unreadCounts));
+
+        // Paging & UI State
         this.searchTimeout = null;
-        
-        // Paging State
         this.pageSize = 50;
         this.paginationOffset = 0;
         this.hasMoreConversations = true;
@@ -25,114 +28,104 @@ class ConversationCore {
         this.init();
     }
 
+    // ============================================================
+    // 1. STATE MANAGEMENT (The "Real App" Logic)
+    // ============================================================
+
+    _loadBadgesFromStorage() {
+        try {
+            const stored = localStorage.getItem('mca_unread_badges');
+            if (stored) {
+                const obj = JSON.parse(stored);
+                // Convert to Map, ensuring keys are Strings for consistency
+                return new Map(Object.entries(obj));
+            }
+        } catch (e) { console.error('Error loading badges', e); }
+        return new Map();
+    }
+
+    _saveBadgesToStorage() {
+        try {
+            const obj = Object.fromEntries(this.unreadCounts);
+            localStorage.setItem('mca_unread_badges', JSON.stringify(obj));
+        } catch (e) { console.error('Error saving badges', e); }
+    }
+
+    // Call this when a socket event comes in
+    incrementBadge(conversationId) {
+        const id = String(conversationId);
+
+        // 1. If currently viewing this chat, do NOTHING (it's read instantly)
+        if (String(this.currentConversationId) === id && !document.hidden) {
+            return;
+        }
+
+        // 2. Otherwise, increment local count
+        const current = this.unreadCounts.get(id) || 0;
+        const newCount = current + 1;
+        this.unreadCounts.set(id, newCount);
+        this._saveBadgesToStorage();
+
+        // 3. Update UI immediately
+        this.updateBadgeUI(id, newCount);
+
+        // 4. Also update the data model if it exists
+        if (this.conversations.has(Number(id))) {
+            const conv = this.conversations.get(Number(id));
+            conv.unread_count = newCount;
+            this.conversations.set(Number(id), conv);
+        }
+    }
+
+    // Call this when user clicks a conversation
+    clearBadge(conversationId) {
+        const id = String(conversationId);
+        if (this.unreadCounts.has(id)) {
+            this.unreadCounts.delete(id);
+            this._saveBadgesToStorage();
+
+            // Remove from UI immediately
+            const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
+            if (item) {
+                item.classList.remove('unread');
+                const badge = item.querySelector('.conversation-badge');
+                if (badge) badge.remove();
+            }
+        }
+    }
+
+    updateBadgeUI(conversationId, count) {
+        const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+        if (!item) return;
+
+        item.classList.add('unread');
+        let badge = item.querySelector('.conversation-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'conversation-badge';
+            item.appendChild(badge);
+        }
+        badge.textContent = count;
+    }
+
+    // ============================================================
+    // 2. DATA LOADING
+    // ============================================================
+
     init() {
         this.setupEventListeners();
         this.loadInitialData();
     }
 
-    setupEventListeners() {
-        // --- 1. ROBUST Event Delegation ---
-        // We attach to a permanent parent (document or main-content) to ensure
-        // we catch events even if #conversationsList is re-created or loaded late.
-
-        const mainContainer = document.getElementById('main-content') || document.body;
-
-        mainContainer.addEventListener('click', (e) => {
-            // Ensure we are only clicking inside the list
-            const listContainer = e.target.closest('#conversationsList');
-            if (!listContainer) return;
-
-            // A. Handle Delete Checkbox (Expanded for Custom CSS)
-            // Checks for the class on the target, OR if the target is inside a wrapper
-            const checkboxWrapper = e.target.closest('.conversation-checkbox');
-            const realInput = e.target.closest('.delete-checkbox');
-
-            if (realInput || (checkboxWrapper && !e.target.closest('.conversation-item'))) {
-                e.stopPropagation();
-
-                // If they clicked a wrapper/label, find the ID associated with it
-                const id = realInput ? realInput.dataset.conversationId :
-                           checkboxWrapper.querySelector('.delete-checkbox')?.dataset.conversationId;
-
-                if (id) this.toggleDeleteSelection(id);
-                return;
-            }
-
-            // B. Handle Conversation Selection
-            const item = e.target.closest('.conversation-item');
-
-            // Critical: Ensure we didn't click a button, input, or label inside the item
-            if (item &&
-                !e.target.closest('button') &&
-                !e.target.closest('input') &&
-                !e.target.closest('.delete-checkbox')) {
-
-                this.selectConversation(item.dataset.conversationId);
-            }
-
-            // C. Handle "Load More" (Delegated)
-            if (e.target.id === 'loadMoreBtn') {
-                this.loadConversations(false);
-            }
-        });
-
-        // --- 2. Filters & Search (unchanged) ---
-        const stateFilter = document.getElementById('stateFilter');
-        if (stateFilter) stateFilter.addEventListener('change', () => this.filterConversations());
-
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(this.searchTimeout);
-                this.searchTimeout = setTimeout(() => {
-                    if (e.target.value.trim() === '') this.renderConversationsList();
-                    else this.filterConversations();
-                }, 300);
-            });
-            // Handle the little 'x' clear button in search inputs
-            searchInput.addEventListener('search', (e) => {
-                if (e.target.value === '') this.renderConversationsList();
-            });
-        }
-
-        // --- 3. Global Buttons (Check existence before attaching) ---
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) refreshBtn.addEventListener('click', () => this.refreshData());
-
-        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
-        if (deleteSelectedBtn) deleteSelectedBtn.addEventListener('click', () => this.confirmDeleteSelected());
-    }
-
-    // --- DATA LOADING ---
-
     async loadInitialData() {
         try {
             console.log('Loading initial data...');
             this.utils.showLoading();
-            
-            // Just fetch the list.
-            // We trust app-bootstrap.js has already shown the dashboard.
             await this.loadConversations(true);
         } catch (error) {
             this.utils.handleError(error, 'Error loading initial data');
         } finally {
             this.utils.hideLoading();
-        }
-    }
-
-    // Helper to load badges from localStorage
-    _loadBadgesFromStorage() {
-        try {
-            const stored = localStorage.getItem('mca_unread_badges');
-            if (stored) {
-                const badges = JSON.parse(stored);
-                Object.entries(badges).forEach(([id, count]) => {
-                    if (count > 0) this.unreadMessages.set(id, count);
-                });
-                console.log('📦 Loaded badges from localStorage:', this.unreadMessages.size);
-            }
-        } catch (e) {
-            console.warn('Failed to load badges from storage:', e);
         }
     }
 
@@ -143,12 +136,9 @@ class ConversationCore {
         try {
             if (reset) {
                 this.conversations.clear();
-                this.unreadMessages.clear();
                 this.paginationOffset = 0;
                 this.hasMoreConversations = true;
-
-                // Load persisted badges from localStorage FIRST
-                this._loadBadgesFromStorage();
+                // CRITICAL: We DO NOT clear this.unreadCounts here.
             }
 
             if (!this.hasMoreConversations) return;
@@ -160,19 +150,28 @@ class ConversationCore {
             this.paginationOffset += conversations.length;
 
             conversations.forEach(conv => {
-                this.conversations.set(conv.id, conv);
-                // Merge: API wins if it has data, but keep localStorage badges if API says 0
-                const storedBadge = this.unreadMessages.get(conv.id) || 0;
-                const apiBadge = conv.unread_count || 0;
-                if (apiBadge > 0) {
-                    this.unreadMessages.set(conv.id, apiBadge);
-                } else if (storedBadge > 0) {
-                    // Keep localStorage badge - API might be stale
-                    this.unreadMessages.set(conv.id, storedBadge);
+                const idStr = String(conv.id);
+
+                // MERGE LOGIC: Local Storage vs API
+                const apiCount = conv.unread_count || 0;
+                const localCount = this.unreadCounts.get(idStr) || 0;
+
+                // If API says unread, trust API and update local
+                if (apiCount > 0) {
+                    this.unreadCounts.set(idStr, apiCount);
+                    conv.unread_count = apiCount;
                 }
+                // If API says 0 but Local says > 0, TRUST LOCAL (The Fix)
+                else if (localCount > 0) {
+                    conv.unread_count = localCount;
+                }
+
+                this.conversations.set(conv.id, conv);
             });
 
+            this._saveBadgesToStorage(); // Sync back any API findings
             this.renderConversationsList();
+
         } catch (error) {
             console.error('Error in loadConversations:', error);
         } finally {
@@ -180,75 +179,62 @@ class ConversationCore {
         }
     }
 
+    // ============================================================
+    // 3. SELECTION & UI
+    // ============================================================
+
     async selectConversation(conversationId) {
         if (this.currentConversationId === conversationId) return;
 
-        // 1. Tell the Traffic Cop we are moving
+        // 1. Clear badge immediately (Optimistic UI)
+        this.clearBadge(conversationId);
+
         this.currentConversationId = conversationId;
         if (this.parent) this.parent.currentConversationId = conversationId;
 
-        // 2. CLEAR THE STAGE
-        // Since the container is permanent, we must empty it before loading new chats.
+        // 2. Prepare UI
         const msgContainer = document.getElementById('messagesContainer');
-        if (msgContainer) msgContainer.innerHTML = '';
-
-        // 3. Show the loading spinner inside that empty box
         if (msgContainer) {
-            msgContainer.innerHTML = `
-                <div class="loading-state-chat">
-                    <div class="loading-spinner"></div>
-                </div>
-            `;
+            msgContainer.innerHTML = `<div class="loading-state-chat"><div class="loading-spinner"></div></div>`;
         }
 
-        // Reset UI Elements
+        // Reset Tabs/Buttons
         document.querySelectorAll('.tab-btn[data-tab="ai-assistant"]').forEach(btn => btn.click());
         document.getElementById('backHomeBtn')?.classList.remove('hidden');
         document.getElementById('conversationActions')?.classList.remove('hidden');
+        document.getElementById('messageInputContainer')?.classList.remove('hidden');
         this.updateConversationSelection();
 
-        const inputContainer = document.getElementById('messageInputContainer');
-
-        // --- FIX 1: STOP HIDING THE INPUT ---
-        // We removed the line that adds 'hidden' to inputContainer.
-        // We just make sure it's visible.
-        if (inputContainer) inputContainer.classList.remove('hidden');
-        // ------------------------------------
-
-        // Check Cache for Header Info
-        const cachedConv = this.conversations.get(conversationId);
-        if (cachedConv) {
-            this.selectedConversation = cachedConv;
-            this.showConversationDetails();
-        }
-
+        // 3. Fetch Data
         try {
-            // Fetch Details & Messages
-            const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
+            // Check cache for header info first
+            const cachedConv = this.conversations.get(Number(conversationId));
+            if (cachedConv) {
+                this.selectedConversation = cachedConv;
+                this.showConversationDetails();
+            }
 
-            // Parallel Loads
+            // Parallel fetch
+            const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
             const msgPromise = this.parent.messaging ?
                 this.parent.messaging.loadConversationMessages(conversationId) : Promise.resolve();
-
             const toolsPromise = Promise.allSettled([
                 this.parent.intelligence ? this.parent.intelligence.loadConversationIntelligence(conversationId, cachedConv) : Promise.resolve(),
                 this.parent.documents ? this.parent.documents.loadDocuments() : Promise.resolve()
             ]);
 
-            // Update Header with fresh data
             const data = await dataPromise;
             if (this.currentConversationId !== conversationId) return;
 
             this.selectedConversation = data.conversation || data;
-            this.conversations.set(conversationId, this.selectedConversation);
+            this.conversations.set(Number(conversationId), this.selectedConversation);
             this.showConversationDetails();
 
             await msgPromise;
-            // Tools load silently in background
 
         } catch (error) {
             console.error('Error selecting conversation:', error);
-            // Even if error, ensure input is visible so user isn't stuck
+            const inputContainer = document.getElementById('messageInputContainer');
             if (inputContainer) inputContainer.classList.remove('hidden');
         }
     }
@@ -270,48 +256,47 @@ class ConversationCore {
         // Delegate to Global Header Renderer
         if (window.updateChatHeader) {
             window.updateChatHeader(
-                businessDisplay, 
-                ownerDisplay, 
-                c.lead_phone || c.phone, 
+                businessDisplay,
+                ownerDisplay,
+                c.lead_phone || c.phone,
                 c.id
             );
         }
     }
 
-    // --- RENDERING ---
+    // ============================================================
+    // 4. RENDERING
+    // ============================================================
 
     renderConversationsList() {
         const container = document.getElementById('conversationsList');
         if (!container) return;
 
         const conversations = Array.from(this.conversations.values());
-        
-        // Filter locally if needed (avoids API call)
+
+        // --- Filters ---
         const searchTerm = document.getElementById('searchInput')?.value.trim().toLowerCase();
         const stateFilter = document.getElementById('stateFilter')?.value;
 
         let visible = conversations;
-
-        if (stateFilter) {
-            visible = visible.filter(c => c.state === stateFilter);
-        }
+        if (stateFilter) visible = visible.filter(c => c.state === stateFilter);
         if (searchTerm && searchTerm.length >= 2) {
-            visible = visible.filter(c => 
+            visible = visible.filter(c =>
                 (c.business_name || '').toLowerCase().includes(searchTerm) ||
                 (c.lead_phone || '').includes(searchTerm) ||
                 (c.first_name || '').toLowerCase().includes(searchTerm)
             );
         }
 
+        // --- Sort by activity (Newest first) ---
+        visible.sort((a, b) => new Date(b.last_activity || 0) - new Date(a.last_activity || 0));
+
+        // --- Render ---
         if (visible.length === 0) {
             container.innerHTML = `<div class="empty-state"><h3>No matches found</h3></div>`;
             return;
         }
 
-        // Sort by activity (Newest first)
-        visible.sort((a, b) => new Date(b.last_activity || 0) - new Date(a.last_activity || 0));
-
-        // Generate HTML
         let html = visible.map(conv => this.generateConversationHTML(conv)).join('');
 
         if (this.hasMoreConversations && !searchTerm) {
@@ -324,7 +309,6 @@ class ConversationCore {
     }
 
     generateConversationHTML(conv) {
-        // 1. Helper for Time
         const timeSince = (d) => {
             if(!d) return '';
             const s = Math.floor((new Date() - new Date(d)) / 1000);
@@ -334,31 +318,25 @@ class ConversationCore {
             return Math.floor(s/86400) + 'd ago';
         };
 
-        // 2. Helper for Phone Formatting (The Fix)
         const formatPhone = (phone) => {
             if (!phone) return 'No Phone';
-            // Clean non-numeric characters
             const cleaned = ('' + phone).replace(/\D/g, '');
-            // Check if it looks like a standard US number (10 digits)
             const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
-            if (match) {
-                return `(${match[1]}) ${match[2]}-${match[3]}`;
-            }
-            return phone; // Return original if unique format
+            return match ? `(${match[1]}) ${match[2]}-${match[3]}` : phone;
         };
 
         const initials = (conv.business_name || 'U').substring(0,2).toUpperCase();
-        const isSelected = this.currentConversationId === conv.id ? 'selected' : '';
+        const isSelected = String(this.currentConversationId) === String(conv.id) ? 'selected' : '';
         const isChecked = this.selectedForDeletion.has(conv.id) ? 'checked' : '';
-        const unread = this.unreadMessages.get(conv.id);
+
+        // TRUTH CHECK: Get unread from our robust map
+        const unread = this.unreadCounts.get(String(conv.id)) || 0;
 
         let offerBadge = conv.has_offer ? `<span class="offer-badge-small">OFFER</span>` : '';
-
-        // Safely format ID
         let displayCid = conv.display_id || String(conv.id).slice(-6);
 
         return `
-            <div class="conversation-item ${isSelected}" data-conversation-id="${conv.id}">
+            <div class="conversation-item ${isSelected} ${unread > 0 ? 'unread' : ''}" data-conversation-id="${conv.id}">
                 <div class="conversation-avatar"><div class="avatar-circle">${initials}</div></div>
                 <div class="conversation-content">
                     <div class="conversation-header">
@@ -376,104 +354,57 @@ class ConversationCore {
                 <div class="conversation-checkbox">
                     <input type="checkbox" class="delete-checkbox" data-conversation-id="${conv.id}" ${isChecked}>
                 </div>
-                ${unread ? `<div class="conversation-badge">${unread}</div>` : ''}
+                ${unread > 0 ? `<div class="conversation-badge">${unread}</div>` : ''}
             </div>
         `;
     }
 
     updateConversationSelection() {
-        // Lightweight class toggle
-        const allItems = document.querySelectorAll('.conversation-item');
-        allItems.forEach(el => {
-            if (el.dataset.conversationId === String(this.currentConversationId)) {
-                el.classList.add('selected');
-            } else {
-                el.classList.remove('selected');
-            }
+        document.querySelectorAll('.conversation-item').forEach(el => {
+            el.classList.toggle('selected', el.dataset.conversationId === String(this.currentConversationId));
         });
     }
 
-    // --- UPDATES ---
+    // ============================================================
+    // 5. CONVERSATION UPDATES (Preview, etc.)
+    // ============================================================
 
     async updateConversationPreview(conversationId, message) {
-        let conv = this.conversations.get(conversationId);
+        let conv = this.conversations.get(Number(conversationId));
 
-        // 1. UPDATE DATA
         if (!conv) {
-            console.log(`⚠️ Conversation ${conversationId} not in memory. Fetching single record...`);
             try {
-                // FIX: Fetch ONLY this specific conversation, do not reload the whole list
                 const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
                 if (data && (data.conversation || data)) {
                     conv = data.conversation || data;
-                    this.conversations.set(conversationId, conv);
-
-                    // If we are searching/filtering, don't force it into the view unless it matches
-                    const searchTerm = document.getElementById('searchInput')?.value.trim();
-                    if (!searchTerm) {
-                        this.renderConversationsList(); // Safe re-render
-                    }
+                    this.conversations.set(Number(conversationId), conv);
                 } else {
-                    return; // Lead doesn't exist or error
+                    return;
                 }
             } catch (e) {
-                console.error("Error fetching missing conversation update:", e);
+                console.error("Error fetching missing conversation:", e);
                 return;
             }
         }
 
-        // Now we definitely have the conv (or we returned)
+        // Update data
         conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
         conv.last_activity = new Date().toISOString();
-        conv.unread_count = (conv.unread_count || 0) + 1;
-        this.conversations.set(conversationId, conv);
-        this.unreadMessages.set(conversationId, conv.unread_count);
+        this.conversations.set(Number(conversationId), conv);
 
-        // 2. UPDATE SIDEBAR (DOM Manipulation)
+        // Update sidebar DOM
         const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
         const list = document.getElementById('conversationsList');
 
         if (item && list) {
-            // Update existing item
             const preview = item.querySelector('.message-preview');
             const time = item.querySelector('.conversation-time');
             if (preview) preview.textContent = conv.last_message;
             if (time) time.textContent = 'Just now';
-
-            // Update Badge
-            let badge = item.querySelector('.conversation-badge');
-            if (!badge) {
-                badge = document.createElement('div');
-                badge.className = 'conversation-badge';
-                item.appendChild(badge);
-            }
-            badge.textContent = conv.unread_count;
-
-            // Move to top of list
-            list.prepend(item);
-        } else if (list) {
-            // Item exists in memory but not DOM (e.g. filtered out or new), prepend it
-            // Only if no search is active (otherwise it looks weird appearing in a search result)
-            if (!document.getElementById('searchInput')?.value.trim()) {
-                const html = this.generateConversationHTML(conv);
-                list.insertAdjacentHTML('afterbegin', html);
-            }
-        }
-
-        // 3. THE GUARD (Traffic Cop)
-        if (window.appState && window.appState.mode === 'dashboard') {
-            return;
-        }
-
-        // 4. CHECK ACTIVE CHAT
-        if (String(this.currentConversationId) !== String(conversationId)) {
-             return;
-        }
-
-        // 5. RENDER MESSAGE
-        // FIX: Using the correct method name 'addMessage'
-        if (this.parent.messaging && typeof this.parent.messaging.addMessage === 'function') {
-            this.parent.messaging.addMessage(message);
+            list.prepend(item); // Move to top
+        } else if (list && !document.getElementById('searchInput')?.value.trim()) {
+            const html = this.generateConversationHTML(conv);
+            list.insertAdjacentHTML('afterbegin', html);
         }
     }
 
@@ -486,22 +417,22 @@ class ConversationCore {
         this.loadConversations(true);
     }
 
-    // --- DELETION ---
+    // ============================================================
+    // 6. DELETION
+    // ============================================================
 
     toggleDeleteSelection(id) {
         if (this.selectedForDeletion.has(id)) this.selectedForDeletion.delete(id);
         else this.selectedForDeletion.add(id);
-        
+
         const cb = document.querySelector(`.delete-checkbox[data-conversation-id="${id}"]`);
         if(cb) cb.checked = this.selectedForDeletion.has(id);
-        
+
         this.updateDeleteButtonVisibility();
     }
 
-    // ✅ FIX: Public method for safe cleanup used by app-bootstrap
     clearDeleteSelection() {
         this.selectedForDeletion.clear();
-        // Visually uncheck boxes without reloading the whole list
         document.querySelectorAll('.delete-checkbox').forEach(cb => cb.checked = false);
         this.updateDeleteButtonVisibility();
     }
@@ -509,7 +440,7 @@ class ConversationCore {
     updateDeleteButtonVisibility() {
         const btn = document.getElementById('deleteSelectedBtn');
         if (!btn) return;
-        
+
         const count = this.selectedForDeletion.size;
         btn.classList.toggle('hidden', count === 0);
         if (count > 0) btn.textContent = `Delete ${count} Lead${count > 1 ? 's' : ''}`;
@@ -526,8 +457,7 @@ class ConversationCore {
 
                 ids.forEach(id => this.conversations.delete(id));
                 this.selectedForDeletion.clear();
-                
-                // If we deleted the active conversation, go to dashboard
+
                 if (ids.includes(this.currentConversationId)) {
                     this.clearConversationDetails();
                 }
@@ -551,5 +481,65 @@ class ConversationCore {
             this.parent.selectedConversation = null;
         }
         if (window.loadDashboard) window.loadDashboard();
+    }
+
+    // ============================================================
+    // 7. EVENT LISTENERS
+    // ============================================================
+
+    setupEventListeners() {
+        const mainContainer = document.getElementById('main-content') || document.body;
+
+        mainContainer.addEventListener('click', (e) => {
+            const listContainer = e.target.closest('#conversationsList');
+            if (!listContainer) return;
+
+            // A. Handle Delete Checkbox
+            const checkboxWrapper = e.target.closest('.conversation-checkbox');
+            const realInput = e.target.closest('.delete-checkbox');
+
+            if (realInput || (checkboxWrapper && !e.target.closest('.conversation-item'))) {
+                e.stopPropagation();
+                const id = realInput ? realInput.dataset.conversationId :
+                           checkboxWrapper.querySelector('.delete-checkbox')?.dataset.conversationId;
+                if (id) this.toggleDeleteSelection(id);
+                return;
+            }
+
+            // B. Handle Conversation Selection
+            const item = e.target.closest('.conversation-item');
+            if (item && !e.target.closest('button') && !e.target.closest('input') && !e.target.closest('.delete-checkbox')) {
+                this.selectConversation(item.dataset.conversationId);
+            }
+
+            // C. Handle "Load More"
+            if (e.target.id === 'loadMoreBtn') {
+                this.loadConversations(false);
+            }
+        });
+
+        // Filters & Search
+        const stateFilter = document.getElementById('stateFilter');
+        if (stateFilter) stateFilter.addEventListener('change', () => this.filterConversations());
+
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    this.renderConversationsList();
+                }, 300);
+            });
+            searchInput.addEventListener('search', (e) => {
+                if (e.target.value === '') this.renderConversationsList();
+            });
+        }
+
+        // Global Buttons
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.refreshData());
+
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        if (deleteSelectedBtn) deleteSelectedBtn.addEventListener('click', () => this.confirmDeleteSelected());
     }
 }

@@ -1,29 +1,34 @@
-// WebSocket Manager for MCA Command Center
+// WebSocket Manager - Simplified Event Routing
+
 class WebSocketManager {
     constructor(app) {
         this.app = app;
         this.socket = null;
+        this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 3000;
-        this.isConnecting = false;
 
         console.log('WebSocketManager: Initializing...');
         this.connect();
     }
 
     connect() {
-        if (this.isConnecting || (this.socket && this.socket.connected)) {
-            return;
-        }
-
+        if (this.isConnecting || (this.socket && this.socket.connected)) return;
         this.isConnecting = true;
 
-        // Dynamic URL handling
         const wsUrl = this.app.wsUrl || window.location.origin;
         console.log(`WebSocketManager: Connecting to ${wsUrl}...`);
 
         try {
+            // Ensure socket.io is loaded
+            if (typeof io === 'undefined') {
+                console.warn('Socket.io not found, retrying...');
+                setTimeout(() => this.connect(), 1000);
+                this.isConnecting = false;
+                return;
+            }
+
             this.socket = io(wsUrl, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
@@ -32,9 +37,7 @@ class WebSocketManager {
             });
 
             this.setupEventHandlers();
-
-            // Make socket globally available for debugging
-            window.globalSocket = this.socket;
+            window.globalSocket = this.socket; // Debug access
 
         } catch (error) {
             console.error('WebSocketManager: Connection error:', error);
@@ -49,7 +52,6 @@ class WebSocketManager {
             this.isConnecting = false;
             this.reconnectAttempts = 0;
 
-            // Update UI status dot
             const statusDot = document.querySelector('.connection-status .status-dot');
             const statusText = document.querySelector('.connection-status .status-text');
             if (statusDot) {
@@ -58,7 +60,7 @@ class WebSocketManager {
             }
             if (statusText) statusText.textContent = 'Connected';
 
-            // Join room if we have a current conversation
+            // Re-join room if needed
             if (this.app.currentConversationId) {
                 this.joinConversation(this.app.currentConversationId);
             }
@@ -79,97 +81,69 @@ class WebSocketManager {
 
         // --- Data Events ---
 
-        // 1. New Message Received
+        // 1. New Message - Hand off to Messaging Module completely
         this.socket.on('new_message', (data) => {
             console.log('📨 WebSocket: new_message received', data);
-
-            // Update the list order (Move to top)
-            if (this.app.conversationUI) {
-                this.app.conversationUI.updateConversationPreview(data.conversation_id, data.message);
-            }
-
-            // Show notification / Update chat view
             if (this.app.messaging) {
                 this.app.messaging.handleIncomingMessage(data);
             }
         });
 
-        // 2. Conversation Updated (e.g. State Change)
+        // 2. Conversation Updated (Status change, etc)
         this.socket.on('conversation_updated', (data) => {
             console.log('📋 WebSocket: conversation_updated', data);
 
-            if (this.app.conversationUI) {
-                // Always reload the list to update status/time
-                this.app.conversationUI.loadConversations();
-
-                // If we are looking at this conversation, refresh details
-                if (this.app.currentConversationId === data.conversation_id) {
-                    console.log('🔄 Refreshing current conversation details...');
-                    // Reload messages
-                    if (this.app.messaging) this.app.messaging.loadConversationMessages();
-                    // Reload details
-                    this.app.conversationUI.selectConversation(data.conversation_id);
+            // If we are looking at it, refresh details
+            if (String(this.app.currentConversationId) === String(data.conversation_id)) {
+                if (this.app.conversationUI) {
+                    this.app.conversationUI.showConversationDetails();
+                }
+                if (this.app.messaging) {
+                    this.app.messaging.loadConversationMessages();
                 }
             }
-        });
 
-        // 3. Document Uploaded
-        this.socket.on('document_uploaded', (data) => {
-            console.log('📄 WebSocket: document_uploaded', data);
-            // Only refresh if we are looking at this conversation's docs
-            if (this.app.currentConversationId === data.conversation_id && this.app.documents) {
-                this.app.documents.loadDocuments();
+            // Always refresh list
+            if (this.app.conversationUI) {
+                this.app.conversationUI.loadConversations();
             }
         });
 
-        // 4. FCS/Lender Updates
-        this.socket.on('fcs_completed', (data) => {
-            console.log('📊 WebSocket: fcs_completed', data);
-            if (this.app.currentConversationId === data.conversation_id) {
-                this.app.utils.showNotification('FCS Report Ready!', 'success');
-                if (this.app.fcs) this.app.fcs.loadFCSData();
-            }
-        });
-
-        // 5. Offer / Lead List Refresh (OPTIMIZED)
+        // 3. New Lead / Offer / Refresh List
         this.socket.on('refresh_lead_list', async (data) => {
             console.log('⚡ WebSocket: refresh_lead_list', data);
-            
+
             const listContainer = document.getElementById('conversationsList');
-            if (!listContainer || !data.conversationId) return;
+            if (!listContainer || !data.conversationId) {
+                // Fallback: just reload the list
+                if (this.app.conversationUI) {
+                    this.app.conversationUI.loadConversations();
+                }
+                return;
+            }
 
             // Try to find the existing conversation row
             const existingRow = document.querySelector(`.conversation-item[data-conversation-id="${data.conversationId}"]`);
 
             if (existingRow) {
                 // SCENARIO A: It's already in the list. Update it instantly.
-                console.log('⚡ Updating existing row for offer...');
-                
-                // 1. Add Badge if missing
                 this.addOfferBadge(existingRow);
-
-                // 2. Move to Top
-                listContainer.prepend(existingRow); 
-
-                // 3. Flash Effect
+                listContainer.prepend(existingRow);
                 this.flashRow(existingRow);
-
             } else {
                 // SCENARIO B: It's a NEW lead not in the list.
-                console.log('⚡ Fetching new lead to inject...');
-                
                 try {
                     const newConvData = await this.app.apiCall(`/api/conversations/${data.conversationId}`);
-                    
+
                     if (newConvData && this.app.templates && this.app.templates.conversationListItem) {
                         const html = this.app.templates.conversationListItem(newConvData);
                         listContainer.insertAdjacentHTML('afterbegin', html);
-                        
+
                         const newRow = document.querySelector(`.conversation-item[data-conversation-id="${data.conversationId}"]`);
                         if (newRow) {
                             this.addOfferBadge(newRow);
                             this.flashRow(newRow);
-                            newRow.classList.add('unread'); 
+                            newRow.classList.add('unread');
                         }
                     } else {
                         if (this.app.conversationUI) this.app.conversationUI.loadConversations();
@@ -178,6 +152,23 @@ class WebSocketManager {
                     console.error('Error injecting new lead:', error);
                     if (this.app.conversationUI) this.app.conversationUI.loadConversations();
                 }
+            }
+        });
+
+        // 4. Document Events
+        this.socket.on('document_uploaded', (data) => {
+            console.log('📄 WebSocket: document_uploaded', data);
+            if (String(this.app.currentConversationId) === String(data.conversation_id)) {
+                if (this.app.documents) this.app.documents.loadDocuments();
+            }
+        });
+
+        // 5. FCS/Lender Updates
+        this.socket.on('fcs_completed', (data) => {
+            console.log('📊 WebSocket: fcs_completed', data);
+            if (String(this.app.currentConversationId) === String(data.conversation_id)) {
+                this.app.utils.showNotification('FCS Report Ready!', 'success');
+                if (this.app.fcs) this.app.fcs.loadFCSData();
             }
         });
     }
@@ -191,14 +182,12 @@ class WebSocketManager {
     // Helper: Add the green OFFER badge safely
     addOfferBadge(rowElement) {
         const nameEl = rowElement.querySelector('.business-name');
-        if (nameEl) {
-            if (!nameEl.querySelector('.offer-badge')) {
-                const badge = document.createElement('span');
-                badge.className = 'offer-badge';
-                badge.style.cssText = "background:rgba(0,255,136,0.1); border:1px solid #00ff88; color:#00ff88; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:6px; font-weight:bold;";
-                badge.innerText = "OFFER";
-                nameEl.appendChild(badge);
-            }
+        if (nameEl && !nameEl.querySelector('.offer-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'offer-badge';
+            badge.style.cssText = "background:rgba(0,255,136,0.1); border:1px solid #00ff88; color:#00ff88; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:6px; font-weight:bold;";
+            badge.innerText = "OFFER";
+            nameEl.appendChild(badge);
         }
     }
 
@@ -207,8 +196,8 @@ class WebSocketManager {
         rowElement.style.transition = "background-color 0.5s ease";
         const originalBg = rowElement.style.backgroundColor;
         rowElement.style.backgroundColor = "rgba(0, 255, 136, 0.2)";
-        setTimeout(() => { 
-            rowElement.style.backgroundColor = originalBg || ""; 
+        setTimeout(() => {
+            rowElement.style.backgroundColor = originalBg || "";
         }, 1000);
     }
 
