@@ -299,15 +299,19 @@ class AIAssistant {
 
     triggerSmartIntro() {
         const messagesContainer = document.getElementById('aiChatMessages');
-        const spinner = document.getElementById('aiInitialSpinner');
-
         if (!messagesContainer) return;
+
+        // 🔔 Prevent duplicate intro
+        if (messagesContainer.querySelector('.ai-message-row')) {
+            console.log('🛑 Intro already exists, skipping');
+            return;
+        }
+
+        const spinner = document.getElementById('aiInitialSpinner');
         if (spinner) spinner.remove();
 
-        // 🔔 Make sure we're still on the same conversation
         const currentId = this.parent.getCurrentConversationId();
         if (currentId !== this.currentConversationId) {
-            console.log('🛑 Aborting intro: User switched conversations');
             return;
         }
 
@@ -315,7 +319,6 @@ class AIAssistant {
         const businessName = conversation ? conversation.business_name : 'this deal';
         const message = `How can I help you with **${businessName}** today?`;
 
-        // Add welcome message
         this.addMessageToChat('assistant', message, false);
     }
 }
