@@ -126,7 +126,10 @@ async function syncDriveFiles(conversationId, businessName) {
         });
 
         const files = fileRes.data.files || [];
-        const usefulFiles = files.filter(f => !f.mimeType.includes('folder'));
+        const usefulFiles = files.filter(f =>
+            f.mimeType === 'application/pdf' ||
+            f.name.toLowerCase().endsWith('.pdf')
+        );
 
         if (usefulFiles.length === 0) {
             console.log(`⚠️ Folder "${matchedName}" exists but is empty.`);
@@ -139,6 +142,17 @@ async function syncDriveFiles(conversationId, businessName) {
         let uploadedCount = 0;
         for (const file of usefulFiles) {
             try {
+                // 🔒 DUPLICATE CHECK - Skip if already synced
+                const existingDoc = await db.query(`
+                    SELECT id FROM documents
+                    WHERE conversation_id = $1 AND original_filename = $2
+                `, [conversationId, file.name]);
+
+                if (existingDoc.rows.length > 0) {
+                    console.log(`⏭️ Skipping duplicate: ${file.name}`);
+                    continue;
+                }
+
                 const driveStream = await drive.files.get(
                     { fileId: file.id, alt: 'media' },
                     { responseType: 'stream' }
