@@ -130,7 +130,11 @@ class ConversationCore {
                 return;
             }
 
-            const url = `/api/conversations?limit=${this.pageSize}&offset=${this.paginationOffset}`;
+            const stateFilter = document.getElementById('stateFilter')?.value || '';
+            let url = `/api/conversations?limit=${this.pageSize}&offset=${this.paginationOffset}`;
+            if (stateFilter) {
+                url += `&filter=${encodeURIComponent(stateFilter)}`;
+            }
             const conversations = await this.parent.apiCall(url);
 
             if (conversations.length < this.pageSize) this.hasMoreConversations = false;
@@ -404,7 +408,7 @@ class ConversationCore {
     }
 
     filterConversations() {
-        this.renderConversationsList();
+        this.loadConversations(true);  // Reset and reload with new filter
     }
 
     refreshData() {
