@@ -225,15 +225,11 @@ class AIAssistant {
         const conversationId = this.parent.getCurrentConversationId();
         const messagesContainer = document.getElementById('aiChatMessages');
 
-        // Don't capture 'spinner' here - it might get deleted while we wait
-
         if (!messagesContainer) return;
 
         // 1. CACHE CHECK
         if (this.aiChatCache.has(conversationId)) {
             console.log(`⚡ [Cache] Rendering AI history for ${conversationId}`);
-
-            // Remove CURRENT spinner if it exists
             const currentSpinner = document.getElementById('aiInitialSpinner');
             if (currentSpinner) currentSpinner.remove();
 
@@ -243,29 +239,26 @@ class AIAssistant {
                 this.addMessageToChat(msg.role, msg.content, false, false);
             });
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        } else {
-            // Spinner is already there from render(), do nothing
         }
 
         try {
             // 2. FETCH FROM API
             const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
 
-            // RACE CONDITION FIX: Check if user switched conversations during fetch
+            // TRAFFIC COP: STOP IF USER SWITCHED CONVERSATIONS
             if (this.parent.getCurrentConversationId() !== conversationId) {
-                console.log('⚠️ AI History: User switched conversations, aborting render');
+                console.log('🛑 Aborting AI load: User switched conversations');
                 return;
             }
 
-            // CRITICAL FIX: Look for the spinner NOW, after the await finished
+            // Remove spinner now that we are sure we want to update THIS screen
             const activeSpinner = document.getElementById('aiInitialSpinner');
             if (activeSpinner) activeSpinner.remove();
 
             if (data.messages && data.messages.length > 0) {
                 this.aiChatCache.set(conversationId, data.messages);
 
-                // Verify container still exists before writing to it
+                // Double-check container existence
                 const currentContainer = document.getElementById('aiChatMessages');
                 if (currentContainer) {
                     currentContainer.innerHTML = '';
@@ -282,12 +275,12 @@ class AIAssistant {
         } catch (error) {
             console.log('Error loading history:', error);
 
-            // Remove spinner on error too
-            const activeSpinner = document.getElementById('aiInitialSpinner');
-            if (activeSpinner) activeSpinner.remove();
-
-            // Fallback to intro if history fails
-            this.triggerSmartIntro();
+            // Only remove spinner/show intro if we are still on the same convo
+            if (this.parent.getCurrentConversationId() === conversationId) {
+                const activeSpinner = document.getElementById('aiInitialSpinner');
+                if (activeSpinner) activeSpinner.remove();
+                this.triggerSmartIntro();
+            }
         }
     }
 
