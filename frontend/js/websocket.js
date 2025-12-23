@@ -110,49 +110,15 @@ class WebSocketManager {
         });
 
         // 3. New Lead / Offer / Refresh List
+        // FIX: Delegate strictly to ConversationUI to prevent duplicates
+        // No more direct DOM manipulation here - single source of truth
         this.socket.on('refresh_lead_list', async (data) => {
             console.log('⚡ WebSocket: refresh_lead_list', data);
 
-            const listContainer = document.getElementById('conversationsList');
-            if (!listContainer || !data.conversationId) {
-                // Fallback: just reload the list
-                if (this.app.conversationUI) {
-                    this.app.conversationUI.loadConversations();
-                }
-                return;
-            }
+            if (!this.app.conversationUI) return;
 
-            // Try to find the existing conversation row
-            const existingRow = document.querySelector(`.conversation-item[data-conversation-id="${data.conversationId}"]`);
-
-            if (existingRow) {
-                // SCENARIO A: It's already in the list. Update it instantly.
-                this.addOfferBadge(existingRow);
-                listContainer.prepend(existingRow);
-                this.flashRow(existingRow);
-            } else {
-                // SCENARIO B: It's a NEW lead not in the list.
-                try {
-                    const newConvData = await this.app.apiCall(`/api/conversations/${data.conversationId}`);
-
-                    if (newConvData && this.app.templates && this.app.templates.conversationListItem) {
-                        const html = this.app.templates.conversationListItem(newConvData);
-                        listContainer.insertAdjacentHTML('afterbegin', html);
-
-                        const newRow = document.querySelector(`.conversation-item[data-conversation-id="${data.conversationId}"]`);
-                        if (newRow) {
-                            this.addOfferBadge(newRow);
-                            this.flashRow(newRow);
-                            newRow.classList.add('unread');
-                        }
-                    } else {
-                        if (this.app.conversationUI) this.app.conversationUI.loadConversations();
-                    }
-                } catch (error) {
-                    console.error('Error injecting new lead:', error);
-                    if (this.app.conversationUI) this.app.conversationUI.loadConversations();
-                }
-            }
+            // Delegate to ConversationCore to handle update
+            await this.app.conversationUI.handleConversationUpdate(data.conversationId);
         });
 
         // 4. Document Events
@@ -177,28 +143,6 @@ class WebSocketManager {
         if (this.socket && this.socket.connected) {
             this.socket.emit('join_conversation', conversationId);
         }
-    }
-
-    // Helper: Add the green OFFER badge safely
-    addOfferBadge(rowElement) {
-        const nameEl = rowElement.querySelector('.business-name');
-        if (nameEl && !nameEl.querySelector('.offer-badge')) {
-            const badge = document.createElement('span');
-            badge.className = 'offer-badge';
-            badge.style.cssText = "background:rgba(0,255,136,0.1); border:1px solid #00ff88; color:#00ff88; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:6px; font-weight:bold;";
-            badge.innerText = "OFFER";
-            nameEl.appendChild(badge);
-        }
-    }
-
-    // Helper: Flash animation
-    flashRow(rowElement) {
-        rowElement.style.transition = "background-color 0.5s ease";
-        const originalBg = rowElement.style.backgroundColor;
-        rowElement.style.backgroundColor = "rgba(0, 255, 136, 0.2)";
-        setTimeout(() => {
-            rowElement.style.backgroundColor = originalBg || "";
-        }, 1000);
     }
 
     // Helper to manually refresh data

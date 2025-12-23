@@ -429,6 +429,45 @@ class ConversationCore {
         this.loadConversations(true);
     }
 
+    // Handle real-time conversation updates (new leads, offers, etc.)
+    // Single source of truth - prevents duplicate DOM entries
+    async handleConversationUpdate(conversationId) {
+        if (!conversationId) return;
+
+        try {
+            // 1. Fetch the latest data for this specific conversation
+            const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
+            const freshConv = data.conversation || data;
+
+            if (!freshConv || !freshConv.id) return;
+
+            // 2. Update the Source of Truth (The Map)
+            // This overwrites the existing entry if present, preventing duplicates
+            freshConv.last_activity = new Date().toISOString(); // Ensure it sorts to top
+            this.conversations.set(Number(freshConv.id), freshConv);
+
+            // 3. Re-render the list (auto-sorts by last_activity)
+            this.renderConversationsList();
+
+            // 4. Flash the row to indicate an update
+            setTimeout(() => {
+                const row = document.querySelector(`.conversation-item[data-conversation-id="${freshConv.id}"]`);
+                if (row) {
+                    row.style.transition = "background-color 0.5s ease";
+                    row.style.backgroundColor = "rgba(0, 255, 136, 0.2)";
+                    setTimeout(() => {
+                        row.style.backgroundColor = "";
+                    }, 1000);
+                }
+            }, 50);
+
+        } catch (error) {
+            console.error('Failed to handle conversation update:', error);
+            // Fallback: full reload
+            this.loadConversations(true);
+        }
+    }
+
     // ============================================================
     // 6. DELETION
     // ============================================================
