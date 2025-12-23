@@ -29,10 +29,16 @@ class AIAssistant {
             return;
         }
 
-        // CHECK: Is the DOM already setup for this conversation?
-        if (this.currentConversationId === conversation.id && this.isInitialized) {
+        // 🔔 Reset state when conversation changes
+        if (this.currentConversationId !== conversation.id) {
+            this.currentConversationId = conversation.id;
+            this.isInitialized = false;
+        }
+
+        // If already initialized for THIS conversation, skip
+        if (this.isInitialized) {
             const existingChat = document.getElementById('aiChatMessages');
-            if (existingChat) return; // Already there!
+            if (existingChat) return;
         }
 
         // Only wipe if we are changing conversations or initializing
@@ -171,6 +177,13 @@ class AIAssistant {
         const messagesContainer = document.getElementById('aiChatMessages');
         if (!messagesContainer) return;
 
+        // 🔔 Prevent cross-conversation pollution
+        const currentId = this.parent.getCurrentConversationId();
+        if (currentId !== this.currentConversationId) {
+            console.log('🛑 Blocking message add: Wrong conversation');
+            return;
+        }
+
         const messageRow = document.createElement('div');
         messageRow.className = `ai-message-row ${role === 'user' ? 'user' : 'assistant'}`;
 
@@ -289,9 +302,14 @@ class AIAssistant {
         const spinner = document.getElementById('aiInitialSpinner');
 
         if (!messagesContainer) return;
-
-        // FIX: Force remove spinner if it still exists
         if (spinner) spinner.remove();
+
+        // 🔔 Make sure we're still on the same conversation
+        const currentId = this.parent.getCurrentConversationId();
+        if (currentId !== this.currentConversationId) {
+            console.log('🛑 Aborting intro: User switched conversations');
+            return;
+        }
 
         const conversation = this.parent.getSelectedConversation();
         const businessName = conversation ? conversation.business_name : 'this deal';
