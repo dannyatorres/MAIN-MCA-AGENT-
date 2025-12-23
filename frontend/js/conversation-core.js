@@ -376,12 +376,28 @@ class ConversationCore {
         const list = document.getElementById('conversationsList');
 
         if (item && list) {
+            // Item exists in current view - update and move to top
             const preview = item.querySelector('.message-preview');
             const time = item.querySelector('.conversation-time');
             if (preview) preview.textContent = conv.last_message;
             if (time) time.textContent = 'Just now';
-            list.prepend(item); // Move to top
-        } else if (list && !document.getElementById('searchInput')?.value.trim()) {
+            list.prepend(item);
+        } else if (list) {
+            // Item not in current view - only add if it matches current filter
+            const searchTerm = document.getElementById('searchInput')?.value.trim();
+            const stateFilter = document.getElementById('stateFilter')?.value;
+
+            // Don't add if search is active
+            if (searchTerm) return;
+
+            // Don't add if filter is active and conversation doesn't match
+            if (stateFilter) {
+                if (stateFilter === 'INTERESTED' && !conv.has_response) return;
+                if (stateFilter === 'UNREAD' && !conv.unread_count) return;
+                if (stateFilter !== 'INTERESTED' && stateFilter !== 'UNREAD' && conv.current_step !== stateFilter) return;
+            }
+
+            // Matches filter (or no filter) - add to list
             const html = this.generateConversationHTML(conv);
             list.insertAdjacentHTML('afterbegin', html);
         }
