@@ -1,13 +1,14 @@
 export class DealIntelligenceTab {
     constructor(parent) {
         this.parent = parent;
+        this.isAnalyzing = false;
     }
 
     render(container) {
         const conv = this.parent.getSelectedConversation();
 
         if (!conv) {
-            container.innerHTML = '<div class="p-4 text-gray-500">No conversation selected.</div>';
+            container.innerHTML = '<div class="deal-intel-empty-state"><p class="empty-text">No conversation selected.</p></div>';
             return;
         }
 
@@ -46,13 +47,13 @@ export class DealIntelligenceTab {
         const scenarios = gamePlan.nextPositionScenarios || {};
         const isFirstPosition = (overview.currentPositions === 0);
 
-        // --- 3. RENDER (Using CSS Classes) ---
+        // --- 3. RENDER DATA VIEW ---
         container.innerHTML = `
-            <div class="deal-intelligence-panel p-4 h-full overflow-y-auto">
+            <div class="deal-intelligence-panel">
 
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-lg font-bold text-gray-800">Deal Intelligence</h2>
-                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase tracking-wide">
+                <div class="panel-header-row">
+                    <h2 class="panel-title">Deal Intelligence</h2>
+                    <span class="strategy-badge ${strategy.strategy_type || ''}">
                         ${strategy.strategy_type ? strategy.strategy_type.replace('_', ' ') : 'Ready'}
                     </span>
                 </div>
@@ -77,17 +78,17 @@ export class DealIntelligenceTab {
                 </div>
 
                 <div class="withholding-section">
-                     <div class="flex justify-between items-end mb-4">
-                        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Withholding Analysis</h3>
-                        <div class="text-right">
-                             <div class="text-2xl font-bold text-blue-600">${(withholding.totalWithhold || 0).toFixed(1)}%</div>
-                             <div class="text-xs text-gray-400 uppercase">Total Usage</div>
+                    <div class="withholding-header">
+                        <h3 class="section-title">Withholding Analysis</h3>
+                        <div class="withholding-total-display">
+                            <div class="total-value">${(withholding.totalWithhold || 0).toFixed(1)}%</div>
+                            <div class="total-label">Total Usage</div>
                         </div>
                     </div>
                     ${this.renderWithholdingList(withholding.breakdown)}
                 </div>
 
-                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6">
+                <h3 class="section-title scenarios-title">
                     ${isFirstPosition ? 'Recommended Opening Offer' : 'Stacking Options'}
                 </h3>
 
@@ -95,24 +96,23 @@ export class DealIntelligenceTab {
 
                 ${this.renderLastPosition(gamePlan.lastPositionAnalysis)}
 
-                <div class="h-8"></div>
             </div>
         `;
     }
 
     renderWithholdingList(breakdown) {
-        if (!breakdown || breakdown.length === 0) return '<div class="text-sm text-gray-400 italic py-2">No active positions found.</div>';
+        if (!breakdown || breakdown.length === 0) {
+            return '<div class="no-data-message">No active positions found.</div>';
+        }
 
         return breakdown.map(item => `
             <div class="withholding-item">
-                <div>
-                    <div class="font-medium text-sm text-gray-900">${item.lender}</div>
-                    <div class="text-xs text-gray-500">${item.payment.toLocaleString()} ${item.frequency}</div>
+                <div class="withholding-info">
+                    <div class="lender-name">${item.lender}</div>
+                    <div class="payment-info">${item.payment.toLocaleString()} ${item.frequency}</div>
                 </div>
-                <div class="text-right flex flex-col justify-center">
-                    <span class="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded">
-                        ${item.withholdPct}%
-                    </span>
+                <div class="withholding-pct">
+                    <span class="pct-badge">${item.withholdPct}%</span>
                 </div>
             </div>
         `).join('');
@@ -121,52 +121,53 @@ export class DealIntelligenceTab {
     renderScenarios(nps, isFirstPosition) {
         if (!nps) return '';
 
-        // Helper to get best offer
         const getOffer = (tier) => nps[tier] && nps[tier][0] ? nps[tier][0] : null;
         const leadOffer = getOffer('aggressive') || getOffer('moderate') || getOffer('conservative');
 
-        if (!leadOffer) return '<div class="p-4 bg-gray-50 rounded text-sm text-gray-500">No scenarios generated.</div>';
+        if (!leadOffer) {
+            return '<div class="no-data-message">No scenarios generated.</div>';
+        }
 
-        // 1. OPENING OFFER CARD (First Position)
+        // First Position - Show single offer card
         if (isFirstPosition) {
             return `
                 <div class="offer-card">
                     <div class="offer-grid">
-                        <div>
+                        <div class="offer-stat">
                             <div class="data-label">Funding</div>
                             <div class="offer-big-value">${leadOffer.funding.toLocaleString()}</div>
                         </div>
-                        <div>
+                        <div class="offer-stat">
                             <div class="data-label">Term</div>
-                            <div class="offer-big-value text-gray-700">${leadOffer.term} ${leadOffer.termUnit}</div>
+                            <div class="offer-big-value secondary">${leadOffer.term} ${leadOffer.termUnit}</div>
                         </div>
-                        <div>
+                        <div class="offer-stat">
                             <div class="data-label">Payment</div>
-                            <div class="offer-big-value text-gray-700">${leadOffer.payment.toLocaleString()}</div>
+                            <div class="offer-big-value secondary">${leadOffer.payment.toLocaleString()}</div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4 text-sm text-gray-600 bg-white bg-opacity-60 p-3 rounded-lg border border-blue-100">
-                        <div class="flex justify-between">
-                            <span>Factor Rate:</span> <span class="font-bold text-gray-900">${leadOffer.factor}</span>
+                    <div class="offer-details">
+                        <div class="detail-row">
+                            <span>Factor Rate:</span>
+                            <span class="detail-value">${leadOffer.factor}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span>Withholding:</span> <span class="font-bold text-blue-600">+${leadOffer.withholdAddition}%</span>
+                        <div class="detail-row">
+                            <span>Withholding:</span>
+                            <span class="detail-value highlight">+${leadOffer.withholdAddition}%</span>
                         </div>
                     </div>
 
-                    <div class="mt-4 pt-4 border-t border-blue-100">
-                        <p class="text-sm text-gray-600 italic text-center">
-                            "${leadOffer.frequency === 'daily' ? 'Daily' : 'Weekly'} payment based on strong revenue trend."
-                        </p>
+                    <div class="offer-note">
+                        ${leadOffer.frequency === 'daily' ? 'Daily' : 'Weekly'} payment based on revenue analysis.
                     </div>
                 </div>
             `;
         }
 
-        // 2. STACKING TABLES
+        // Stacking - Show tables
         return `
-            <div>
+            <div class="scenarios-container">
                 ${this.renderScenarioTable(nps.conservative, 'Conservative', 'conservative')}
                 ${this.renderScenarioTable(nps.moderate, 'Moderate', 'moderate')}
                 ${this.renderScenarioTable(nps.aggressive, 'Aggressive', 'aggressive')}
@@ -179,10 +180,10 @@ export class DealIntelligenceTab {
 
         const rowsHtml = rows.slice(0, 3).map(r => `
             <tr>
-                <td class="font-bold text-gray-900">${r.funding.toLocaleString()}</td>
+                <td class="cell-funding">${r.funding.toLocaleString()}</td>
                 <td>${r.term} ${r.termUnit}</td>
                 <td>${r.payment.toLocaleString()}</td>
-                <td class="font-bold text-blue-600">+${r.withholdAddition}%</td>
+                <td class="cell-cap">+${r.withholdAddition}%</td>
             </tr>
         `).join('');
 
@@ -194,7 +195,7 @@ export class DealIntelligenceTab {
                         <tr>
                             <th>Fund</th>
                             <th>Term</th>
-                            <th>Pay</th>
+                            <th>Payment</th>
                             <th>Cap</th>
                         </tr>
                     </thead>
@@ -210,19 +211,19 @@ export class DealIntelligenceTab {
 
         return `
             <div class="competitor-box">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Last Position Analysis</h3>
-                <div class="flex justify-between items-start">
+                <h3 class="section-title">Last Position Analysis</h3>
+                <div class="competitor-grid">
                     <div>
-                        <div class="text-xl font-bold text-gray-800">${deal.originalFunding.toLocaleString()}</div>
-                        <div class="text-xs text-gray-500 uppercase mt-1">Est. Original Funding</div>
+                        <div class="competitor-value">${deal.originalFunding.toLocaleString()}</div>
+                        <div class="competitor-label">Est. Original Funding</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-xl font-bold text-gray-800">${deal.term} ${deal.termUnit}</div>
-                         <div class="text-xs text-gray-500 uppercase mt-1">Term Length</div>
+                        <div class="competitor-value">${deal.term} ${deal.termUnit}</div>
+                        <div class="competitor-label">Term Length</div>
                     </div>
                 </div>
-                <div class="mt-3 text-sm text-gray-600 bg-white p-3 rounded border border-gray-200">
-                    <span class="font-bold text-gray-800">Insight:</span> ${deal.reasoning || 'Standard deal structure detected.'}
+                <div class="competitor-insight">
+                    <strong>Insight:</strong> ${deal.reasoning || 'Standard deal structure detected.'}
                 </div>
             </div>
         `;
@@ -259,10 +260,7 @@ export class DealIntelligenceTab {
 
             if (result.success) {
                 if (status) status.textContent = 'Analysis complete! Loading results...';
-
-                // Reload conversation data and re-render this tab
                 await this.parent.intelligence.loadConversationIntelligence(conversationId);
-
             } else {
                 throw new Error(result.error || 'Analysis failed');
             }
