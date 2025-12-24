@@ -148,3 +148,72 @@
     padding: 16px;
     margin-top: 24px;
 }
+
+/* --- EMPTY STATE --- */
+.deal-intel-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.deal-intel-empty-state .empty-icon {
+    color: #30363d;
+    margin-bottom: 20px;
+}
+
+.deal-intel-empty-state .empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #e6edf3;
+    margin: 0 0 8px 0;
+}
+
+.deal-intel-empty-state .empty-text {
+    font-size: 14px;
+    color: #8b949e;
+    max-width: 280px;
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+}
+
+.run-analysis-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%);
+    color: #000;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.3);
+    transition: all 0.2s;
+}
+
+.run-analysis-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(45, 212, 191, 0.5);
+}
+
+.run-analysis-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.analysis-status {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #8b949e;
+    min-height: 20px;
+}
+
+.analysis-status.error {
+    color: #f87171;
+}

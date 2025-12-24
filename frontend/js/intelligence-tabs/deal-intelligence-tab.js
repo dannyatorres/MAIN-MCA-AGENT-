@@ -17,21 +17,26 @@ export class DealIntelligenceTab {
         // --- 1. EMPTY STATE ---
         if (!gamePlan.businessOverview) {
             container.innerHTML = `
-                <div class="p-8 text-center h-full flex flex-col justify-center items-center">
-                    <div class="text-gray-300 mb-4">
-                        <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <div class="deal-intel-empty-state">
+                    <div class="empty-icon">
+                        <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900">Awaiting Strategy Analysis</h3>
-                    <p class="mt-2 text-sm text-gray-500 max-w-xs">Run the Commander to analyze bank statements, detect competitors, and generate offer scenarios.</p>
-                    <button id="runAnalysisBtn" class="mt-6 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                    <h3 class="empty-title">Awaiting Strategy Analysis</h3>
+                    <p class="empty-text">Run the Commander to analyze bank statements, detect competitors, and generate offer scenarios.</p>
+
+                    <button id="runAnalysisBtn" class="run-analysis-btn">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
                         Run FCS Analysis
                     </button>
-                    <div id="analysisStatus" class="mt-3 text-sm text-gray-500"></div>
+                    <p id="analysisStatus" class="analysis-status"></p>
                 </div>
             `;
 
-            // Attach click handler
-            container.querySelector('#runAnalysisBtn')?.addEventListener('click', () => this.runAnalysis(container));
+            container.querySelector('#runAnalysisBtn')?.addEventListener('click', () => this.runAnalysis(conv.id));
             return;
         }
 
@@ -223,19 +228,16 @@ export class DealIntelligenceTab {
         `;
     }
 
-    async runAnalysis(container) {
-        const conv = this.parent.getSelectedConversation();
-        if (!conv) return;
-
-        const btn = container.querySelector('#runAnalysisBtn');
-        const status = container.querySelector('#analysisStatus');
+    async runAnalysis(convId) {
+        const btn = document.querySelector('#runAnalysisBtn');
+        const status = document.querySelector('#analysisStatus');
 
         btn.disabled = true;
         btn.textContent = 'Analyzing...';
         status.textContent = 'Running FCS strategy analysis...';
 
         try {
-            const response = await fetch(`/api/conversations/${conv.id}/analyze-strategy`, {
+            const response = await fetch(`/api/conversations/${convId}/analyze-strategy`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -246,15 +248,16 @@ export class DealIntelligenceTab {
                 status.textContent = 'Analysis complete! Refreshing...';
                 // Refresh the conversation data and re-render
                 await this.parent.refreshCurrentConversation();
-                this.render(container);
             } else {
                 status.textContent = `Error: ${result.error}`;
+                status.classList.add('error');
                 btn.disabled = false;
                 btn.textContent = 'Run FCS Analysis';
             }
         } catch (error) {
             console.error('Analysis error:', error);
             status.textContent = `Error: ${error.message}`;
+            status.classList.add('error');
             btn.disabled = false;
             btn.textContent = 'Run FCS Analysis';
         }
