@@ -96,6 +96,29 @@ Negative Days Extraction Rules
 - Count weekends/holidays as negative if they remain negative throughout
 - Only count if ending balance < $0.00 (balance of exactly $0.00 is NOT negative)
 
+MCA Deposit Detection Guidelines
+
+Use these guidelines alongside your knowledge of MCA lenders and patterns:
+
+LIKELY AN MCA DEPOSIT:
+- Amount is $5,000+ (rarely round numbers — fees are usually deducted, e.g., $13,950 not $15,000)
+- Contains lender name or keywords like "FUNDING", "ADVANCE", "CAPITAL"
+- A new daily/weekly payment pattern starts shortly after (next business day for daily, same day next week for weekly)
+- Payments are CONSISTENT amounts (same amount every time)
+
+PROBABLY NOT AN MCA DEPOSIT:
+- Contains "REFUND", "REVERSAL", "RETURN", "CHARGEBACK", "CREDIT", "ADJ"
+- Amount is under $5,000 (unless very obvious lender name + payment pattern)
+- Small amounts ($500-$3,000) from a lender name are likely chargebacks, not new funding
+- Payment amounts vary (inconsistent amounts = not MCA)
+
+WHEN IN DOUBT:
+- If lender name + small amount (<$5k) → assume chargeback, not funding
+- If generic description + large amount + new payment pattern starts → likely MCA
+- Deposit name and payment name don't always match — use timing and patterns
+
+Use best judgement — these are guidelines, not hard rules.
+
 True Revenue Rules - SIMPLIFIED DECISION TREE
 
 Step 1: Identify the deposit type
