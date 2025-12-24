@@ -719,6 +719,7 @@ app.use('/api/conversations', require('./routes/conversations'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/documents', require('./routes/documents'));
 app.use('/api/fcs', require('./routes/fcs'));
+app.use('/api/integrations', require('./routes/integrationRoutes'));
 app.use('/api/lenders', require('./routes/lenders'));
 app.use('/api/csv-import', require('./routes/csv-import'));
 app.use('/api/lookups', require('./routes/lookups'));
