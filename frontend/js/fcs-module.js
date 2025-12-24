@@ -304,13 +304,14 @@ class FCSModule {
             let cleanText = content.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
             let lines = cleanText.split('\n');
 
-            // 1. MODERN FONT STACK
+            // Modern System Font Stack
             const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
             let html = `<div class="fcs-styled-report" style="font-family: ${fontFamily}; color: #e6edf3; line-height: 1.5;">`;
 
             let inTable = false;
             let inSummary = false;
+            let currentSection = ''; // Tracks which section we are in
             let tableHeaders = [];
 
             for (let i = 0; i < lines.length; i++) {
@@ -323,26 +324,25 @@ class FCSModule {
                 // === DETECT SUMMARY SECTION ===
                 if (trimmedLine.match(/^\d+-Month Summary/i) || trimmedLine.match(/^Summary$/i)) {
                     if (inTable) { html += '</tbody></table></div>'; inTable = false; }
+                    currentSection = 'Summary';
 
-                    // Compact header with a gradient accent
                     html += `
                     <div style="margin-top: 32px; border-radius: 8px; border: 1px solid #30363d; overflow: hidden; background: #0d1117;">
                         <div style="background: linear-gradient(90deg, #2dd4bf 0%, #0f1115 100%); padding: 10px 16px;">
                             <h3 style="margin: 0; color: #0f1115; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${trimmedLine}</h3>
                         </div>
-                        <div style="padding: 0;">`; // Removed vertical padding from container
+                        <div style="padding: 0;">`;
                     inSummary = true;
                     continue;
                 }
 
-                // === SUMMARY KEY:VALUE PAIRS (TIGHTER) ===
+                // === SUMMARY KEY:VALUE ===
                 if (inSummary && trimmedLine.startsWith('- ') && trimmedLine.includes(':')) {
                     const content = trimmedLine.substring(2);
                     const colonIndex = content.indexOf(':');
                     const key = content.substring(0, colonIndex).trim();
                     const val = content.substring(colonIndex + 1).trim();
 
-                    // 3. TIGHTER SUMMARY ROWS
                     html += `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid #21262d;">
                         <span style="color: #8b949e; font-size: 12px; font-weight: 500;">${key}</span>
@@ -357,7 +357,7 @@ class FCSModule {
                     inSummary = false;
                 }
 
-                // === MARKDOWN TABLE HEADER ===
+                // === TABLE HEADER ===
                 if (trimmedLine.startsWith('|') && trimmedLine.includes('Month') && trimmedLine.includes('Deposits')) {
                     if (inTable) { html += '</tbody></table></div>'; }
                     tableHeaders = trimmedLine.split('|').map(h => h.trim()).filter(h => h);
@@ -373,7 +373,7 @@ class FCSModule {
                     continue;
                 }
 
-                // === MARKDOWN TABLE ROW ===
+                // === TABLE ROW ===
                 if (inTable && trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
                     const cells = trimmedLine.split('|').map(c => c.trim()).filter(c => c);
                     if (cells.length >= 5) {
@@ -408,15 +408,16 @@ class FCSModule {
                     continue;
                 }
 
-                // === SECTION HEADERS (Observations, etc) ===
+                // === SECTION HEADERS ===
                 const isHeader = (trimmedLine.endsWith(':') && trimmedLine.length < 60 && !trimmedLine.startsWith('-')) ||
                                  trimmedLine.startsWith('##') || trimmedLine.startsWith('===');
 
                 if (isHeader) {
                     const headerText = trimmedLine.replace(/^[#=\s]+/, '').replace(/[=:]+$/, '').trim();
+                    currentSection = headerText; // UPDATE CURRENT SECTION
 
                     // Special style for Analysis Headers
-                    if (headerText.match(/^(Observations|Recent MCA|Debt-Consolidation|Items for Review)/i)) {
+                    if (headerText.match(/^(Observations|Recent MCA|Debt-Consolidation|Items for Review|MCA Deposits)/i)) {
                         html += `
                         <div style="margin-top: 24px; margin-bottom: 8px;">
                             <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${headerText}</span>
@@ -429,14 +430,32 @@ class FCSModule {
                     continue;
                 }
 
-                // === 2. FIX FOR BULLET POINTS (THE "SPREAD OUT" ISSUE) ===
-                // Instead of making each bullet a box, we make them a clean list
+                // === BULLET POINTS (LOGIC FOR "STANDING OUT") ===
                 if (trimmedLine.startsWith('- ')) {
                     const bulletContent = trimmedLine.substring(2);
-                    const tagMatch = bulletContent.match(/^(.+?)\s{2,}(.+)$/); // Check for right-aligned tags
 
+                    // 1. OBSERVATIONS: Make them distinct cards
+                    if (currentSection.includes('Observations')) {
+                        html += `
+                        <div style="background: #161b22; border-left: 3px solid #3b82f6; padding: 12px; margin-bottom: 8px; border-radius: 0 6px 6px 0; font-size: 13px; color: #e6edf3; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                            ${bulletContent}
+                        </div>`;
+                        continue;
+                    }
+
+                    // 2. MCA DEPOSITS: Make them Green/Money cards
+                    if (currentSection.includes('MCA Deposits')) {
+                        html += `
+                        <div style="background: rgba(22, 163, 74, 0.1); border: 1px solid rgba(22, 163, 74, 0.3); padding: 10px 12px; margin-bottom: 6px; border-radius: 6px; display: flex; align-items: center;">
+                            <span style="color: #4ade80; margin-right: 10px; font-size: 16px;">💰</span>
+                            <span style="color: #e6edf3; font-size: 13px; font-weight: 500;">${bulletContent}</span>
+                        </div>`;
+                        continue;
+                    }
+
+                    // 3. Regular Tagged List Items (like in "1a. Revenue Deductions")
+                    const tagMatch = bulletContent.match(/^(.+?)\s{2,}(.+)$/);
                     if (tagMatch) {
-                        // Tagged items (Keep these as cards, but tighter)
                         const [, leftPart, rightPart] = tagMatch;
                         html += `
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 4px; background: #161b22; border-radius: 6px; border: 1px solid #30363d;">
@@ -444,34 +463,36 @@ class FCSModule {
                             <span style="color: #8b949e; font-size: 11px; background: #21262d; padding: 2px 8px; border-radius: 4px;">${rightPart.trim()}</span>
                         </div>`;
                     } else {
-                        // Regular bullets (Observations, Lists) - REMOVED THE BOX
+                        // 4. Default Bullet (Clean list)
                         html += `
                         <div style="position: relative; padding-left: 16px; margin-bottom: 6px; color: #c9d1d9; font-size: 13px;">
-                            <span style="position: absolute; left: 0; top: 6px; width: 4px; height: 4px; background: #3b82f6; border-radius: 50%;"></span>
+                            <span style="position: absolute; left: 0; top: 6px; width: 4px; height: 4px; background: #30363d; border-radius: 50%;"></span>
                             ${bulletContent}
                         </div>`;
                     }
                     continue;
                 }
 
-                // === POSITIONS (Keep these as cards, they are important) ===
+                // === POSITIONS (MAKE THEM POP) ===
                 if (trimmedLine.match(/^Position\s+\d+:/i)) {
                     const content = trimmedLine.replace(/^Position\s+\d+:\s*/i, '');
                     const posNum = trimmedLine.match(/^Position\s+(\d+)/i)[1];
+
+                    // Enhanced "Card" look for Positions
                     html += `
-                    <div style="display: flex; align-items: flex-start; gap: 12px; padding: 10px; margin: 8px 0; background: #161b22; border-radius: 6px; border-left: 3px solid #f59e0b;">
-                        <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-top: 2px;">P${posNum}</span>
-                        <span style="color: #e6edf3; font-size: 13px; font-weight: 500;">${content}</span>
+                    <div style="display: flex; align-items: center; gap: 14px; padding: 14px; margin: 10px 0; background: #1c2128; border: 1px solid #f59e0b; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);">
+                        <div style="background: #f59e0b; color: #000; font-size: 12px; font-weight: 800; padding: 4px 8px; border-radius: 4px; min-width: 24px; text-align: center;">P${posNum}</div>
+                        <span style="color: #fff; font-size: 14px; font-weight: 600;">${content}</span>
                     </div>`;
                     continue;
                 }
 
-                // === REASON/NOTES (Integrated style) ===
+                // === REASON/NOTES ===
                 if (trimmedLine.startsWith('Reason:') || trimmedLine.startsWith('NOTE:')) {
                     const content = trimmedLine.replace(/^(Reason:|NOTE:)\s*/i, '');
                     html += `
-                    <div style="margin: 4px 0 16px 20px; font-size: 12px; color: #8b949e; border-left: 2px solid #30363d; padding-left: 12px; font-style: italic;">
-                        ${content}
+                    <div style="margin: 4px 0 20px 0; padding: 10px 14px; background: rgba(139, 148, 158, 0.1); border-left: 3px solid #8b949e; border-radius: 0 6px 6px 0; font-size: 12px; color: #c9d1d9; font-style: italic;">
+                        <strong>Analysis:</strong> ${content}
                     </div>`;
                     continue;
                 }
@@ -481,7 +502,7 @@ class FCSModule {
                     const colonIndex = trimmedLine.indexOf(':');
                     const key = trimmedLine.substring(0, colonIndex).trim();
                     const val = trimmedLine.substring(colonIndex + 1).trim();
-                    if (key && val && key.length < 40) {
+                    if (key && val && key.length < 60) {
                         html += `
                         <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(48, 54, 61, 0.5);">
                             <span style="color: #8b949e;">${key}</span>
