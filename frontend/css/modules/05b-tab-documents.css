@@ -500,3 +500,44 @@
     color: #e6edf3;
     font-size: 14px;
 }
+
+/* ==========================================================================
+   [FCS] Sync Loading State
+   ========================================================================== */
+
+.sync-loading-state {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    margin: 20px;
+    background: rgba(45, 212, 191, 0.05);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    border-radius: 12px;
+}
+
+.spinner-sync {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #30363d;
+    border-top-color: #2dd4bf;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    flex-shrink: 0;
+}
+
+.sync-loading-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sync-loading-text strong {
+    color: #e6edf3;
+    font-size: 14px;
+}
+
+.sync-loading-text span {
+    color: #8b949e;
+    font-size: 13px;
+}
