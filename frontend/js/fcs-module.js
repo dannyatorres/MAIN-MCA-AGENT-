@@ -240,15 +240,13 @@ class FCSModule {
                 let line = lines[i];
                 let trimmedLine = line.trim();
 
-                // Skip empty lines and pure separator lines
                 if (trimmedLine === '' || trimmedLine.match(/^[-=_*]{3,}$/)) continue;
-                if (trimmedLine.match(/^\|[-\s|:]+\|$/)) continue; // Skip markdown table separator row
+                if (trimmedLine.match(/^\|[-\s|:]+\|$/)) continue;
 
-                // DETECT MARKDOWN TABLE HEADER (contains | and Month)
+                // === NEW FORMAT: Markdown table header ===
                 if (trimmedLine.startsWith('|') && trimmedLine.includes('Month') && trimmedLine.includes('Deposits')) {
                     if (inTable) { html += '</tbody></table></div>'; }
 
-                    // Parse headers
                     tableHeaders = trimmedLine.split('|').map(h => h.trim()).filter(h => h);
 
                     html += `
@@ -264,17 +262,12 @@ class FCSModule {
                     continue;
                 }
 
-                // PARSE MARKDOWN TABLE ROW
+                // === NEW FORMAT: Markdown table row ===
                 if (inTable && trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
                     const cells = trimmedLine.split('|').map(c => c.trim()).filter(c => c);
 
                     if (cells.length >= 5) {
-                        const month = cells[0] || '-';
-                        const deposits = cells[1] || '-';
-                        const revenue = cells[2] || '-';
-                        const negDays = cells[3] || '0';
-                        const endBal = cells[4] || '-';
-                        const numDep = cells[5] || '-';
+                        const [month, deposits, revenue, negDays, endBal, numDep] = cells;
                         const negDaysNum = parseInt(negDays) || 0;
 
                         html += `
@@ -284,19 +277,57 @@ class FCSModule {
                                 <td style="padding: 12px; font-weight: 600; color: #4ade80;">${revenue}</td>
                                 <td style="padding: 12px; ${negDaysNum > 3 ? 'color: #f87171;' : ''}">${negDays}</td>
                                 <td style="padding: 12px;">${endBal}</td>
-                                <td style="padding: 12px;">${numDep}</td>
+                                <td style="padding: 12px;">${numDep || '-'}</td>
                             </tr>`;
                         continue;
                     }
                 }
 
-                // NON-TABLE ROW: Close table if we were in one
-                if (inTable && !trimmedLine.startsWith('|')) {
+                // === OLD FORMAT: "Jul 2025   Deposits: $X   Revenue: $X   Neg Days: X   End Bal: $X   #Dep: X" ===
+                const oldFormatMatch = trimmedLine.match(/^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})\s+Deposits:\s*(\$?[\d,.-]+)\s+Revenue:\s*(\$?[\d,.-]+)\s+Neg Days:\s*([\dN\/A]+)\s+End Bal:\s*(\$?[\d,.-]+)\s+#Dep:\s*(\d+)/i);
+
+                if (oldFormatMatch) {
+                    // Start table if not already in one
+                    if (!inTable) {
+                        html += `
+                        <div style="overflow-x: auto; margin: 20px 0; border-radius: 8px; border: 1px solid #30363d;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; background: #0d1117;">
+                                <thead style="background: #161b22; color: #8b949e; text-transform: uppercase; font-size: 11px;">
+                                    <tr>
+                                        <th style="padding: 12px;">Month</th>
+                                        <th style="padding: 12px;">Deposits</th>
+                                        <th style="padding: 12px;">Revenue</th>
+                                        <th style="padding: 12px;">Neg Days</th>
+                                        <th style="padding: 12px;">End Bal</th>
+                                        <th style="padding: 12px;">#Dep</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                        inTable = true;
+                    }
+
+                    const [, month, deposits, revenue, negDays, endBal, numDep] = oldFormatMatch;
+                    const negDaysNum = parseInt(negDays) || 0;
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #21262d;">
+                            <td style="padding: 12px; font-weight: 600; color: #3b82f6;">${month}</td>
+                            <td style="padding: 12px;">${deposits}</td>
+                            <td style="padding: 12px; font-weight: 600; color: #4ade80;">${revenue}</td>
+                            <td style="padding: 12px; ${negDaysNum > 3 ? 'color: #f87171;' : ''}">${negDays}</td>
+                            <td style="padding: 12px;">${endBal}</td>
+                            <td style="padding: 12px;">${numDep}</td>
+                        </tr>`;
+                    continue;
+                }
+
+                // === Close table if we hit non-table content ===
+                if (inTable && !trimmedLine.startsWith('|') && !oldFormatMatch) {
                     html += '</tbody></table></div>';
                     inTable = false;
                 }
 
-                // SECTION HEADERS
+                // === SECTION HEADERS ===
                 const isHeader = (trimmedLine.endsWith(':') && trimmedLine.length < 60) ||
                                  trimmedLine.startsWith('##') ||
                                  trimmedLine.startsWith('===') ||
@@ -308,7 +339,6 @@ class FCSModule {
                     if (headerText.includes('BUSINESS NAME') || headerText.includes('EXTRACTED')) {
                         html += `<div style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-top: 20px;">${headerText}</div>`;
                     } else if (headerText.includes('ACCOUNT') && headerText.includes('...')) {
-                        // Account header (e.g., "CHECKING ACCOUNT ...1234")
                         html += `<h3 style="color: #2dd4bf; margin: 28px 0 16px 0; font-size: 16px; font-weight: 700;">${headerText}</h3>`;
                     } else {
                         html += `<h4 style="color: #3b82f6; margin: 24px 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 8px;">${headerText}</h4>`;
@@ -316,8 +346,8 @@ class FCSModule {
                     continue;
                 }
 
-                // KEY: VALUE PAIRS
-                if (trimmedLine.includes(':') && !trimmedLine.startsWith('|')) {
+                // === KEY: VALUE PAIRS ===
+                if (trimmedLine.includes(':') && !trimmedLine.startsWith('|') && !trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i)) {
                     const colonIndex = trimmedLine.indexOf(':');
                     const key = trimmedLine.substring(0, colonIndex).trim();
                     const val = trimmedLine.substring(colonIndex + 1).trim();
@@ -332,7 +362,7 @@ class FCSModule {
                     }
                 }
 
-                // BULLET POINTS (lines starting with -)
+                // === BULLET POINTS ===
                 if (trimmedLine.startsWith('- ')) {
                     const bulletContent = trimmedLine.substring(2);
                     html += `<div style="margin: 6px 0 6px 12px; font-size: 13px; line-height: 1.6; color: #c9d1d9;">
@@ -341,7 +371,7 @@ class FCSModule {
                     continue;
                 }
 
-                // PLAIN TEXT
+                // === PLAIN TEXT ===
                 html += `<div style="margin-bottom: 6px; font-size: 13px; line-height: 1.5; color: #9ca3af;">${trimmedLine}</div>`;
             }
 
