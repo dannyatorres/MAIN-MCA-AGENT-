@@ -97,7 +97,7 @@
 }
 
 /* ==========================================================================
-   [DASHBOARD MODE]
+   [DASHBOARD MODE & CONTAINER]
    ========================================================================== */
 
 .center-panel.dashboard-mode .panel-header {
@@ -113,23 +113,26 @@
     overflow-x: hidden;
 }
 
-/* ==========================================================================
-   [COMPACT DASHBOARD CONTAINER]
-   ========================================================================== */
-
-.dashboard-container {
-    padding: 24px;
-    width: 100%;
-    max-width: 520px;
-    margin: auto;
-    box-sizing: border-box;
-    animation: fadeIn 0.4s ease-out;
-}
-
 #dashboardView {
     display: flex;
     justify-content: center;
     align-items: center;
+    min-height: 100%;
+    padding: 20px 0; /* Buffer for small screens */
+}
+
+.dashboard-container {
+    width: 100%;
+    max-width: 750px; /* INCREASED: Fits the desktop panel naturally */
+    padding: 0 40px;  /* Breathing room on sides */
+    margin: auto;
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* UNIFIED SPACING: Keeps rhythm consistent */
+
+    animation: fadeIn 0.4s ease-out;
 }
 
 @keyframes fadeIn {
@@ -137,27 +140,27 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 500px) {
-    .quick-actions-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
+/* Mobile responsive adjustment */
+@media (max-width: 600px) {
     .dashboard-container {
         padding: 16px;
+        max-width: 100%;
+    }
+    .stats-grid, .quick-actions-grid {
+        gap: 10px;
     }
 }
 
 /* ==========================================================================
-   [HERO WELCOME CARD - COMPACT]
+   [HERO WELCOME CARD]
    ========================================================================== */
 
 .hero-card {
     background: linear-gradient(135deg, #1a1f2e 0%, #161b22 50%, #0d1117 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
-    padding: 24px 32px;
+    padding: 32px; /* Increased padding for luxury feel */
     text-align: center;
-    margin-bottom: 16px;
     position: relative;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -169,8 +172,8 @@
     position: absolute;
     right: -20px;
     bottom: -30px;
-    width: 140px;
-    height: 140px;
+    width: 160px; /* Slightly larger watermark */
+    height: 160px;
     background-image: url('logo.png');
     background-size: contain;
     background-repeat: no-repeat;
@@ -189,23 +192,19 @@
     pointer-events: none;
 }
 
-.hero-logo {
-    display: none; /* Hide the explicit logo since we're using watermark */
-}
-
 .hero-greeting {
-    font-size: 24px;
+    font-size: 26px; /* Larger font */
     font-weight: 700;
     color: #e6edf3;
-    margin: 0 0 8px 0;
+    margin: 0 0 10px 0;
 }
 
 .hero-quote {
-    font-size: 13px;
+    font-size: 14px;
     color: #8b949e;
     font-style: italic;
-    max-width: 380px;
-    margin: 0 auto 12px auto;
+    max-width: 480px; /* Wider text measure */
+    margin: 0 auto 16px auto;
     line-height: 1.5;
 }
 
@@ -217,14 +216,13 @@
 }
 
 /* ==========================================================================
-   [COMPACT STATS GRID]
+   [STATS GRID]
    ========================================================================== */
 
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 16px; /* Matches container gap */
 }
 
 .center-panel .stat-card {
@@ -232,40 +230,50 @@
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
     border-radius: 12px;
-    padding: 14px;
+    padding: 20px; /* Increased padding */
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    justify-content: space-between;
+    height: 100px; /* Fixed height for consistency */
     transition: transform 0.2s;
+    position: relative;
+}
+
+.center-panel .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
 .stat-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     background: rgba(59, 130, 246, 0.1);
     color: #3b82f6;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .stat-value {
     color: #e6edf3 !important;
-    font-size: 22px;
+    font-size: 28px; /* Larger numbers */
     font-weight: 700;
+    line-height: 1;
+    margin-top: auto; /* Push to bottom */
+    margin-bottom: 4px;
 }
 
 .stat-label {
     color: #8b949e !important;
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 /* ==========================================================================
-   [COMPACT GOAL CARD]
+   [GOAL CARD]
    ========================================================================== */
 
 .center-panel .goal-card {
@@ -273,67 +281,67 @@
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
     border-radius: 12px;
-    padding: 16px 20px;
+    padding: 24px; /* Spacious */
     position: relative;
     overflow: hidden;
-    margin-bottom: 16px;
 }
 
 .goal-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
 }
 
 .goal-title {
     color: #e6edf3;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 14px;
+    margin-bottom: 4px;
 }
 
 .goal-numbers {
     color: #ffffff;
     font-weight: 700;
-    font-size: 18px;
-    margin-top: 2px;
+    font-size: 20px;
 }
 
 .goal-subtext {
     opacity: 0.5;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 400;
 }
 
 .progress-track {
     width: 100%;
-    height: 6px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 3px;
+    height: 8px; /* Thicker bar */
+    background: rgba(255,255,255,0.06);
+    border-radius: 4px;
     overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #3b82f6, #10b981);
-    border-radius: 3px;
+    border-radius: 4px;
     transition: width 1s ease-out;
 }
 
 /* ==========================================================================
-   [COMPACT QUICK ACTIONS]
+   [QUICK ACTIONS]
    ========================================================================== */
 
 .quick-actions-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    gap: 16px;
 }
 
 .action-card {
     background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 14px 10px;
+    border-radius: 12px;
+    padding: 16px 12px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -343,23 +351,24 @@
     transform: translateY(-2px);
     border-color: rgba(59, 130, 246, 0.3);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(180deg, #252d3d 0%, #1a2029 100%);
 }
 
 .action-icon {
-    width: 32px;
-    height: 32px;
-    margin: 0 auto 8px auto;
+    width: 36px;
+    height: 36px;
+    margin: 0 auto 10px auto;
     background: rgba(59, 130, 246, 0.1);
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #3b82f6;
-    font-size: 14px;
+    font-size: 16px;
 }
 
 .action-label {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     color: #8b949e;
     text-transform: uppercase;
