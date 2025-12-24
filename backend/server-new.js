@@ -688,6 +688,21 @@ app.use('/api/agent', require('./routes/agent')); // AI Agent for Dispatcher
 app.use('/api/cleaner', require('./routes/cleaner')); // Background Verification
 app.use('/api/stats', require('./routes/stats'));
 
+// TEMP DEBUG - remove later
+app.get('/api/stats-test', async (req, res) => {
+    const { getDatabase } = require('./services/database');
+    const db = getDatabase();
+
+    const submitted = await db.query(`SELECT COUNT(DISTINCT conversation_id) as count FROM lender_submissions`);
+    const offers = await db.query(`SELECT COUNT(DISTINCT conversation_id) as count FROM lender_submissions WHERE status = 'OFFER'`);
+
+    res.json({
+        submitted: submitted.rows[0]?.count,
+        offers: offers.rows[0]?.count,
+        file_check: 'inline test'
+    });
+});
+
 // --- CONTACT FORM ROUTE (LOG ONLY) ---
 app.post('/api/contact', (req, res) => {
     const { name, email, message } = req.body;
