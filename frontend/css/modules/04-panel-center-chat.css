@@ -97,7 +97,7 @@
 }
 
 /* ==========================================================================
-   [DASHBOARD MODE & CONTAINER]
+   [DASHBOARD MODE & CONTAINER - FIXED CENTERING]
    ========================================================================== */
 
 .center-panel.dashboard-mode .panel-header {
@@ -113,26 +113,61 @@
     overflow-x: hidden;
 }
 
+/* 1. Dashboard View - The Scrollable Canvas */
 #dashboardView {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100%;
-    padding: 20px 0; /* Buffer for small screens */
+    /* Absolute positioning ensures it fills the exact visible area */
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    /* Grid centering is more stable than flex for this */
+    display: grid;
+    place-items: center;
+
+    /* Allow scrolling if height is small */
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Reset padding to ensure no offset */
+    padding: 0;
+
+    /* Background matches panel to hide edges */
+    background: transparent;
 }
 
+/* 2. The Inner Container - The visible content */
 .dashboard-container {
     width: 100%;
-    max-width: 750px; /* INCREASED: Fits the desktop panel naturally */
-    padding: 0 40px;  /* Breathing room on sides */
-    margin: auto;
+    /* Keep the 750px max-width, it looks good */
+    max-width: 750px;
+
+    /* Remove top/bottom auto margins, let Grid handle centering */
+    margin: 0;
+
+    /* Padding handles the spacing on mobile */
+    padding: 40px;
     box-sizing: border-box;
 
     display: flex;
     flex-direction: column;
-    gap: 16px; /* UNIFIED SPACING: Keeps rhythm consistent */
+    gap: 16px;
 
-    animation: fadeIn 0.4s ease-out;
+    /* Animation entry */
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 3. Helper to ensure scrollbar doesn't shift layout */
+#dashboardView::-webkit-scrollbar {
+    width: 8px;
+}
+#dashboardView::-webkit-scrollbar-track {
+    background: transparent;
+}
+#dashboardView::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
 }
 
 @keyframes fadeIn {
@@ -141,13 +176,10 @@
 }
 
 /* Mobile responsive adjustment */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .dashboard-container {
-        padding: 16px;
+        padding: 20px;
         max-width: 100%;
-    }
-    .stats-grid, .quick-actions-grid {
-        gap: 10px;
     }
 }
 
