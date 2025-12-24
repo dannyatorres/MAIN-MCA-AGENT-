@@ -267,7 +267,9 @@ async function processEmail(email, db) {
 
     if (data.category === 'OFFER') {
         await db.query(`UPDATE conversations SET has_offer = TRUE, last_activity = NOW() WHERE id = $1`, [bestMatchId]);
-        if (global.io) global.io.emit('refresh_lead_list');
+        if (global.io) {
+            global.io.emit('refresh_lead_list', { conversationId: bestMatchId });
+        }
     }
 
     const systemNote = `📩 **INBOX UPDATE (${data.lender}):** ${data.summary}`;
