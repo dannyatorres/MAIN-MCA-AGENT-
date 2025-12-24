@@ -20,7 +20,7 @@ class FCSModule {
     }
 
     // =========================================================
-    // SYNC & ANALYZE LOGIC (Replaces old Modal)
+    // SYNC & ANALYZE LOGIC (With Job Polling)
     // =========================================================
     async triggerSyncAndAnalyze() {
         const conversationId = this.parent.getCurrentConversationId();
@@ -31,18 +31,26 @@ class FCSModule {
             return;
         }
 
-        // 1. UI: Hide Results, Show Loading
         const fcsResults = document.getElementById('fcsResults');
-        const syncLoading = document.getElementById('syncLoading'); // Defined in fcs-tab.js
+        const syncLoading = document.getElementById('syncLoading');
 
         if (fcsResults) fcsResults.style.display = 'none';
-        if (syncLoading) syncLoading.style.display = 'flex';
+        if (syncLoading) {
+            syncLoading.style.display = 'flex';
+            syncLoading.innerHTML = `
+                <div class="spinner-sync"></div>
+                <div class="sync-loading-text">
+                    <strong>AI Agent Working...</strong>
+                    <span>Starting sync process...</span>
+                </div>
+            `;
+        }
 
         try {
             console.log(`☁️ Triggering Sync & Analyze for: ${conversation.business_name}`);
 
-            // 2. API Call: Sync Drive -> Download -> Analyze
-            const response = await this.parent.apiCall(`/api/integrations/drive/sync`, {
+            // 1. Start the job (returns immediately with jobId)
+            const startResponse = await this.parent.apiCall(`/api/integrations/drive/sync`, {
                 method: 'POST',
                 body: {
                     conversationId: conversationId,
@@ -50,14 +58,24 @@ class FCSModule {
                 }
             });
 
-            if (response.success) {
-                // 3. Success: Wait a moment, then reload
+            if (!startResponse.success || !startResponse.jobId) {
+                throw new Error(startResponse.error || "Failed to start sync job");
+            }
+
+            const jobId = startResponse.jobId;
+            console.log(`📋 Job started: ${jobId}`);
+
+            // 2. Poll for completion
+            const result = await this.pollJobStatus(jobId, syncLoading);
+
+            // 3. Handle completion
+            if (result.status === 'completed') {
                 if (syncLoading) {
                     syncLoading.innerHTML = `
                         <div style="color:#10b981; font-size: 24px;">✅</div>
                         <div class="sync-loading-text">
                             <strong style="color:#10b981">Analysis Complete!</strong>
-                            <span>Synced ${response.count} files. Reloading report...</span>
+                            <span>Synced ${result.result?.count || 0} files. Loading report...</span>
                         </div>
                     `;
                 }
@@ -65,21 +83,14 @@ class FCSModule {
                 setTimeout(() => {
                     if (syncLoading) {
                         syncLoading.style.display = 'none';
-                        // Reset content for next time
-                        syncLoading.innerHTML = `
-                            <div class="spinner-sync"></div>
-                            <div class="sync-loading-text">
-                                <strong>AI Agent Working...</strong>
-                                <span>Searching Drive, downloading PDFs, and running Financial Analysis.</span>
-                            </div>
-                        `;
+                        this.resetSyncLoadingUI(syncLoading);
                     }
-                    // Reload Data
+                    this.reportCache.delete(conversationId); // Clear cache to force reload
                     this.loadFCSData();
                 }, 1500);
 
             } else {
-                throw new Error(response.error || "Sync failed");
+                throw new Error(result.error || "Sync failed");
             }
 
         } catch (err) {
@@ -95,6 +106,67 @@ class FCSModule {
                 `;
             }
         }
+    }
+
+    async pollJobStatus(jobId, syncLoading, maxAttempts = 120) {
+        const pollInterval = 3000; // Check every 3 seconds
+        let attempts = 0;
+
+        const statusMessages = [
+            'Searching Google Drive...',
+            'Downloading bank statements...',
+            'Analyzing financial data...',
+            'Running AI underwriting...',
+            'Generating FCS report...',
+            'Almost done...'
+        ];
+
+        while (attempts < maxAttempts) {
+            attempts++;
+
+            try {
+                const status = await this.parent.apiCall(`/api/integrations/drive/sync/status/${jobId}`);
+
+                // Update progress UI
+                if (syncLoading && status.status === 'processing') {
+                    const messageIndex = Math.min(Math.floor(attempts / 10), statusMessages.length - 1);
+                    syncLoading.innerHTML = `
+                        <div class="spinner-sync"></div>
+                        <div class="sync-loading-text">
+                            <strong>AI Agent Working...</strong>
+                            <span>${status.progress || statusMessages[messageIndex]}</span>
+                        </div>
+                    `;
+                }
+
+                // Check if done
+                if (status.status === 'completed' || status.status === 'failed') {
+                    return status;
+                }
+
+            } catch (err) {
+                console.warn(`Poll attempt ${attempts} failed:`, err.message);
+                // Continue polling unless it's a 404 (job not found)
+                if (err.message.includes('404')) {
+                    throw new Error('Job not found - it may have expired');
+                }
+            }
+
+            // Wait before next poll
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+
+        throw new Error('Sync timed out after 6 minutes');
+    }
+
+    resetSyncLoadingUI(syncLoading) {
+        syncLoading.innerHTML = `
+            <div class="spinner-sync"></div>
+            <div class="sync-loading-text">
+                <strong>AI Agent Working...</strong>
+                <span>Searching Drive, downloading PDFs, and running Financial Analysis.</span>
+            </div>
+        `;
     }
 
     // =========================================================
