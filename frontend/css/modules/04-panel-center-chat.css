@@ -121,9 +121,15 @@
     padding: 40px;
     width: 100%;
     max-width: 800px;
-    margin: 0 auto; /* Center horizontal */
-    box-sizing: border-box; /* Include padding in width */
+    margin: auto; /* Center both horizontal AND vertical */
+    box-sizing: border-box;
     animation: fadeIn 0.4s ease-out;
+}
+
+#dashboardView {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 /* Ensure nothing inside forces a horizontal scroll */
