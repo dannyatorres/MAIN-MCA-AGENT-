@@ -180,22 +180,50 @@ class MessagingModule {
     // ============================================================
 
     setupEventListeners() {
-        if (this.eventListenersAttached) return;
+        if (this.eventListenersAttached) {
+            console.log('⚠️ Event listeners already attached, skipping');
+            return;
+        }
 
         const msgInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
+        const sendBtn = document.getElementById('sendMessageBtn'); // FIXED: was 'sendBtn'
 
+        console.log('🔧 Setting up messaging event listeners:', {
+            hasInput: !!msgInput,
+            hasBtn: !!sendBtn
+        });
+
+        // Enter key to send
         if (msgInput) {
             msgInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); }
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.sendMessage();
+                }
             });
         }
-        if (sendBtn) sendBtn.addEventListener('click', () => this.sendMessage());
+
+        // Send button
+        if (sendBtn) {
+            sendBtn.removeAttribute('onclick');
+
+            // Clone to remove any existing listeners
+            const newBtn = sendBtn.cloneNode(true);
+            sendBtn.parentNode.replaceChild(newBtn, sendBtn);
+
+            newBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.sendMessage();
+            });
+        }
 
         // File Upload
         const attachBtn = document.getElementById('attachmentBtn');
         const fileInput = document.getElementById('fileInput');
         if (attachBtn && fileInput) {
+            attachBtn.removeAttribute('onclick');
             attachBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
         }
@@ -203,6 +231,7 @@ class MessagingModule {
         // AI Toggle
         const aiToggleBtn = document.getElementById('aiToggleBtn');
         if (aiToggleBtn) {
+            aiToggleBtn.removeAttribute('onclick');
             aiToggleBtn.addEventListener('click', () => {
                 const isCurrentlyOn = aiToggleBtn.dataset.state === 'on';
                 this.toggleAI(!isCurrentlyOn);
@@ -210,6 +239,7 @@ class MessagingModule {
         }
 
         this.eventListenersAttached = true;
+        console.log('✅ Messaging event listeners attached');
     }
 
     async handleFileUpload(e) {
