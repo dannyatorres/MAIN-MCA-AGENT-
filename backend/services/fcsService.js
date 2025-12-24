@@ -219,13 +219,23 @@ class FCSService {
             // 4. Generate Analysis (GEMINI ONLY)
             const fcsAnalysisRaw = await this.generateFCSAnalysis(extractedData, businessName);
 
-            // 📝 LOG: Raw Gemini output
+            // 📝 LOG TO CONSOLE (Railway logs)
+            console.log('\n========== RAW GEMINI OUTPUT ==========');
+            console.log(fcsAnalysisRaw);
+            console.log('========== END RAW OUTPUT ==========\n');
+
+            // 📝 LOG: Raw Gemini output (to file)
             logFCSReport(conversationId, fcsAnalysisRaw, '1-raw-gemini');
 
             // 🧹 CLEANER: Remove markdown artifacts and echo lines
             const fcsAnalysis = this.cleanGeminiOutput(fcsAnalysisRaw);
 
-            // 📝 LOG: After cleaning
+            // 📝 LOG CLEANED VERSION (Railway logs)
+            console.log('\n========== CLEANED FCS REPORT ==========');
+            console.log(fcsAnalysis);
+            console.log('========== END CLEANED REPORT ==========\n');
+
+            // 📝 LOG: After cleaning (to file)
             logFCSReport(conversationId, fcsAnalysis, '2-cleaned');
 
             // 5. Extract Metrics

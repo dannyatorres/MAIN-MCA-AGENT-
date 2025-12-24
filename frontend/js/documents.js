@@ -1049,7 +1049,6 @@ class DocumentsModule {
         if (this.parent.intelligenceManager) {
             this.parent.intelligenceManager.switchTab('fcs');
         } else {
-            // Fallback: try to click the FCS tab directly
             const fcsTab = document.querySelector('[data-tab="fcs"]');
             if (fcsTab) fcsTab.click();
         }
@@ -1061,9 +1060,7 @@ class DocumentsModule {
         const fcsResults = document.getElementById('fcsResults');
         const syncLoading = document.getElementById('syncLoading');
 
-        if (fcsResults) {
-            fcsResults.style.display = 'none';
-        }
+        if (fcsResults) fcsResults.style.display = 'none';
 
         if (syncLoading) {
             syncLoading.style.display = 'flex';
@@ -1071,14 +1068,14 @@ class DocumentsModule {
                 <div class="spinner-sync"></div>
                 <div class="sync-loading-text">
                     <strong>AI Agent Working...</strong>
-                    <span>Analyzing ${selectedIds.length} document(s)...</span>
+                    <span>Starting analysis of ${selectedIds.length} document(s)...</span>
                 </div>
             `;
         }
 
         try {
-            // Call FCS generation with selected document IDs
-            const response = await this.parent.apiCall(`/api/fcs/generate`, {
+            // 1. Start the job (returns immediately with jobId)
+            const startResponse = await this.parent.apiCall(`/api/fcs/generate`, {
                 method: 'POST',
                 body: {
                     conversationId: conversation.id,
@@ -1087,7 +1084,18 @@ class DocumentsModule {
                 }
             });
 
-            if (response.success) {
+            if (!startResponse.success || !startResponse.jobId) {
+                throw new Error(startResponse.error || 'Failed to start FCS generation');
+            }
+
+            const jobId = startResponse.jobId;
+            console.log(`📋 FCS Job started: ${jobId}`);
+
+            // 2. Poll for completion
+            const result = await this.pollFCSJobStatus(jobId, syncLoading);
+
+            // 3. Handle completion
+            if (result.status === 'completed') {
                 if (syncLoading) {
                     syncLoading.innerHTML = `
                         <div style="color:#10b981; font-size: 24px;">✅</div>
@@ -1100,7 +1108,6 @@ class DocumentsModule {
 
                 setTimeout(() => {
                     if (syncLoading) syncLoading.style.display = 'none';
-                    // Reload FCS data
                     if (this.parent.fcs) {
                         this.parent.fcs.reportCache.delete(conversation.id);
                         this.parent.fcs.loadFCSData();
@@ -1108,7 +1115,7 @@ class DocumentsModule {
                 }, 1500);
 
             } else {
-                throw new Error(response.error || 'FCS generation failed');
+                throw new Error(result.error || 'FCS generation failed');
             }
 
         } catch (error) {
@@ -1125,5 +1132,52 @@ class DocumentsModule {
             }
             this.utils.showNotification('FCS generation failed: ' + error.message, 'error');
         }
+    }
+
+    async pollFCSJobStatus(jobId, syncLoading, maxAttempts = 120) {
+        const pollInterval = 3000;
+        let attempts = 0;
+
+        const statusMessages = [
+            'Extracting text from documents...',
+            'Analyzing financial data...',
+            'Running AI underwriting...',
+            'Calculating metrics...',
+            'Generating FCS report...',
+            'Almost done...'
+        ];
+
+        while (attempts < maxAttempts) {
+            attempts++;
+
+            try {
+                const status = await this.parent.apiCall(`/api/fcs/generate/status/${jobId}?_=${Date.now()}`);
+
+                if (syncLoading && status.status === 'processing') {
+                    const messageIndex = Math.min(Math.floor(attempts / 10), statusMessages.length - 1);
+                    syncLoading.innerHTML = `
+                        <div class="spinner-sync"></div>
+                        <div class="sync-loading-text">
+                            <strong>AI Agent Working...</strong>
+                            <span>${status.progress || statusMessages[messageIndex]}</span>
+                        </div>
+                    `;
+                }
+
+                if (status.status === 'completed' || status.status === 'failed') {
+                    return status;
+                }
+
+            } catch (err) {
+                console.warn(`Poll attempt ${attempts} failed:`, err.message);
+                if (err.message.includes('404')) {
+                    throw new Error('Job not found - it may have expired');
+                }
+            }
+
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+
+        throw new Error('FCS generation timed out after 6 minutes');
     }
 }

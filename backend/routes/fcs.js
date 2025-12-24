@@ -8,6 +8,9 @@ const fcsService = require('../services/fcsService'); // <--- CRITICAL IMPORT
 // FCS Request Deduplication
 const recentFCSRequests = new Map();
 
+// In-memory job tracking for FCS generation
+const fcsJobs = new Map();
+
 // 1. TRIGGER ROUTE (Updated to actually RUN the process)
 router.post('/trigger/:conversationId', async (req, res) => {
     try {
@@ -75,7 +78,7 @@ router.post('/trigger/:conversationId', async (req, res) => {
     }
 });
 
-// 2. GENERATE ROUTE (Manual generation with document selection)
+// 2. GENERATE ROUTE (Manual generation with document selection - returns jobId immediately)
 router.post('/generate', async (req, res) => {
     const { conversationId, businessName, documentIds } = req.body;
 
@@ -83,27 +86,83 @@ router.post('/generate', async (req, res) => {
         return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
 
+    const jobId = `fcs-${conversationId}-${Date.now()}`;
+
+    fcsJobs.set(jobId, {
+        status: 'processing',
+        conversationId,
+        businessName,
+        documentIds,
+        startedAt: new Date(),
+        progress: 'Starting analysis...',
+        result: null,
+        error: null
+    });
+
+    // Return immediately with jobId
+    res.json({ success: true, jobId, status: 'processing' });
+
+    // Process in background
+    processFCSJob(jobId, conversationId, businessName, documentIds);
+});
+
+// 2b. GENERATE STATUS ROUTE (Check job status by jobId)
+router.get('/generate/status/:jobId', (req, res) => {
+    const { jobId } = req.params;
+    const job = fcsJobs.get(jobId);
+
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+
+    if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    res.json({
+        success: true,
+        jobId,
+        status: job.status,
+        progress: job.progress,
+        result: job.result,
+        error: job.error
+    });
+
+    // Clean up completed jobs after client fetches result
+    if (job.status === 'completed' || job.status === 'failed') {
+        setTimeout(() => fcsJobs.delete(jobId), 60000);
+    }
+});
+
+// Background processor for FCS jobs
+async function processFCSJob(jobId, conversationId, businessName, documentIds) {
+    const job = fcsJobs.get(jobId);
+    const db = getDatabase();
+
     try {
-        console.log(`📊 Manual FCS generation for: ${businessName}`);
+        console.log(`📊 FCS Job ${jobId} started for: ${businessName}`);
         console.log(`📄 Document IDs: ${documentIds?.join(', ') || 'all'}`);
 
-        const db = getDatabase();
+        job.progress = 'Extracting document text...';
 
-        // Call FCS service with optional document filter
         const result = await fcsService.generateAndSaveFCS(
             conversationId,
             businessName,
             db,
-            documentIds // Pass the filter
+            documentIds
         );
 
-        res.json({ success: true, analysisId: result.analysisId });
+        job.status = 'completed';
+        job.progress = 'Complete';
+        job.result = result;
+
+        console.log(`✅ FCS Job ${jobId} completed`);
 
     } catch (err) {
-        console.error('FCS Generation Error:', err);
-        res.status(500).json({ success: false, error: err.message });
+        console.error(`❌ FCS Job ${jobId} failed:`, err);
+        job.status = 'failed';
+        job.error = err.message;
     }
-});
+}
 
 // 3. STATUS ROUTE (Required for the loading spinner to know when to stop)
 router.get('/status/:conversationId', async (req, res) => {
