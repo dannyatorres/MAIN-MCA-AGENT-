@@ -527,6 +527,25 @@ app.get('/api/fix/add-funding-status', async (req, res) => {
 });
 // =========================================================
 
+// =========================================================
+// 💰 FIX: Add funding tracking columns
+// URL: https://mcagent.io/api/fix/add-funding-tracking
+// =========================================================
+app.get('/api/fix/add-funding-tracking', async (req, res) => {
+    try {
+        const db = getDatabase();
+        await db.query(`
+            ALTER TABLE conversations
+            ADD COLUMN IF NOT EXISTS funded_amount NUMERIC(15,2),
+            ADD COLUMN IF NOT EXISTS funded_at TIMESTAMP;
+        `);
+        res.json({ success: true, message: 'Funding tracking columns added' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
 // --- TRUST PROXY ---
 app.set('trust proxy', 1);
 
@@ -692,9 +711,9 @@ app.use('/api/cleaner', require('./routes/cleaner')); // Background Verification
 app.get('/api/stats', async (req, res) => {
     try {
         const db = getDatabase();
-        
+
         const mainStats = await db.query(`
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 COUNT(*) FILTER (WHERE has_offer = true) as offers,
                 COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as new_today,
@@ -705,18 +724,28 @@ app.get('/api/stats', async (req, res) => {
                 COALESCE(AVG(monthly_revenue), 0) as avg_monthly_revenue
             FROM conversations
         `);
-        
+
         const submittedResult = await db.query(`SELECT COUNT(DISTINCT conversation_id) as count FROM lender_submissions`);
-        const stateBreakdown = await db.query(`SELECT state, COUNT(*) as count FROM conversations WHERE state IS NOT NULL GROUP BY state ORDER BY count DESC`);
-        const leadSourceBreakdown = await db.query(`SELECT COALESCE(lead_source, 'Unknown') as lead_source, COUNT(*) as count FROM conversations GROUP BY lead_source ORDER BY count DESC`);
-        const industryBreakdown = await db.query(`SELECT COALESCE(industry_type, 'Unknown') as industry, COUNT(*) as count FROM conversations GROUP BY industry_type ORDER BY count DESC LIMIT 10`);
-        const geoBreakdown = await db.query(`SELECT COALESCE(us_state, business_state, 'Unknown') as region, COUNT(*) as count FROM conversations GROUP BY region ORDER BY count DESC LIMIT 10`);
-        const creditBreakdown = await db.query(`SELECT COALESCE(credit_score, 'Unknown') as credit_tier, COUNT(*) as count FROM conversations GROUP BY credit_score ORDER BY count DESC`);
-        const fundingBreakdown = await db.query(`SELECT COALESCE(funding_status, 'Unknown') as status, COUNT(*) as count FROM conversations GROUP BY funding_status ORDER BY count DESC`);
-        const activityTrend = await db.query(`SELECT DATE(created_at) as date, COUNT(*) as count FROM conversations WHERE created_at >= CURRENT_DATE - INTERVAL '30 days' GROUP BY DATE(created_at) ORDER BY date ASC`);
+
+        // Funded this month
+        const fundedThisMonth = await db.query(`
+            SELECT
+                COUNT(*) as deal_count,
+                COALESCE(SUM(funded_amount), 0) as total_funded
+            FROM conversations
+            WHERE funded_at >= DATE_TRUNC('month', CURRENT_DATE)
+        `);
+
+        // Funded last month
+        const fundedLastMonth = await db.query(`
+            SELECT COALESCE(SUM(funded_amount), 0) as total_funded
+            FROM conversations
+            WHERE funded_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+              AND funded_at < DATE_TRUNC('month', CURRENT_DATE)
+        `);
 
         const stats = mainStats.rows[0];
-        
+
         res.json({
             success: true,
             active: parseInt(stats.total || 0),
@@ -728,13 +757,12 @@ app.get('/api/stats', async (req, res) => {
             aiDisabled: parseInt(stats.ai_disabled || 0),
             totalMonthlyRevenue: parseFloat(stats.total_monthly_revenue || 0),
             avgMonthlyRevenue: parseFloat(stats.avg_monthly_revenue || 0),
-            stateBreakdown: stateBreakdown.rows,
-            leadSourceBreakdown: leadSourceBreakdown.rows,
-            industryBreakdown: industryBreakdown.rows,
-            geoBreakdown: geoBreakdown.rows,
-            creditBreakdown: creditBreakdown.rows,
-            fundingBreakdown: fundingBreakdown.rows,
-            activityTrend: activityTrend.rows
+
+            // Funding goal data
+            fundedThisMonth: parseFloat(fundedThisMonth.rows[0]?.total_funded || 0),
+            dealsClosedThisMonth: parseInt(fundedThisMonth.rows[0]?.deal_count || 0),
+            fundedLastMonth: parseFloat(fundedLastMonth.rows[0]?.total_funded || 0),
+            monthlyGoal: 500000
         });
     } catch (error) {
         console.error('Stats error:', error);

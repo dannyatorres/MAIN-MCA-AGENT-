@@ -36,13 +36,16 @@ class StatsModule {
             const stats = await this.parent.apiCall('/api/stats');
 
             const normalizedStats = {
-                active: stats.active || 0,
-                submitted: stats.submitted || 0,
-                offers: stats.offers || 0
+                active: stats.active ?? stats.totalConversations ?? 0,
+                submitted: stats.submitted ?? 0,
+                offers: stats.offers ?? 0
             };
 
             this.statsCache = normalizedStats;
             this.updateUI(normalizedStats);
+
+            // Update Funding Goal Card
+            this.updateFundingGoal(stats);
 
         } catch (error) {
             console.error('Error loading stats:', error);
@@ -50,6 +53,48 @@ class StatsModule {
                 if (activeEl) activeEl.textContent = '-';
                 if (submittedEl) submittedEl.textContent = '-';
                 if (offersEl) offersEl.textContent = '-';
+            }
+        }
+    }
+
+    updateFundingGoal(stats) {
+        const funded = stats.fundedThisMonth || 0;
+        const goal = stats.monthlyGoal || 500000;
+        const deals = stats.dealsClosedThisMonth || 0;
+        const lastMonth = stats.fundedLastMonth || 0;
+        const percentage = Math.min(Math.round((funded / goal) * 100), 100);
+
+        const formatMoney = (num) => '$' + num.toLocaleString();
+
+        const fundedEl = document.getElementById('fundedAmount');
+        const goalEl = document.getElementById('goalAmount');
+        const percentEl = document.getElementById('goalPercentage');
+        const dealsEl = document.getElementById('dealsCount');
+        const lastMonthEl = document.getElementById('lastMonthAmount');
+        const progressBar = document.getElementById('goalProgressBar');
+        const statusEl = document.getElementById('goalStatus');
+
+        if (fundedEl) fundedEl.textContent = formatMoney(funded);
+        if (goalEl) goalEl.textContent = formatMoney(goal);
+        if (percentEl) percentEl.textContent = percentage + '%';
+        if (dealsEl) dealsEl.textContent = deals;
+        if (lastMonthEl) lastMonthEl.textContent = formatMoney(lastMonth);
+        if (progressBar) progressBar.style.width = percentage + '%';
+
+        if (statusEl) {
+            const dayOfMonth = new Date().getDate();
+            const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+            const expectedProgress = (dayOfMonth / daysInMonth) * 100;
+
+            if (percentage >= expectedProgress) {
+                statusEl.textContent = 'Ahead of pace';
+                statusEl.style.color = '#10b981';
+            } else if (percentage >= expectedProgress * 0.8) {
+                statusEl.textContent = 'On track';
+                statusEl.style.color = '#f59e0b';
+            } else {
+                statusEl.textContent = 'Behind pace';
+                statusEl.style.color = '#f85149';
             }
         }
     }
