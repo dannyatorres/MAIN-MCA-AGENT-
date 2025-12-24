@@ -6,8 +6,7 @@ const path = require('path');
 require('dotenv').config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Using 1.5 Pro for better JSON adherence, switch to 2.5 if available in your env
-const commander = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+const commander = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
 // ==========================================
 // HELPER FUNCTIONS (The "Calculator")
