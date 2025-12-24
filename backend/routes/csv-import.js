@@ -182,13 +182,13 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             const batch = validLeads.slice(i, i + BATCH_SIZE);
 
             // A. Insert into Conversations
-            // FIXED: Removed csv_import_id - Schema Safe (10 params)
+            // FIXED: Added Owner Address fields (Total 14 params + NOW())
             const convValues = [];
             const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
-                const offset = idx * 10;
-                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, NOW())`);
+                const offset = idx * 14;
+                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, $${offset+12}, $${offset+13}, $${offset+14}, NOW())`);
 
                 convValues.push(
                     lead.id,
@@ -200,7 +200,12 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     lead.city,
                     lead.zip,
                     lead.first_name,
-                    lead.last_name
+                    lead.last_name,
+                    // NEW FIELDS:
+                    lead.owner_home_address || null,
+                    lead.owner_home_city || null,
+                    lead.owner_home_state || null,
+                    lead.owner_home_zip || null
                 );
             });
 
@@ -208,45 +213,44 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 await db.query(`
                     INSERT INTO conversations (
                         id, business_name, lead_phone, email, us_state,
-                        address, city, zip, first_name, last_name, created_at
+                        address, city, zip, first_name, last_name,
+                        owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
+                        created_at
                     ) VALUES ${convPlaceholders.join(', ')}
                     ON CONFLICT (lead_phone) DO NOTHING
                 `, convValues);
 
                 // B. Insert into Lead Details
+                // Reverted to original fields (removed owner address)
                 const detailValues = [];
                 const detailPlaceholders = [];
                 let dIdx = 0;
 
                 batch.forEach((lead) => {
-                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue || lead.industry || lead.business_start_date || lead.owner_home_address) {
-                        const offset = dIdx * 12;
-                        detailPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, $${offset+12}, NOW())`);
+                    // Check if we have details to save (removed owner_home_address check)
+                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue || lead.industry || lead.business_start_date) {
+                        const offset = dIdx * 8;
+                        detailPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, NOW())`);
 
                         detailValues.push(
                             lead.id,
-                            lead.annual_revenue,
-                            lead.business_start_date,
-                            lead.date_of_birth,
-                            lead.tax_id,
-                            lead.ssn,
-                            lead.industry,
-                            lead.requested_amount,
-                            lead.owner_home_address,
-                            lead.owner_home_city,
-                            lead.owner_home_state,
-                            lead.owner_home_zip
+                            lead.annual_revenue ? parseFloat(lead.annual_revenue) : null,
+                            lead.business_start_date || null,
+                            lead.date_of_birth || null,
+                            lead.tax_id || null,
+                            lead.ssn || null,
+                            lead.industry || null,
+                            lead.funding_amount ? parseFloat(lead.funding_amount) : null
                         );
                         dIdx++;
                     }
                 });
 
                 if (detailValues.length > 0) {
-                    await db.query(`
+                    const detailsQuery = `
                         INSERT INTO lead_details (
                             conversation_id, annual_revenue, business_start_date, date_of_birth,
-                            tax_id_encrypted, ssn_encrypted, business_type, funding_amount,
-                            owner_home_address, owner_home_city, owner_home_state, owner_home_zip, created_at
+                            tax_id_encrypted, ssn_encrypted, business_type, funding_amount, created_at
                         ) VALUES ${detailPlaceholders.join(', ')}
                         ON CONFLICT (conversation_id) DO UPDATE SET
                         tax_id_encrypted = EXCLUDED.tax_id_encrypted,
@@ -255,12 +259,9 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                         business_type = EXCLUDED.business_type,
                         funding_amount = EXCLUDED.funding_amount,
                         business_start_date = EXCLUDED.business_start_date,
-                        date_of_birth = EXCLUDED.date_of_birth,
-                        owner_home_address = EXCLUDED.owner_home_address,
-                        owner_home_city = EXCLUDED.owner_home_city,
-                        owner_home_state = EXCLUDED.owner_home_state,
-                        owner_home_zip = EXCLUDED.owner_home_zip
-                    `, detailValues);
+                        date_of_birth = EXCLUDED.date_of_birth
+                    `;
+                    await db.query(detailsQuery, detailValues);
                 }
 
                 importedCount += batch.length;
