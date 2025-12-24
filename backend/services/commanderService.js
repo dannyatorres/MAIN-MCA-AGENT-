@@ -234,6 +234,13 @@ async function analyzeAndStrategize(conversationId) {
         let responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
         const data = JSON.parse(responseText);
 
+        // DEBUG: Log Gemini response
+        console.log('=== GEMINI RAW RESPONSE ===');
+        console.log('nextPositionGuidance:', JSON.stringify(data.nextPositionGuidance, null, 2));
+        console.log('mcaPositions:', JSON.stringify(data.mcaPositions, null, 2));
+        console.log('avgRevenue:', data.avgRevenue);
+        console.log('===========================');
+
         // 4. RUN THE CALCULATOR (Post-Processing)
 
         // 4a. Calculate Withholding

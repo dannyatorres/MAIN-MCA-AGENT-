@@ -247,7 +247,7 @@ export class DealIntelligenceTab {
             if (result.success) {
                 status.textContent = 'Analysis complete! Refreshing...';
                 // Refresh the conversation data and re-render
-                await this.parent.refreshCurrentConversation();
+                await this.parent.intelligence.loadConversationIntelligence(convId);
             } else {
                 status.textContent = `Error: ${result.error}`;
                 status.classList.add('error');
