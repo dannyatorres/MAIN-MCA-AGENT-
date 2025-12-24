@@ -65,6 +65,37 @@ class DocumentsModule {
                 }
             });
         }
+
+        // Generate FCS button handler
+        const generateFCSBtn = document.getElementById('generateFCSBtn');
+        if (generateFCSBtn) {
+            generateFCSBtn.addEventListener('click', async () => {
+                const conversationId = generateFCSBtn.dataset.conversationId || this.parent.getCurrentConversationId();
+
+                if (!conversationId) {
+                    this.utils.showNotification('No conversation selected', 'error');
+                    return;
+                }
+
+                generateFCSBtn.disabled = true;
+                generateFCSBtn.innerHTML = '<span class="loading-spinner small"></span> Generating...';
+
+                try {
+                    if (this.parent.fcs && typeof this.parent.fcs.triggerSyncAndAnalyze === 'function') {
+                        await this.parent.fcs.triggerSyncAndAnalyze();
+                        this.utils.showNotification('FCS Report generated!', 'success');
+                    } else {
+                        throw new Error('FCS module not available');
+                    }
+                } catch (error) {
+                    console.error('FCS Generation error:', error);
+                    this.utils.showNotification('FCS generation failed: ' + error.message, 'error');
+                } finally {
+                    generateFCSBtn.disabled = false;
+                    generateFCSBtn.innerHTML = 'Generate';
+                }
+            });
+        }
     }
 
     async loadDocuments() {
