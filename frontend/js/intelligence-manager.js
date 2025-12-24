@@ -6,6 +6,7 @@ import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
 import { FCSTab } from './intelligence-tabs/fcs-tab.js';
 import { EmailTab } from './intelligence-tabs/email-tab.js';
+import { DealIntelligenceTab } from './intelligence-tabs/deal-intelligence-tab.js';
 
 export class IntelligenceManager {
     constructor(parent) {
@@ -17,7 +18,8 @@ export class IntelligenceManager {
             // 'ai-assistant': REMOVED (Handled dynamically)
             'lenders': new LendersTab(parent),
             'fcs': new FCSTab(parent),
-            'email': new EmailTab(parent)
+            'email': new EmailTab(parent),
+            'strategy': new DealIntelligenceTab(parent)
         };
 
         this.init();
