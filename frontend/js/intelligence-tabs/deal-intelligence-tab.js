@@ -228,16 +228,29 @@ export class DealIntelligenceTab {
         `;
     }
 
-    async runAnalysis(convId) {
-        const btn = document.querySelector('#runAnalysisBtn');
-        const status = document.querySelector('#analysisStatus');
+    async runAnalysis(conversationId) {
+        const btn = document.getElementById('runAnalysisBtn');
+        const status = document.getElementById('analysisStatus');
 
+        if (!btn || this.isAnalyzing) return;
+
+        this.isAnalyzing = true;
         btn.disabled = true;
-        btn.textContent = 'Analyzing...';
-        status.textContent = 'Running FCS strategy analysis...';
+        btn.innerHTML = `
+            <svg class="spin" width="20" height="20" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"></circle>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"></path>
+            </svg>
+            Analyzing...
+        `;
+
+        if (status) {
+            status.textContent = 'Running FCS analysis with Commander AI...';
+            status.classList.remove('error');
+        }
 
         try {
-            const response = await fetch(`/api/conversations/${convId}/analyze-strategy`, {
+            const response = await fetch(`/api/conversations/${conversationId}/analyze-strategy`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -245,21 +258,31 @@ export class DealIntelligenceTab {
             const result = await response.json();
 
             if (result.success) {
-                status.textContent = 'Analysis complete! Refreshing...';
-                // Refresh the conversation data and re-render
-                await this.parent.intelligence.loadConversationIntelligence(convId);
+                if (status) status.textContent = 'Analysis complete! Loading results...';
+
+                // Reload conversation data and re-render this tab
+                await this.parent.intelligence.loadConversationIntelligence(conversationId);
+
             } else {
-                status.textContent = `Error: ${result.error}`;
-                status.classList.add('error');
-                btn.disabled = false;
-                btn.textContent = 'Run FCS Analysis';
+                throw new Error(result.error || 'Analysis failed');
             }
+
         } catch (error) {
             console.error('Analysis error:', error);
-            status.textContent = `Error: ${error.message}`;
-            status.classList.add('error');
+            if (status) {
+                status.textContent = `Error: ${error.message}`;
+                status.classList.add('error');
+            }
+
             btn.disabled = false;
-            btn.textContent = 'Run FCS Analysis';
+            btn.innerHTML = `
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Retry Analysis
+            `;
         }
+
+        this.isAnalyzing = false;
     }
 }

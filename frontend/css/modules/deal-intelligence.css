@@ -217,3 +217,12 @@
 .analysis-status.error {
     color: #f87171;
 }
+
+/* Spinner animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.run-analysis-btn .spin {
+    animation: spin 1s linear infinite;
+}

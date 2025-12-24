@@ -96,8 +96,8 @@ function generateScenariosFromGuidance(guidance, currentWithholdPct, revenue, la
                 const monthlyPayment = isDaily ? payment * 21 : payment * 4.33;
                 const actualWithholdAddition = (monthlyPayment / revenue) * 100;
 
-                // Only keep if within 3% tolerance of target
-                if (Math.abs(actualWithholdAddition - targetWithholdAddition) <= 3) {
+                // Only keep if within 10% tolerance of target
+                if (Math.abs(actualWithholdAddition - targetWithholdAddition) <= 10) {
                     scenarios.push({
                         funding: amount,
                         term: term,
@@ -267,6 +267,18 @@ async function analyzeAndStrategize(conversationId) {
                 data.avgRevenue,
                 lastPositionForScenarios
             );
+
+            // DEBUG: Scenario generation
+            console.log('=== SCENARIO GENERATION DEBUG ===');
+            console.log('avgRevenue:', data.avgRevenue);
+            console.log('totalWithhold:', withholdingData.totalWithhold);
+            console.log('recommendedWithholdingAddition:', data.nextPositionGuidance.recommendedWithholdingAddition);
+            console.log('termRanges:', JSON.stringify(data.nextPositionGuidance.termRanges));
+            console.log('amountRanges:', JSON.stringify(data.nextPositionGuidance.amountRanges));
+            console.log('conservative scenarios:', nextPositionScenarios?.conservative?.length || 0);
+            console.log('moderate scenarios:', nextPositionScenarios?.moderate?.length || 0);
+            console.log('aggressive scenarios:', nextPositionScenarios?.aggressive?.length || 0);
+            console.log('=================================');
         }
 
         // 5. Construct Final Game Plan Object
