@@ -7,43 +7,94 @@ router.get('/', async (req, res) => {
     try {
         const db = getDatabase();
 
-        // Total conversations
-        const totalResult = await db.query(`SELECT COUNT(*) FROM conversations`);
-
-        // State breakdown
-        const stateResult = await db.query(`
-            SELECT state, COUNT(*) as count
+        // Main counts from conversations
+        const mainStats = await db.query(`
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE has_offer = true) as offers,
+                COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as new_today,
+                COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as new_this_week,
+                COUNT(*) FILTER (WHERE ai_enabled = true) as ai_enabled,
+                COUNT(*) FILTER (WHERE ai_enabled = false) as ai_disabled,
+                COALESCE(SUM(monthly_revenue), 0) as total_monthly_revenue,
+                COALESCE(AVG(monthly_revenue), 0) as avg_monthly_revenue
             FROM conversations
-            GROUP BY state
         `);
 
-        // Submitted = conversations sent to lenders
+        // Submitted count
         const submittedResult = await db.query(`
-            SELECT COUNT(DISTINCT conversation_id) FROM lender_submissions
+            SELECT COUNT(DISTINCT conversation_id) as count FROM lender_submissions
         `);
 
-        // Offers = conversations with OFFER status
-        const offersResult = await db.query(`
-            SELECT COUNT(DISTINCT conversation_id) FROM lender_submissions
-            WHERE status = 'OFFER'
+        // State breakdown (workflow state)
+        const stateBreakdown = await db.query(`
+            SELECT state, COUNT(*) as count FROM conversations WHERE state IS NOT NULL GROUP BY state ORDER BY count DESC
         `);
 
-        // Build state breakdown object
-        const stateBreakdown = {};
-        stateResult.rows.forEach(row => {
-            if (row.state) stateBreakdown[row.state] = parseInt(row.count);
-        });
+        // Lead source breakdown
+        const leadSourceBreakdown = await db.query(`
+            SELECT COALESCE(lead_source, 'Unknown') as lead_source, COUNT(*) as count FROM conversations GROUP BY lead_source ORDER BY count DESC
+        `);
+
+        // Industry breakdown
+        const industryBreakdown = await db.query(`
+            SELECT COALESCE(industry_type, 'Unknown') as industry, COUNT(*) as count FROM conversations GROUP BY industry_type ORDER BY count DESC LIMIT 10
+        `);
+
+        // Geographic breakdown (US states)
+        const geoBreakdown = await db.query(`
+            SELECT COALESCE(us_state, business_state, 'Unknown') as region, COUNT(*) as count FROM conversations GROUP BY region ORDER BY count DESC LIMIT 10
+        `);
+
+        // Credit score breakdown
+        const creditBreakdown = await db.query(`
+            SELECT COALESCE(credit_score, 'Unknown') as credit_tier, COUNT(*) as count FROM conversations GROUP BY credit_score ORDER BY count DESC
+        `);
+
+        // Funding status breakdown
+        const fundingBreakdown = await db.query(`
+            SELECT COALESCE(funding_status, 'Unknown') as status, COUNT(*) as count FROM conversations GROUP BY funding_status ORDER BY count DESC
+        `);
+
+        // Recent activity (last 30 days by day)
+        const activityTrend = await db.query(`
+            SELECT DATE(created_at) as date, COUNT(*) as count 
+            FROM conversations 
+            WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+            GROUP BY DATE(created_at) 
+            ORDER BY date ASC
+        `);
+
+        const stats = mainStats.rows[0];
 
         res.json({
             success: true,
-            totalConversations: parseInt(totalResult.rows[0]?.count || 0),
-            active: parseInt(totalResult.rows[0]?.count || 0),
+
+            // Main dashboard numbers
+            active: parseInt(stats.total || 0),
             submitted: parseInt(submittedResult.rows[0]?.count || 0),
-            offers: parseInt(offersResult.rows[0]?.count || 0),
-            stateBreakdown,
-            newLeads: stateBreakdown['NEW'] || 0,
-            qualified: stateBreakdown['QUALIFIED'] || 0,
-            funded: stateBreakdown['FUNDED'] || 0
+            offers: parseInt(stats.offers || 0),
+            newToday: parseInt(stats.new_today || 0),
+            newThisWeek: parseInt(stats.new_this_week || 0),
+
+            // AI stats
+            aiEnabled: parseInt(stats.ai_enabled || 0),
+            aiDisabled: parseInt(stats.ai_disabled || 0),
+
+            // Revenue
+            totalMonthlyRevenue: parseFloat(stats.total_monthly_revenue || 0),
+            avgMonthlyRevenue: parseFloat(stats.avg_monthly_revenue || 0),
+
+            // Breakdowns
+            stateBreakdown: stateBreakdown.rows,
+            leadSourceBreakdown: leadSourceBreakdown.rows,
+            industryBreakdown: industryBreakdown.rows,
+            geoBreakdown: geoBreakdown.rows,
+            creditBreakdown: creditBreakdown.rows,
+            fundingBreakdown: fundingBreakdown.rows,
+
+            // Trends
+            activityTrend: activityTrend.rows
         });
 
     } catch (error) {
@@ -58,7 +109,7 @@ router.get('/offers', async (req, res) => {
         const db = getDatabase();
 
         const result = await db.query(`
-            SELECT
+            SELECT 
                 ls.conversation_id,
                 c.business_name,
                 ls.lender_name,
@@ -85,7 +136,7 @@ router.get('/submitted', async (req, res) => {
         const db = getDatabase();
 
         const result = await db.query(`
-            SELECT
+            SELECT 
                 ls.conversation_id,
                 c.business_name,
                 COUNT(ls.id) as lender_count,
