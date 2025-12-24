@@ -106,10 +106,7 @@ class StatsModule {
     }
 
     updateHeroCard() {
-        const hour = new Date().getHours();
-        let greeting = 'Good evening';
-        if (hour < 12) greeting = 'Good morning';
-        else if (hour < 17) greeting = 'Good afternoon';
+        const greeting = 'Whats good fam?';
 
         const quotes = [
             "Success is not final, failure is not fatal: it is the courage to continue that counts.",
@@ -134,7 +131,7 @@ class StatsModule {
         const quoteEl = document.getElementById('heroQuote');
         const dateEl = document.getElementById('heroDate');
 
-        if (greetingEl) greetingEl.textContent = `${greeting}, Agent`;
+        if (greetingEl) greetingEl.textContent = greeting;
         if (quoteEl) quoteEl.textContent = `"${randomQuote}"`;
         if (dateEl) dateEl.textContent = dateStr;
     }
