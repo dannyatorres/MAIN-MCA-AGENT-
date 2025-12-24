@@ -1,189 +1,97 @@
-// stats.js - Dashboard statistics module
+// js/stats.js
+// ---------------------------------------------------------
+// Connects /api/stats (Backend) to command-center.html (Frontend)
+// ---------------------------------------------------------
 
-class StatsModule {
-    constructor(parent) {
-        this.parent = parent;
-        this.statsCache = null;
-        this.init();
-    }
+window.commandCenter = window.commandCenter || {};
 
-    init() {
-        console.log('📊 StatsModule initialized');
-
-        // Expose global functions for clickable stats
-        window.showOffersModal = () => this.showOffersModal();
-        window.showSubmittedLeads = () => this.showSubmittedLeads();
-
-        if (!this.parent.currentConversationId) {
-            this.loadStats();
-        }
-    }
-
+window.commandCenter.stats = {
     async loadStats() {
-        const activeEl = document.getElementById('activeCount');
-        const submittedEl = document.getElementById('submittedCount');
-        const offersEl = document.getElementById('offersCount');
+        console.log("📊 Loading Dashboard Stats...");
+        
+        try {
+            // 1. Fetch data from your backend route
+            // Uses the global apiService defined in api.js
+            const response = await window.commandCenter.api.get('/api/stats');
+            
+            if (!response || !response.success) {
+                console.warn("⚠️ Stats API returned invalid data:", response);
+                return;
+            }
 
-        if (!activeEl) return;
+            console.log("✅ Stats Received:", response);
 
-        if (this.statsCache) {
-            this.updateUI(this.statsCache);
+            // 2. Map Backend Keys to Frontend IDs
+            // Backend sends: active, submitted, offers
+            // HTML expects IDs: activeCount, submittedCount, offersCount
+            
+            this.updateElement('activeCount', response.active);
+            this.updateElement('submittedCount', response.submitted);
+            this.updateElement('offersCount', response.offers);
+            
+            // Update the "Last updated" timestamp in the status bar
+            const lastUpdated = document.getElementById('lastUpdated');
+            if (lastUpdated) {
+                const now = new Date().toLocaleTimeString();
+                lastUpdated.textContent = `Last updated: ${now}`;
+            }
+
+        } catch (error) {
+            console.error("❌ Failed to load stats:", error);
+            // Optional: Set to 0 or Error on failure
+            this.updateElement('activeCount', 0);
+        }
+    },
+
+    // Helper to safely update DOM elements
+    updateElement(elementId, value) {
+        const el = document.getElementById(elementId);
+        if (el) {
+            // Use '0' if value is null/undefined
+            el.textContent = value !== undefined && value !== null ? value : 0;
+            
+            // Add a small animation effect
+            el.classList.remove('pop-in');
+            void el.offsetWidth; // Trigger reflow
+            el.classList.add('pop-in');
         } else {
-            if (activeEl.textContent === '-') activeEl.textContent = '...';
-        }
-
-        try {
-            const stats = await this.parent.apiCall('/api/stats');
-
-            const normalizedStats = {
-                active: stats.active || 0,
-                submitted: stats.submitted || 0,
-                offers: stats.offers || 0
-            };
-
-            this.statsCache = normalizedStats;
-            this.updateUI(normalizedStats);
-
-        } catch (error) {
-            console.error('Error loading stats:', error);
-            if (!this.statsCache) {
-                if (activeEl) activeEl.textContent = '-';
-                if (submittedEl) submittedEl.textContent = '-';
-                if (offersEl) offersEl.textContent = '-';
-            }
+            console.warn(`⚠️ Missing HTML element: #${elementId}`);
         }
     }
+};
 
-    updateUI(data) {
-        const activeEl = document.getElementById('activeCount');
-        const submittedEl = document.getElementById('submittedCount');
-        const offersEl = document.getElementById('offersCount');
+// ---------------------------------------------------------
+// Modal Openers (Called by HTML onclick attributes)
+// ---------------------------------------------------------
 
-        if (activeEl) activeEl.textContent = data.active;
-        if (submittedEl) submittedEl.textContent = data.submitted;
-        if (offersEl) offersEl.textContent = data.offers;
+// Open Submitted Leads Modal
+window.showSubmittedLeads = async function() {
+    console.log("📂 Opening Submitted Leads...");
+    // Reuse your existing modal logic or alert for now
+    if (window.commandCenter.lenderAdmin) {
+        // If you have the lender admin module loaded
+        window.commandCenter.lenderAdmin.openManagementModal();
+    } else {
+        alert("Loading submission details...");
+        // You can redirect to a specific view or fetch /api/stats/submitted here
     }
+};
 
-    async showOffersModal() {
-        try {
-            const result = await this.parent.apiCall('/api/stats/offers');
-
-            if (!result.offers || result.offers.length === 0) {
-                this.parent.utils.showNotification('No offers yet', 'info');
-                return;
-            }
-
-            let html = `
-                <div style="max-height: 400px; overflow-y: auto;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid #30363d; text-align: left;">
-                                <th style="padding: 10px; color: #8b949e;">Business</th>
-                                <th style="padding: 10px; color: #8b949e;">Lender</th>
-                                <th style="padding: 10px; color: #8b949e;">Amount</th>
-                                <th style="padding: 10px; color: #8b949e;">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            result.offers.forEach(offer => {
-                const amount = offer.offer_amount
-                    ? `$${Number(offer.offer_amount).toLocaleString()}`
-                    : 'N/A';
-                const date = offer.last_response_at
-                    ? new Date(offer.last_response_at).toLocaleDateString()
-                    : '-';
-
-                html += `
-                    <tr style="border-bottom: 1px solid #21262d; cursor: pointer;"
-                        onclick="window.commandCenter.conversationUI.selectConversation('${offer.conversation_id}'); document.getElementById('statsModal').remove();">
-                        <td style="padding: 12px; color: #e6edf3;">${offer.business_name || 'Unknown'}</td>
-                        <td style="padding: 12px; color: #8b949e;">${offer.lender_name || '-'}</td>
-                        <td style="padding: 12px; color: #10b981; font-weight: 600;">${amount}</td>
-                        <td style="padding: 12px; color: #8b949e;">${date}</td>
-                    </tr>
-                `;
-            });
-
-            html += `</tbody></table></div>`;
-            this.showSimpleModal('💰 Active Offers', html);
-
-        } catch (error) {
-            console.error('Error loading offers:', error);
-            this.parent.utils.showNotification('Failed to load offers', 'error');
+// Open Offers Modal
+window.showOffersModal = async function() {
+    console.log("💰 Opening Offers...");
+    try {
+        const data = await window.commandCenter.api.get('/api/stats/offers');
+        if (data.success && data.offers.length > 0) {
+            // Simple alert for now, or replace with a custom modal builder
+            const offerSummary = data.offers.map(o => 
+                `${o.business_name}: $${o.offer_amount.toLocaleString()} from ${o.lender_name}`
+            ).join('\n');
+            alert("Current Offers:\n\n" + offerSummary);
+        } else {
+            alert("No active offers currently pending.");
         }
+    } catch (e) {
+        console.error("Error fetching offers:", e);
     }
-
-    async showSubmittedLeads() {
-        try {
-            const result = await this.parent.apiCall('/api/stats/submitted');
-
-            if (!result.submitted || result.submitted.length === 0) {
-                this.parent.utils.showNotification('No submissions yet', 'info');
-                return;
-            }
-
-            let html = `
-                <div style="max-height: 400px; overflow-y: auto;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid #30363d; text-align: left;">
-                                <th style="padding: 10px; color: #8b949e;">Business</th>
-                                <th style="padding: 10px; color: #8b949e;">Lenders</th>
-                                <th style="padding: 10px; color: #8b949e;">Last Sent</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            result.submitted.forEach(item => {
-                const date = item.last_submitted
-                    ? new Date(item.last_submitted).toLocaleDateString()
-                    : '-';
-
-                html += `
-                    <tr style="border-bottom: 1px solid #21262d; cursor: pointer;"
-                        onclick="window.commandCenter.conversationUI.selectConversation('${item.conversation_id}'); document.getElementById('statsModal').remove();">
-                        <td style="padding: 12px; color: #e6edf3;">${item.business_name || 'Unknown'}</td>
-                        <td style="padding: 12px; color: #8b949e;">${item.lender_count} lender${item.lender_count > 1 ? 's' : ''}</td>
-                        <td style="padding: 12px; color: #8b949e;">${date}</td>
-                    </tr>
-                `;
-            });
-
-            html += `</tbody></table></div>`;
-            this.showSimpleModal('📤 Submitted Leads', html);
-
-        } catch (error) {
-            console.error('Error loading submitted:', error);
-            this.parent.utils.showNotification('Failed to load submissions', 'error');
-        }
-    }
-
-    showSimpleModal(title, content) {
-        const existing = document.getElementById('statsModal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'statsModal';
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h3>${title}</h3>
-                    <button class="modal-close" onclick="document.getElementById('statsModal').remove()">×</button>
-                </div>
-                <div class="modal-body">
-                    ${content}
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-    }
-
-    trackEvent(eventName, data = {}) {
-        console.log('📈 Event tracked:', eventName, data);
-    }
-}
+};
