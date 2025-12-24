@@ -17,6 +17,9 @@ class StatsModule {
         window.saveMonthlyGoal = () => this.saveMonthlyGoal();
         window.markAsFunded = (id, amount) => this.markAsFunded(id, amount);
 
+        // Set dynamic greeting and quote
+        this.updateHeroCard();
+
         if (!this.parent.currentConversationId) {
             this.loadStats();
         }
@@ -100,6 +103,40 @@ class StatsModule {
                 statusEl.style.color = '#f85149';
             }
         }
+    }
+
+    updateHeroCard() {
+        const hour = new Date().getHours();
+        let greeting = 'Good evening';
+        if (hour < 12) greeting = 'Good morning';
+        else if (hour < 17) greeting = 'Good afternoon';
+
+        const quotes = [
+            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+            "The secret of getting ahead is getting started.",
+            "Don't watch the clock; do what it does. Keep going.",
+            "The only way to do great work is to love what you do.",
+            "Opportunities don't happen. You create them.",
+            "Success usually comes to those who are too busy to be looking for it.",
+            "The harder you work for something, the greater you'll feel when you achieve it.",
+            "Dream bigger. Do bigger.",
+            "Your limitation—it's only your imagination.",
+            "Push yourself, because no one else is going to do it for you."
+        ];
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const now = new Date();
+        const dateStr = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+        const greetingEl = document.getElementById('heroGreeting');
+        const quoteEl = document.getElementById('heroQuote');
+        const dateEl = document.getElementById('heroDate');
+
+        if (greetingEl) greetingEl.textContent = `${greeting}, Agent`;
+        if (quoteEl) quoteEl.textContent = `"${randomQuote}"`;
+        if (dateEl) dateEl.textContent = dateStr;
     }
 
     editMonthlyGoal() {

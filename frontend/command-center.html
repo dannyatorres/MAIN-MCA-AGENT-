@@ -78,24 +78,19 @@
             <div class="center-panel">
                 <div id="dashboardView" class="view-layer">
                     <div class="dashboard-container">
-                        <div class="dashboard-header">
-                            <h1>Welcome back, Agent</h1>
-                            <p>Here is what's happening with your pipeline today.</p>
+
+                        <!-- Hero Welcome Card -->
+                        <div class="hero-card">
+                            <div class="hero-logo">
+                                <span class="logo-text">MCA</span>
+                                <span class="logo-accent">gent</span>
+                            </div>
+                            <h1 class="hero-greeting" id="heroGreeting">Good evening, Agent</h1>
+                            <p class="hero-quote" id="heroQuote">"Success is not final, failure is not fatal: it is the courage to continue that counts."</p>
+                            <div class="hero-date" id="heroDate">Tuesday, December 23, 2025</div>
                         </div>
-                        <div class="dashboard-toolbar" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                            <button class="btn btn-secondary dashboard-action-btn" onclick="window.open('/lead_reformatter.html', '_blank')">
-                                <i class="fas fa-table"></i> Formatter
-                            </button>
-                            <button class="btn btn-secondary dashboard-action-btn" onclick="if(window.openLenderManagementModal) window.openLenderManagementModal(); else alert('System loading...');">
-                                <i class="fas fa-university"></i> Manage Lenders
-                            </button>
-                            <button class="btn btn-secondary dashboard-action-btn" onclick="openCleanerModal()">
-                                <i class="fas fa-user-check"></i> Background Verification
-                            </button>
-                            <button class="btn btn-secondary dashboard-action-btn">
-                                <i class="fas fa-cog"></i> Settings
-                            </button>
-                        </div>
+
+                        <!-- Stats Row -->
                         <div class="stats-grid">
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-fire"></i></div>
@@ -137,6 +132,27 @@
                                 <span id="goalStatus" style="color: #10b981;">On track</span>
                             </div>
                         </div>
+
+                        <!-- Quick Actions Row -->
+                        <div class="quick-actions-grid">
+                            <div class="action-card" onclick="window.open('/lead_reformatter.html', '_blank')">
+                                <div class="action-icon"><i class="fas fa-table"></i></div>
+                                <div class="action-label">Formatter</div>
+                            </div>
+                            <div class="action-card" onclick="if(window.openLenderManagementModal) window.openLenderManagementModal(); else alert('Loading...');">
+                                <div class="action-icon"><i class="fas fa-university"></i></div>
+                                <div class="action-label">Lenders</div>
+                            </div>
+                            <div class="action-card" onclick="openCleanerModal()">
+                                <div class="action-icon"><i class="fas fa-user-check"></i></div>
+                                <div class="action-label">Verify</div>
+                            </div>
+                            <div class="action-card" onclick="window.openSettingsModal && window.openSettingsModal()">
+                                <div class="action-icon"><i class="fas fa-cog"></i></div>
+                                <div class="action-label">Settings</div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
