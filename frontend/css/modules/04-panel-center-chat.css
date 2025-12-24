@@ -288,14 +288,17 @@
    ========================================================================== */
 
 .hero-card {
-    background: linear-gradient(135deg, #1a1f2e 0%, #161b22 50%, #0d1117 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: block;
+    width: 100%;
+    background: linear-gradient(135deg, #1a1f2e 0%, #161b22 50%, #0d1117 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: 16px;
     padding: 40px;
     text-align: center;
     margin-bottom: 24px;
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 /* Subtle glow effect */
@@ -315,20 +318,21 @@
     font-weight: 800;
     margin-bottom: 16px;
     letter-spacing: -1px;
+    display: block;
 }
 
 .logo-text {
-    color: #e6edf3;
+    color: #e6edf3 !important;
 }
 
 .logo-accent {
-    color: #3b82f6;
+    color: #3b82f6 !important;
 }
 
 .hero-greeting {
     font-size: 28px;
     font-weight: 700;
-    color: #e6edf3;
+    color: #e6edf3 !important;
     margin: 0 0 16px 0;
 }
 
@@ -353,15 +357,17 @@
    ========================================================================== */
 
 .quick-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
     gap: 12px;
     margin-top: 24px;
+    width: 100%;
 }
 
 .action-card {
-    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: block;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: 12px;
     padding: 20px 16px;
     text-align: center;
