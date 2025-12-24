@@ -13,6 +13,7 @@ class StatsModule {
         // Expose global functions for clickable stats
         window.showOffersModal = () => this.showOffersModal();
         window.showSubmittedLeads = () => this.showSubmittedLeads();
+        window.editMonthlyGoal = () => this.editMonthlyGoal();
 
         if (!this.parent.currentConversationId) {
             this.loadStats();
@@ -96,6 +97,27 @@ class StatsModule {
                 statusEl.textContent = 'Behind pace';
                 statusEl.style.color = '#f85149';
             }
+        }
+    }
+
+    editMonthlyGoal() {
+        const currentGoal = document.getElementById('goalAmount')?.textContent || '$500,000';
+        const currentValue = currentGoal.replace(/[$,]/g, '');
+
+        const newGoal = prompt('Enter your monthly funding goal:', currentValue);
+
+        if (newGoal && !isNaN(newGoal) && parseFloat(newGoal) > 0) {
+            this.parent.apiCall('/api/settings/goal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ goal: parseFloat(newGoal) })
+            }).then(() => {
+                this.statsCache = null;
+                this.loadStats();
+                this.parent.utils.showNotification('Goal updated!', 'success');
+            }).catch(err => {
+                this.parent.utils.showNotification('Failed to update goal', 'error');
+            });
         }
     }
 

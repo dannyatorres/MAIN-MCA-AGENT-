@@ -546,6 +546,29 @@ app.get('/api/fix/add-funding-tracking', async (req, res) => {
 });
 // =========================================================
 
+// =========================================================
+// ⚙️ FIX: Add settings table
+// URL: https://mcagent.io/api/fix/add-settings-table
+// =========================================================
+app.get('/api/fix/add-settings-table', async (req, res) => {
+    try {
+        const db = getDatabase();
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT,
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+            INSERT INTO app_settings (key, value) VALUES ('monthly_goal', '500000')
+            ON CONFLICT (key) DO NOTHING;
+        `);
+        res.json({ success: true, message: 'Settings table created' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// =========================================================
+
 // --- TRUST PROXY ---
 app.set('trust proxy', 1);
 
@@ -727,6 +750,9 @@ app.get('/api/stats', async (req, res) => {
 
         const submittedResult = await db.query(`SELECT COUNT(DISTINCT conversation_id) as count FROM lender_submissions`);
 
+        // Get monthly goal from settings
+        const goalResult = await db.query(`SELECT value FROM app_settings WHERE key = 'monthly_goal'`);
+
         // Funded this month
         const fundedThisMonth = await db.query(`
             SELECT
@@ -762,7 +788,7 @@ app.get('/api/stats', async (req, res) => {
             fundedThisMonth: parseFloat(fundedThisMonth.rows[0]?.total_funded || 0),
             dealsClosedThisMonth: parseInt(fundedThisMonth.rows[0]?.deal_count || 0),
             fundedLastMonth: parseFloat(fundedLastMonth.rows[0]?.total_funded || 0),
-            monthlyGoal: 500000
+            monthlyGoal: parseFloat(goalResult.rows[0]?.value || 500000)
         });
     } catch (error) {
         console.error('Stats error:', error);
@@ -802,6 +828,38 @@ app.get('/api/stats/submitted', async (req, res) => {
     }
 });
 // === END STATS ENDPOINTS ===
+
+// === SETTINGS ENDPOINTS ===
+// Get monthly goal
+app.get('/api/settings/goal', async (req, res) => {
+    try {
+        const db = getDatabase();
+        const result = await db.query(`SELECT value FROM app_settings WHERE key = 'monthly_goal'`);
+        const goal = result.rows[0]?.value || '500000';
+        res.json({ success: true, goal: parseFloat(goal) });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Set monthly goal
+app.post('/api/settings/goal', async (req, res) => {
+    try {
+        const { goal } = req.body;
+        if (!goal || isNaN(goal)) {
+            return res.status(400).json({ success: false, error: 'Invalid goal amount' });
+        }
+        const db = getDatabase();
+        await db.query(`
+            INSERT INTO app_settings (key, value, updated_at) VALUES ('monthly_goal', $1, NOW())
+            ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()
+        `, [goal.toString()]);
+        res.json({ success: true, goal: parseFloat(goal) });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+// === END SETTINGS ENDPOINTS ===
 
 // TEMP DEBUG - remove later
 app.get('/api/stats-test', async (req, res) => {
