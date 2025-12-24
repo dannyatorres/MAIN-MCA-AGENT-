@@ -133,10 +133,11 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     last_name: getFuzzyValue(row, ['Last Name', 'Owner Last Name']),
 
                     // Home Address (from Background Verification)
-                    owner_home_address: getFuzzyValue(row, ['Home Address', 'Owner Home Address']),
-                    owner_home_city: getFuzzyValue(row, ['Home City', 'Owner Home City']),
-                    owner_home_state: cleanStateCode(getFuzzyValue(row, ['Home State', 'Owner Home State'])),
-                    owner_home_zip: getFuzzyValue(row, ['Home Zip', 'Owner Home Zip']),
+                    // CHANGED: Added 'Owner 1' variations to the list of accepted keys
+                    owner_home_address: getFuzzyValue(row, ['Home Address', 'Owner Home Address', 'Owner 1 Address']),
+                    owner_home_city: getFuzzyValue(row, ['Home City', 'Owner Home City', 'Owner 1 City']),
+                    owner_home_state: cleanStateCode(getFuzzyValue(row, ['Home State', 'Owner Home State', 'Owner 1 State'])),
+                    owner_home_zip: getFuzzyValue(row, ['Home Zip', 'Owner Home Zip', 'Owner 1 Zip']),
 
                     // Details
                     industry: getFuzzyValue(row, ['Industry', 'Business Type']),

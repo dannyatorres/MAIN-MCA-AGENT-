@@ -437,7 +437,8 @@ function createCRMFile(normalizedData) {
         'City', 'State', 'Zip', 'Business Type', 'Annual Revenue',
         'Funding', 'Factor Rate', 'Funding Date', 'Term', 'Notes',
         'Campaign', 'TaxID', 'SSN', 'Business Start Date', 'DOB',
-        'Home Address', 'Home City', 'Home State', 'Home Zip'
+        // CHANGED: Renamed the last 4 headers to "Owner 1..."
+        'Owner 1 Address', 'Owner 1 City', 'Owner 1 State', 'Owner 1 Zip'
     ];
 
     const rows = [crmHeaders.join(',')];
@@ -447,21 +448,22 @@ function createCRMFile(normalizedData) {
             row['First Name'],
             row['Last Name'],
             row['Phone Number'],
-            row['Phone Number'], // Cell Phone same as Phone
+            row['Phone Number'],
             row['Company Name'],
             row['Email'],
-            'WEB', // Default Source
-            row['Address'],           // Business address
-            row['City'],              // Business city
-            row['State'],             // Business state
-            row['Zip'],               // Business zip
-            '', '', '', '', '', '',   // Empty financial fields
+            'WEB',
+            row['Address'],
+            row['City'],
+            row['State'],
+            row['Zip'],
+            '', '', '', '', '', '',
             row['Notes'] || row['Monthly Revenue'],
             '',
             row['TaxID'],
             formatSSN(row['SSN']),
             formatDate(row['Business Start Date']),
             formatDate(row['DOB']),
+            // Data stays the same, but now falls under the "Owner 1" headers
             row['Home Address'] || '',
             row['Home City'] || '',
             row['Home State'] || '',
