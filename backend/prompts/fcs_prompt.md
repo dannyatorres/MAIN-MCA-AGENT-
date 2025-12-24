@@ -111,7 +111,7 @@ DECISION TREE:
 └─────────────────────────────────────────┘
          │
          ├─YES → EXCLUDE from revenue
-         │        LIST ONLY in "MCA Deposits"
+         │        LIST in BOTH "1a. Revenue Deductions" AND "MCA Deposits"
          │
          └─NO → Continue to Step 2
                       │
