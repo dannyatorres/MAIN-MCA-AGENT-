@@ -108,6 +108,11 @@ class CSVImportModalManager {
             const csvText = await this.readFileAsText(file);
             const { headers, data } = await processCSV(csvText);
 
+            // --- DEBUG LOG START ---
+            console.log('🔍 STEP 1: Raw Headers from User File:', headers);
+            console.log('🔍 STEP 1: First Row Raw Data:', data[0]);
+            // --- DEBUG LOG END ---
+
             // 3. Detect Format
             const format = detectFormat(headers);
             console.log(`Detected format: ${format}`);
@@ -440,6 +445,15 @@ function createCRMFile(normalizedData) {
         // CHANGED: Renamed the last 4 headers to "Owner 1..."
         'Owner 1 Address', 'Owner 1 City', 'Owner 1 State', 'Owner 1 Zip'
     ];
+
+    // --- DEBUG LOG START ---
+    console.log('🔍 STEP 2: Final Headers being sent to server:', crmHeaders);
+    if (normalizedData.length > 0) {
+        console.log('🔍 STEP 2: Checking first row data mapping:');
+        console.log('   - Original Home Address:', normalizedData[0]['Home Address']);
+        console.log('   - Mapped to Column index 23 (Owner 1 Address)');
+    }
+    // --- DEBUG LOG END ---
 
     const rows = [crmHeaders.join(',')];
 

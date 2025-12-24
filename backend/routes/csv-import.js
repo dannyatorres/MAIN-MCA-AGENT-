@@ -83,10 +83,19 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
 
         // 2. Parse CSV
         const rows = [];
+        let headersLogged = false;
         await new Promise((resolve, reject) => {
             fs.createReadStream(req.file.path)
                 .pipe(csvParser())
-                .on('data', (row) => rows.push(row))
+                .on('data', (row) => {
+                    // --- DEBUG LOG START ---
+                    if (!headersLogged) {
+                        console.log('🔍 STEP 3 (Server): Headers Received by Backend:', Object.keys(row));
+                        headersLogged = true;
+                    }
+                    // --- DEBUG LOG END ---
+                    rows.push(row);
+                })
                 .on('end', resolve)
                 .on('error', reject);
         });
@@ -118,6 +127,15 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 const annual_rev = cleanMoney(getFuzzyValue(row, ['Annual Revenue', 'Revenue', 'Sales']));
                 const monthly_rev = cleanMoney(getFuzzyValue(row, ['Monthly Revenue'])) || (annual_rev ? annual_rev / 12 : 0);
                 const requested = cleanMoney(getFuzzyValue(row, ['Requested Amount', 'Funding Amount', 'Funding']));
+
+                // --- DEBUG LOG START ---
+                if (index === 0) {
+                    const debugAddress = getFuzzyValue(row, ['Home Address', 'Owner Home Address', 'Owner 1 Address']);
+                    console.log('🔍 STEP 4 (Server): Lookup for Owner Address:');
+                    console.log('   - Row Keys available:', Object.keys(row));
+                    console.log('   - Value found:', debugAddress);
+                }
+                // --- DEBUG LOG END ---
 
                 const lead = {
                     id,
