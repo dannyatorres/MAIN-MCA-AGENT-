@@ -106,7 +106,6 @@ class StatsModule {
         const currentGoal = document.getElementById('goalAmount')?.textContent || '$500,000';
         const currentValue = currentGoal.replace(/[$,]/g, '');
 
-        // Remove existing modal if any
         document.getElementById('goalEditModal')?.remove();
 
         const modal = document.createElement('div');
@@ -118,37 +117,27 @@ class StatsModule {
                     <h3>Set Monthly Goal</h3>
                     <button class="modal-close" onclick="document.getElementById('goalEditModal').remove()">×</button>
                 </div>
-                <div class="modal-body" style="padding: 24px;">
+                <div class="modal-body">
                     <p style="color: #8b949e; margin-bottom: 16px;">Enter your funding target for this month:</p>
                     <div style="position: relative;">
                         <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6e7681; font-size: 18px;">$</span>
                         <input type="text" id="goalInput" value="${parseInt(currentValue).toLocaleString()}"
+                            class="form-input"
                             style="width: 100%; padding: 14px 14px 14px 32px; font-size: 24px; font-weight: 700;
-                            background: #0d1117; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3;
-                            text-align: left; box-sizing: border-box;"
+                            background: #0d1117; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3;"
                             onclick="this.select()"
                             onkeypress="if(event.key === 'Enter') document.getElementById('saveGoalBtn').click()">
                     </div>
-                    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
-                        <button onclick="document.getElementById('goalInput').value='100,000'"
-                            style="padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer;">$100K</button>
-                        <button onclick="document.getElementById('goalInput').value='250,000'"
-                            style="padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer;">$250K</button>
-                        <button onclick="document.getElementById('goalInput').value='500,000'"
-                            style="padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer;">$500K</button>
-                        <button onclick="document.getElementById('goalInput').value='1,000,000'"
-                            style="padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer;">$1M</button>
+                    <div style="display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('goalInput').value='100,000'">$100K</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('goalInput').value='250,000'">$250K</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('goalInput').value='500,000'">$500K</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('goalInput').value='1,000,000'">$1M</button>
                     </div>
                 </div>
-                <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid #30363d; display: flex; justify-content: flex-end; gap: 12px;">
-                    <button onclick="document.getElementById('goalEditModal').remove()"
-                        style="padding: 10px 20px; background: #21262d; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3; cursor: pointer;">
-                        Cancel
-                    </button>
-                    <button id="saveGoalBtn" onclick="window.saveMonthlyGoal()"
-                        style="padding: 10px 20px; background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600;">
-                        Save Goal
-                    </button>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="document.getElementById('goalEditModal').remove()">Cancel</button>
+                    <button id="saveGoalBtn" class="btn btn-primary" onclick="window.saveMonthlyGoal()">Save Goal</button>
                 </div>
             </div>
         `;
