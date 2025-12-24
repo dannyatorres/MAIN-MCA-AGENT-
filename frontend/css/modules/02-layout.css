@@ -1,6 +1,6 @@
 /* ==========================================================================
    [MODULE: LAYOUT]
-   Modern "Floating Card" Grid System
+   Modern "Floating Card" Grid System - Perfect Top Alignment
    ========================================================================== */
 
 /* 1. Main Container */
@@ -9,24 +9,30 @@
     flex-direction: column;
     height: 100vh;
     width: 100%;
-    background-color: #0f1115 !important; /* Deep Onyx background */
-    overflow: hidden; /* Prevent body scroll */
+    background-color: #0f1115 !important;
+    overflow: hidden;
 }
 
 /* 2. Hide the Old Header */
 .header {
-    display: none !important; /* Completely remove it */
+    display: none !important;
 }
 
-/* 3. The Layout Grid (The Canvas) - Update to Fill Screen */
+/* 3. The Layout Grid (The Canvas) */
 .main-content {
-    height: 100vh; /* Force full height */
-    display: flex;
-    min-height: 0;
+    height: 100vh;
     width: 100%;
-    padding: 12px; /* GAP around the entire app - Keep the gap for the 'floating card' look */
-    gap: 12px;     /* GAP between panels */
-    background: #0f1115 !important; /* Deep Onyx background */
+
+    /* ALIGNMENT ENGINE */
+    display: flex;
+    align-items: stretch; /* Forces all panels to be same height & top-aligned */
+
+    /* GAPS & SPACING */
+    padding: 12px; /* 12px gap around the edges */
+    gap: 12px;     /* 12px gap between panels */
+
+    background: #0f1115 !important;
+    box-sizing: border-box;
 }
 
 /* 4. Unified Panel Architecture (The Cards) */
@@ -36,70 +42,68 @@
     display: flex;
     flex-direction: column;
 
+    /* RESET MARGINS to ensure perfect top alignment */
+    margin: 0 !important;
+
     /* Dark Theme Card Background */
     background-color: #161b22 !important;
 
-    /* Glass & Border: The "Inner Light" effect */
+    /* Glass & Border: The "Floating" effect */
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 
-    height: 100%;
+    /* Height control handled by flex-stretch above */
+    height: auto;
+    flex-grow: 1;
     overflow: hidden;
 }
 
-/* 5. Perfect Alignment (With Exception for Left Panel) */
-/* Apply strict height only to Center and Right panels */
+/* 5. Header Geometry */
 .panel-header,
 .center-panel .panel-header,
 .right-panel .panel-header {
     min-height: 64px;
-    max-height: 64px;     /* Strict height for single-row headers */
+    max-height: 64px;
     padding: 0 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-
-    border-bottom: 1px solid rgba(0,0,0,0.05); /* Subtle border */
-
-    /* CHANGE: Transparent so it shows the Grey container background */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     background: transparent;
-
     flex-shrink: 0;
 }
 
-/* EXCEPTION: Left Panel needs to grow to fit Buttons + Search */
+/* EXCEPTION: Left Panel Toolbar (Buttons + Search) */
 .left-panel .panel-header {
     min-height: 64px;
-    height: auto;         /* Allow it to grow! */
-    max-height: none;     /* Remove the ceiling */
-    padding: 12px 16px;   /* Add breathing room */
-
-    display: flex;
+    height: auto;
+    max-height: none;
+    padding: 12px 16px;
+    gap: 10px;
     flex-direction: column;
     justify-content: center;
-    gap: 10px;
-
-    border-bottom: 1px solid var(--gray-100);
-    background: var(--white);
-    flex-shrink: 0;
+    /* Ensure it blends with the card */
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* 6. Panel Sizes (Smart Resizing) */
+/* 6. Panel Sizing (Responsive) */
 
-/* Left Panel: Fixed width, but allowed to shrink slightly on small screens */
+/* Left Panel */
 .left-panel {
     flex: 0 0 300px;
-    width: 300px;     /* Explicit width */
+    width: 300px;
 }
 
-/* Center Panel: The Hero. Takes all available space. */
+/* Center Panel (Hero) */
 .center-panel {
-    flex: 1;          /* Grow to fill space */
-    min-width: 350px; /* Never get smaller than a phone screen */
+    flex: 1; /* Takes all remaining space */
+    min-width: 350px;
+    position: relative; /* Anchor for absolute children */
 }
 
-/* Right Panel: Fixed width, but hides automatically if screen is tight */
+/* Right Panel */
 .right-panel {
     flex: 0 0 420px;
     width: 420px;
@@ -107,312 +111,53 @@
 
 /* ==========================================================================
    [RESPONSIVE LOGIC]
-   Handle window resizing gracefully
    ========================================================================== */
 
-/* Tablet Mode (Narrower than 1200px) */
-/* We hide the Right Panel (Intelligence) to save space for Chat */
 @media (max-width: 1200px) {
     .right-panel {
-        display: none; /* Hide Intelligence panel */
+        display: none;
     }
     .left-panel {
-        flex: 0 0 280px; /* Shrink sidebar slightly */
+        flex: 0 0 280px;
     }
 }
 
-/* Mobile Mode (Narrower than 768px) */
-/* We stack everything or hide the Sidebar */
 @media (max-width: 768px) {
     .main-content {
-        padding: 0;   /* Remove outer padding */
-        gap: 0;       /* Remove gaps */
+        padding: 0;
+        gap: 0;
     }
-
+    .left-panel, .center-panel, .right-panel {
+        border-radius: 0;
+        border: none !important;
+    }
     .left-panel {
-        /* On mobile, you usually toggle between list and chat */
-        /* For now, let's keep it visible but small */
         flex: 0 0 80px;
-        overflow: hidden; /* Hide text, show avatars only? */
     }
-
-    .center-panel {
-        border-radius: 0; /* Remove card look on mobile */
-        border: none;
-    }
-
-    .header {
-        padding: 0 12px; /* Save space in header */
-    }
-}
-
-/* 7. Header Components Consistency */
-.title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--gray-900);
-    letter-spacing: -0.5px;
-}
-
-.header-left, .header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-/* Connection Status */
-.connection-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-}
-
-.status-text {
-    display: none;
-}
-
-/* Stats Summary */
-.stats-summary {
-    display: flex;
-    gap: 16px;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-}
-
-.stat-label {
-    font-size: 11px;
-    color: var(--gray-500);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stat-value {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--gray-900);
-}
-
-/* Refresh Button */
-.refresh-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: var(--gray-100);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--border-radius);
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.refresh-btn:hover {
-    background: var(--gray-200);
-}
-
-.refresh-icon {
-    font-size: 16px;
-}
-
-/* Panel Header Elements */
-.panel-header h2 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--gray-900);
-    margin: 0;
-}
-
-/* Panel Title Layout */
-.panel-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-}
-
-.title-text h2 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--gray-900);
-}
-
-/* Compact Toolbar Buttons */
-.panel-toolbar {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
-
-.toolbar-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    background: var(--gray-100);
-    color: var(--gray-600);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.toolbar-btn:hover {
-    background: var(--gray-200);
-    color: var(--gray-800);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.toolbar-btn.primary {
-    background: var(--primary-green);
-    color: white;
-    border-color: var(--dark-green);
-}
-
-.toolbar-btn.primary:hover {
-    background: var(--dark-green);
-    color: white;
-}
-
-.toolbar-btn.secondary {
-    background: var(--blue);
-    color: white;
-    border-color: #2563eb;
-}
-
-.toolbar-btn.secondary:hover {
-    background: #2563eb;
-    color: white;
-}
-
-.toolbar-btn.tertiary {
-    background: var(--orange);
-    color: white;
-    border-color: #d97706;
-}
-
-.toolbar-btn.tertiary:hover {
-    background: #d97706;
-    color: white;
-}
-
-/* Responsive toolbar */
-@media (max-width: 768px) {
-    .panel-title {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .toolbar-btn {
-        width: 32px;
-        height: 32px;
-        font-size: 14px;
-    }
-}
-
-/* Form Styles */
-.required {
-    color: var(--error-color);
-    font-weight: 500;
-}
-
-.form-input:invalid {
-    border-color: var(--error-color);
-}
-
-.form-input:focus:invalid {
-    outline-color: var(--error-color);
-    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
-}
-
-.panel-controls {
-    display: flex;
-    gap: 4px;
-    flex-wrap: nowrap;
-    margin-bottom: 2px;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.filter-select,
-.search-input,
-.state-select {
-    padding: 1px 4px;
-    border: 1px solid #d1d5db;
-    border-radius: 2px;
-    font-size: 11px;
-    background: var(--white);
-    height: 22px;
-    box-sizing: border-box;
-}
-
-.search-input {
-    width: 100px;
-    font-size: 11px;
-}
-
-.filter-select,
-.state-select {
-    min-width: 80px;
-    font-size: 11px;
-}
-
-/* 1. Hide the Bottom Status Bar */
-.status-bar {
-    display: none !important;
-}
-
-/* 2. Ensure Main Content Stretches Fully */
-.main-content {
-    /* Make sure it takes all available height */
-    flex: 1;
-    height: 100vh;
-    overflow: hidden !important; /* Prevent outer scroll */
-    width: 100%;
-    box-sizing: border-box;
-
-    /* Optional: If you want the cards to touch the bottom edge flush,
-       change 'padding-bottom' to 0.
-       Currently, it keeps a 12px gap for the 'floating' look. */
-    padding-bottom: 12px;
 }
 
 /* ==========================================================================
-   [VIEW LAYER SYSTEM]
-   Dual-view structure for dashboard and chat
+   [VIEW LAYERS & UTILITIES]
    ========================================================================== */
 
 .view-layer {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
     display: flex;
     flex-direction: column;
-    transition: opacity 0.2s ease;
 }
 
 .view-layer.hidden {
     display: none !important;
 }
 
-/* Ensure center panel can contain absolute positioned views */
-.center-panel {
-    position: relative;
+.status-bar {
+    display: none !important;
 }
 
-/* ==========================================================================
+/* Form Styles used in headers */
+.form-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
