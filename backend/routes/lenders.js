@@ -454,6 +454,27 @@ router.get('/available', async (req, res) => {
     }
 });
 
+// Get submission history for a conversation
+router.get('/submissions/:conversationId', async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(`
+            SELECT lender_name, status, offer_amount, factor_rate,
+                   decline_reason, submitted_at, last_response_at
+            FROM lender_submissions
+            WHERE conversation_id = $1
+            ORDER BY submitted_at DESC
+        `, [conversationId]);
+
+        res.json({ success: true, submissions: result.rows });
+    } catch (error) {
+        console.error('Error fetching submissions:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Get single lender details
 router.get('/:lenderId', async (req, res) => {
     try {

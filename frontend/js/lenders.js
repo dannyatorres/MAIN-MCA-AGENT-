@@ -969,6 +969,10 @@ class LendersModule {
 
         // Populate the modal content
         try {
+            // 🔔 Fetch submission history first
+            this.submissionHistory = await this.getSubmissionHistory();
+            console.log(`📋 Found ${this.submissionHistory.length} previous submissions`);
+
             this.populateSubmissionLenders();
             this.populateSubmissionDocuments();
             this.prefillSubmissionMessage();
@@ -1115,10 +1119,21 @@ class LendersModule {
         }
     }
 
+    async getSubmissionHistory() {
+        const conversationId = this.parent.getCurrentConversationId();
+        if (!conversationId) return [];
+
+        try {
+            const result = await this.parent.apiCall(`/api/lenders/submissions/${conversationId}`);
+            return result.submissions || [];
+        } catch (error) {
+            console.error('Error fetching submission history:', error);
+            return [];
+        }
+    }
 
     populateSubmissionLenders() {
         const lenderList = document.getElementById('lenderSelectionList');
-        // ✅ Check the toggle state
         const showAll = document.getElementById('showAllLendersToggle')?.checked || false;
 
         if (!lenderList) return;
@@ -1134,58 +1149,135 @@ class LendersModule {
             return;
         }
 
-        // Group by tier (Non-Qualified gets a special tier)
-        const lendersByTier = {};
-        displayList.forEach(lender => {
-            // If it's from the non-qualified list, label it "Restricted"
-            let tier = lender.Tier || 'Unknown';
-            if (!lender.Tier && lender.blockingRule) tier = 'Restricted';
+        // 🔔 Build lookup of already submitted lenders
+        const submittedMap = new Map();
+        (this.submissionHistory || []).forEach(sub => {
+            submittedMap.set(sub.lender_name?.toLowerCase(), sub);
+        });
 
-            if (!lendersByTier[tier]) lendersByTier[tier] = [];
-            lendersByTier[tier].push(lender);
+        // 🔔 Separate into submitted vs available
+        const alreadySubmitted = [];
+        const available = [];
+
+        displayList.forEach(lender => {
+            const lenderName = (lender['Lender Name'] || lender.name || '').toLowerCase();
+            const submission = submittedMap.get(lenderName);
+
+            if (submission) {
+                alreadySubmitted.push({ ...lender, submission });
+            } else {
+                available.push(lender);
+            }
         });
 
         let html = '';
-        // Custom sort to put "Restricted" at the bottom
-        const sortedTiers = Object.keys(lendersByTier).sort((a, b) => {
-            if (a === 'Restricted') return 1;
-            if (b === 'Restricted') return -1;
-            return a.localeCompare(b);
-        });
 
-        sortedTiers.forEach(tier => {
-            html += `<div style="margin-bottom: 16px;">`;
+        // 🔔 SECTION 1: Already Submitted
+        if (alreadySubmitted.length > 0) {
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #f59e0b; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding-left: 2px;">
+                        📤 Already Submitted (${alreadySubmitted.length})
+                    </div>
+            `;
 
-            // Tier Header with color for Restricted
-            const headerColor = tier === 'Restricted' ? '#ef4444' : '#64748b';
-            html += `<div style="font-size: 11px; font-weight: 700; color: ${headerColor}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; padding-left: 2px;">Tier ${tier}</div>`;
-
-            lendersByTier[tier].forEach(lender => {
+            alreadySubmitted.forEach(lender => {
                 const lenderName = lender['Lender Name'] || lender.name;
-                const isPreferred = lender.isPreferred;
-                const reason = lender.blockingRule ? `(${lender.blockingRule})` : '';
+                const sub = lender.submission;
 
-                // ✅ APPLIED: "selection-item" class for the card look
+                // Status badge
+                let statusBadge = '';
+                let statusColor = '#6b7280';
+
+                if (sub.status === 'OFFER') {
+                    statusBadge = sub.offer_amount
+                        ? `OFFER $${Number(sub.offer_amount).toLocaleString()}`
+                        : 'OFFER';
+                    statusColor = '#10b981';
+                } else if (sub.status === 'DECLINED' || sub.status === 'DECLINE') {
+                    statusBadge = 'DECLINED';
+                    statusColor = '#ef4444';
+                } else {
+                    statusBadge = sub.status || 'PENDING';
+                    statusColor = '#6b7280';
+                }
+
+                // Format date
+                const sentDate = sub.submitted_at
+                    ? new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    : '';
+
                 html += `
-                    <label class="selection-item">
-                        <input type="checkbox" class="lender-checkbox" value="${lenderName}" checked>
-                        <div class="list-text">
+                    <label class="selection-item" style="opacity: 0.7;">
+                        <input type="checkbox" class="lender-checkbox" value="${lenderName}">
+                        <div class="list-text" style="flex: 1;">
                             ${lenderName}
-                            ${isPreferred ? '<span style="color:#3b82f6; margin-left:6px;">★</span>' : ''}
-                            ${reason ? `<span style="color:#ef4444; font-size:11px; margin-left:6px;">${reason}</span>` : ''}
+                            <span style="color: ${statusColor}; font-size: 11px; font-weight: 600; margin-left: 8px;">${statusBadge}</span>
+                            ${sentDate ? `<span style="color: #6b7280; font-size: 10px; margin-left: 6px;">(${sentDate})</span>` : ''}
                         </div>
                     </label>
                 `;
             });
+
             html += `</div>`;
-        });
+        }
+
+        // 🔔 SECTION 2: Available Lenders (grouped by tier)
+        if (available.length > 0) {
+            html += `
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding-left: 2px;">
+                        ✅ Available Lenders (${available.length})
+                    </div>
+            `;
+
+            // Group by tier
+            const lendersByTier = {};
+            available.forEach(lender => {
+                let tier = lender.Tier || 'Unknown';
+                if (!lender.Tier && lender.blockingRule) tier = 'Restricted';
+                if (!lendersByTier[tier]) lendersByTier[tier] = [];
+                lendersByTier[tier].push(lender);
+            });
+
+            // Sort tiers (Restricted at bottom)
+            const sortedTiers = Object.keys(lendersByTier).sort((a, b) => {
+                if (a === 'Restricted') return 1;
+                if (b === 'Restricted') return -1;
+                return a.localeCompare(b);
+            });
+
+            sortedTiers.forEach(tier => {
+                const headerColor = tier === 'Restricted' ? '#ef4444' : '#64748b';
+                html += `<div style="font-size: 10px; font-weight: 600; color: ${headerColor}; margin: 12px 0 6px 4px;">Tier ${tier}</div>`;
+
+                lendersByTier[tier].forEach(lender => {
+                    const lenderName = lender['Lender Name'] || lender.name;
+                    const isPreferred = lender.isPreferred;
+                    const reason = lender.blockingRule ? `(${lender.blockingRule})` : '';
+
+                    html += `
+                        <label class="selection-item">
+                            <input type="checkbox" class="lender-checkbox" value="${lenderName}" checked>
+                            <div class="list-text">
+                                ${lenderName}
+                                ${isPreferred ? '<span style="color:#3b82f6; margin-left:6px;">★</span>' : ''}
+                                ${reason ? `<span style="color:#ef4444; font-size:11px; margin-left:6px;">${reason}</span>` : ''}
+                            </div>
+                        </label>
+                    `;
+                });
+            });
+
+            html += `</div>`;
+        }
 
         lenderList.innerHTML = html;
 
         // Reset button text
         const toggleBtn = document.getElementById('toggleAllLendersBtn');
         if (toggleBtn) {
-            toggleBtn.textContent = 'DESELECT ALL'; // Caps to match new style
+            toggleBtn.textContent = 'DESELECT ALL';
             toggleBtn.className = 'action-link';
         }
     }
