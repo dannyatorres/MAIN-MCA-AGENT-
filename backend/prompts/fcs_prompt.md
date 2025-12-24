@@ -438,7 +438,7 @@ QUALITY CHECK REMINDERS:
 Before finalizing the FCS, ensure:
 - All MCA positions identified (check for daily/weekly debits)
 - Revenue calculations follow the decision tree correctly
-- MCA deposits are ONLY listed in "MCA Deposits" section (not in Revenue Deductions)
+- MCA deposits are listed in BOTH "1a. Revenue Deductions" AND "MCA Deposits" sections
 - Large unlabeled deposits are in "Items for Review" if included in revenue
 - Position counts match between all sections
 - Deposits over $10,000 are properly categorized
