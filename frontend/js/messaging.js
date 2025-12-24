@@ -1,4 +1,4 @@
-// messaging.js - Robust Messaging (Fixed Render Order)
+// messaging.js - Fixed version with event delegation
 
 class MessagingModule {
     constructor(parent) {
@@ -7,7 +7,8 @@ class MessagingModule {
         this.utils = parent.utils;
         this.templates = parent.templates;
         this.messageCache = new Map();
-        this.eventListenersAttached = false;
+        this.isSending = false;
+        this.lastSendTime = 0;
         this.init();
     }
 
@@ -17,49 +18,154 @@ class MessagingModule {
     }
 
     // ============================================================
-    // INCOMING EVENTS (The Logic Fix)
+    // EVENT LISTENERS - Using delegation (attach once, works always)
+    // ============================================================
+
+    setupEventListeners() {
+        // Use document-level delegation - only attach ONCE ever
+        if (window._messagingEventsAttached) return;
+        window._messagingEventsAttached = true;
+
+        console.log('🔧 Attaching messaging event listeners (delegation)');
+
+        // ENTER KEY - Capture at document level
+        document.addEventListener('keydown', (e) => {
+            const input = document.getElementById('messageInput');
+            if (!input) return;
+            if (document.activeElement !== input) return;
+
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+
+        // SEND BUTTON - Delegation
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('#sendMessageBtn');
+            if (btn) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+
+        // ATTACHMENT BUTTON
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('#attachmentBtn');
+            if (btn) {
+                document.getElementById('fileInput')?.click();
+            }
+        });
+
+        // FILE INPUT CHANGE
+        document.addEventListener('change', (e) => {
+            if (e.target.id === 'fileInput') {
+                this.handleFileUpload(e);
+            }
+        });
+
+        // AI TOGGLE
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('#aiToggleBtn');
+            if (btn) {
+                const isCurrentlyOn = btn.dataset.state === 'on';
+                this.toggleAI(!isCurrentlyOn);
+            }
+        });
+
+        console.log('✅ Messaging listeners ready');
+    }
+
+    // ============================================================
+    // SEND MESSAGE - With proper blocking
+    // ============================================================
+
+    async sendMessage(textOverride = null, mediaUrl = null) {
+        // INSTANT BLOCK - No async, no delay
+        const now = Date.now();
+        if (now - this.lastSendTime < 500) {
+            console.log('⚠️ Blocked: Too fast');
+            return;
+        }
+        if (this.isSending) {
+            console.log('⚠️ Blocked: Already sending');
+            return;
+        }
+
+        this.lastSendTime = now;
+        this.isSending = true;
+
+        const input = document.getElementById('messageInput');
+        const content = textOverride !== null ? textOverride : (input?.value.trim() || '');
+        const convId = this.parent.getCurrentConversationId();
+
+        if ((!content && !mediaUrl) || !convId) {
+            this.isSending = false;
+            return;
+        }
+
+        // Clear input IMMEDIATELY (feels responsive)
+        if (input && textOverride === null) {
+            input.value = '';
+        }
+
+        try {
+            const res = await this.parent.apiCall(`/api/conversations/${convId}/messages`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    message_content: content,
+                    sender_type: 'user',
+                    media_url: mediaUrl,
+                    message_type: mediaUrl ? 'mms' : 'sms'
+                })
+            });
+
+            if (res?.message) {
+                this.addMessage(res.message);
+                this.parent.conversationUI?.updateConversationPreview(convId, res.message);
+            }
+
+        } catch (e) {
+            console.error('Send failed:', e);
+            this.parent.utils?.showNotification('Failed to send', 'error');
+            // Restore message on failure
+            if (input && textOverride === null) {
+                input.value = content;
+            }
+        } finally {
+            this.isSending = false;
+        }
+    }
+
+    // ============================================================
+    // INCOMING EVENTS
     // ============================================================
 
     handleIncomingMessage(data) {
         const message = data.message || data;
-
         const rawId = data.conversation_id || message.conversation_id;
-        if (!rawId) {
-            console.warn('⚠️ handleIncomingMessage: No conversation ID found, ignoring');
-            return;
-        }
+        if (!rawId) return;
 
         const messageConversationId = String(rawId);
         const currentConversationId = String(this.parent.getCurrentConversationId());
-
         const isCurrentChat = (messageConversationId === currentConversationId && !document.hidden);
 
-        // 1. BADGE LOGIC
         if (!isCurrentChat) {
             const isLeadMessage = message.direction === 'inbound';
-            const isAiReply = message.sent_by === 'ai' && !message.is_drip;  // AI reply but NOT drip
+            const isAiReply = message.sent_by === 'ai' && !message.is_drip;
 
             if (isLeadMessage || isAiReply) {
-                if (this.parent.conversationUI) {
-                    this.parent.conversationUI.incrementBadge(messageConversationId);
-                }
+                this.parent.conversationUI?.incrementBadge(messageConversationId);
             }
         }
 
-        // 2. MOVE TO TOP & UPDATE PREVIEW
-        if (this.parent.conversationUI) {
-            this.parent.conversationUI.updateConversationPreview(messageConversationId, message);
-        }
+        this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
 
-        // 3. CHAT UI (If we are looking at this specific chat)
         if (isCurrentChat) {
             this.addMessage(message);
-        } else {
-            // Notification sound for inbound only (not AI - that would be noisy)
-            if (message.direction === 'inbound') {
-                this.playNotificationSound();
-                this.showBrowserNotification(data);
-            }
+        } else if (message.direction === 'inbound') {
+            this.playNotificationSound();
+            this.showBrowserNotification(data);
         }
     }
 
@@ -71,26 +177,22 @@ class MessagingModule {
         const convId = String(conversationId);
         const container = document.getElementById('messagesContainer');
 
-        // 1. Cache First
         if (this.messageCache.has(convId)) {
             this.renderMessages(this.messageCache.get(convId));
-        } else {
-            if (container) container.innerHTML = '<div class="loading-spinner"></div>';
+        } else if (container) {
+            container.innerHTML = '<div class="loading-spinner"></div>';
         }
 
         try {
-            // 2. Fetch Fresh
             const data = await this.parent.apiCall(`/api/conversations/${convId}/messages`);
             this.messageCache.set(convId, data || []);
 
-            // Render only if still active
             if (String(this.parent.getCurrentConversationId()) === convId) {
                 this.renderMessages(data || []);
             }
             this.updateAIButtonState(convId);
         } catch (e) {
             console.error('Load messages error', e);
-            // Silent fail if we have cache
         }
     }
 
@@ -107,71 +209,23 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 
-        // Dedup Check
         if (container.querySelector(`.message[data-message-id="${message.id}"]`)) return;
 
-        // SCROLL FIX: Check if user is near bottom BEFORE adding content
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
 
-        // Render
         const html = this.parent.templates.messageItem(message);
         const list = container.querySelector('.messages-list');
 
         if (list) list.insertAdjacentHTML('beforeend', html);
         else container.innerHTML = `<div class="messages-list">${html}</div>`;
 
-        // Cache update
         const convId = String(message.conversation_id);
         if (this.messageCache.has(convId)) {
             this.messageCache.get(convId).push(message);
         }
 
-        // SCROLL FIX: Only auto-scroll if user was already at/near the bottom
-        // Prevents losing place when reading history
         if (isNearBottom) {
             container.scrollTop = container.scrollHeight;
-        }
-    }
-
-    // ============================================================
-    // SENDING
-    // ============================================================
-
-    async sendMessage(textOverride = null, mediaUrl = null) {
-        const input = document.getElementById('messageInput');
-        const content = textOverride !== null ? textOverride : (input ? input.value.trim() : '');
-        const convId = this.parent.getCurrentConversationId();
-
-        if ((!content && !mediaUrl) || !convId) return;
-
-        try {
-            // 1. Send to API
-            const res = await this.parent.apiCall(`/api/conversations/${convId}/messages`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    message_content: content,
-                    sender_type: 'user',
-                    media_url: mediaUrl,
-                    message_type: mediaUrl ? 'mms' : 'sms'
-                })
-            });
-
-            // 2. Add bubble to chat immediately
-            if (res && res.message) {
-                this.addMessage(res.message);
-
-                // 3. Update the Sidebar List (Preview + Move to Top)
-                if (this.parent.conversationUI) {
-                    this.parent.conversationUI.updateConversationPreview(convId, res.message);
-                }
-            }
-
-            // 4. Clear input
-            if (input && textOverride === null) input.value = '';
-
-        } catch (e) {
-            console.error(e);
-            this.parent.utils.showNotification('Failed to send', 'error');
         }
     }
 
@@ -179,77 +233,16 @@ class MessagingModule {
     // UTILS
     // ============================================================
 
-    setupEventListeners() {
-        if (this.eventListenersAttached) {
-            console.log('⚠️ Event listeners already attached, skipping');
-            return;
-        }
-
-        const msgInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendMessageBtn'); // FIXED: was 'sendBtn'
-
-        console.log('🔧 Setting up messaging event listeners:', {
-            hasInput: !!msgInput,
-            hasBtn: !!sendBtn
-        });
-
-        // Enter key to send
-        if (msgInput) {
-            msgInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.sendMessage();
-                }
-            });
-        }
-
-        // Send button
-        if (sendBtn) {
-            sendBtn.removeAttribute('onclick');
-
-            // Clone to remove any existing listeners
-            const newBtn = sendBtn.cloneNode(true);
-            sendBtn.parentNode.replaceChild(newBtn, sendBtn);
-
-            newBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.sendMessage();
-            });
-        }
-
-        // File Upload
-        const attachBtn = document.getElementById('attachmentBtn');
-        const fileInput = document.getElementById('fileInput');
-        if (attachBtn && fileInput) {
-            attachBtn.removeAttribute('onclick');
-            attachBtn.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
-        }
-
-        // AI Toggle
-        const aiToggleBtn = document.getElementById('aiToggleBtn');
-        if (aiToggleBtn) {
-            aiToggleBtn.removeAttribute('onclick');
-            aiToggleBtn.addEventListener('click', () => {
-                const isCurrentlyOn = aiToggleBtn.dataset.state === 'on';
-                this.toggleAI(!isCurrentlyOn);
-            });
-        }
-
-        this.eventListenersAttached = true;
-        console.log('✅ Messaging event listeners attached');
-    }
-
     async handleFileUpload(e) {
-        const file = e.target.files[0];
+        const file = e.target.files?.[0];
         if (!file) return;
 
         const attachBtn = document.getElementById('attachmentBtn');
-        const originalIcon = attachBtn.innerHTML;
-        attachBtn.innerHTML = '⏳';
-        attachBtn.disabled = true;
+        const originalIcon = attachBtn?.innerHTML;
+        if (attachBtn) {
+            attachBtn.innerHTML = '⏳';
+            attachBtn.disabled = true;
+        }
 
         try {
             const formData = new FormData();
@@ -265,8 +258,10 @@ class MessagingModule {
             console.error('Upload error:', error);
             alert('Failed to upload image');
         } finally {
-            attachBtn.innerHTML = originalIcon;
-            attachBtn.disabled = false;
+            if (attachBtn) {
+                attachBtn.innerHTML = originalIcon;
+                attachBtn.disabled = false;
+            }
             e.target.value = '';
         }
     }
@@ -279,12 +274,14 @@ class MessagingModule {
 
     showBrowserNotification(data) {
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('New Message', { body: data.message.content });
+            new Notification('New Message', { body: data.message?.content || 'New message' });
         }
     }
 
     requestNotificationPermissionOnDemand() {
-        if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
     }
 
     async updateAIButtonState(conversationId) {
@@ -301,14 +298,20 @@ class MessagingModule {
         const conversationId = this.parent.getCurrentConversationId();
         if (!conversationId) return;
         const btn = document.getElementById('aiToggleBtn');
+        if (!btn) return;
+
         const oldState = btn.dataset.state;
         btn.dataset.state = newState ? 'on' : 'off';
+
         try {
             await this.parent.apiCall(`/api/conversations/${conversationId}/toggle-ai`, {
-                method: 'POST', body: JSON.stringify({ enabled: newState })
+                method: 'POST',
+                body: JSON.stringify({ enabled: newState })
             });
         } catch (error) {
             btn.dataset.state = oldState;
         }
     }
 }
+
+window.MessagingModule = MessagingModule;
