@@ -304,7 +304,11 @@ class FCSModule {
             let cleanText = content.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
             let lines = cleanText.split('\n');
 
-            let html = '<div class="fcs-styled-report" style="font-family: sans-serif; color: #e6edf3;">';
+            // 1. MODERN FONT STACK
+            const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+            let html = `<div class="fcs-styled-report" style="font-family: ${fontFamily}; color: #e6edf3; line-height: 1.5;">`;
+
             let inTable = false;
             let inSummary = false;
             let tableHeaders = [];
@@ -320,216 +324,175 @@ class FCSModule {
                 if (trimmedLine.match(/^\d+-Month Summary/i) || trimmedLine.match(/^Summary$/i)) {
                     if (inTable) { html += '</tbody></table></div>'; inTable = false; }
 
+                    // Compact header with a gradient accent
                     html += `
-                    <div style="margin-top: 32px; border-radius: 12px; border: 1px solid #30363d; overflow: hidden;">
-                        <div style="background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%); padding: 12px 16px;">
-                            <h3 style="margin: 0; color: #0f1115; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${trimmedLine}</h3>
+                    <div style="margin-top: 32px; border-radius: 8px; border: 1px solid #30363d; overflow: hidden; background: #0d1117;">
+                        <div style="background: linear-gradient(90deg, #2dd4bf 0%, #0f1115 100%); padding: 10px 16px;">
+                            <h3 style="margin: 0; color: #0f1115; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${trimmedLine}</h3>
                         </div>
-                        <div style="background: #0d1117; padding: 4px 0;">`;
+                        <div style="padding: 0;">`; // Removed vertical padding from container
                     inSummary = true;
                     continue;
                 }
 
-                // === SUMMARY KEY:VALUE PAIRS ===
+                // === SUMMARY KEY:VALUE PAIRS (TIGHTER) ===
                 if (inSummary && trimmedLine.startsWith('- ') && trimmedLine.includes(':')) {
                     const content = trimmedLine.substring(2);
                     const colonIndex = content.indexOf(':');
                     const key = content.substring(0, colonIndex).trim();
                     const val = content.substring(colonIndex + 1).trim();
 
+                    // 3. TIGHTER SUMMARY ROWS
                     html += `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; border-bottom: 1px solid #21262d;">
-                        <span style="color: #8b949e; font-size: 13px; flex-shrink: 0;">${key}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid #21262d;">
+                        <span style="color: #8b949e; font-size: 12px; font-weight: 500;">${key}</span>
                         <span style="font-weight: 600; color: #e6edf3; font-size: 13px; text-align: right; margin-left: 16px;">${val}</span>
                     </div>`;
                     continue;
                 }
 
-                // === END SUMMARY (next section header) ===
+                // === END SUMMARY ===
                 if (inSummary && (trimmedLine.endsWith(':') || trimmedLine.startsWith('##') || trimmedLine.startsWith('==='))) {
                     html += '</div></div>';
                     inSummary = false;
                 }
 
-                // === NEW FORMAT: Markdown table header ===
+                // === MARKDOWN TABLE HEADER ===
                 if (trimmedLine.startsWith('|') && trimmedLine.includes('Month') && trimmedLine.includes('Deposits')) {
                     if (inTable) { html += '</tbody></table></div>'; }
-
                     tableHeaders = trimmedLine.split('|').map(h => h.trim()).filter(h => h);
 
                     html += `
-                    <div style="overflow-x: auto; margin: 20px 0; border-radius: 12px; border: 1px solid #30363d;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; background: #0d1117;">
-                            <thead style="background: #161b22; color: #8b949e; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">
-                                <tr>
-                                    ${tableHeaders.map(h => `<th style="padding: 14px 16px; font-weight: 600;">${h}</th>`).join('')}
-                                </tr>
+                    <div style="overflow-x: auto; margin: 20px 0; border-radius: 8px; border: 1px solid #30363d; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; background: #0d1117;">
+                            <thead style="background: #161b22; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <tr>${tableHeaders.map(h => `<th style="padding: 12px 16px; font-weight: 600; border-bottom: 1px solid #30363d;">${h}</th>`).join('')}</tr>
                             </thead>
                             <tbody>`;
                     inTable = true;
                     continue;
                 }
 
-                // === NEW FORMAT: Markdown table row ===
+                // === MARKDOWN TABLE ROW ===
                 if (inTable && trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
                     const cells = trimmedLine.split('|').map(c => c.trim()).filter(c => c);
-
                     if (cells.length >= 5) {
                         const [month, deposits, revenue, negDays, endBal, numDep] = cells;
                         const negDaysNum = parseInt(negDays) || 0;
 
                         html += `
-                            <tr style="border-bottom: 1px solid #21262d; transition: background 0.2s;">
-                                <td style="padding: 14px 16px; font-weight: 600; color: #3b82f6;">${month}</td>
-                                <td style="padding: 14px 16px; font-family: monospace;">${deposits}</td>
-                                <td style="padding: 14px 16px; font-weight: 600; color: #4ade80; font-family: monospace;">${revenue}</td>
-                                <td style="padding: 14px 16px; font-weight: 600; ${negDaysNum > 3 ? 'color: #f87171;' : 'color: #e6edf3;'}">${negDays}</td>
-                                <td style="padding: 14px 16px; font-family: monospace;">${endBal}</td>
-                                <td style="padding: 14px 16px; color: #8b949e;">${numDep || '-'}</td>
+                            <tr style="border-bottom: 1px solid #21262d;">
+                                <td style="padding: 10px 16px; font-weight: 600; color: #3b82f6;">${month}</td>
+                                <td style="padding: 10px 16px; font-family: ui-monospace, SFMono-Regular, monospace;">${deposits}</td>
+                                <td style="padding: 10px 16px; font-weight: 600; color: #4ade80; font-family: ui-monospace, SFMono-Regular, monospace;">${revenue}</td>
+                                <td style="padding: 10px 16px; font-weight: 600; ${negDaysNum > 3 ? 'color: #f87171;' : 'color: #9ca3af;'}">${negDays}</td>
+                                <td style="padding: 10px 16px; font-family: ui-monospace, SFMono-Regular, monospace;">${endBal}</td>
+                                <td style="padding: 10px 16px; color: #8b949e;">${numDep || '-'}</td>
                             </tr>`;
                         continue;
                     }
                 }
 
-                // === OLD FORMAT: Inline labels ===
-                const oldFormatMatch = trimmedLine.match(/^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})\s+Deposits:\s*(\$?[\d,.-]+)\s+Revenue:\s*(\$?[\d,.-]+)\s+Neg Days:\s*([\dN\/A]+)\s+End Bal:\s*(\$?[\d,.-]+)\s+#Dep:\s*(\d+)/i);
-
-                if (oldFormatMatch) {
-                    if (!inTable) {
-                        html += `
-                        <div style="overflow-x: auto; margin: 20px 0; border-radius: 12px; border: 1px solid #30363d;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; background: #0d1117;">
-                                <thead style="background: #161b22; color: #8b949e; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">
-                                    <tr>
-                                        <th style="padding: 14px 16px; font-weight: 600;">Month</th>
-                                        <th style="padding: 14px 16px; font-weight: 600;">Deposits</th>
-                                        <th style="padding: 14px 16px; font-weight: 600;">Revenue</th>
-                                        <th style="padding: 14px 16px; font-weight: 600;">Neg Days</th>
-                                        <th style="padding: 14px 16px; font-weight: 600;">End Bal</th>
-                                        <th style="padding: 14px 16px; font-weight: 600;">#Dep</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-                        inTable = true;
-                    }
-
-                    const [, month, deposits, revenue, negDays, endBal, numDep] = oldFormatMatch;
-                    const negDaysNum = parseInt(negDays) || 0;
-
-                    html += `
-                        <tr style="border-bottom: 1px solid #21262d;">
-                            <td style="padding: 14px 16px; font-weight: 600; color: #3b82f6;">${month}</td>
-                            <td style="padding: 14px 16px; font-family: monospace;">${deposits}</td>
-                            <td style="padding: 14px 16px; font-weight: 600; color: #4ade80; font-family: monospace;">${revenue}</td>
-                            <td style="padding: 14px 16px; font-weight: 600; ${negDaysNum > 3 ? 'color: #f87171;' : 'color: #e6edf3;'}">${negDays}</td>
-                            <td style="padding: 14px 16px; font-family: monospace;">${endBal}</td>
-                            <td style="padding: 14px 16px; color: #8b949e;">${numDep}</td>
-                        </tr>`;
-                    continue;
-                }
-
-                // === Close table if non-table content ===
-                if (inTable && !trimmedLine.startsWith('|') && !oldFormatMatch) {
+                // === CLOSE TABLE ===
+                if (inTable && !trimmedLine.startsWith('|')) {
                     html += '</tbody></table></div>';
                     inTable = false;
                 }
 
-                // === MONTH HEADERS (NOVEMBER 2025, etc.) ===
-                const monthHeaderMatch = trimmedLine.match(/^(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{4}$/i);
-                if (monthHeaderMatch) {
-                    html += `<h4 style="color: #f59e0b; margin: 24px 0 12px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">${trimmedLine}</h4>`;
+                // === MONTH HEADERS ===
+                if (trimmedLine.match(/^(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{4}$/i)) {
+                    html += `<div style="display:flex; align-items:center; margin: 24px 0 12px 0;">
+                                <h4 style="color: #f59e0b; margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">${trimmedLine}</h4>
+                                <div style="flex-grow:1; height:1px; background:#30363d; margin-left:12px;"></div>
+                             </div>`;
                     continue;
                 }
 
-                // === SECTION HEADERS ===
+                // === SECTION HEADERS (Observations, etc) ===
                 const isHeader = (trimmedLine.endsWith(':') && trimmedLine.length < 60 && !trimmedLine.startsWith('-')) ||
-                                 trimmedLine.startsWith('##') ||
-                                 trimmedLine.startsWith('===') ||
-                                 (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 4 && trimmedLine.length < 60 && !trimmedLine.includes('$') && !trimmedLine.startsWith('|') && !trimmedLine.startsWith('-'));
+                                 trimmedLine.startsWith('##') || trimmedLine.startsWith('===');
 
                 if (isHeader) {
                     const headerText = trimmedLine.replace(/^[#=\s]+/, '').replace(/[=:]+$/, '').trim();
 
-                    if (headerText.includes('BUSINESS NAME') || headerText.includes('EXTRACTED')) {
-                        html += `<div style="color: #6b7280; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-top: 20px; letter-spacing: 1px;">${headerText}</div>`;
-                    } else if (headerText.includes('ACCOUNT') && headerText.includes('...')) {
-                        html += `<h3 style="color: #2dd4bf; margin: 32px 0 16px 0; font-size: 16px; font-weight: 700; padding-bottom: 8px; border-bottom: 2px solid #2dd4bf;">${headerText}</h3>`;
-                    } else if (headerText.match(/^(Observations|Recent MCA|Debt-Consolidation|Items for Review)/i)) {
+                    // Special style for Analysis Headers
+                    if (headerText.match(/^(Observations|Recent MCA|Debt-Consolidation|Items for Review)/i)) {
                         html += `
-                        <div style="margin-top: 28px; margin-bottom: 12px; padding: 10px 14px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 0 8px 8px 0;">
-                            <h4 style="margin: 0; color: #3b82f6; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">${headerText}</h4>
+                        <div style="margin-top: 24px; margin-bottom: 8px;">
+                            <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${headerText}</span>
                         </div>`;
+                    } else if (headerText.includes('BUSINESS NAME') || headerText.includes('EXTRACTED')) {
+                        html += `<div style="color: #6b7280; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-top: 20px; letter-spacing: 1px;">${headerText}</div>`;
                     } else {
-                        html += `<h4 style="color: #3b82f6; margin: 28px 0 12px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 8px; font-weight: 600;">${headerText}</h4>`;
+                        html += `<h4 style="color: #e6edf3; margin: 24px 0 8px 0; font-size: 14px; font-weight: 600;">${headerText}</h4>`;
                     }
                     continue;
                 }
 
-                // === BULLET POINTS WITH CONTEXT ===
+                // === 2. FIX FOR BULLET POINTS (THE "SPREAD OUT" ISSUE) ===
+                // Instead of making each bullet a box, we make them a clean list
                 if (trimmedLine.startsWith('- ')) {
                     const bulletContent = trimmedLine.substring(2);
-
-                    // Check if it has a right-aligned tag (like "Bluevine - Funding/Loan)")
-                    const tagMatch = bulletContent.match(/^(.+?)\s{2,}(.+)$/);
+                    const tagMatch = bulletContent.match(/^(.+?)\s{2,}(.+)$/); // Check for right-aligned tags
 
                     if (tagMatch) {
+                        // Tagged items (Keep these as cards, but tighter)
                         const [, leftPart, rightPart] = tagMatch;
                         html += `
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 12px; margin: 4px 0; background: #161b22; border-radius: 8px; border: 1px solid #21262d;">
-                            <span style="color: #c9d1d9; font-size: 13px; line-height: 1.5;">${leftPart.trim()}</span>
-                            <span style="color: #8b949e; font-size: 12px; background: #21262d; padding: 4px 10px; border-radius: 6px; white-space: nowrap; margin-left: 12px;">${rightPart.trim()}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 4px; background: #161b22; border-radius: 6px; border: 1px solid #30363d;">
+                            <span style="color: #e6edf3; font-size: 13px;">${leftPart.trim()}</span>
+                            <span style="color: #8b949e; font-size: 11px; background: #21262d; padding: 2px 8px; border-radius: 4px;">${rightPart.trim()}</span>
                         </div>`;
                     } else {
+                        // Regular bullets (Observations, Lists) - REMOVED THE BOX
                         html += `
-                        <div style="padding: 10px 12px; margin: 4px 0; background: #161b22; border-radius: 8px; border: 1px solid #21262d; font-size: 13px; line-height: 1.6; color: #c9d1d9;">
-                            <span style="color: #2dd4bf; margin-right: 8px;">•</span>${bulletContent}
+                        <div style="position: relative; padding-left: 16px; margin-bottom: 6px; color: #c9d1d9; font-size: 13px;">
+                            <span style="position: absolute; left: 0; top: 6px; width: 4px; height: 4px; background: #3b82f6; border-radius: 50%;"></span>
+                            ${bulletContent}
                         </div>`;
                     }
                     continue;
                 }
 
-                // === POSITION LINES (e.g., "Position 1: Lender Name - $500 daily") ===
+                // === POSITIONS (Keep these as cards, they are important) ===
                 if (trimmedLine.match(/^Position\s+\d+:/i)) {
                     const content = trimmedLine.replace(/^Position\s+\d+:\s*/i, '');
                     const posNum = trimmedLine.match(/^Position\s+(\d+)/i)[1];
                     html += `
-                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; margin: 6px 0; background: #161b22; border-radius: 8px; border: 1px solid #21262d;">
-                        <span style="background: #3b82f6; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px;">P${posNum}</span>
-                        <span style="color: #e6edf3; font-size: 13px;">${content}</span>
+                    <div style="display: flex; align-items: flex-start; gap: 12px; padding: 10px; margin: 8px 0; background: #161b22; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                        <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-top: 2px;">P${posNum}</span>
+                        <span style="color: #e6edf3; font-size: 13px; font-weight: 500;">${content}</span>
                     </div>`;
                     continue;
                 }
 
-                // === REASON/NOTE BLOCKS ===
+                // === REASON/NOTES (Integrated style) ===
                 if (trimmedLine.startsWith('Reason:') || trimmedLine.startsWith('NOTE:')) {
-                    const label = trimmedLine.startsWith('Reason:') ? 'Reason' : 'Note';
                     const content = trimmedLine.replace(/^(Reason:|NOTE:)\s*/i, '');
                     html += `
-                    <div style="padding: 12px 14px; margin: 8px 0 16px 0; background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 8px;">
-                        <span style="color: #fbbf24; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${label}:</span>
-                        <p style="margin: 6px 0 0 0; color: #d1d5db; font-size: 13px; line-height: 1.6;">${content}</p>
+                    <div style="margin: 4px 0 16px 20px; font-size: 12px; color: #8b949e; border-left: 2px solid #30363d; padding-left: 12px; font-style: italic;">
+                        ${content}
                     </div>`;
                     continue;
                 }
 
-                // === REGULAR KEY:VALUE PAIRS ===
-                if (trimmedLine.includes(':') && !trimmedLine.startsWith('|') && !trimmedLine.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i)) {
+                // === REGULAR KEY:VALUE ===
+                if (trimmedLine.includes(':') && !trimmedLine.startsWith('|')) {
                     const colonIndex = trimmedLine.indexOf(':');
                     const key = trimmedLine.substring(0, colonIndex).trim();
                     const val = trimmedLine.substring(colonIndex + 1).trim();
-
                     if (key && val && key.length < 40) {
                         html += `
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #21262d; font-size: 13px;">
-                            <span style="color: #8b949e; flex-shrink: 0;">${key}</span>
-                            <span style="font-weight: 500; color: #e6edf3; text-align: right; margin-left: 16px; max-width: 65%;">${val}</span>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(48, 54, 61, 0.5);">
+                            <span style="color: #8b949e;">${key}</span>
+                            <span style="color: #e6edf3;">${val}</span>
                         </div>`;
                         continue;
                     }
                 }
 
                 // === PLAIN TEXT ===
-                html += `<div style="margin-bottom: 8px; font-size: 13px; line-height: 1.6; color: #9ca3af;">${trimmedLine}</div>`;
+                html += `<div style="margin-bottom: 6px; font-size: 13px; color: #8b949e;">${trimmedLine}</div>`;
             }
 
             if (inTable) { html += '</tbody></table></div>'; }
