@@ -100,17 +100,17 @@
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-fire"></i></div>
                                 <div class="stat-value" id="activeCount">-</div>
-                                <div class="stat-label">Active Leads</div>
+                                <div class="stat-label">Active</div>
                             </div>
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-spinner"></i></div>
-                                <div class="stat-value" id="processingCount">-</div>
-                                <div class="stat-label">Processing</div>
+                            <div class="stat-card" style="cursor: pointer;" onclick="window.showSubmittedLeads && window.showSubmittedLeads()">
+                                <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
+                                <div class="stat-value" id="submittedCount">-</div>
+                                <div class="stat-label">Submitted</div>
                             </div>
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
-                                <div class="stat-value" id="todayCount">-</div>
-                                <div class="stat-label">New Today</div>
+                            <div class="stat-card" style="cursor: pointer;" onclick="window.showOffersModal && window.showOffersModal()">
+                                <div class="stat-icon" style="color: #10b981;"><i class="fas fa-dollar-sign"></i></div>
+                                <div class="stat-value" id="offersCount">-</div>
+                                <div class="stat-label">Offers</div>
                             </div>
                         </div>
                     </div>

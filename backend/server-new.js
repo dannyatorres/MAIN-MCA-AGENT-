@@ -686,6 +686,7 @@ app.use('/api/calling', require('./routes/calling'));
 app.use('/api/email', emailRoutes);
 app.use('/api/agent', require('./routes/agent')); // AI Agent for Dispatcher
 app.use('/api/cleaner', require('./routes/cleaner')); // Background Verification
+app.use('/api/stats', require('./routes/stats'));
 
 // --- CONTACT FORM ROUTE (LOG ONLY) ---
 app.post('/api/contact', (req, res) => {

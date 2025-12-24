@@ -1,20 +1,19 @@
-// stats.js - Statistics module for tracking application metrics
+// stats.js - Dashboard statistics module
 
 class StatsModule {
     constructor(parent) {
         this.parent = parent;
-        this.apiBaseUrl = parent.apiBaseUrl;
-        this.utils = parent.utils;
-        
-        // ✅ NEW: Cache storage
         this.statsCache = null;
-
         this.init();
     }
 
     init() {
         console.log('📊 StatsModule initialized');
-        // Optionally load stats immediately if we are on dashboard
+
+        // Expose global functions for clickable stats
+        window.showOffersModal = () => this.showOffersModal();
+        window.showSubmittedLeads = () => this.showSubmittedLeads();
+
         if (!this.parent.currentConversationId) {
             this.loadStats();
         }
@@ -22,55 +21,166 @@ class StatsModule {
 
     async loadStats() {
         const activeEl = document.getElementById('activeCount');
-        const processingEl = document.getElementById('processingCount');
-        const todayEl = document.getElementById('todayCount');
+        const submittedEl = document.getElementById('submittedCount');
+        const offersEl = document.getElementById('offersCount');
 
-        if (!activeEl) return; // Not on dashboard, skip
+        if (!activeEl) return;
 
-        // 1. INSTANT RENDER FROM CACHE
         if (this.statsCache) {
-            console.log('⚡ [Cache] Showing stats instantly');
             this.updateUI(this.statsCache);
         } else {
-            // Optional: Show simple placeholder if no cache
             if (activeEl.textContent === '-') activeEl.textContent = '...';
         }
 
         try {
-            console.log('📊 Fetching dashboard stats...');
             const stats = await this.parent.apiCall('/api/stats');
-            
-            // Normalize Data
+
             const normalizedStats = {
-                active: stats.totalConversations || stats.conversations?.total || 0,
-                processing: stats.processing || stats.fcs_processing?.currentlyProcessing || 0,
-                today: stats.newLeads || stats.conversations?.today || 0
+                active: stats.active || 0,
+                submitted: stats.submitted || 0,
+                offers: stats.offers || 0
             };
 
-            // 2. UPDATE CACHE & UI
             this.statsCache = normalizedStats;
             this.updateUI(normalizedStats);
 
         } catch (error) {
             console.error('Error loading stats:', error);
-            // Only show dashes if we really have nothing
             if (!this.statsCache) {
-                activeEl.textContent = '-';
-                processingEl.textContent = '-';
-                todayEl.textContent = '-';
+                if (activeEl) activeEl.textContent = '-';
+                if (submittedEl) submittedEl.textContent = '-';
+                if (offersEl) offersEl.textContent = '-';
             }
         }
     }
 
-    // Helper to keep UI logic clean
     updateUI(data) {
         const activeEl = document.getElementById('activeCount');
-        const processingEl = document.getElementById('processingCount');
-        const todayEl = document.getElementById('todayCount');
+        const submittedEl = document.getElementById('submittedCount');
+        const offersEl = document.getElementById('offersCount');
 
         if (activeEl) activeEl.textContent = data.active;
-        if (processingEl) processingEl.textContent = data.processing;
-        if (todayEl) todayEl.textContent = data.today;
+        if (submittedEl) submittedEl.textContent = data.submitted;
+        if (offersEl) offersEl.textContent = data.offers;
+    }
+
+    async showOffersModal() {
+        try {
+            const result = await this.parent.apiCall('/api/stats/offers');
+
+            if (!result.offers || result.offers.length === 0) {
+                this.parent.utils.showNotification('No offers yet', 'info');
+                return;
+            }
+
+            let html = `
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #30363d; text-align: left;">
+                                <th style="padding: 10px; color: #8b949e;">Business</th>
+                                <th style="padding: 10px; color: #8b949e;">Lender</th>
+                                <th style="padding: 10px; color: #8b949e;">Amount</th>
+                                <th style="padding: 10px; color: #8b949e;">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            result.offers.forEach(offer => {
+                const amount = offer.offer_amount
+                    ? `$${Number(offer.offer_amount).toLocaleString()}`
+                    : 'N/A';
+                const date = offer.last_response_at
+                    ? new Date(offer.last_response_at).toLocaleDateString()
+                    : '-';
+
+                html += `
+                    <tr style="border-bottom: 1px solid #21262d; cursor: pointer;"
+                        onclick="window.commandCenter.conversationUI.selectConversation('${offer.conversation_id}'); document.getElementById('statsModal').remove();">
+                        <td style="padding: 12px; color: #e6edf3;">${offer.business_name || 'Unknown'}</td>
+                        <td style="padding: 12px; color: #8b949e;">${offer.lender_name || '-'}</td>
+                        <td style="padding: 12px; color: #10b981; font-weight: 600;">${amount}</td>
+                        <td style="padding: 12px; color: #8b949e;">${date}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div>`;
+            this.showSimpleModal('💰 Active Offers', html);
+
+        } catch (error) {
+            console.error('Error loading offers:', error);
+            this.parent.utils.showNotification('Failed to load offers', 'error');
+        }
+    }
+
+    async showSubmittedLeads() {
+        try {
+            const result = await this.parent.apiCall('/api/stats/submitted');
+
+            if (!result.submitted || result.submitted.length === 0) {
+                this.parent.utils.showNotification('No submissions yet', 'info');
+                return;
+            }
+
+            let html = `
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #30363d; text-align: left;">
+                                <th style="padding: 10px; color: #8b949e;">Business</th>
+                                <th style="padding: 10px; color: #8b949e;">Lenders</th>
+                                <th style="padding: 10px; color: #8b949e;">Last Sent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            result.submitted.forEach(item => {
+                const date = item.last_submitted
+                    ? new Date(item.last_submitted).toLocaleDateString()
+                    : '-';
+
+                html += `
+                    <tr style="border-bottom: 1px solid #21262d; cursor: pointer;"
+                        onclick="window.commandCenter.conversationUI.selectConversation('${item.conversation_id}'); document.getElementById('statsModal').remove();">
+                        <td style="padding: 12px; color: #e6edf3;">${item.business_name || 'Unknown'}</td>
+                        <td style="padding: 12px; color: #8b949e;">${item.lender_count} lender${item.lender_count > 1 ? 's' : ''}</td>
+                        <td style="padding: 12px; color: #8b949e;">${date}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div>`;
+            this.showSimpleModal('📤 Submitted Leads', html);
+
+        } catch (error) {
+            console.error('Error loading submitted:', error);
+            this.parent.utils.showNotification('Failed to load submissions', 'error');
+        }
+    }
+
+    showSimpleModal(title, content) {
+        const existing = document.getElementById('statsModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'statsModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3>${title}</h3>
+                    <button class="modal-close" onclick="document.getElementById('statsModal').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    ${content}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
     }
 
     trackEvent(eventName, data = {}) {
