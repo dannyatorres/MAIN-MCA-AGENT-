@@ -184,48 +184,64 @@
 }
 
 /* ==========================================================================
-   [HERO WELCOME CARD]
+   [HERO WELCOME CARD - WITH LOGO]
    ========================================================================== */
 
 .hero-card {
+    /* 1. Background & Shape */
     background: linear-gradient(135deg, #1a1f2e 0%, #161b22 50%, #0d1117 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
-    padding: 32px; /* Increased padding for luxury feel */
+
+    /* 2. Layout & Spacing */
+    padding: 32px;
     text-align: center;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+
+    /* 3. ESSENTIAL for the Logo to stay inside */
     position: relative;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 1;
 }
 
-/* Corgi watermark */
+/* THE CORGI WATERMARK */
 .hero-card::after {
     content: '';
     position: absolute;
+
+    /* Position: Bottom Right (Peeking in) */
     right: -20px;
-    bottom: -30px;
-    width: 160px; /* Slightly larger watermark */
-    height: 160px;
-    background-image: url('logo.png');
+    bottom: -40px;
+
+    /* Size */
+    width: 240px;
+    height: 240px;
+
+    /* Image: Points to logo.png in the main folder */
+    background-image: url('../../logo.png');
     background-size: contain;
     background-repeat: no-repeat;
-    opacity: 0.06;
+
+    /* Style: Subtle & Angled */
+    opacity: 0.08;
+    transform: rotate(-10deg);
+
+    /* Interaction: Click-through */
     pointer-events: none;
+    z-index: -1; /* Puts it behind the text */
 }
 
-.hero-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
-    pointer-events: none;
+/* Ensure text sits on top of the logo */
+.hero-greeting,
+.hero-quote,
+.hero-date {
+    position: relative;
+    z-index: 2;
 }
 
 .hero-greeting {
-    font-size: 26px; /* Larger font */
+    font-size: 26px;
     font-weight: 700;
     color: #e6edf3;
     margin: 0 0 10px 0;
