@@ -177,21 +177,26 @@ router.get('/:id', async (req, res) => {
         // =========================================================
         // FETCH COMMANDER STRATEGY
         // =========================================================
-        const strategyResult = await db.query(`
-            SELECT lead_grade, strategy_type, game_plan
-            FROM lead_strategy
-            WHERE conversation_id = $1
-        `, [conversation.id]);
+        try {
+            const strategyResult = await db.query(`
+                SELECT lead_grade, strategy_type, game_plan, offer_amount, offer_generated_at
+                FROM lead_strategy
+                WHERE conversation_id = $1
+            `, [conversation.id]);
 
-        // Inject the strategy into the response object
-        if (strategyResult.rows.length > 0) {
-            conversation.lead_strategy = strategyResult.rows[0];
+            if (strategyResult.rows.length > 0) {
+                conversation.lead_strategy = strategyResult.rows[0];
 
-            // If the game_plan is stored as a string, parse it
-            if (typeof conversation.lead_strategy.game_plan === 'string') {
-                conversation.lead_strategy.game_plan = JSON.parse(conversation.lead_strategy.game_plan);
+                // If the game_plan is stored as a string, parse it
+                if (typeof conversation.lead_strategy.game_plan === 'string') {
+                    conversation.lead_strategy.game_plan = JSON.parse(conversation.lead_strategy.game_plan);
+                }
+            } else {
+                conversation.lead_strategy = null;
             }
-        } else {
+        } catch (err) {
+            console.error('Failed to attach strategy:', err.message);
+            // Don't crash the whole request if this table is missing
             conversation.lead_strategy = null;
         }
         // =========================================================
