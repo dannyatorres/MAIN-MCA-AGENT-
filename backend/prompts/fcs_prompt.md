@@ -273,7 +273,7 @@ WHAT DOES NOT BELONG HERE:
 - Check deposits described as "Deposit by Check" with no lender name
 - Deposits already listed in "1a. Revenue Deductions"
 
-CRITICAL RULE: MCA deposits are AUTOMATICALLY excluded from revenue - do not list them in "1a. Revenue Deductions"
+CRITICAL RULE: MCA deposits must be listed here to confirm they were excluded from revenue, AND listed in the MCA Deposits section.
 
 Format:
 - $50,250.00 on 09/17/2025 (Fedwire Credit Via: Bankunited N.A/267090594 B/O: Stage Advance LLC)
