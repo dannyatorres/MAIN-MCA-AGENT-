@@ -111,10 +111,12 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
 
                 // Basic Info
                 const business_name = getFuzzyValue(row, ['Company Name', 'Company', 'Business', 'Legal Name']);
-                const phone = getFuzzyValue(row, ['Phone', 'Phone Number', 'Mobile', 'Cell']);
+                const phone = getFuzzyValue(row, ['Phone', 'Phone Number', 'Mobile', 'Cell', 'Verified Mobile']);
                 const email = getFuzzyValue(row, ['Email', 'Business Email']);
 
-                if (!business_name && !phone) return;
+                // FIXED: Strictly require a phone number.
+                // If phone is missing, skip this row immediately to prevent crashing.
+                if (!phone) return;
 
                 // Clean Dates
                 const rawDob = getFuzzyValue(row, ['DOB', 'Date of Birth']);
@@ -182,11 +184,12 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             const batch = validLeads.slice(i, i + BATCH_SIZE);
 
             // A. Insert into Conversations
-            // FIXED: Added Owner Address fields (Total 14 params + NOW())
+            // BULLETPROOF: Using DO UPDATE instead of DO NOTHING
             const convValues = [];
             const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
+                // We are now inserting 14 values per row + NOW()
                 const offset = idx * 14;
                 convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, $${offset+12}, $${offset+13}, $${offset+14}, NOW())`);
 
@@ -196,12 +199,12 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     lead.lead_phone,
                     lead.email,
                     lead.us_state,
-                    lead.address,
-                    lead.city,
-                    lead.zip,
+                    lead.address,         // Business Address
+                    lead.city,            // Business City
+                    lead.zip,             // Business Zip
                     lead.first_name,
                     lead.last_name,
-                    // NEW FIELDS:
+                    // Owner Address Fields
                     lead.owner_home_address || null,
                     lead.owner_home_city || null,
                     lead.owner_home_state || null,
@@ -210,15 +213,24 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             });
 
             if (batch.length > 0) {
-                await db.query(`
+                // FIXED: Using "DO UPDATE" instead of "DO NOTHING"
+                // This prevents failures when re-uploading or updating existing leads
+                const query = `
                     INSERT INTO conversations (
                         id, business_name, lead_phone, email, us_state,
                         address, city, zip, first_name, last_name,
                         owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
                         created_at
                     ) VALUES ${convPlaceholders.join(', ')}
-                    ON CONFLICT (lead_phone) DO NOTHING
-                `, convValues);
+                    ON CONFLICT (lead_phone)
+                    DO UPDATE SET
+                        owner_home_address = EXCLUDED.owner_home_address,
+                        owner_home_city = EXCLUDED.owner_home_city,
+                        owner_home_state = EXCLUDED.owner_home_state,
+                        owner_home_zip = EXCLUDED.owner_home_zip
+                `;
+
+                await db.query(query, convValues);
 
                 // B. Insert into Lead Details
                 // Reverted to original fields (removed owner address)
