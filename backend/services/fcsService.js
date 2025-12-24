@@ -2,8 +2,38 @@
 // FIXED: Enabled 'imagelessMode' for 30-page limit & restored Gemini 3 Preview
 
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const AWS = require('aws-sdk');
+
+// === FCS REPORT LOGGING ===
+function logFCSReport(conversationId, content, stage) {
+    try {
+        const logDir = path.join(__dirname, '../logs/fcs');
+        if (!fsSync.existsSync(logDir)) {
+            fsSync.mkdirSync(logDir, { recursive: true });
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `${conversationId}_${timestamp}_${stage}.txt`;
+        const filepath = path.join(logDir, filename);
+
+        const header = `
+================================================================================
+FCS REPORT LOG - ${stage.toUpperCase()}
+================================================================================
+Conversation ID: ${conversationId}
+Stage: ${stage}
+Timestamp: ${new Date().toISOString()}
+================================================================================
+
+`;
+        fsSync.writeFileSync(filepath, header + content);
+        console.log(`📝 FCS logged [${stage}]: ${filepath}`);
+    } catch (err) {
+        console.error('⚠️ Failed to log FCS:', err.message);
+    }
+}
 const { DocumentProcessorServiceClient } = require('@google-cloud/documentai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -178,8 +208,14 @@ class FCSService {
             // 4. Generate Analysis (GEMINI ONLY)
             const fcsAnalysisRaw = await this.generateFCSAnalysis(extractedData, businessName);
 
+            // 📝 LOG: Raw Gemini output
+            logFCSReport(conversationId, fcsAnalysisRaw, '1-raw-gemini');
+
             // 🧹 CLEANER: Remove markdown artifacts and echo lines
             const fcsAnalysis = this.cleanGeminiOutput(fcsAnalysisRaw);
+
+            // 📝 LOG: After cleaning
+            logFCSReport(conversationId, fcsAnalysis, '2-cleaned');
 
             // 5. Extract Metrics
             const averageRevenue = extractMoneyValue(fcsAnalysis, 'Average True Revenue') || extractMoneyValue(fcsAnalysis, 'Revenue');
@@ -192,6 +228,24 @@ class FCSService {
             const state = extractStringValue(fcsAnalysis, 'State');
             const industry = extractStringValue(fcsAnalysis, 'Industry');
             const withholdingPct = calculateWithholding(fcsAnalysis, averageRevenue);
+
+            // 📝 LOG: Extracted metrics
+            const metricsLog = `
+EXTRACTED METRICS:
+==================
+Average Revenue: ${averageRevenue}
+Average Balance: ${avgBalance}
+Deposit Count: ${depositCount}
+Negative Days: ${negDays}
+Avg Negative Days: ${avgNegDays}
+Time in Business: ${tibText}
+Last MCA: ${lastMca}
+State: ${state}
+Industry: ${industry}
+Withholding %: ${withholdingPct}
+==================
+`;
+            logFCSReport(conversationId, metricsLog + '\n\nFULL REPORT:\n' + fcsAnalysis, '3-final-with-metrics');
 
             // 6. Save
             await db.query(`
