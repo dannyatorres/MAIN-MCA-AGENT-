@@ -9,6 +9,8 @@ export class FCSTab {
         console.log('📊 Rendering FCS Tab');
 
         const conversation = this.parent.getSelectedConversation();
+
+        // 1. Empty State (No Conversation Selected)
         if (!conversation) {
             container.innerHTML = `
                 <div class="empty-state" style="text-align: center; padding: 60px 20px;">
@@ -20,29 +22,16 @@ export class FCSTab {
             return;
         }
 
-        // 1. Build the UI Structure
+        // 2. Build the UI (NO TOP BUTTON)
+        // We keep #syncLoading hidden so we can toggle it from the module
         container.innerHTML = `
-            <div class="intelligence-section" style="padding: 15px;">
-                <div style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
-                    <button id="btnSyncFcs" class="btn-primary" style="
-                        background: #2563eb;
-                        color: white;
-                        padding: 8px 16px;
-                        border-radius: 6px;
-                        border: none;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        font-weight: 500;">
-                        <span>☁️</span> Sync Drive & Analyze
-                    </button>
-                </div>
+            <div class="intelligence-section">
 
-                <div id="syncLoading" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 6px; margin-bottom: 20px; color: #1e40af;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <div class="loading-spinner-small"></div>
-                        <span><strong>AI Agent Working:</strong> Searching Drive, downloading PDFs, and running Financial Analysis...</span>
+                <div id="syncLoading" class="sync-loading-state" style="display: none;">
+                    <div class="spinner-sync"></div>
+                    <div class="sync-loading-text">
+                        <strong>AI Agent Working...</strong>
+                        <span>Searching Drive, downloading PDFs, and running Financial Analysis.</span>
                     </div>
                 </div>
 
@@ -54,64 +43,12 @@ export class FCSTab {
             </div>
         `;
 
-        // 2. Attach Click Listener to the new Button
-        const btnSync = container.querySelector('#btnSyncFcs');
-        const loadingDiv = container.querySelector('#syncLoading');
-
-        btnSync.onclick = async () => {
-            if (btnSync.disabled) return;
-
-            // UI Feedback
-            btnSync.disabled = true;
-            btnSync.innerHTML = `<span>⏳</span> Syncing...`;
-            loadingDiv.style.display = 'block';
-
-            try {
-                console.log(`☁️ Triggering Drive Sync for: ${conversation.business_name}`);
-
-                // Call the backend endpoint
-                const response = await fetch(`/api/integrations/drive/sync`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        conversationId: conversation.id,
-                        businessName: conversation.business_name
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    loadingDiv.innerHTML = `✅ <strong>Success!</strong> Found ${result.count} files. Analysis complete. Reloading...`;
-
-                    // Wait 1.5s then refresh the data
-                    setTimeout(() => {
-                        loadingDiv.style.display = 'none';
-                        btnSync.disabled = false;
-                        btnSync.innerHTML = `<span>☁️</span> Sync Drive & Analyze`;
-
-                        // Reload the FCS module data
-                        if (this.parent.fcs) this.parent.fcs.loadFCSData();
-                    }, 1500);
-                } else {
-                    throw new Error(result.error || "Sync failed");
-                }
-
-            } catch (err) {
-                console.error("Sync Error:", err);
-                loadingDiv.style.display = 'none';
-                btnSync.disabled = false;
-                btnSync.innerHTML = `<span>❌</span> Retry Sync`;
-                alert(`Sync Failed: ${err.message}`);
-            }
-        };
-
-        // 3. Load existing data immediately
-        if (this.parent.fcs) {
+        // 3. Trigger Data Load
+        if (this.parent.fcs && typeof this.parent.fcs.loadFCSData === 'function') {
             this.parent.fcs.loadFCSData();
         }
     }
 }
 
-// Expose globally for non-module scripts (optional)
+// Expose globally
 window.FCSTab = FCSTab;
