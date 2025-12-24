@@ -111,7 +111,8 @@
 
 /* The Content Container */
 .news-feed-container {
-    padding-top: 20px;
+    /* CHANGED: Remove the top gap so cards slide up */
+    padding-top: 0px !important;
     padding-bottom: 80px;
 }
 
@@ -120,8 +121,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    /* Shrink the space under the "Market Pulse" text */
+    margin-bottom: 8px;
+    padding-bottom: 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* Soft border */
     position: sticky;
     top: 0;

@@ -17,7 +17,10 @@
 /* 1. Panel Header Reset */
 .left-panel .panel-header {
     min-height: auto;
-    padding: 16px 12px;
+
+    /* CHANGED: Reduced top padding from 16px to 4px */
+    padding: 4px 12px 12px 12px;
+
     gap: 4px;
     justify-content: center;
     background: transparent;
