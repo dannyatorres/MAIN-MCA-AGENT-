@@ -230,29 +230,33 @@ class FCSModule {
 
         try {
             let cleanText = content.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
-            let lines = cleanText.split('\n').filter(line => line.trim() !== '');
+            let lines = cleanText.split('\n');
 
             let html = '<div class="fcs-styled-report" style="font-family: sans-serif; color: #e6edf3;">';
             let inTable = false;
+            let tableHeaders = [];
 
             for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
-                if (line.match(/^[-=_*]{3,}$/)) continue;
+                let line = lines[i];
+                let trimmedLine = line.trim();
 
-                const isTableStart = line.match(/MONTH.*DEPOSITS/i) || line.match(/DATE.*REVENUE/i);
+                // Skip empty lines and pure separator lines
+                if (trimmedLine === '' || trimmedLine.match(/^[-=_*]{3,}$/)) continue;
+                if (trimmedLine.match(/^\|[-\s|:]+\|$/)) continue; // Skip markdown table separator row
 
-                if (isTableStart) {
+                // DETECT MARKDOWN TABLE HEADER (contains | and Month)
+                if (trimmedLine.startsWith('|') && trimmedLine.includes('Month') && trimmedLine.includes('Deposits')) {
                     if (inTable) { html += '</tbody></table></div>'; }
+
+                    // Parse headers
+                    tableHeaders = trimmedLine.split('|').map(h => h.trim()).filter(h => h);
+
                     html += `
-                    <div style="overflow-x: auto; margin-bottom: 20px; border-radius: 8px; border: 1px solid #30363d; margin-top: 15px;">
+                    <div style="overflow-x: auto; margin: 20px 0; border-radius: 8px; border: 1px solid #30363d;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; background: #0d1117;">
                             <thead style="background: #161b22; color: #8b949e; text-transform: uppercase; font-size: 11px;">
                                 <tr>
-                                    <th style="padding: 12px;">Month</th>
-                                    <th style="padding: 12px;">Deposits</th>
-                                    <th style="padding: 12px;">Revenue</th>
-                                    <th style="padding: 12px;">Neg Days</th>
-                                    <th style="padding: 12px;">End Bal</th>
+                                    ${tableHeaders.map(h => `<th style="padding: 12px;">${h}</th>`).join('')}
                                 </tr>
                             </thead>
                             <tbody>`;
@@ -260,63 +264,85 @@ class FCSModule {
                     continue;
                 }
 
-                const dateMatch = line.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z,.]*\s+\d{4}/i) ||
-                                  line.match(/^\d{1,2}\/\d{4}/) ||
-                                  line.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}/);
+                // PARSE MARKDOWN TABLE ROW
+                if (inTable && trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
+                    const cells = trimmedLine.split('|').map(c => c.trim()).filter(c => c);
 
-                if (inTable && dateMatch) {
-                    const month = dateMatch[0];
-                    const cleanLine = line.replace(month, '');
-                    const nums = cleanLine.match(/[-$]?[\d,]+(\.\d{2})?/g) || [];
+                    if (cells.length >= 5) {
+                        const month = cells[0] || '-';
+                        const deposits = cells[1] || '-';
+                        const revenue = cells[2] || '-';
+                        const negDays = cells[3] || '0';
+                        const endBal = cells[4] || '-';
+                        const numDep = cells[5] || '-';
+                        const negDaysNum = parseInt(negDays) || 0;
 
-                    const deposits = nums[0] || '-';
-                    const revenue  = nums[1] || '-';
-                    const negDays  = nums[2] || '0';
-                    const endBal   = nums[3] || '-';
-
-                    html += `
-                        <tr style="border-bottom: 1px solid #21262d;">
-                            <td style="padding: 12px; font-weight: 600; color: #3b82f6;">${month}</td>
-                            <td style="padding: 12px;">${deposits}</td>
-                            <td style="padding: 12px; font-weight: 600; color: #4ade80;">${revenue}</td>
-                            <td style="padding: 12px; ${parseInt(negDays) > 3 ? 'color: #f87171;' : ''}">${negDays}</td>
-                            <td style="padding: 12px;">${endBal}</td>
-                        </tr>`;
-                    continue;
+                        html += `
+                            <tr style="border-bottom: 1px solid #21262d;">
+                                <td style="padding: 12px; font-weight: 600; color: #3b82f6;">${month}</td>
+                                <td style="padding: 12px;">${deposits}</td>
+                                <td style="padding: 12px; font-weight: 600; color: #4ade80;">${revenue}</td>
+                                <td style="padding: 12px; ${negDaysNum > 3 ? 'color: #f87171;' : ''}">${negDays}</td>
+                                <td style="padding: 12px;">${endBal}</td>
+                                <td style="padding: 12px;">${numDep}</td>
+                            </tr>`;
+                        continue;
+                    }
                 }
 
-                const isHeader = (line.trim().endsWith(':') && line.length < 50) ||
-                                 line.startsWith('##') ||
-                                 (line === line.toUpperCase() && line.length > 4 && !line.includes('$'));
+                // NON-TABLE ROW: Close table if we were in one
+                if (inTable && !trimmedLine.startsWith('|')) {
+                    html += '</tbody></table></div>';
+                    inTable = false;
+                }
+
+                // SECTION HEADERS
+                const isHeader = (trimmedLine.endsWith(':') && trimmedLine.length < 60) ||
+                                 trimmedLine.startsWith('##') ||
+                                 trimmedLine.startsWith('===') ||
+                                 (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 4 && !trimmedLine.includes('$') && !trimmedLine.startsWith('|'));
 
                 if (isHeader) {
-                    if (inTable) { html += '</tbody></table></div>'; inTable = false; }
-                    const headerText = line.replace(/^[#\s]+/, '').replace(/:$/, '');
+                    const headerText = trimmedLine.replace(/^[#=\s]+/, '').replace(/[=:]+$/, '').trim();
 
                     if (headerText.includes('BUSINESS NAME') || headerText.includes('EXTRACTED')) {
-                         html += `<div style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-top: 20px;">${headerText}</div>`;
+                        html += `<div style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-top: 20px;">${headerText}</div>`;
+                    } else if (headerText.includes('ACCOUNT') && headerText.includes('...')) {
+                        // Account header (e.g., "CHECKING ACCOUNT ...1234")
+                        html += `<h3 style="color: #2dd4bf; margin: 28px 0 16px 0; font-size: 16px; font-weight: 700;">${headerText}</h3>`;
                     } else {
-                         html += `<h4 style="color: #3b82f6; margin: 24px 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 8px;">${headerText}</h4>`;
+                        html += `<h4 style="color: #3b82f6; margin: 24px 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; padding-bottom: 8px;">${headerText}</h4>`;
                     }
                     continue;
                 }
 
-                if (inTable) { html += '</tbody></table></div>'; inTable = false; }
+                // KEY: VALUE PAIRS
+                if (trimmedLine.includes(':') && !trimmedLine.startsWith('|')) {
+                    const colonIndex = trimmedLine.indexOf(':');
+                    const key = trimmedLine.substring(0, colonIndex).trim();
+                    const val = trimmedLine.substring(colonIndex + 1).trim();
 
-                if (line.includes(':')) {
-                    const [key, val] = line.split(':');
-                    html += `
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 13px;">
-                        <span style="color: #9ca3af;">${key}</span>
-                        <span style="font-weight: 600; color: #e6edf3;">${val}</span>
+                    if (key && val) {
+                        html += `
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 13px;">
+                            <span style="color: #9ca3af;">${key}</span>
+                            <span style="font-weight: 600; color: #e6edf3;">${val}</span>
+                        </div>`;
+                        continue;
+                    }
+                }
+
+                // BULLET POINTS (lines starting with -)
+                if (trimmedLine.startsWith('- ')) {
+                    const bulletContent = trimmedLine.substring(2);
+                    html += `<div style="margin: 6px 0 6px 12px; font-size: 13px; line-height: 1.6; color: #c9d1d9;">
+                        <span style="color: #2dd4bf; margin-right: 8px;">•</span>${bulletContent}
                     </div>`;
+                    continue;
                 }
-                else if (i < 5 && line.length < 50 && line === line.toUpperCase()) {
-                     html += `<div style="color: #fff; font-size: 24px; font-weight: 700; margin-bottom: 20px;">${line}</div>`;
-                }
-                else {
-                    html += `<div style="margin-bottom: 6px; font-size: 13px; line-height: 1.5; color: #9ca3af;">${line}</div>`;
-                }
+
+                // PLAIN TEXT
+                html += `<div style="margin-bottom: 6px; font-size: 13px; line-height: 1.5; color: #9ca3af;">${trimmedLine}</div>`;
             }
 
             if (inTable) { html += '</tbody></table></div>'; }

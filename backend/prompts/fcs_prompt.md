@@ -70,16 +70,15 @@ Output Workflow
 Underwriting Section Breakdown
 
 Monthly Financial Summary
-Use consistent column spacing to ensure headers align vertically.
-FORMAT EXAMPLE (Do NOT output this example line, only the actual data):
-Month Year  Deposits: $amount  Revenue: $amount  Neg Days: #  End Bal: $amount  #Dep: #
+Output as a markdown table with pipe delimiters. ALWAYS include the header row and separator row exactly as shown:
 
-Example with proper column alignment:
-Jul 2025   Deposits: $10,955   Revenue: $10,955   Neg Days: 6   End Bal: $8,887    #Dep: 3
-Jun 2025   Deposits: $4,196    Revenue: $4,196    Neg Days: 7   End Bal: -$2,053   #Dep: 12
-May 2025   Deposits: $7,940    Revenue: $7,940    Neg Days: 0   End Bal: $14       #Dep: 9
+| Month | Deposits | Revenue | Neg Days | End Bal | #Dep |
+|-------|----------|---------|----------|---------|------|
+| Jul 2025 | $10,955 | $10,955 | 6 | $8,887 | 3 |
+| Jun 2025 | $4,196 | $4,196 | 7 | -$2,053 | 12 |
+| May 2025 | $7,940 | $7,940 | 0 | $14 | 9 |
 
-CRITICAL: Each column header (Deposits:, Revenue:, Neg Days:, End Bal:, #Dep:) must start at the same character position on every line. Use spaces to pad shorter values so columns align vertically.
+CRITICAL: You MUST use this exact markdown table format with | delimiters. Do not use any other format for the monthly summary table.
 
 Negative Days Extraction Rules
 - A negative day = when account's END-OF-DAY balance is below $0.00
