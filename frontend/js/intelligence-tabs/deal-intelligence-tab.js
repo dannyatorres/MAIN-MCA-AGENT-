@@ -23,8 +23,15 @@ export class DealIntelligenceTab {
                     </div>
                     <h3 class="text-lg font-medium text-gray-900">Awaiting Strategy Analysis</h3>
                     <p class="mt-2 text-sm text-gray-500 max-w-xs">Run the Commander to analyze bank statements, detect competitors, and generate offer scenarios.</p>
+                    <button id="runAnalysisBtn" class="mt-6 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                        Run FCS Analysis
+                    </button>
+                    <div id="analysisStatus" class="mt-3 text-sm text-gray-500"></div>
                 </div>
             `;
+
+            // Attach click handler
+            container.querySelector('#runAnalysisBtn')?.addEventListener('click', () => this.runAnalysis(container));
             return;
         }
 
@@ -214,5 +221,42 @@ export class DealIntelligenceTab {
                 </div>
             </div>
         `;
+    }
+
+    async runAnalysis(container) {
+        const conv = this.parent.getSelectedConversation();
+        if (!conv) return;
+
+        const btn = container.querySelector('#runAnalysisBtn');
+        const status = container.querySelector('#analysisStatus');
+
+        btn.disabled = true;
+        btn.textContent = 'Analyzing...';
+        status.textContent = 'Running FCS strategy analysis...';
+
+        try {
+            const response = await fetch(`/api/conversations/${conv.id}/analyze-strategy`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                status.textContent = 'Analysis complete! Refreshing...';
+                // Refresh the conversation data and re-render
+                await this.parent.refreshCurrentConversation();
+                this.render(container);
+            } else {
+                status.textContent = `Error: ${result.error}`;
+                btn.disabled = false;
+                btn.textContent = 'Run FCS Analysis';
+            }
+        } catch (error) {
+            console.error('Analysis error:', error);
+            status.textContent = `Error: ${error.message}`;
+            btn.disabled = false;
+            btn.textContent = 'Run FCS Analysis';
+        }
     }
 }
