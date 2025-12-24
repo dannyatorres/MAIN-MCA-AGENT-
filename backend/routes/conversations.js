@@ -174,6 +174,28 @@ router.get('/:id', async (req, res) => {
 
         const conversation = result.rows[0];
 
+        // =========================================================
+        // FETCH COMMANDER STRATEGY
+        // =========================================================
+        const strategyResult = await db.query(`
+            SELECT lead_grade, strategy_type, game_plan
+            FROM lead_strategy
+            WHERE conversation_id = $1
+        `, [conversation.id]);
+
+        // Inject the strategy into the response object
+        if (strategyResult.rows.length > 0) {
+            conversation.lead_strategy = strategyResult.rows[0];
+
+            // If the game_plan is stored as a string, parse it
+            if (typeof conversation.lead_strategy.game_plan === 'string') {
+                conversation.lead_strategy.game_plan = JSON.parse(conversation.lead_strategy.game_plan);
+            }
+        } else {
+            conversation.lead_strategy = null;
+        }
+        // =========================================================
+
         // --- AUTO-CLEAR OFFER FLAG ---
         if (conversation.has_offer) {
             await db.query(`UPDATE conversations SET has_offer = FALSE WHERE id = $1`, [conversation.id]);
