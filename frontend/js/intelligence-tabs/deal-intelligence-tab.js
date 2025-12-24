@@ -206,24 +206,34 @@ export class DealIntelligenceTab {
     }
 
     renderLastPosition(lp) {
+        // Guard against missing data
         if (!lp || !lp.scenarios || lp.scenarios.length === 0) return '';
+
         const deal = lp.scenarios[0];
+
+        // Guard against missing fields
+        if (!deal) return '';
+
+        const funding = deal.originalFunding || deal.funding || 0;
+        const term = deal.term || '?';
+        const termUnit = deal.termUnit || '';
+        const reasoning = deal.reasoning || 'Standard deal structure detected.';
 
         return `
             <div class="competitor-box">
                 <h3 class="section-title">Last Position Analysis</h3>
                 <div class="competitor-grid">
                     <div>
-                        <div class="competitor-value">${deal.originalFunding.toLocaleString()}</div>
+                        <div class="competitor-value">${funding.toLocaleString()}</div>
                         <div class="competitor-label">Est. Original Funding</div>
                     </div>
                     <div class="text-right">
-                        <div class="competitor-value">${deal.term} ${deal.termUnit}</div>
+                        <div class="competitor-value">${term} ${termUnit}</div>
                         <div class="competitor-label">Term Length</div>
                     </div>
                 </div>
                 <div class="competitor-insight">
-                    <strong>Insight:</strong> ${deal.reasoning || 'Standard deal structure detected.'}
+                    <strong>Insight:</strong> ${reasoning}
                 </div>
             </div>
         `;
