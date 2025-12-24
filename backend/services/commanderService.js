@@ -1,15 +1,16 @@
 // backend/services/commanderService.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getDatabase } = require('./database');
+const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const commander = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+const commander = genAI.getGenerativeModel({ model: "gemini-2.5-pro-preview-05-06" });
 
 // ==========================================
-// HELPER FUNCTIONS (The "Calculator")
+// HELPER FUNCTIONS
 // ==========================================
 
 function calculateWithholding(positions, revenue) {
@@ -17,10 +18,10 @@ function calculateWithholding(positions, revenue) {
     const breakdown = [];
 
     for (const pos of positions) {
-        if (pos.status === 'active') {
+        if (pos.status === 'active' || pos.status === 'Active') {
             const dailyRate = pos.frequency === 'weekly' ? pos.amount / 5 : pos.amount;
             const monthlyPayment = dailyRate * 21;
-            const withholdPct = (monthlyPayment / revenue) * 100;
+            const withholdPct = revenue > 0 ? (monthlyPayment / revenue) * 100 : 0;
             totalWithhold += withholdPct;
 
             breakdown.push({
@@ -41,7 +42,7 @@ function calculateWithholding(positions, revenue) {
 }
 
 function parseTermRange(rangeStr) {
-    // Parse "30-60 days" or "12-20 weeks"
+    if (!rangeStr) return null;
     const match = rangeStr.match(/(\d+)-(\d+)\s+(days|weeks)/);
     if (match) {
         return { min: parseInt(match[1]), max: parseInt(match[2]), unit: match[3] };
@@ -50,19 +51,21 @@ function parseTermRange(rangeStr) {
 }
 
 function generateScenariosFromGuidance(guidance, currentWithholdPct, revenue, lastPosition) {
-    if (!guidance) return null;
+    if (!guidance || !revenue || revenue <= 0) return null;
 
     const isDaily = guidance.paymentFrequency === 'daily';
     const termUnit = isDaily ? 'days' : 'weeks';
 
-    // Approved Terms Logic
     const weeklyTerms = [4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52];
     const dailyTerms = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 100, 110, 120, 130, 140, 150, 160, 180];
     const approvedTerms = isDaily ? dailyTerms : weeklyTerms;
-    const factor = 1.49; // Standard base factor
+    const factor = 1.49;
 
     const generateTierScenarios = (tierName, targetWithholdAddition, customGuidance = null) => {
         const guidanceToUse = customGuidance || guidance;
+
+        if (!guidanceToUse.termRanges || !guidanceToUse.amountRanges) return [];
+
         const termRange = parseTermRange(guidanceToUse.termRanges[tierName]);
         const amountRange = guidanceToUse.amountRanges[tierName];
 
@@ -71,14 +74,12 @@ function generateScenariosFromGuidance(guidance, currentWithholdPct, revenue, la
         const scenarios = [];
         const validTerms = approvedTerms.filter(t => t >= termRange.min && t <= termRange.max);
 
-        // --- LAST POSITION CAP LOGIC ---
-        let maxAmount = amountRange.max;
-        let maxTerm = Math.max(...validTerms);
+        let maxAmount = amountRange.max || 50000;
+        let maxTerm = validTerms.length > 0 ? Math.max(...validTerms) : 52;
 
         if (lastPosition) {
-            maxAmount = Math.min(maxAmount, lastPosition.funding);
-            // 50% Rule logic
-            let lastPositionMaxTerm = lastPosition.term * 0.5;
+            maxAmount = Math.min(maxAmount, lastPosition.funding || maxAmount);
+            let lastPositionMaxTerm = (lastPosition.term || 52) * 0.5;
             if (lastPosition.termUnit !== termUnit) {
                 if (lastPosition.termUnit === 'weeks' && termUnit === 'days') lastPositionMaxTerm *= 5;
                 else if (lastPosition.termUnit === 'days' && termUnit === 'weeks') lastPositionMaxTerm /= 5;
@@ -87,17 +88,19 @@ function generateScenariosFromGuidance(guidance, currentWithholdPct, revenue, la
         }
 
         const finalValidTerms = validTerms.filter(t => t <= maxTerm);
+        if (finalValidTerms.length === 0) return [];
 
-        // Generate Scenarios
-        for (let amount = amountRange.min; amount <= maxAmount; amount += 5000) {
+        const minAmount = amountRange.min || 5000;
+
+        for (let amount = minAmount; amount <= maxAmount; amount += 5000) {
             for (const term of finalValidTerms) {
                 const totalPayback = amount * factor;
                 const payment = totalPayback / term;
                 const monthlyPayment = isDaily ? payment * 21 : payment * 4.33;
                 const actualWithholdAddition = (monthlyPayment / revenue) * 100;
 
-                // Only keep if within 10% tolerance of target
-                if (Math.abs(actualWithholdAddition - targetWithholdAddition) <= 10) {
+                // Loosened tolerance to 15% to ensure scenarios generate
+                if (Math.abs(actualWithholdAddition - targetWithholdAddition) <= 15) {
                     scenarios.push({
                         funding: amount,
                         term: term,
@@ -113,29 +116,27 @@ function generateScenariosFromGuidance(guidance, currentWithholdPct, revenue, la
             }
         }
 
-        // Sort closest to target withholding
         scenarios.sort((a, b) => Math.abs(a.withholdAddition - targetWithholdAddition) - Math.abs(b.withholdAddition - targetWithholdAddition));
-        return scenarios.slice(0, 4); // Top 4
+        return scenarios.slice(0, 4);
     };
 
-    // Run generations
-    const recWithhold = guidance.recommendedWithholdingAddition;
+    const recWithhold = guidance.recommendedWithholdingAddition || 10;
     const conservative = generateTierScenarios('conservative', recWithhold);
     const moderate = generateTierScenarios('moderate', recWithhold);
     const aggressive = generateTierScenarios('aggressive', recWithhold);
 
-    // Best Case Logic
     let bestCase = [];
     if (guidance.bestCaseGuidance) {
-        const bestWithhold = guidance.bestCaseGuidance.withholdingAddition;
+        const bestWithhold = guidance.bestCaseGuidance.withholdingAddition || 10;
         const bcCon = generateTierScenarios('conservative', bestWithhold, guidance.bestCaseGuidance);
         const bcMod = generateTierScenarios('moderate', bestWithhold, guidance.bestCaseGuidance);
         const bcAgg = generateTierScenarios('aggressive', bestWithhold, guidance.bestCaseGuidance);
-        bestCase = [...bcCon, ...bcMod, ...bcAgg].sort((a, b) => Math.abs(a.withholdAddition - bestWithhold) - Math.abs(b.withholdAddition - bestWithhold)).slice(0, 6);
+        bestCase = [...bcCon, ...bcMod, ...bcAgg].sort((a, b) =>
+            Math.abs(a.withholdAddition - bestWithhold) - Math.abs(b.withholdAddition - bestWithhold)
+        ).slice(0, 6);
     }
 
-    // Reasoning Helper
-    const addReasoning = (list, tier, target) => list.map(s => ({
+    const addReasoning = (list, tier) => list.map(s => ({
         ...s,
         reasoning: `${tier} - ${s.funding.toLocaleString()} @ ${s.term} ${s.termUnit}. Adds ${s.withholdAddition}% withholding.`
     }));
@@ -153,30 +154,16 @@ function generateScenariosFromGuidance(guidance, currentWithholdPct, revenue, la
         targetTotal: currentWithholdPct + recWithhold,
         paymentCapacity: Math.round(((recWithhold / 100) * revenue / (isDaily ? 21 : 4.33)) * 100) / 100,
 
-        conservative: addReasoning(conservative, 'Conservative', recWithhold),
-        moderate: addReasoning(moderate, 'Moderate', recWithhold),
-        aggressive: addReasoning(aggressive, 'Aggressive', recWithhold),
-        bestCase: addReasoning(bestCase, 'Best Case', 10),
+        conservative: addReasoning(conservative, 'Conservative'),
+        moderate: addReasoning(moderate, 'Moderate'),
+        aggressive: addReasoning(aggressive, 'Aggressive'),
+        bestCase: addReasoning(bestCase, 'Best Case'),
         considerations: (guidance.riskConsiderations || []).map(p => ({ category: "Risk", points: [p] }))
     };
 }
 
-function analyzeLastPosition(deposit, payment, frequency) {
-    if (!deposit || !payment) return { scenarios: [] };
-
-    // Simple reverse engineer for "Last Position Analysis" display
-    // Logic from python script simplified for brevity
-    const depositAmt = deposit.amount;
-    const scenarios = [];
-
-    // Placeholder if not fully ported, but the Main Loop below handles the crucial parts
-
-    return { scenarios: [] };
-}
-
-
 // ==========================================
-// MAIN FUNCTIONS
+// PROMPT LOADING
 // ==========================================
 
 function loadPrompt(filename) {
@@ -204,14 +191,21 @@ function injectVariables(template, variables) {
     return result;
 }
 
+// ==========================================
 // MAIN STRATEGY FUNCTION
+// ==========================================
+
 async function analyzeAndStrategize(conversationId) {
     const db = getDatabase();
     console.log(`COMMANDER: Analyzing lead ${conversationId}...`);
 
     try {
-        // 1. Fetch Data
-        const fcsRes = await db.query(`SELECT * FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1`, [conversationId]);
+        // 1. Fetch FCS Data
+        const fcsRes = await db.query(`
+            SELECT * FROM fcs_analyses
+            WHERE conversation_id = $1
+            ORDER BY created_at DESC LIMIT 1
+        `, [conversationId]);
 
         if (!fcsRes.rows[0]) {
             console.log('COMMANDER: No FCS data yet');
@@ -230,80 +224,80 @@ async function analyzeAndStrategize(conversationId) {
         });
 
         // 3. Run AI
+        console.log('COMMANDER: Calling Gemini API...');
         const result = await commander.generateContent(prompt);
-        let responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+        let responseText = result.response.text()
+            .replace(/```json/g, '')
+            .replace(/```/g, '')
+            .trim();
+
         const data = JSON.parse(responseText);
 
-        // DEBUG: Log Gemini response
-        console.log('=== GEMINI RAW RESPONSE ===');
-        console.log('nextPositionGuidance:', JSON.stringify(data.nextPositionGuidance, null, 2));
-        console.log('mcaPositions:', JSON.stringify(data.mcaPositions, null, 2));
+        // Debug logging
+        console.log('=== GEMINI PARSED DATA ===');
         console.log('avgRevenue:', data.avgRevenue);
-        console.log('===========================');
+        console.log('currentPositionCount:', data.currentPositionCount);
+        console.log('mcaPositions:', data.mcaPositions?.length || 0);
+        console.log('==========================');
 
-        // 4. RUN THE CALCULATOR (Post-Processing)
+        // 4. Calculate Withholding
+        const activePositions = (data.mcaPositions || []).filter(p =>
+            p.status === 'active' || p.status === 'Active'
+        );
+        const withholdingData = calculateWithholding(activePositions, data.avgRevenue || 0);
 
-        // 4a. Calculate Withholding
-        const activePositions = (data.mcaPositions || []).filter(p => p.status === 'active' || p.status === 'Active');
-        const withholdingData = calculateWithholding(activePositions, data.avgRevenue);
-
-        // 4b. Prepare Last Position Data for Scenarios
+        // 5. Prepare Last Position Data
         let lastPositionForScenarios = null;
-        if (data.lastPositionAnalysis && data.lastPositionAnalysis.scenarios && data.lastPositionAnalysis.scenarios.length > 0) {
+        if (data.lastPositionAnalysis?.scenarios?.length > 0) {
             const mostLikely = data.lastPositionAnalysis.scenarios[0];
             lastPositionForScenarios = {
-                funding: mostLikely.originalFunding,
+                funding: mostLikely.originalFunding || mostLikely.funding,
                 term: mostLikely.term,
                 termUnit: mostLikely.termUnit
             };
         }
 
-        // 4c. Generate Next Position Scenarios (The Table Data)
+        // 6. Generate Scenarios
         let nextPositionScenarios = null;
         if (data.nextPositionGuidance) {
             nextPositionScenarios = generateScenariosFromGuidance(
                 data.nextPositionGuidance,
                 withholdingData.totalWithhold,
-                data.avgRevenue,
+                data.avgRevenue || 0,
                 lastPositionForScenarios
             );
 
-            // DEBUG: Scenario generation
-            console.log('=== SCENARIO GENERATION DEBUG ===');
-            console.log('avgRevenue:', data.avgRevenue);
-            console.log('totalWithhold:', withholdingData.totalWithhold);
-            console.log('recommendedWithholdingAddition:', data.nextPositionGuidance.recommendedWithholdingAddition);
-            console.log('termRanges:', JSON.stringify(data.nextPositionGuidance.termRanges));
-            console.log('amountRanges:', JSON.stringify(data.nextPositionGuidance.amountRanges));
-            console.log('conservative scenarios:', nextPositionScenarios?.conservative?.length || 0);
-            console.log('moderate scenarios:', nextPositionScenarios?.moderate?.length || 0);
-            console.log('aggressive scenarios:', nextPositionScenarios?.aggressive?.length || 0);
-            console.log('=================================');
+            console.log('=== SCENARIO GENERATION ===');
+            console.log('Conservative:', nextPositionScenarios?.conservative?.length || 0);
+            console.log('Moderate:', nextPositionScenarios?.moderate?.length || 0);
+            console.log('Aggressive:', nextPositionScenarios?.aggressive?.length || 0);
+            console.log('===========================');
         }
 
-        // 5. Construct Final Game Plan Object
+        // 7. Build Game Plan Object
+        const leadGrade = data.avgRevenue > 40000 ? "A" : (data.avgRevenue > 25000 ? "B" : "C");
+        const strategyType = data.revenueTrend?.direction === 'upward' ? "PURSUE_HARD" : "STANDARD";
+
         const gamePlan = {
             businessOverview: {
                 name: data.businessName,
                 industry: data.industry,
                 state: data.state,
-                currentPositions: data.currentPositionCount,
+                currentPositions: data.currentPositionCount || 0,
                 nextPosition: data.nextPosition,
-                avgRevenue: data.avgRevenue,
-                avgBankBalance: data.avgBankBalance,
+                avgRevenue: data.avgRevenue || 0,
+                avgBankBalance: data.avgBankBalance || 0,
                 negativeDays: data.negativeDays
             },
             withholding: withholdingData,
             revenueTrend: data.revenueTrend,
             lastPositionAnalysis: data.lastPositionAnalysis,
             nextPositionScenarios: nextPositionScenarios,
-
-            // Standard fields for the Dashboard list view
-            lead_grade: data.avgRevenue > 40000 ? "A" : (data.avgRevenue > 25000 ? "B" : "C"),
-            strategy_type: data.revenueTrend?.direction === 'upward' ? "PURSUE_HARD" : "STANDARD",
+            lead_grade: leadGrade,
+            strategy_type: strategyType,
             offer_range: {
                 min: nextPositionScenarios?.conservative?.[0]?.funding || 0,
-                max: nextPositionScenarios?.aggressive?.[0]?.funding || 0
+                max: nextPositionScenarios?.aggressive?.[0]?.funding || nextPositionScenarios?.moderate?.[0]?.funding || 0
             }
         };
 
@@ -312,19 +306,97 @@ async function analyzeAndStrategize(conversationId) {
         console.log(`   Strategy: ${gamePlan.strategy_type}`);
         console.log(`   Offer Range: ${gamePlan.offer_range.min.toLocaleString()} - ${gamePlan.offer_range.max.toLocaleString()}`);
 
-        // 6. Save to DB
+        // 8. SAVE TO DATABASE - Structured Data
+        const strategyId = uuidv4();
+
+        // Get lead offer for recommended fields
+        const leadOffer = nextPositionScenarios?.moderate?.[0] ||
+                          nextPositionScenarios?.conservative?.[0] ||
+                          nextPositionScenarios?.aggressive?.[0];
+
         await db.query(`
-            INSERT INTO lead_strategy (conversation_id, lead_grade, strategy_type, game_plan)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO lead_strategy (
+                id, conversation_id, fcs_analysis_id, lead_grade, strategy_type, game_plan,
+                raw_ai_response, avg_revenue, avg_balance, current_positions, total_withholding,
+                recommended_funding_min, recommended_funding_max, recommended_payment,
+                recommended_term, recommended_term_unit, analysis_version
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             ON CONFLICT (conversation_id)
             DO UPDATE SET
-                lead_grade = $2,
-                strategy_type = $3,
-                game_plan = $4,
+                fcs_analysis_id = $3,
+                lead_grade = $4,
+                strategy_type = $5,
+                game_plan = $6,
+                raw_ai_response = $7,
+                avg_revenue = $8,
+                avg_balance = $9,
+                current_positions = $10,
+                total_withholding = $11,
+                recommended_funding_min = $12,
+                recommended_funding_max = $13,
+                recommended_payment = $14,
+                recommended_term = $15,
+                recommended_term_unit = $16,
                 updated_at = NOW()
-        `, [conversationId, gamePlan.lead_grade, gamePlan.strategy_type, JSON.stringify(gamePlan)]);
+            RETURNING id
+        `, [
+            strategyId,
+            conversationId,
+            fcs.id,
+            gamePlan.lead_grade,
+            gamePlan.strategy_type,
+            JSON.stringify(gamePlan),
+            JSON.stringify(data),
+            data.avgRevenue || 0,
+            data.avgBankBalance || 0,
+            data.currentPositionCount || 0,
+            withholdingData.totalWithhold,
+            gamePlan.offer_range.min,
+            gamePlan.offer_range.max,
+            leadOffer?.payment || 0,
+            leadOffer?.term || 0,
+            leadOffer?.termUnit || 'weeks',
+            'v1'
+        ]);
 
-        // 7. Update State
+        // 9. Save Individual Scenarios
+        // First delete old scenarios for this conversation
+        await db.query(`DELETE FROM strategy_scenarios WHERE conversation_id = $1`, [conversationId]);
+
+        const allScenarios = [
+            ...(nextPositionScenarios?.conservative || []).map(s => ({...s, tier: 'conservative'})),
+            ...(nextPositionScenarios?.moderate || []).map(s => ({...s, tier: 'moderate'})),
+            ...(nextPositionScenarios?.aggressive || []).map(s => ({...s, tier: 'aggressive'})),
+            ...(nextPositionScenarios?.bestCase || []).map(s => ({...s, tier: 'best_case'}))
+        ];
+
+        for (const scenario of allScenarios.slice(0, 12)) {
+            await db.query(`
+                INSERT INTO strategy_scenarios (
+                    strategy_id, conversation_id, tier, funding_amount, term, term_unit,
+                    payment_amount, payment_frequency, factor_rate, withhold_addition,
+                    total_withhold, reasoning
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            `, [
+                strategyId,
+                conversationId,
+                scenario.tier,
+                scenario.funding,
+                scenario.term,
+                scenario.termUnit,
+                scenario.payment,
+                scenario.frequency,
+                parseFloat(scenario.factor),
+                scenario.withholdAddition,
+                scenario.newTotalWithhold,
+                scenario.reasoning
+            ]);
+        }
+
+        console.log(`✅ Strategy saved with ${allScenarios.length} scenarios`);
+
+        // 10. Update Conversation State
         let newState = 'STRATEGIZED';
         if (gamePlan.strategy_type === 'DEAD') newState = 'DEAD';
         if (gamePlan.strategy_type === 'PURSUE_HARD') newState = 'HOT_LEAD';
@@ -335,11 +407,15 @@ async function analyzeAndStrategize(conversationId) {
 
     } catch (err) {
         console.error('COMMANDER ERROR:', err.message);
+        console.error(err.stack);
         return null;
     }
 }
 
-// GENERATE OFFER - Called when lead says "ok let's see what you got"
+// ==========================================
+// GENERATE OFFER
+// ==========================================
+
 async function generateOffer(conversationId) {
     const db = getDatabase();
     console.log(`COMMANDER: Generating offer for ${conversationId}...`);
@@ -372,7 +448,6 @@ async function generateOffer(conversationId) {
         const fcs = fcsRes.rows[0];
         const lead = leadRes.rows[0];
 
-        // Load and populate the prompt template
         const template = loadPrompt('offer_generation.md');
         if (!template) return null;
 
@@ -399,7 +474,6 @@ async function generateOffer(conversationId) {
 
         console.log(`OFFER GENERATED: ${offer.offer_amount.toLocaleString()} @ ${offer.factor_rate}`);
 
-        // Save offer to strategy table
         await db.query(`
             UPDATE lead_strategy
             SET offer_amount = $1, offer_generated_at = NOW(), game_plan = game_plan || $2
@@ -416,7 +490,10 @@ async function generateOffer(conversationId) {
     }
 }
 
-// RE-STRATEGIZE - Called when situation changes
+// ==========================================
+// RE-STRATEGIZE
+// ==========================================
+
 async function reStrategize(conversationId, newContext) {
     const db = getDatabase();
     console.log(`COMMANDER: Re-evaluating strategy for ${conversationId}...`);
@@ -435,7 +512,6 @@ async function reStrategize(conversationId, newContext) {
             currentPlan = JSON.parse(currentPlan);
         }
 
-        // Load and populate the prompt template
         const template = loadPrompt('restrategize.md');
         if (!template) return null;
 

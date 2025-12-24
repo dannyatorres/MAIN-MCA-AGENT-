@@ -10,6 +10,10 @@ const path = require('path');
 const emailRoutes = require('./routes/emailRoutes');
 require('dotenv').config();
 
+// Migration imports
+const { runStrategyMigration } = require('./migrations/strategy-schema');
+const { getDatabase } = require('./services/database');
+
 // Create Express app
 const app = express();
 const server = http.createServer(app);
@@ -140,6 +144,14 @@ try {
     require('./services/processorAgent').startProcessor();
     console.log('✅ Processor Agent Service: INITIALIZED');
 } catch (e) { console.error('⚠️ Failed to start Processor Agent:', e.message); }
+
+// --- 7b. RUN DATABASE MIGRATIONS ---
+(async () => {
+    try {
+        const db = getDatabase();
+        await runStrategyMigration(db);
+    } catch (e) { console.error('⚠️ Migration error:', e.message); }
+})();
 
 // --- 8. START SERVER ---
 const PORT = process.env.PORT || 3000;
