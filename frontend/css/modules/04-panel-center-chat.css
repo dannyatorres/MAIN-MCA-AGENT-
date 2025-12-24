@@ -114,14 +114,14 @@
 }
 
 /* ==========================================================================
-   [DASHBOARD CARDS - FORCED STYLING]
+   [COMPACT DASHBOARD CONTAINER]
    ========================================================================== */
 
 .dashboard-container {
-    padding: 40px;
+    padding: 24px;
     width: 100%;
-    max-width: 800px;
-    margin: auto; /* Center both horizontal AND vertical */
+    max-width: 520px;
+    margin: auto;
     box-sizing: border-box;
     animation: fadeIn 0.4s ease-out;
 }
@@ -132,176 +132,52 @@
     align-items: center;
 }
 
-/* Ensure nothing inside forces a horizontal scroll */
-.message-content,
-.dashboard-header,
-.stats-grid {
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-.dashboard-header {
-    margin-bottom: 32px;
-    text-align: center;
-}
-
-.dashboard-header h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: #e6edf3;
-    margin-bottom: 8px;
-}
-
-.dashboard-header p {
-    color: #8b949e;
-    font-size: 14px;
-}
-
-.dashboard-toolbar {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-}
-
-.dashboard-action-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: #21262d;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    color: #e6edf3;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.dashboard-action-btn:hover {
-    background: #30363d;
-    border-color: #8b949e;
-    transform: translateY(-1px);
-}
-
-/* Stats Grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 32px;
-}
-
-/* Stat Cards (Small ones) */
-.center-panel .stat-card {
-    /* High Specificity + !important to ensure Gradient Applies */
-    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
-
-    border-radius: 12px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    transition: transform 0.2s;
-}
-
-.center-panel .stat-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.15) !important;
-}
-
-.stat-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-}
-
-/* Goal Card (Large one) */
-.center-panel .goal-card {
-    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
-
-    border-radius: 16px;
-    padding: 24px;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 24px;
-}
-
-/* Internal Shine for Goal Card */
-.goal-card::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 150px; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03));
-    transform: skewX(-20deg);
-    pointer-events: none;
-}
-
-.goal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 12px;
-}
-
-.progress-track {
-    width: 100%;
-    height: 8px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3b82f6, #10b981);
-    border-radius: 4px;
-    transition: width 1s ease-out;
-}
-
-/* Dashboard Text Colors */
-.stat-value { color: #e6edf3 !important; font-size: 24px; font-weight: 700; }
-.stat-label { color: #8b949e !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-.goal-title { color: #e6edf3; font-weight: 600; }
-.goal-numbers { color: #ffffff; font-weight: 700; font-size: 20px; }
-.goal-subtext { opacity: 0.5; font-size: 14px; }
-
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
+@media (max-width: 500px) {
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-container {
+        padding: 16px;
+    }
+}
+
 /* ==========================================================================
-   [HERO WELCOME CARD]
+   [HERO WELCOME CARD - COMPACT]
    ========================================================================== */
 
 .hero-card {
-    display: block;
-    width: 100%;
-    background: linear-gradient(135deg, #1a1f2e 0%, #161b22 50%, #0d1117 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: linear-gradient(135deg, #1a1f2e 0%, #161b22 50%, #0d1117 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
-    padding: 40px;
+    padding: 24px 32px;
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     position: relative;
     overflow: hidden;
-    box-sizing: border-box;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Subtle glow effect */
+/* Corgi watermark */
+.hero-card::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    bottom: -30px;
+    width: 140px;
+    height: 140px;
+    background-image: url('logo.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.06;
+    pointer-events: none;
+}
+
 .hero-card::before {
     content: '';
     position: absolute;
@@ -314,62 +190,150 @@
 }
 
 .hero-logo {
-    font-size: 32px;
-    font-weight: 800;
-    margin-bottom: 16px;
-    letter-spacing: -1px;
-    display: block;
-}
-
-.logo-text {
-    color: #e6edf3 !important;
-}
-
-.logo-accent {
-    color: #3b82f6 !important;
+    display: none; /* Hide the explicit logo since we're using watermark */
 }
 
 .hero-greeting {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
-    color: #e6edf3 !important;
-    margin: 0 0 16px 0;
+    color: #e6edf3;
+    margin: 0 0 8px 0;
 }
 
 .hero-quote {
-    font-size: 14px;
+    font-size: 13px;
     color: #8b949e;
     font-style: italic;
-    max-width: 400px;
-    margin: 0 auto 20px auto;
-    line-height: 1.6;
+    max-width: 380px;
+    margin: 0 auto 12px auto;
+    line-height: 1.5;
 }
 
 .hero-date {
-    font-size: 12px;
+    font-size: 11px;
     color: #6e7681;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
 /* ==========================================================================
-   [QUICK ACTIONS GRID]
+   [COMPACT STATS GRID]
+   ========================================================================== */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.center-panel .stat-card {
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: transform 0.2s;
+}
+
+.stat-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.stat-value {
+    color: #e6edf3 !important;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.stat-label {
+    color: #8b949e !important;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   [COMPACT GOAL CARD]
+   ========================================================================== */
+
+.center-panel .goal-card {
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+    border-radius: 12px;
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.goal-title {
+    color: #e6edf3;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.goal-numbers {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 18px;
+    margin-top: 2px;
+}
+
+.goal-subtext {
+    opacity: 0.5;
+    font-size: 13px;
+}
+
+.progress-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    border-radius: 3px;
+    transition: width 1s ease-out;
+}
+
+/* ==========================================================================
+   [COMPACT QUICK ACTIONS]
    ========================================================================== */
 
 .quick-actions-grid {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 12px;
-    margin-top: 24px;
-    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
 }
 
 .action-card {
-    display: block;
-    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px;
-    padding: 20px 16px;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px 10px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -378,51 +342,28 @@
 .action-card:hover {
     transform: translateY(-2px);
     border-color: rgba(59, 130, 246, 0.3);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 .action-icon {
-    width: 40px;
-    height: 40px;
-    margin: 0 auto 12px auto;
+    width: 32px;
+    height: 32px;
+    margin: 0 auto 8px auto;
     background: rgba(59, 130, 246, 0.1);
-    border-radius: 10px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #3b82f6;
-    font-size: 16px;
-}
-
-.action-card:hover .action-icon {
-    background: rgba(59, 130, 246, 0.2);
+    font-size: 14px;
 }
 
 .action-label {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 600;
     color: #8b949e;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-}
-
-.action-card:hover .action-label {
-    color: #e6edf3;
-}
-
-/* Responsive for smaller screens */
-@media (max-width: 600px) {
-    .quick-actions-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .hero-card {
-        padding: 24px;
-    }
-
-    .hero-greeting {
-        font-size: 22px;
-    }
 }
 
 /* ==========================================================================
