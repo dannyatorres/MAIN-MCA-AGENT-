@@ -250,6 +250,22 @@ class FCSService {
             const industry = extractStringValue(fcsAnalysis, 'Industry');
             const withholdingPct = calculateWithholding(fcsAnalysis, averageRevenue);
 
+            // 📊 Inject withholding into report before saving
+            let finalReport = fcsAnalysis;
+            if (withholdingPct && parseFloat(withholdingPct) > 0) {
+                // Find the summary section and inject withholding
+                const summaryMatch = finalReport.match(/(- Last MCA Deposit:.*?)(\n|$)/i);
+                if (summaryMatch) {
+                    finalReport = finalReport.replace(
+                        summaryMatch[0],
+                        `${summaryMatch[0]}- Current Withholding: ${withholdingPct}%\n`
+                    );
+                } else {
+                    // Fallback: append to end
+                    finalReport += `\n- Current Withholding: ${withholdingPct}%`;
+                }
+            }
+
             // 📝 LOG: Extracted metrics
             const metricsLog = `
 EXTRACTED METRICS:
@@ -266,7 +282,7 @@ Industry: ${industry}
 Withholding %: ${withholdingPct}
 ==================
 `;
-            logFCSReport(conversationId, metricsLog + '\n\nFULL REPORT:\n' + fcsAnalysis, '3-final-with-metrics');
+            logFCSReport(conversationId, metricsLog + '\n\nFULL REPORT:\n' + finalReport, '3-final-with-metrics');
 
             // 6. Save
             await db.query(`
@@ -286,7 +302,7 @@ Withholding %: ${withholdingPct}
                     completed_at = NOW()
                 WHERE id = $12
             `, [
-                fcsAnalysis, averageRevenue, state, industry, negDays, avgNegDays,
+                finalReport, averageRevenue, state, industry, negDays, avgNegDays,
                 avgBalance, depositCount, tibText, lastMca, withholdingPct, analysisId
             ]);
 
