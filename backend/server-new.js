@@ -861,6 +861,29 @@ app.post('/api/settings/goal', async (req, res) => {
 });
 // === END SETTINGS ENDPOINTS ===
 
+// Mark deal as funded
+app.post('/api/conversations/:id/mark-funded', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { amount } = req.body;
+
+        if (!amount || isNaN(amount)) {
+            return res.status(400).json({ success: false, error: 'Invalid amount' });
+        }
+
+        const db = getDatabase();
+        await db.query(`
+            UPDATE conversations
+            SET funded_amount = $1, funded_at = NOW(), state = 'FUNDED', current_step = 'funded'
+            WHERE id = $2
+        `, [parseFloat(amount), id]);
+
+        res.json({ success: true, message: 'Deal marked as funded' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // TEMP DEBUG - remove later
 app.get('/api/stats-test', async (req, res) => {
     const { getDatabase } = require('./services/database');

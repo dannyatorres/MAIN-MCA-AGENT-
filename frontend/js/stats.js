@@ -14,6 +14,7 @@ class StatsModule {
         window.showOffersModal = () => this.showOffersModal();
         window.showSubmittedLeads = () => this.showSubmittedLeads();
         window.editMonthlyGoal = () => this.editMonthlyGoal();
+        window.markAsFunded = (id, amount) => this.markAsFunded(id, amount);
 
         if (!this.parent.currentConversationId) {
             this.loadStats();
@@ -149,6 +150,7 @@ class StatsModule {
                                 <th style="padding: 10px; color: #8b949e;">Lender</th>
                                 <th style="padding: 10px; color: #8b949e;">Amount</th>
                                 <th style="padding: 10px; color: #8b949e;">Date</th>
+                                <th style="padding: 10px; color: #8b949e;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -156,29 +158,77 @@ class StatsModule {
 
             result.offers.forEach(offer => {
                 const amount = offer.offer_amount
-                    ? `$${Number(offer.offer_amount).toLocaleString()}`
-                    : 'N/A';
+                    ? Number(offer.offer_amount)
+                    : 0;
+                const displayAmount = amount ? `$${amount.toLocaleString()}` : 'N/A';
                 const date = offer.last_response_at
                     ? new Date(offer.last_response_at).toLocaleDateString()
                     : '-';
 
                 html += `
-                    <tr style="border-bottom: 1px solid #21262d; cursor: pointer;"
-                        onclick="window.commandCenter.conversationUI.selectConversation('${offer.conversation_id}'); document.getElementById('statsModal').remove();">
-                        <td style="padding: 12px; color: #e6edf3;">${offer.business_name || 'Unknown'}</td>
+                    <tr style="border-bottom: 1px solid #21262d;">
+                        <td style="padding: 12px; color: #e6edf3; cursor: pointer;"
+                            onclick="window.commandCenter.conversationUI.selectConversation('${offer.conversation_id}'); document.getElementById('statsModal').remove();">
+                            ${offer.business_name || 'Unknown'}
+                        </td>
                         <td style="padding: 12px; color: #8b949e;">${offer.lender_name || '-'}</td>
-                        <td style="padding: 12px; color: #10b981; font-weight: 600;">${amount}</td>
+                        <td style="padding: 12px; color: #10b981; font-weight: 600;">${displayAmount}</td>
                         <td style="padding: 12px; color: #8b949e;">${date}</td>
+                        <td style="padding: 12px;">
+                            <button onclick="window.markAsFunded('${offer.conversation_id}', ${amount})"
+                                style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white;
+                                padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;
+                                transition: all 0.2s;">
+                                Funded
+                            </button>
+                        </td>
                     </tr>
                 `;
             });
 
             html += `</tbody></table></div>`;
-            this.showSimpleModal('💰 Active Offers', html);
+            this.showSimpleModal('Active Offers', html);
 
         } catch (error) {
             console.error('Error loading offers:', error);
             this.parent.utils.showNotification('Failed to load offers', 'error');
+        }
+    }
+
+    async markAsFunded(conversationId, offerAmount) {
+        const amountStr = prompt('Enter final funded amount:', offerAmount || '');
+
+        if (!amountStr) return;
+
+        const amount = parseFloat(amountStr.replace(/[$,]/g, ''));
+
+        if (isNaN(amount) || amount <= 0) {
+            this.parent.utils.showNotification('Invalid amount', 'error');
+            return;
+        }
+
+        try {
+            await this.parent.apiCall(`/api/conversations/${conversationId}/mark-funded`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount })
+            });
+
+            this.parent.utils.showNotification(`Deal funded: $${amount.toLocaleString()}`, 'success');
+
+            // Close modal and refresh stats
+            document.getElementById('statsModal')?.remove();
+            this.statsCache = null;
+            this.loadStats();
+
+            // Refresh conversation list
+            if (this.parent.conversationUI) {
+                this.parent.conversationUI.loadConversations();
+            }
+
+        } catch (error) {
+            console.error('Error marking as funded:', error);
+            this.parent.utils.showNotification('Failed to mark as funded', 'error');
         }
     }
 
