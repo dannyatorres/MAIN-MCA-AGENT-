@@ -14,6 +14,7 @@ class StatsModule {
         window.showOffersModal = () => this.showOffersModal();
         window.showSubmittedLeads = () => this.showSubmittedLeads();
         window.editMonthlyGoal = () => this.editMonthlyGoal();
+        window.saveMonthlyGoal = () => this.saveMonthlyGoal();
         window.markAsFunded = (id, amount) => this.markAsFunded(id, amount);
 
         if (!this.parent.currentConversationId) {
@@ -105,21 +106,81 @@ class StatsModule {
         const currentGoal = document.getElementById('goalAmount')?.textContent || '$500,000';
         const currentValue = currentGoal.replace(/[$,]/g, '');
 
-        const newGoal = prompt('Enter your monthly funding goal:', currentValue);
+        // Remove existing modal if any
+        document.getElementById('goalEditModal')?.remove();
 
-        if (newGoal && !isNaN(newGoal) && parseFloat(newGoal) > 0) {
-            this.parent.apiCall('/api/settings/goal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ goal: parseFloat(newGoal) })
-            }).then(() => {
-                this.statsCache = null;
-                this.loadStats();
-                this.parent.utils.showNotification('Goal updated!', 'success');
-            }).catch(err => {
-                this.parent.utils.showNotification('Failed to update goal', 'error');
-            });
+        const modal = document.createElement('div');
+        modal.id = 'goalEditModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3>Set Monthly Goal</h3>
+                    <button class="modal-close" onclick="document.getElementById('goalEditModal').remove()">×</button>
+                </div>
+                <div class="modal-body" style="padding: 24px;">
+                    <p style="color: #8b949e; margin-bottom: 16px;">Enter your funding target for this month:</p>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6e7681; font-size: 18px;">$</span>
+                        <input type="text" id="goalInput" value="${parseInt(currentValue).toLocaleString()}"
+                            style="width: 100%; padding: 14px 14px 14px 32px; font-size: 24px; font-weight: 700;
+                            background: #0d1117; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3;
+                            text-align: left; box-sizing: border-box;"
+                            onclick="this.select()"
+                            onkeypress="if(event.key === 'Enter') document.getElementById('saveGoalBtn').click()">
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                        <button onclick="document.getElementById('goalInput').value='100,000'"
+                            style="padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer;">$100K</button>
+                        <button onclick="document.getElementById('goalInput').value='250,000'"
+                            style="padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer;">$250K</button>
+                        <button onclick="document.getElementById('goalInput').value='500,000'"
+                            style="padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer;">$500K</button>
+                        <button onclick="document.getElementById('goalInput').value='1,000,000'"
+                            style="padding: 8px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer;">$1M</button>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid #30363d; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button onclick="document.getElementById('goalEditModal').remove()"
+                        style="padding: 10px 20px; background: #21262d; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3; cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button id="saveGoalBtn" onclick="window.saveMonthlyGoal()"
+                        style="padding: 10px 20px; background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600;">
+                        Save Goal
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById('goalInput').focus();
+        document.getElementById('goalInput').select();
+    }
+
+    saveMonthlyGoal() {
+        const input = document.getElementById('goalInput');
+        if (!input) return;
+
+        const newGoal = parseFloat(input.value.replace(/[$,]/g, ''));
+
+        if (isNaN(newGoal) || newGoal <= 0) {
+            this.parent.utils.showNotification('Please enter a valid amount', 'error');
+            return;
         }
+
+        this.parent.apiCall('/api/settings/goal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ goal: newGoal })
+        }).then(() => {
+            document.getElementById('goalEditModal')?.remove();
+            this.statsCache = null;
+            this.loadStats();
+            this.parent.utils.showNotification(`Goal set to $${newGoal.toLocaleString()}!`, 'success');
+        }).catch(err => {
+            this.parent.utils.showNotification('Failed to update goal', 'error');
+        });
     }
 
     updateUI(data) {
