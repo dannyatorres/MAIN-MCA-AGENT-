@@ -183,39 +183,59 @@ class StatsModule {
     }
 
     async showOffersModal() {
+        // Show modal immediately with loading state
+        let html = `
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #30363d; text-align: left;">
+                            <th style="padding: 10px; color: #8b949e;">Business</th>
+                            <th style="padding: 10px; color: #8b949e;">Lender</th>
+                            <th style="padding: 10px; color: #8b949e;">Amount</th>
+                            <th style="padding: 10px; color: #8b949e;">Date</th>
+                            <th style="padding: 10px; color: #8b949e;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="offersTableBody">
+                        <tr>
+                            <td colspan="5" style="padding: 40px; text-align: center; color: #8b949e;">
+                                <i class="fas fa-circle-notch fa-spin" style="font-size: 24px; margin-bottom: 12px;"></i>
+                                <div>Loading offers...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+        this.showSimpleModal('Active Offers', html);
+
         try {
             const result = await this.parent.apiCall('/api/stats/offers');
+            const tbody = document.getElementById('offersTableBody');
+            if (!tbody) return;
 
             if (!result.offers || result.offers.length === 0) {
-                this.parent.utils.showNotification('No offers yet', 'info');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="padding: 40px; text-align: center; color: #6e7681;">
+                            <i class="fas fa-inbox" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i>
+                            <div style="font-size: 14px;">No offers yet</div>
+                            <div style="font-size: 12px; margin-top: 4px;">Offers will appear here when lenders respond</div>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
 
-            let html = `
-                <div style="max-height: 400px; overflow-y: auto;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid #30363d; text-align: left;">
-                                <th style="padding: 10px; color: #8b949e;">Business</th>
-                                <th style="padding: 10px; color: #8b949e;">Lender</th>
-                                <th style="padding: 10px; color: #8b949e;">Amount</th>
-                                <th style="padding: 10px; color: #8b949e;">Date</th>
-                                <th style="padding: 10px; color: #8b949e;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
+            let rows = '';
             result.offers.forEach(offer => {
-                const amount = offer.offer_amount
-                    ? Number(offer.offer_amount)
-                    : 0;
+                const amount = offer.offer_amount ? Number(offer.offer_amount) : 0;
                 const displayAmount = amount ? `$${amount.toLocaleString()}` : 'N/A';
                 const date = offer.last_response_at
                     ? new Date(offer.last_response_at).toLocaleDateString()
                     : '-';
 
-                html += `
+                rows += `
                     <tr style="border-bottom: 1px solid #21262d;">
                         <td style="padding: 12px; color: #e6edf3; cursor: pointer;"
                             onclick="window.commandCenter.conversationUI.selectConversation('${offer.conversation_id}'); document.getElementById('statsModal').remove();">
@@ -227,8 +247,7 @@ class StatsModule {
                         <td style="padding: 12px;">
                             <button onclick="window.markAsFunded('${offer.conversation_id}', ${amount})"
                                 style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white;
-                                padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;
-                                transition: all 0.2s;">
+                                padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
                                 Funded
                             </button>
                         </td>
@@ -236,12 +255,21 @@ class StatsModule {
                 `;
             });
 
-            html += `</tbody></table></div>`;
-            this.showSimpleModal('Active Offers', html);
+            tbody.innerHTML = rows;
 
         } catch (error) {
             console.error('Error loading offers:', error);
-            this.parent.utils.showNotification('Failed to load offers', 'error');
+            const tbody = document.getElementById('offersTableBody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="padding: 40px; text-align: center; color: #f85149;">
+                            <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 12px;"></i>
+                            <div>Failed to load offers</div>
+                        </td>
+                    </tr>
+                `;
+            }
         }
     }
 
@@ -283,33 +311,55 @@ class StatsModule {
     }
 
     async showSubmittedLeads() {
+        // Show modal immediately with loading state
+        let html = `
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #30363d; text-align: left;">
+                            <th style="padding: 10px; color: #8b949e;">Business</th>
+                            <th style="padding: 10px; color: #8b949e;">Lenders</th>
+                            <th style="padding: 10px; color: #8b949e;">Last Sent</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submittedTableBody">
+                        <tr>
+                            <td colspan="3" style="padding: 40px; text-align: center; color: #8b949e;">
+                                <i class="fas fa-circle-notch fa-spin" style="font-size: 24px; margin-bottom: 12px;"></i>
+                                <div>Loading submissions...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+        this.showSimpleModal('Submitted Leads', html);
+
         try {
             const result = await this.parent.apiCall('/api/stats/submitted');
+            const tbody = document.getElementById('submittedTableBody');
+            if (!tbody) return;
 
             if (!result.submitted || result.submitted.length === 0) {
-                this.parent.utils.showNotification('No submissions yet', 'info');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" style="padding: 40px; text-align: center; color: #6e7681;">
+                            <i class="fas fa-paper-plane" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i>
+                            <div style="font-size: 14px;">No submissions yet</div>
+                            <div style="font-size: 12px; margin-top: 4px;">Leads will appear here after you send them to lenders</div>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
 
-            let html = `
-                <div style="max-height: 400px; overflow-y: auto;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid #30363d; text-align: left;">
-                                <th style="padding: 10px; color: #8b949e;">Business</th>
-                                <th style="padding: 10px; color: #8b949e;">Lenders</th>
-                                <th style="padding: 10px; color: #8b949e;">Last Sent</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
+            let rows = '';
             result.submitted.forEach(item => {
                 const date = item.last_submitted
                     ? new Date(item.last_submitted).toLocaleDateString()
                     : '-';
 
-                html += `
+                rows += `
                     <tr style="border-bottom: 1px solid #21262d; cursor: pointer;"
                         onclick="window.commandCenter.conversationUI.selectConversation('${item.conversation_id}'); document.getElementById('statsModal').remove();">
                         <td style="padding: 12px; color: #e6edf3;">${item.business_name || 'Unknown'}</td>
@@ -319,12 +369,21 @@ class StatsModule {
                 `;
             });
 
-            html += `</tbody></table></div>`;
-            this.showSimpleModal('📤 Submitted Leads', html);
+            tbody.innerHTML = rows;
 
         } catch (error) {
             console.error('Error loading submitted:', error);
-            this.parent.utils.showNotification('Failed to load submissions', 'error');
+            const tbody = document.getElementById('submittedTableBody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" style="padding: 40px; text-align: center; color: #f85149;">
+                            <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 12px;"></i>
+                            <div>Failed to load submissions</div>
+                        </td>
+                    </tr>
+                `;
+            }
         }
     }
 
