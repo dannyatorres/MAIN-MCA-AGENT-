@@ -75,7 +75,37 @@ router.post('/trigger/:conversationId', async (req, res) => {
     }
 });
 
-// 2. STATUS ROUTE (Required for the loading spinner to know when to stop)
+// 2. GENERATE ROUTE (Manual generation with document selection)
+router.post('/generate', async (req, res) => {
+    const { conversationId, businessName, documentIds } = req.body;
+
+    if (!conversationId || !businessName) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    try {
+        console.log(`📊 Manual FCS generation for: ${businessName}`);
+        console.log(`📄 Document IDs: ${documentIds?.join(', ') || 'all'}`);
+
+        const db = getDatabase();
+
+        // Call FCS service with optional document filter
+        const result = await fcsService.generateAndSaveFCS(
+            conversationId,
+            businessName,
+            db,
+            documentIds // Pass the filter
+        );
+
+        res.json({ success: true, analysisId: result.analysisId });
+
+    } catch (err) {
+        console.error('FCS Generation Error:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 3. STATUS ROUTE (Required for the loading spinner to know when to stop)
 router.get('/status/:conversationId', async (req, res) => {
     try {
         const { conversationId } = req.params;

@@ -169,7 +169,7 @@ class FCSService {
         }
     }
 
-    async generateAndSaveFCS(conversationId, businessName, db) {
+    async generateAndSaveFCS(conversationId, businessName, db, documentIds = null) {
         let analysisId = null;
         try {
             console.log(`\n🔵 Starting FCS generation for: ${businessName}`);
@@ -182,10 +182,21 @@ class FCSService {
             `, [conversationId]);
             analysisId = createResult.rows[0].id;
 
-            const docsResult = await db.query(`
-                SELECT id, original_filename, s3_bucket, s3_key
-                FROM documents WHERE conversation_id = $1
-            `, [conversationId]);
+            let docsResult;
+            if (documentIds && documentIds.length > 0) {
+                // Filter to only selected documents
+                docsResult = await db.query(`
+                    SELECT id, original_filename, s3_bucket, s3_key
+                    FROM documents
+                    WHERE conversation_id = $1 AND id = ANY($2)
+                `, [conversationId, documentIds]);
+            } else {
+                // Use all documents
+                docsResult = await db.query(`
+                    SELECT id, original_filename, s3_bucket, s3_key
+                    FROM documents WHERE conversation_id = $1
+                `, [conversationId]);
+            }
 
             if (docsResult.rows.length === 0) throw new Error('No documents found');
             const documents = docsResult.rows.map(d => ({ ...d, filename: d.original_filename }));

@@ -65,6 +65,14 @@ class DocumentsModule {
                 }
             });
         }
+
+        // Generate FCS button handler
+        const generateFCSBtn = document.getElementById('generateFCSBtn');
+        if (generateFCSBtn) {
+            generateFCSBtn.addEventListener('click', () => {
+                this.openFCSModal();
+            });
+        }
     }
 
     async loadDocuments() {
@@ -920,5 +928,202 @@ class DocumentsModule {
                 </div>
             </div>
         `;
+    }
+
+    // =========================================================
+    // FCS GENERATION MODAL
+    // =========================================================
+
+    openFCSModal() {
+        const conversation = this.parent.getSelectedConversation();
+        if (!conversation) {
+            this.utils.showNotification('No conversation selected', 'error');
+            return;
+        }
+
+        const docs = this.currentDocuments || [];
+        if (docs.length === 0) {
+            this.utils.showNotification('No documents available. Upload files first.', 'warning');
+            return;
+        }
+
+        // Build modal HTML
+        const modalHtml = `
+            <div id="fcsGenerateModal" class="doc-modal-overlay" onclick="if(event.target === this) this.remove()">
+                <div class="doc-modal-card" style="max-width: 550px;" onclick="event.stopPropagation()">
+                    <div class="doc-modal-header">
+                        <span>📊 Generate FCS Report</span>
+                        <button onclick="document.getElementById('fcsGenerateModal').remove()" class="doc-modal-close">×</button>
+                    </div>
+                    <div class="doc-modal-body" style="max-height: 400px; overflow-y: auto;">
+                        <p style="color: #8b949e; font-size: 13px; margin-bottom: 16px;">
+                            Select the documents to include in the financial analysis:
+                        </p>
+                        <div class="fcs-doc-select-all" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #30363d;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #e6edf3; font-weight: 600;">
+                                <input type="checkbox" id="fcsSelectAll" checked style="width: 18px; height: 18px; accent-color: #2dd4bf;">
+                                Select All
+                            </label>
+                        </div>
+                        <div id="fcsDocumentList" class="fcs-document-list">
+                            ${docs.map(doc => `
+                                <label class="fcs-doc-item" style="display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                                    <input type="checkbox" class="fcs-doc-checkbox" value="${doc.id}" checked style="width: 18px; height: 18px; accent-color: #2dd4bf; flex-shrink: 0;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="color: #e6edf3; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            ${doc.originalFilename || doc.original_filename || 'Unknown'}
+                                        </div>
+                                        <div style="color: #6e7681; font-size: 11px; margin-top: 2px;">
+                                            ${doc.documentType || doc.document_type || 'Document'} • ${this.utils.formatFileSize(doc.fileSize || doc.file_size || 0)}
+                                        </div>
+                                    </div>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="doc-modal-footer">
+                        <button onclick="document.getElementById('fcsGenerateModal').remove()" class="btn btn-secondary btn-sm">Cancel</button>
+                        <button id="confirmFCSGenerate" class="btn btn-primary btn-sm">
+                            <i class="fas fa-bolt"></i> Generate FCS
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Setup event listeners
+        this.setupFCSModalListeners();
+    }
+
+    setupFCSModalListeners() {
+        const selectAllCheckbox = document.getElementById('fcsSelectAll');
+        const docCheckboxes = document.querySelectorAll('.fcs-doc-checkbox');
+        const confirmBtn = document.getElementById('confirmFCSGenerate');
+
+        // Select All toggle
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', (e) => {
+                docCheckboxes.forEach(cb => cb.checked = e.target.checked);
+            });
+        }
+
+        // Update Select All when individual checkboxes change
+        docCheckboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                const allChecked = Array.from(docCheckboxes).every(c => c.checked);
+                const someChecked = Array.from(docCheckboxes).some(c => c.checked);
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+                }
+            });
+        });
+
+        // Confirm button
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => this.confirmFCSGeneration());
+        }
+    }
+
+    async confirmFCSGeneration() {
+        const selectedIds = Array.from(document.querySelectorAll('.fcs-doc-checkbox:checked'))
+            .map(cb => cb.value);
+
+        if (selectedIds.length === 0) {
+            this.utils.showNotification('Please select at least one document', 'warning');
+            return;
+        }
+
+        const conversation = this.parent.getSelectedConversation();
+        if (!conversation) {
+            this.utils.showNotification('No conversation selected', 'error');
+            return;
+        }
+
+        // Close modal
+        document.getElementById('fcsGenerateModal')?.remove();
+
+        // Switch to FCS tab
+        if (this.parent.intelligenceManager) {
+            this.parent.intelligenceManager.switchTab('fcs');
+        } else {
+            // Fallback: try to click the FCS tab directly
+            const fcsTab = document.querySelector('[data-tab="fcs"]');
+            if (fcsTab) fcsTab.click();
+        }
+
+        // Small delay to let tab render
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Clear existing FCS and show loading
+        const fcsResults = document.getElementById('fcsResults');
+        const syncLoading = document.getElementById('syncLoading');
+
+        if (fcsResults) {
+            fcsResults.style.display = 'none';
+        }
+
+        if (syncLoading) {
+            syncLoading.style.display = 'flex';
+            syncLoading.innerHTML = `
+                <div class="spinner-sync"></div>
+                <div class="sync-loading-text">
+                    <strong>AI Agent Working...</strong>
+                    <span>Analyzing ${selectedIds.length} document(s)...</span>
+                </div>
+            `;
+        }
+
+        try {
+            // Call FCS generation with selected document IDs
+            const response = await this.parent.apiCall(`/api/fcs/generate`, {
+                method: 'POST',
+                body: {
+                    conversationId: conversation.id,
+                    businessName: conversation.business_name,
+                    documentIds: selectedIds
+                }
+            });
+
+            if (response.success) {
+                if (syncLoading) {
+                    syncLoading.innerHTML = `
+                        <div style="color:#10b981; font-size: 24px;">✅</div>
+                        <div class="sync-loading-text">
+                            <strong style="color:#10b981">Analysis Complete!</strong>
+                            <span>Loading report...</span>
+                        </div>
+                    `;
+                }
+
+                setTimeout(() => {
+                    if (syncLoading) syncLoading.style.display = 'none';
+                    // Reload FCS data
+                    if (this.parent.fcs) {
+                        this.parent.fcs.reportCache.delete(conversation.id);
+                        this.parent.fcs.loadFCSData();
+                    }
+                }, 1500);
+
+            } else {
+                throw new Error(response.error || 'FCS generation failed');
+            }
+
+        } catch (error) {
+            console.error('FCS Generation error:', error);
+            if (syncLoading) syncLoading.style.display = 'none';
+            if (fcsResults) {
+                fcsResults.style.display = 'block';
+                fcsResults.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        <p><strong>Generation Failed:</strong> ${error.message}</p>
+                        <button onclick="window.conversationUI.documents.openFCSModal()" class="btn btn-primary" style="margin-top: 16px;">Try Again</button>
+                    </div>
+                `;
+            }
+            this.utils.showNotification('FCS generation failed: ' + error.message, 'error');
+        }
     }
 }
