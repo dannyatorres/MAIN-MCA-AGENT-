@@ -686,7 +686,94 @@ app.use('/api/calling', require('./routes/calling'));
 app.use('/api/email', emailRoutes);
 app.use('/api/agent', require('./routes/agent')); // AI Agent for Dispatcher
 app.use('/api/cleaner', require('./routes/cleaner')); // Background Verification
-app.use('/api/stats', require('./routes/stats'));
+// app.use('/api/stats', require('./routes/stats'));  // DISABLED - using inline below
+
+// === STATS ENDPOINTS ===
+app.get('/api/stats', async (req, res) => {
+    try {
+        const db = getDatabase();
+        
+        const mainStats = await db.query(`
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE has_offer = true) as offers,
+                COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as new_today,
+                COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as new_this_week,
+                COUNT(*) FILTER (WHERE ai_enabled = true) as ai_enabled,
+                COUNT(*) FILTER (WHERE ai_enabled = false) as ai_disabled,
+                COALESCE(SUM(monthly_revenue), 0) as total_monthly_revenue,
+                COALESCE(AVG(monthly_revenue), 0) as avg_monthly_revenue
+            FROM conversations
+        `);
+        
+        const submittedResult = await db.query(`SELECT COUNT(DISTINCT conversation_id) as count FROM lender_submissions`);
+        const stateBreakdown = await db.query(`SELECT state, COUNT(*) as count FROM conversations WHERE state IS NOT NULL GROUP BY state ORDER BY count DESC`);
+        const leadSourceBreakdown = await db.query(`SELECT COALESCE(lead_source, 'Unknown') as lead_source, COUNT(*) as count FROM conversations GROUP BY lead_source ORDER BY count DESC`);
+        const industryBreakdown = await db.query(`SELECT COALESCE(industry_type, 'Unknown') as industry, COUNT(*) as count FROM conversations GROUP BY industry_type ORDER BY count DESC LIMIT 10`);
+        const geoBreakdown = await db.query(`SELECT COALESCE(us_state, business_state, 'Unknown') as region, COUNT(*) as count FROM conversations GROUP BY region ORDER BY count DESC LIMIT 10`);
+        const creditBreakdown = await db.query(`SELECT COALESCE(credit_score, 'Unknown') as credit_tier, COUNT(*) as count FROM conversations GROUP BY credit_score ORDER BY count DESC`);
+        const fundingBreakdown = await db.query(`SELECT COALESCE(funding_status, 'Unknown') as status, COUNT(*) as count FROM conversations GROUP BY funding_status ORDER BY count DESC`);
+        const activityTrend = await db.query(`SELECT DATE(created_at) as date, COUNT(*) as count FROM conversations WHERE created_at >= CURRENT_DATE - INTERVAL '30 days' GROUP BY DATE(created_at) ORDER BY date ASC`);
+
+        const stats = mainStats.rows[0];
+        
+        res.json({
+            success: true,
+            active: parseInt(stats.total || 0),
+            submitted: parseInt(submittedResult.rows[0]?.count || 0),
+            offers: parseInt(stats.offers || 0),
+            newToday: parseInt(stats.new_today || 0),
+            newThisWeek: parseInt(stats.new_this_week || 0),
+            aiEnabled: parseInt(stats.ai_enabled || 0),
+            aiDisabled: parseInt(stats.ai_disabled || 0),
+            totalMonthlyRevenue: parseFloat(stats.total_monthly_revenue || 0),
+            avgMonthlyRevenue: parseFloat(stats.avg_monthly_revenue || 0),
+            stateBreakdown: stateBreakdown.rows,
+            leadSourceBreakdown: leadSourceBreakdown.rows,
+            industryBreakdown: industryBreakdown.rows,
+            geoBreakdown: geoBreakdown.rows,
+            creditBreakdown: creditBreakdown.rows,
+            fundingBreakdown: fundingBreakdown.rows,
+            activityTrend: activityTrend.rows
+        });
+    } catch (error) {
+        console.error('Stats error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/stats/offers', async (req, res) => {
+    try {
+        const db = getDatabase();
+        const result = await db.query(`
+            SELECT ls.conversation_id, c.business_name, ls.lender_name, ls.offer_amount, ls.factor_rate, ls.last_response_at
+            FROM lender_submissions ls
+            JOIN conversations c ON c.id = ls.conversation_id
+            WHERE ls.status = 'OFFER'
+            ORDER BY ls.last_response_at DESC
+        `);
+        res.json({ success: true, offers: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/stats/submitted', async (req, res) => {
+    try {
+        const db = getDatabase();
+        const result = await db.query(`
+            SELECT ls.conversation_id, c.business_name, COUNT(ls.id) as lender_count, MAX(ls.submitted_at) as last_submitted
+            FROM lender_submissions ls
+            JOIN conversations c ON c.id = ls.conversation_id
+            GROUP BY ls.conversation_id, c.business_name
+            ORDER BY last_submitted DESC
+        `);
+        res.json({ success: true, submitted: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+// === END STATS ENDPOINTS ===
 
 // TEMP DEBUG - remove later
 app.get('/api/stats-test', async (req, res) => {
