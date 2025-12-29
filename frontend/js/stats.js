@@ -106,7 +106,28 @@ class StatsModule {
     }
 
     updateHeroCard() {
-        const greeting = 'Whats good fam?';
+        const greetings = [
+            "Peace, God!",
+            "What's good, son?",
+            "Yo, what's the word?",
+            "What up, kid?",
+            "Salute, king!",
+            "What's really good?",
+            "Yo, what's poppin?",
+            "What the deal, son?",
+            "Peace, king!",
+            "What's the science?",
+            "Blessings, God!",
+            "Talk to me!",
+            "What's the knowledge?",
+            "Word up, let's work!",
+            "It's only right!",
+            "What's good, family?",
+            "Yo, we here!",
+            "You already know!",
+            "Let's build, God!"
+        ];
+        const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
         const quotes = [
             "Success is not final, failure is not fatal: it is the courage to continue that counts.",
