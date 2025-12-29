@@ -160,17 +160,7 @@
                         </div>
 
                         <div class="header-actions">
-                            <button id="aiToggleBtn" class="ai-toggle-btn" style="
-                                padding: 6px 12px;
-                                border-radius: 6px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                border: 1px solid #ccc;
-                                display: flex;
-                                align-items: center;
-                                gap: 6px;
-                                transition: all 0.2s ease;
-                            ">
+                            <button id="aiToggleBtn" class="ai-toggle-btn">
                                 <i class="fas fa-robot"></i>
                                 <span id="aiBtnText">Loading...</span>
                             </button>
@@ -254,6 +244,32 @@
             </div>
             <div class="status-right">
                 <span id="systemStatus">System: Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Verification Modal -->
+    <div id="cleanerModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 class="modal-title"><i class="fas fa-user-check"></i> Background Verification</h3>
+            <p class="modal-description">Upload a CSV to enrich with verified mobile numbers and home addresses.</p>
+
+            <input type="file" id="cleanerFileInput" class="file-input" accept=".csv">
+
+            <div id="cleanerProgress" class="progress-container hidden">
+                <div class="progress-bar-track">
+                    <div id="cleanerProgressBar" class="progress-bar-fill"></div>
+                </div>
+                <p id="cleanerStatus" class="progress-status">Verifying records...</p>
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="runCleaner()" class="btn btn-primary">
+                    <i class="fas fa-play"></i> Verify File
+                </button>
+                <button onclick="closeCleanerModal()" class="btn btn-secondary">
+                    Cancel
+                </button>
             </div>
         </div>
     </div>
@@ -440,7 +456,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
     <script src="https://unpkg.com/@twilio/voice-sdk@2.11.0/dist/twilio.min.js"></script>
@@ -470,33 +485,6 @@
     <script src="js/calling.js"></script>
 
     <script type="module" src="js/app-bootstrap.js"></script>
-
-    <!-- Background Verification Modal -->
-    <div id="cleanerModal" class="modal-overlay">
-        <div class="modal-box">
-            <h3 class="modal-title"><i class="fas fa-user-check"></i> Background Verification</h3>
-            <p class="modal-description">Upload a CSV to enrich with verified mobile numbers and home addresses.</p>
-
-            <input type="file" id="cleanerFileInput" class="file-input" accept=".csv">
-
-            <div id="cleanerProgress" class="progress-container hidden">
-                <div class="progress-bar-track">
-                    <div id="cleanerProgressBar" class="progress-bar-fill"></div>
-                </div>
-                <p id="cleanerStatus" class="progress-status">Verifying records...</p>
-            </div>
-
-            <div class="modal-actions">
-                <button onclick="runCleaner()" class="btn btn-primary">
-                    <i class="fas fa-play"></i> Verify File
-                </button>
-                <button onclick="closeCleanerModal()" class="btn btn-secondary">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script src="js/background-verification.js"></script>
 
 </body>
