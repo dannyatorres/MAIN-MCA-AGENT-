@@ -1216,7 +1216,7 @@ router.post('/:id/send-to-lenders', async (req, res) => {
 
                 // ✅ QUERY: Explicitly ask for cc_email to see if DB has it
                 const lenderResult = await db.query(
-                    'SELECT id, email, cc_email FROM lenders WHERE name ILIKE $1 LIMIT 1',
+                    'SELECT id, email, cc_email FROM lenders WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1',
                     [lenderName]
                 );
 
