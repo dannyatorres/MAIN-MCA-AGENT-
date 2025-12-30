@@ -157,12 +157,19 @@ async function processEmail(email, db) {
 
     const data = JSON.parse(extraction.choices[0].message.content);
 
-    if (!data.business_name || data.business_name === "null") {
+    // Clean the extracted business name - strip out company patterns
+    let businessName = data.business_name || "";
+    businessName = businessName
+        .replace(/JMS\s*GLOBAL\s*[:\-]?\s*/gi, '')
+        .replace(/New Submission from\s*/gi, '')
+        .trim();
+
+    if (!businessName || businessName === "null") {
         console.log(`      ⚠️ [AI] Irrelevant or Spam (No Merchant Found). Skipping.`);
         return;
     }
 
-    const emailNameClean = normalizeName(data.business_name);
+    const emailNameClean = normalizeName(businessName);
     const candidates = await db.query(`SELECT id, business_name FROM conversations WHERE state NOT IN ('ARCHIVED', 'DEAD')`);
 
     let bestMatchId = null;
@@ -180,11 +187,11 @@ async function processEmail(email, db) {
     }
 
     if (!bestMatchId) {
-        console.log(`      ⚠️ [AI] No matching lead found for: "${data.business_name}"`);
+        console.log(`      ⚠️ [AI] No matching lead found for: "${businessName}"`);
         return;
     }
 
-    console.log(`      ✅ MATCH: "${data.business_name}" -> Lead ${bestMatchId} (${data.category})`);
+    console.log(`      ✅ MATCH: "${businessName}" -> Lead ${bestMatchId} (${data.category})`);
 
     const submissionCheck = await db.query(`
         SELECT id FROM lender_submissions
