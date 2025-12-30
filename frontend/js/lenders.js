@@ -1408,7 +1408,7 @@ Best regards`;
                 progressBar.style.width = '10%';
             }
 
-            const selectedLenders = selectedLenderCheckboxes.map(cb => {
+            const selectedLenders = await Promise.all(selectedLenderCheckboxes.map(async (cb) => {
                 const lenderName = cb.value;
 
                 // ✅ FIX: Search BOTH lists to find the lender data object
@@ -1426,8 +1426,8 @@ Best regards`;
                 // 🕵️ DEBUG: Print the raw object to console so we can see the property names
                 console.log(`🔍 Inspecting "${lenderName}" data:`, lender);
 
-                // AGGRESSIVE EMAIL SEARCH: Try every possible variation
-                const foundEmail =
+                // AGGRESSIVE EMAIL SEARCH: Try every possible variation from sheet
+                let foundEmail =
                     lender.email ||
                     lender.Email ||
                     lender['Lender Email'] ||
@@ -1438,7 +1438,22 @@ Best regards`;
                     null;
 
                 // ✅ FIX: Find CC Email
-                const foundCC = lender.cc_email || lender.cc || null;
+                let foundCC = lender.cc_email || lender.cc || null;
+
+                // 🔍 DATABASE FALLBACK: If no email in sheet, check database
+                if (!foundEmail && lenderName) {
+                    console.log(`🔍 No email in sheet for "${lenderName}", checking database...`);
+                    try {
+                        const dbLookup = await this.parent.apiCall(`/api/lenders/by-name/${encodeURIComponent(lenderName.trim())}`);
+                        if (dbLookup?.success && dbLookup.email) {
+                            foundEmail = dbLookup.email;
+                            foundCC = dbLookup.cc_email || foundCC;
+                            console.log(`✅ Found email in DB: ${foundEmail}`);
+                        }
+                    } catch (e) {
+                        console.warn(`⚠️ DB lookup failed for ${lenderName}:`, e.message);
+                    }
+                }
 
                 if (!foundEmail) {
                     console.error(`⚠️ WARNING: No email found for ${lenderName}. Available keys:`, Object.keys(lender));
@@ -1448,9 +1463,9 @@ Best regards`;
                     name: lenderName,
                     lender_name: lenderName,
                     email: foundEmail ? foundEmail.trim() : null,
-                    cc_email: foundCC ? foundCC.trim() : null // <--- ADD THIS LINE
+                    cc_email: foundCC ? foundCC.trim() : null
                 };
-            });
+            }));
 
             const selectedDocuments = selectedDocumentIds.map(docId => {
                 const doc = this.parent.documents?.currentDocuments?.find(d => d.id === docId);

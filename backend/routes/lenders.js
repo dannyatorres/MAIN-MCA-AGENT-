@@ -475,6 +475,33 @@ router.get('/submissions/:conversationId', async (req, res) => {
     }
 });
 
+// Get lender by name (for email lookup fallback)
+router.get('/by-name/:name', async (req, res) => {
+    try {
+        const { name } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(
+            `SELECT id, name, email, cc_email FROM lenders WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1`,
+            [name]
+        );
+
+        if (result.rows.length === 0) {
+            return res.json({ success: false, email: null });
+        }
+
+        res.json({
+            success: true,
+            email: result.rows[0].email,
+            cc_email: result.rows[0].cc_email
+        });
+
+    } catch (error) {
+        console.error('Error fetching lender by name:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Get single lender details
 router.get('/:lenderId', async (req, res) => {
     try {
