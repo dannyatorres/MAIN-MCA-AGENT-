@@ -292,18 +292,28 @@ class GmailInboxService {
         }
     }
 
-    async retryOperation(operation, maxRetries = 1) {
+    async disconnect() {
+        if (this.connection) {
+            try { await this.connection.end(); } catch (e) {}
+            this.connection = null;
+        }
+    }
+
+    async retryOperation(operation, maxRetries = 2) {
         for (let i = 0; i <= maxRetries; i++) {
             try {
                 return await operation();
             } catch (error) {
-                const isAuthError = error.message.includes('Not authenticated') ||
-                                    error.message.includes('closed') ||
-                                    error.message.includes('ended');
+                const isRetryableError = error.message.includes('Not authenticated') ||
+                                         error.message.includes('closed') ||
+                                         error.message.includes('ended') ||
+                                         error.message.includes('ECONNRESET') ||
+                                         error.message.includes('ETIMEDOUT') ||
+                                         error.message.includes('socket hang up');
 
-                if (isAuthError && i < maxRetries) {
+                if (isRetryableError && i < maxRetries) {
                     console.log(`⚠️ IMAP Error: ${error.message}. Retrying (${i + 1}/${maxRetries})...`);
-                    this.connection = null;
+                    await this.disconnect();
                     await new Promise(r => setTimeout(r, 1000));
                     continue;
                 }
