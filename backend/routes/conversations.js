@@ -30,6 +30,29 @@ router.get('/fix/add-email-body-column', async (req, res) => {
     }
 });
 
+// 🐴 DEBUG: Check lenders table
+router.get('/debug/lenders-search/:name', async (req, res) => {
+    const { name } = req.params;
+    const db = getDatabase();
+
+    console.log(`🐴 TROJAN: Searching for "${name}"...`);
+
+    const exact = await db.query('SELECT id, name, email, cc_email FROM lenders WHERE name = $1', [name]);
+    const ilike = await db.query('SELECT id, name, email, cc_email FROM lenders WHERE name ILIKE $1', [`%${name}%`]);
+    const trimmed = await db.query('SELECT id, name, email, cc_email FROM lenders WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))', [name]);
+
+    console.log('🐴 Exact match:', exact.rows);
+    console.log('🐴 ILIKE match:', ilike.rows);
+    console.log('🐴 Trimmed match:', trimmed.rows);
+
+    res.json({
+        searchedFor: name,
+        exact: exact.rows,
+        ilike: ilike.rows,
+        trimmed: trimmed.rows
+    });
+});
+
 // ==========================================
 // 🛠️ MIGRATION ROUTE (Place at TOP of file)
 // Run: /api/conversations/fix/upgrade-submissions-schema
