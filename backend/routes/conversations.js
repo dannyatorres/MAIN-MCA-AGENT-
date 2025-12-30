@@ -1237,9 +1237,12 @@ router.post('/:id/send-to-lenders', async (req, res) => {
                 // 2a. Find/Create Lender Record (Quick Lookup)
                 let lenderId = null;
 
-                // ✅ QUERY: Explicitly ask for cc_email to see if DB has it
+                // ✅ QUERY: Fuzzy match lender name (both directions)
                 const lenderResult = await db.query(
-                    'SELECT id, email, cc_email FROM lenders WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1',
+                    `SELECT id, email, cc_email FROM lenders
+                     WHERE LOWER(TRIM(name)) ILIKE '%' || LOWER(TRIM($1)) || '%'
+                        OR LOWER(TRIM($1)) ILIKE '%' || LOWER(TRIM(name)) || '%'
+                     LIMIT 1`,
                     [lenderName]
                 );
 
