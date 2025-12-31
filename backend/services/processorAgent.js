@@ -26,7 +26,11 @@ function getSystemPrompt() {
 
 function normalizeName(name) {
     if (!name) return "";
-    return name.toLowerCase().replace(/[,.-]/g, "").replace(/\b(llc|inc|corp|corporation|ltd|co|company)\b/g, "").trim();
+    return name.toLowerCase()
+        .replace(/[,.-]/g, "")
+        .replace(/\b(llc|inc|corp|corporation|ltd|co|company|holdings|group|enterprises|services|solutions|consulting|partners|capital|funding|financial|management)\b/g, "")
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 function getSimilarity(s1, s2) {
@@ -189,10 +193,9 @@ async function processEmail(email, db) {
         const score = getSimilarity(emailNameClean, leadNameClean);
 
         // Also boost score if one contains the other
-        const containsBonus = (leadNameClean.includes(emailNameClean) || emailNameClean.includes(leadNameClean)) ? 0.1 : 0;
-        const finalScore = score + containsBonus;
+        const finalScore = score;
 
-        if (finalScore > 0.65 && finalScore > highestScore) {
+        if (finalScore > 0.85 && finalScore > highestScore) {
             highestScore = finalScore;
             bestMatchId = lead.id;
             console.log(`      🔍 Potential match: "${lead.business_name}" (score: ${finalScore.toFixed(2)})`);
