@@ -157,7 +157,7 @@ class LendersModule {
     }
 
     initializeLenderForm() {
-        const N8N_WEBHOOK_URL = 'https://dannyatorres.app.n8n.cloud/webhook/lender-qualify';
+        const QUALIFICATION_URL = '/api/qualification/qualify';
 
         this.populateLenderForm();
 
@@ -280,7 +280,7 @@ class LendersModule {
                 resultsEl.classList.remove('active');
 
                 try {
-                    const response = await fetch(N8N_WEBHOOK_URL, {
+                    const response = await fetch(QUALIFICATION_URL, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
