@@ -110,6 +110,12 @@ class MessagingModule {
 
         this.addMessage(optimisticMessage);
 
+        // Add to cache immediately so it persists if we switch tabs quickly
+        const convIdStr = String(convId);
+        if (this.messageCache.has(convIdStr)) {
+            this.messageCache.get(convIdStr).push(optimisticMessage);
+        }
+
         this.parent.apiCall(`/api/conversations/${convId}/messages`, {
             method: 'POST',
             body: JSON.stringify({
@@ -176,18 +182,10 @@ class MessagingModule {
         if (!rawId) return;
 
         const messageConversationId = String(rawId);
-
-        // NEW: Skip our own outbound messages - already handled by sendMessage() + HTTP response
-        const isOurOutbound = (message.direction === 'outbound' || message.sender_type === 'user')
-                              && message.sent_by !== 'ai';
-        if (isOurOutbound) {
-            // Just update sidebar preview, don't add to chat (prevents duplicate)
-            this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
-            return;
-        }
-
         const currentConversationId = String(this.parent.getCurrentConversationId());
-        const isCurrentChat = (messageConversationId === currentConversationId && !document.hidden);
+
+        // Removed && !document.hidden - we want to add messages even when tab is hidden
+        const isCurrentChat = (messageConversationId === currentConversationId);
 
         if (!isCurrentChat) {
             const isLeadMessage = message.direction === 'inbound';
