@@ -15,6 +15,9 @@ const anthropic = new Anthropic({
 // ============================================
 
 async function classifyIndustry(inputIndustry) {
+    const input = inputIndustry.toLowerCase().trim();
+    console.log(`🔍 AI Classification - Input: "${input}"`);
+
     const prompt = `Classify this business industry into ONE canonical category.
 
 Input: "${inputIndustry}"
@@ -65,16 +68,19 @@ Choose from these categories ONLY:
 Respond with ONLY the category name, nothing else.`;
 
     try {
+        console.log(`🤖 Calling Claude Haiku...`);
         const response = await anthropic.messages.create({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 50,
             messages: [{ role: 'user', content: prompt }]
         });
 
-        return response.content[0].text.trim().toLowerCase();
+        const result = response.content[0].text.trim().toLowerCase();
+        console.log(`✅ AI Classification Result: "${input}" → "${result}"`);
+        return result;
     } catch (error) {
-        console.error('AI classification error:', error);
-        return inputIndustry.toLowerCase(); // Fallback to original
+        console.error('❌ AI classification error:', error.message);
+        return input; // Fallback to original
     }
 }
 
@@ -117,6 +123,7 @@ function isIndustryType(merchantIndustry, keywords) {
 
 async function getCanonicalIndustries(db, inputIndustry) {
     const input = inputIndustry.toLowerCase().trim();
+    console.log(`📚 Looking up canonical industries for: "${input}"`);
 
     // Check for exact match first
     const result = await db.query(
@@ -126,22 +133,24 @@ async function getCanonicalIndustries(db, inputIndustry) {
     );
 
     if (result.rows.length > 0) {
+        console.log(`✅ Exact match found:`, result.rows[0].canonical_industries);
         return result.rows[0].canonical_industries;
     }
 
     // Check for partial match
     const partialResult = await db.query(
-        `SELECT canonical_industries FROM industry_mappings
+        `SELECT input_term, canonical_industries FROM industry_mappings
          WHERE LOWER(input_term) LIKE $1 OR $2 LIKE '%' || LOWER(input_term) || '%'
          LIMIT 1`,
         [`%${input}%`, input]
     );
 
     if (partialResult.rows.length > 0) {
+        console.log(`✅ Partial match found: "${partialResult.rows[0].input_term}" →`, partialResult.rows[0].canonical_industries);
         return partialResult.rows[0].canonical_industries;
     }
 
-    // No mapping found, return original as array
+    console.log(`⚠️ No mapping found for "${input}", using original`);
     return [input];
 }
 
@@ -465,8 +474,14 @@ router.post('/qualify', async (req, res) => {
             canonicalIndustries = await getCanonicalIndustries(db, classifiedIndustry);
             // Also include the original input just in case
             canonicalIndustries.push(criteria.industry.toLowerCase());
-            console.log(`Industry "${criteria.industry}" mapped to:`, canonicalIndustries);
         }
+
+        // Log the full chain
+        console.log(`\n========== INDUSTRY CLASSIFICATION ==========`);
+        console.log(`Original input: "${criteria.industry}"`);
+        console.log(`AI classified as: "${classifiedIndustry}"`);
+        console.log(`Canonical industries:`, canonicalIndustries);
+        console.log(`==============================================\n`);
 
         // Get all lenders
         const lendersResult = await db.query(`
