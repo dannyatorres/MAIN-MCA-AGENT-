@@ -98,10 +98,10 @@ const s3 = new AWS.S3({
 
 // ⚠️ REMOVED LOCAL FILE UPLOAD - Use /api/documents/upload instead
 
-// Get all conversations
+// Get all conversations (Now with SERVER-SIDE SEARCH)
 router.get('/', async (req, res) => {
     try {
-        const { state, priority, limit = 50, offset = 0, filter } = req.query;
+        const { state, priority, limit = 50, offset = 0, filter, search } = req.query;
         const db = getDatabase();
 
         let query = `
@@ -135,16 +135,38 @@ router.get('/', async (req, res) => {
         const values = [];
         let paramIndex = 1;
 
+        // 1. STATE FILTER
         if (state) {
             query += ` AND c.state = $${paramIndex++}`;
             values.push(state);
         }
 
+        // 2. PRIORITY FILTER
         if (priority) {
             query += ` AND c.priority = $${paramIndex++}`;
             values.push(priority);
         }
 
+        // 3. SEARCH FILTER (The Fix)
+        if (search) {
+            const searchTerm = `%${search.trim()}%`;
+            // Search cleaning for phone: remove non-digits to match raw DB numbers
+            const phoneSearch = `%${search.replace(/\D/g, '')}%`;
+
+            query += ` AND (
+                c.business_name ILIKE $${paramIndex} OR
+                c.first_name ILIKE $${paramIndex} OR
+                c.last_name ILIKE $${paramIndex} OR
+                c.email ILIKE $${paramIndex} OR
+                CAST(c.display_id AS TEXT) ILIKE $${paramIndex} OR
+                c.lead_phone LIKE $${paramIndex + 1}
+            )`;
+
+            values.push(searchTerm, phoneSearch);
+            paramIndex += 2;
+        }
+
+        // 4. QUICK FILTERS
         if (filter) {
             if (filter === 'INTERESTED') {
                 query += ` AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound')`;
@@ -156,6 +178,7 @@ router.get('/', async (req, res) => {
             }
         }
 
+        // 5. SORTING & PAGING
         query += ` ORDER BY c.last_activity DESC NULLS LAST LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
         values.push(parseInt(limit), parseInt(offset));
 
