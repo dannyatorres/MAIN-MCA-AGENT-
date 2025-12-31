@@ -184,12 +184,18 @@ async function processEmail(email, db) {
 
     for (const lead of candidates.rows) {
         const leadNameClean = normalizeName(lead.business_name);
-        if (leadNameClean.includes(emailNameClean) || emailNameClean.includes(leadNameClean)) {
-            const score = getSimilarity(emailNameClean, leadNameClean);
-            if (score > 0.65 && score > highestScore) {
-                highestScore = score;
-                bestMatchId = lead.id;
-            }
+
+        // Check similarity for ALL candidates, not just includes matches
+        const score = getSimilarity(emailNameClean, leadNameClean);
+
+        // Also boost score if one contains the other
+        const containsBonus = (leadNameClean.includes(emailNameClean) || emailNameClean.includes(leadNameClean)) ? 0.1 : 0;
+        const finalScore = score + containsBonus;
+
+        if (finalScore > 0.65 && finalScore > highestScore) {
+            highestScore = finalScore;
+            bestMatchId = lead.id;
+            console.log(`      🔍 Potential match: "${lead.business_name}" (score: ${finalScore.toFixed(2)})`);
         }
     }
 
