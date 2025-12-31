@@ -31,6 +31,37 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Import tool - serves HTML page for CSV import (MUST be before /:lenderId route)
+router.get('/import-tool', (req, res) => {
+    res.send(`<!DOCTYPE html><html><head><title>Import</title></head><body>
+<h1>Lender CSV Import</h1>
+<input type="file" id="f" accept=".csv"><br><br>
+<button onclick="run()">Import</button>
+<pre id="r"></pre>
+<script>
+async function run(){
+    const file=document.getElementById('f').files[0];
+    if(!file)return alert('Select CSV');
+    document.getElementById('r').textContent='Processing...';
+    const text=await file.text();
+    const lines=text.split('\\n'),headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,'')),data=[];
+    for(let i=1;i<lines.length;i++){
+        if(!lines[i].trim())continue;
+        const row={};let field='',idx=0,inQ=false;
+        for(let c of lines[i]){
+            if(c==='"')inQ=!inQ;
+            else if(c===','&&!inQ){row[headers[idx++]]=field.trim();field='';}
+            else field+=c;
+        }
+        row[headers[idx]]=field.trim();
+        data.push(row);
+    }
+    const res=await fetch('/api/lenders/import-csv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lenders:data})});
+    document.getElementById('r').textContent=JSON.stringify(await res.json(),null,2);
+}
+</script></body></html>`);
+});
+
 // Create new lender
 router.post('/', async (req, res) => {
     try {
@@ -677,37 +708,6 @@ router.post('/import-csv', async (req, res) => {
         console.error('Error importing CSV:', error);
         res.status(500).json({ error: 'Failed to import CSV', details: error.message });
     }
-});
-
-// Import tool - serves HTML page for CSV import
-router.get('/import-tool', (req, res) => {
-    res.send(`<!DOCTYPE html><html><head><title>Import</title></head><body>
-<h1>Lender CSV Import</h1>
-<input type="file" id="f" accept=".csv"><br><br>
-<button onclick="run()">Import</button>
-<pre id="r"></pre>
-<script>
-async function run(){
-    const file=document.getElementById('f').files[0];
-    if(!file)return alert('Select CSV');
-    document.getElementById('r').textContent='Processing...';
-    const text=await file.text();
-    const lines=text.split('\\n'),headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,'')),data=[];
-    for(let i=1;i<lines.length;i++){
-        if(!lines[i].trim())continue;
-        const row={};let field='',idx=0,inQ=false;
-        for(let c of lines[i]){
-            if(c==='"')inQ=!inQ;
-            else if(c===','&&!inQ){row[headers[idx++]]=field.trim();field='';}
-            else field+=c;
-        }
-        row[headers[idx]]=field.trim();
-        data.push(row);
-    }
-    const res=await fetch('/api/lenders/import-csv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lenders:data})});
-    document.getElementById('r').textContent=JSON.stringify(await res.json(),null,2);
-}
-</script></body></html>`);
 });
 
 module.exports = router;
