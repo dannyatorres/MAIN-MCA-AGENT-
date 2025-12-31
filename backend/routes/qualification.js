@@ -1,0 +1,462 @@
+// qualification.js - Lender Qualification Route
+const express = require('express');
+const router = express.Router();
+
+// Adjust this import to match your database setup
+const { getDatabase } = require('../services/database');
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function normalizeState(state) {
+    if (!state) return '';
+    const stateMap = {
+        'alabama': 'al', 'alaska': 'ak', 'arizona': 'az', 'arkansas': 'ar',
+        'california': 'ca', 'colorado': 'co', 'connecticut': 'ct', 'delaware': 'de',
+        'florida': 'fl', 'georgia': 'ga', 'hawaii': 'hi', 'idaho': 'id',
+        'illinois': 'il', 'indiana': 'in', 'iowa': 'ia', 'kansas': 'ks',
+        'kentucky': 'ky', 'louisiana': 'la', 'maine': 'me', 'maryland': 'md',
+        'massachusetts': 'ma', 'michigan': 'mi', 'minnesota': 'mn', 'mississippi': 'ms',
+        'missouri': 'mo', 'montana': 'mt', 'nebraska': 'ne', 'nevada': 'nv',
+        'new hampshire': 'nh', 'new jersey': 'nj', 'new mexico': 'nm', 'new york': 'ny',
+        'north carolina': 'nc', 'north dakota': 'nd', 'ohio': 'oh', 'oklahoma': 'ok',
+        'oregon': 'or', 'pennsylvania': 'pa', 'rhode island': 'ri', 'south carolina': 'sc',
+        'south dakota': 'sd', 'tennessee': 'tn', 'texas': 'tx', 'utah': 'ut',
+        'vermont': 'vt', 'virginia': 'va', 'washington': 'wa', 'west virginia': 'wv',
+        'wisconsin': 'wi', 'wyoming': 'wy', 'district of columbia': 'dc'
+    };
+    const lower = state.toLowerCase().trim();
+    return stateMap[lower] || lower;
+}
+
+function industryMatches(merchantIndustry, targetIndustry) {
+    if (!merchantIndustry || !targetIndustry) return false;
+    const m = merchantIndustry.toLowerCase().trim();
+    const t = targetIndustry.toLowerCase().trim();
+    return m.includes(t) || t.includes(m);
+}
+
+function isIndustryType(merchantIndustry, keywords) {
+    const m = merchantIndustry.toLowerCase().trim();
+    return keywords.some(k => m.includes(k) || k.includes(m));
+}
+
+// ============================================
+// CHECK FUNCTIONS (from lenders table)
+// ============================================
+
+function checkPositionRestrictions(lender, criteria) {
+    const posMin = parseFloat(lender.pos_min);
+    const posMax = parseFloat(lender.pos_max);
+
+    if (isNaN(posMin) || isNaN(posMax)) {
+        return 'Position - Invalid position data';
+    }
+
+    if (criteria.requestedPosition < posMin || criteria.requestedPosition > posMax) {
+        return `Position - Accepts positions ${posMin}-${posMax} only`;
+    }
+    return null;
+}
+
+function checkStateRestrictions(lender, criteria) {
+    const stateRestrictions = (lender.state_restrictions || '').toLowerCase();
+    if (!stateRestrictions) return null;
+
+    const merchantState = normalizeState(criteria.state);
+    const restrictionsList = stateRestrictions.split(/[,;|\s]+/).map(s => s.trim()).filter(s => s.length > 0);
+
+    for (const restriction of restrictionsList) {
+        const restrictionNorm = normalizeState(restriction);
+        if (merchantState === restrictionNorm || merchantState === restriction) {
+            return `State - Not accepted in ${criteria.state}`;
+        }
+    }
+    return null;
+}
+
+function checkIndustryRestrictions(lender, criteria) {
+    const prohibited = (lender.prohibited_industries || '').toLowerCase();
+    if (!prohibited) return null;
+
+    const merchantIndustry = criteria.industry.toLowerCase().trim();
+    const prohibitedList = prohibited.split(',').map(i => i.trim());
+
+    for (const prohibitedIndustry of prohibitedList) {
+        if (industryMatches(merchantIndustry, prohibitedIndustry)) {
+            return `Industry - ${prohibitedIndustry} not accepted`;
+        }
+    }
+    return null;
+}
+
+function checkMinimumRequirements(lender, criteria) {
+    const minTib = parseFloat(lender.min_tib_months);
+    if (!isNaN(minTib) && criteria.tib < minTib) {
+        return `TIB - Min ${minTib} months`;
+    }
+
+    const minRevenue = parseFloat(lender.min_monthly_revenue);
+    if (!isNaN(minRevenue) && criteria.monthlyRevenue < minRevenue) {
+        return `Revenue - Min ${minRevenue.toLocaleString()}`;
+    }
+
+    const minFico = parseFloat(lender.min_fico);
+    if (!isNaN(minFico) && criteria.fico < (minFico - 20)) {
+        return `FICO - Min ${minFico} (with 20pt tolerance)`;
+    }
+
+    return null;
+}
+
+function checkMercuryBank(lender, criteria) {
+    if (!criteria.hasMercuryBank) return null;
+
+    if (lender.accepts_mercury === false) {
+        return 'Bank Statements - Mercury Bank not accepted';
+    }
+    return null;
+}
+
+function checkNonProfit(lender, criteria) {
+    if (!criteria.isNonProfit) return null;
+
+    if (lender.accepts_nonprofit !== true) {
+        return 'Non-Profit - Not accepted';
+    }
+    return null;
+}
+
+function checkSoleProp(lender, criteria) {
+    if (!criteria.isSoleProp) return null;
+
+    const requirements = (lender.other_requirements || '').toLowerCase();
+    const prohibited = (lender.prohibited_industries || '').toLowerCase();
+    const allText = requirements + ' ' + prohibited;
+
+    if (allText.includes('no sole prop') || allText.includes('corp only') || allText.includes('sole props')) {
+        return 'Sole Prop - Not accepted';
+    }
+    return null;
+}
+
+function checkWithholdRestrictions(lender, criteria) {
+    const maxWithhold = parseFloat(lender.max_withhold);
+    if (isNaN(maxWithhold) || maxWithhold === 0) return null;
+
+    let proposedWithhold = parseFloat(String(criteria.withholding || '').replace('%', ''));
+    if (isNaN(proposedWithhold)) return null;
+
+    if (proposedWithhold > maxWithhold) {
+        return `Withhold - Proposed ${proposedWithhold}% exceeds max ${maxWithhold}%`;
+    }
+    return null;
+}
+
+function checkBankingRequirements(lender, criteria) {
+    const minDeposits = parseFloat(lender.min_deposits);
+    const maxNegDays = parseFloat(lender.max_negative_days);
+
+    if (!isNaN(minDeposits) && criteria.depositsPerMonth && criteria.depositsPerMonth < minDeposits) {
+        return `Banking - Requires ${minDeposits}+ deposits per month`;
+    }
+
+    if (!isNaN(maxNegDays) && criteria.negativeDays && criteria.negativeDays > maxNegDays) {
+        return `Banking - Max ${maxNegDays} negative days allowed`;
+    }
+
+    return null;
+}
+
+function checkPreferredIndustry(lender, criteria) {
+    const preferredIndustries = (lender.preferred_industries || '').toLowerCase();
+    if (!preferredIndustries) return false;
+
+    const merchantIndustry = criteria.industry.toLowerCase().trim();
+    const preferredList = preferredIndustries.split(',').map(i => i.trim());
+
+    for (const preferred of preferredList) {
+        if (industryMatches(merchantIndustry, preferred)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ============================================
+// CHECK LENDER RULES (from lender_rules table)
+// ============================================
+
+function checkLenderRules(rules, criteria) {
+    const merchantIndustry = criteria.industry.toLowerCase().trim();
+    const merchantState = normalizeState(criteria.state);
+
+    // Industry type detection
+    const isTransportation = isIndustryType(merchantIndustry, ['trucking', 'transportation', 'logistics', 'freight']);
+    const isConstruction = isIndustryType(merchantIndustry, ['construction']);
+    const isAutoSales = isIndustryType(merchantIndustry, ['auto sales', 'car sales', 'vehicle sales', 'auto dealer', 'car dealer']);
+    const isAutoRepair = isIndustryType(merchantIndustry, ['auto repair', 'auto service', 'mechanic', 'automotive repair']);
+    const isStaffing = isIndustryType(merchantIndustry, ['staffing', 'recruiting', 'recruitment', 'employment agency']);
+    const isLandscaping = isIndustryType(merchantIndustry, ['landscaping', 'lawn care', 'landscape']);
+    const isHVAC = isIndustryType(merchantIndustry, ['hvac', 'plumbing', 'electrical', 'flooring', 'windows']);
+
+    for (const rule of rules) {
+        if (!rule.is_active) continue;
+
+        const ruleIndustry = (rule.industry || '').toLowerCase();
+        const ruleState = (rule.state || '').toLowerCase();
+
+        // Check if rule applies to this industry
+        let industryApplies = false;
+        if (ruleIndustry) {
+            if (ruleIndustry === 'trucking' || ruleIndustry === 'transportation') {
+                industryApplies = isTransportation;
+            } else if (ruleIndustry === 'construction') {
+                industryApplies = isConstruction;
+            } else if (ruleIndustry === 'auto sales') {
+                industryApplies = isAutoSales;
+            } else if (ruleIndustry === 'auto repair') {
+                industryApplies = isAutoRepair;
+            } else if (ruleIndustry === 'staffing') {
+                industryApplies = isStaffing;
+            } else if (ruleIndustry === 'landscaping') {
+                industryApplies = isLandscaping;
+            } else if (['hvac', 'plumbing', 'electrical', 'flooring', 'windows'].includes(ruleIndustry)) {
+                industryApplies = isHVAC || industryMatches(merchantIndustry, ruleIndustry);
+            } else {
+                industryApplies = industryMatches(merchantIndustry, ruleIndustry);
+            }
+        }
+
+        // Handle different rule types
+        switch (rule.rule_type) {
+            case 'state_industry_block':
+                // Block specific industry in specific state
+                if (industryApplies && ruleState && merchantState === ruleState) {
+                    return rule.decline_message || `${ruleIndustry} not accepted in ${ruleState.toUpperCase()}`;
+                }
+                break;
+
+            case 'sole_prop_state_block':
+                // Block sole props in specific state
+                if (criteria.isSoleProp && ruleState && merchantState === ruleState) {
+                    return rule.decline_message || `Sole props not accepted in ${ruleState.toUpperCase()}`;
+                }
+                break;
+
+            case 'state_requirement':
+                // State-specific requirements
+                if (ruleState && merchantState === ruleState) {
+                    if (rule.condition_field === 'monthly_revenue' && rule.condition_operator === 'min') {
+                        if (criteria.monthlyRevenue < rule.condition_value) {
+                            return rule.decline_message || `${ruleState.toUpperCase()} requires ${rule.condition_value.toLocaleString()} min revenue`;
+                        }
+                    }
+                }
+                break;
+
+            case 'industry_requirement':
+                // Industry-specific requirements
+                if (industryApplies) {
+                    const field = rule.condition_field;
+                    const op = rule.condition_operator;
+                    const value = parseFloat(rule.condition_value);
+
+                    if (field === 'monthly_revenue' && op === 'min' && criteria.monthlyRevenue < value) {
+                        return rule.decline_message;
+                    }
+                    if (field === 'tib' && op === 'min' && criteria.tib < value) {
+                        return rule.decline_message;
+                    }
+                    if (field === 'fico' && op === 'min' && criteria.fico < value) {
+                        return rule.decline_message;
+                    }
+                    if (field === 'position' && op === 'max' && criteria.requestedPosition > value) {
+                        return rule.decline_message;
+                    }
+                    if (field === 'position' && op === 'min' && criteria.requestedPosition < value) {
+                        return rule.decline_message;
+                    }
+                }
+                break;
+
+            case 'industry_position':
+                // Industry + position combo
+                if (industryApplies) {
+                    const op = rule.condition_operator;
+                    const value = parseFloat(rule.condition_value);
+
+                    if (op === 'min' && criteria.requestedPosition < value) {
+                        return rule.decline_message;
+                    }
+                    if (op === 'max' && criteria.requestedPosition > value) {
+                        return rule.decline_message;
+                    }
+                }
+                break;
+
+            case 'position_only':
+                // Position-only restriction (like "2nd position only")
+                if (rule.condition_operator === 'min' && criteria.requestedPosition < rule.condition_value) {
+                    return rule.decline_message;
+                }
+                break;
+
+            case 'position_requirement':
+                // Position-specific requirement (like "1st position needs 575 FICO")
+                if (rule.condition_field === 'fico' && criteria.requestedPosition === 1) {
+                    if (rule.condition_operator === 'min' && criteria.fico < rule.condition_value) {
+                        return rule.decline_message;
+                    }
+                }
+                break;
+        }
+    }
+
+    return null;
+}
+
+// ============================================
+// MAIN QUALIFICATION ROUTE
+// ============================================
+
+router.post('/qualify', async (req, res) => {
+    try {
+        const criteria = req.body;
+
+        // Validate required fields
+        if (!criteria.requestedPosition) {
+            return res.status(400).json({ error: 'Missing required field: requestedPosition' });
+        }
+
+        const db = getDatabase();
+
+        // Get all lenders
+        const lendersResult = await db.query(`
+            SELECT * FROM lenders
+            WHERE name IS NOT NULL AND name != ''
+        `);
+        const lenders = lendersResult.rows;
+
+        // Get all active rules
+        const rulesResult = await db.query(`
+            SELECT * FROM lender_rules WHERE is_active = true
+        `);
+        const allRules = rulesResult.rows;
+
+        // Group rules by lender
+        const rulesByLender = {};
+        for (const rule of allRules) {
+            const lenderName = (rule.lender_name || '').toLowerCase();
+            if (!rulesByLender[lenderName]) {
+                rulesByLender[lenderName] = [];
+            }
+            rulesByLender[lenderName].push(rule);
+        }
+
+        const qualifiedLenders = [];
+        const nonQualifiedLenders = [];
+        let autoDroppedCount = 0;
+
+        for (const lender of lenders) {
+            const lenderName = (lender.name || '').trim();
+            if (!lenderName || lenderName.length < 2) {
+                autoDroppedCount++;
+                continue;
+            }
+
+            let blockingRule = null;
+
+            // 1. Position check
+            blockingRule = checkPositionRestrictions(lender, criteria);
+
+            // 2. Get lender-specific rules and check them
+            if (!blockingRule) {
+                const lenderNameLower = lenderName.toLowerCase();
+                const lenderRules = [];
+
+                // Find matching rules (fuzzy match on first word)
+                for (const [ruleLenderName, rules] of Object.entries(rulesByLender)) {
+                    if (lenderNameLower.includes(ruleLenderName.split(' ')[0]) ||
+                        ruleLenderName.includes(lenderNameLower.split(' ')[0])) {
+                        lenderRules.push(...rules);
+                    }
+                }
+
+                if (lenderRules.length > 0) {
+                    blockingRule = checkLenderRules(lenderRules, criteria);
+                }
+            }
+
+            // 3. State restrictions
+            if (!blockingRule) blockingRule = checkStateRestrictions(lender, criteria);
+
+            // 4. Sole prop check
+            if (!blockingRule && criteria.isSoleProp) blockingRule = checkSoleProp(lender, criteria);
+
+            // 5. Non-profit check
+            if (!blockingRule && criteria.isNonProfit) blockingRule = checkNonProfit(lender, criteria);
+
+            // 6. Mercury bank check
+            if (!blockingRule) blockingRule = checkMercuryBank(lender, criteria);
+
+            // 7. Industry restrictions
+            if (!blockingRule) blockingRule = checkIndustryRestrictions(lender, criteria);
+
+            // 8. Minimum requirements
+            if (!blockingRule) blockingRule = checkMinimumRequirements(lender, criteria);
+
+            // 9. Banking requirements
+            if (!blockingRule) blockingRule = checkBankingRequirements(lender, criteria);
+
+            // 10. Withhold restrictions
+            if (!blockingRule) blockingRule = checkWithholdRestrictions(lender, criteria);
+
+            // Classify lender
+            if (blockingRule) {
+                nonQualifiedLenders.push({
+                    lender: lenderName,
+                    blockingRule: blockingRule
+                });
+            } else {
+                const isPreferred = checkPreferredIndustry(lender, criteria);
+                qualifiedLenders.push({
+                    ...lender,
+                    isPreferred: isPreferred
+                });
+            }
+        }
+
+        // Sort qualified by tier
+        qualifiedLenders.sort((a, b) => {
+            const tierOrder = { 'A': 1, 'B': 2, 'C': 3 };
+            const tierA = tierOrder[a.tier] || 999;
+            const tierB = tierOrder[b.tier] || 999;
+            if (tierA !== tierB) return tierA - tierB;
+            if (a.isPreferred && !b.isPreferred) return -1;
+            if (!a.isPreferred && b.isPreferred) return 1;
+            return 0;
+        });
+
+        // Return results
+        res.json({
+            qualified: qualifiedLenders,
+            nonQualified: nonQualifiedLenders,
+            autoDropped: autoDroppedCount,
+            summary: {
+                totalProcessed: lenders.length,
+                qualified: qualifiedLenders.length,
+                nonQualified: nonQualifiedLenders.length,
+                autoDropped: autoDroppedCount
+            },
+            criteria: criteria
+        });
+
+    } catch (error) {
+        console.error('Qualification error:', error);
+        res.status(500).json({ error: 'Failed to qualify lenders', details: error.message });
+    }
+});
+
+module.exports = router;
