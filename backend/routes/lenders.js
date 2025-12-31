@@ -575,6 +575,7 @@ router.post('/log-response', async (req, res) => {
             conversation_id,
             lender_name,
             status,
+            position,
             offer_amount,
             offer_rate,
             offer_term,
@@ -603,40 +604,43 @@ router.post('/log-response', async (req, res) => {
             // Update existing submission
             result = await db.query(`
                 UPDATE lender_submissions SET
-                    status = $2,
-                    offer_amount = $3,
-                    factor_rate = $4,
-                    term_length = $5,
-                    decline_reason = $6,
+                    status = $1,
+                    position = COALESCE($2, position),
+                    offer_amount = COALESCE($3, offer_amount),
+                    factor_rate = COALESCE($4, factor_rate),
+                    term_length = COALESCE($5, term_length),
+                    decline_reason = COALESCE($6, decline_reason),
                     offer_details = COALESCE(offer_details, '{}')::jsonb || $7::jsonb,
                     last_response_at = NOW()
-                WHERE id = $1
+                WHERE id = $8
                 RETURNING *
             `, [
-                existing.rows[0].id,
                 status,
+                position ? parseInt(position) : null,
                 offer_amount ? parseFloat(offer_amount) : null,
                 offer_rate ? parseFloat(offer_rate) : null,
                 offer_term ? parseInt(offer_term) : null,
                 decline_reason || null,
-                JSON.stringify({ manual_notes: notes, logged_manually: true, logged_at: new Date() })
+                JSON.stringify({ manual_notes: notes, logged_manually: true, logged_at: new Date() }),
+                existing.rows[0].id
             ]);
             console.log(`✅ Updated lender response: ${lender_name} -> ${status}`);
         } else {
             // Create new submission record
             result = await db.query(`
                 INSERT INTO lender_submissions (
-                    id, conversation_id, lender_name, status,
+                    id, conversation_id, lender_name, status, position,
                     offer_amount, factor_rate, term_length,
                     decline_reason, offer_details,
                     submitted_at, last_response_at, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), NOW())
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW(), NOW())
                 RETURNING *
             `, [
                 uuidv4(),
                 conversation_id,
                 lender_name,
                 status,
+                position ? parseInt(position) : null,
                 offer_amount ? parseFloat(offer_amount) : null,
                 offer_rate ? parseFloat(offer_rate) : null,
                 offer_term ? parseInt(offer_term) : null,
@@ -647,7 +651,7 @@ router.post('/log-response', async (req, res) => {
         }
 
         // If offer was logged, update conversation has_offer flag
-        if (status === 'approved' || status === 'offer') {
+        if (status === 'approved' || status === 'offer' || status === 'APPROVED' || status === 'OFFER' || status === 'FUNDED') {
             await db.query(`
                 UPDATE conversations SET has_offer = TRUE, last_activity = NOW()
                 WHERE id = $1
@@ -659,7 +663,8 @@ router.post('/log-response', async (req, res) => {
             global.io.to(`conversation_${conversation_id}`).emit('lender_response_logged', {
                 conversation_id,
                 lender_name,
-                status
+                status,
+                position
             });
         }
 

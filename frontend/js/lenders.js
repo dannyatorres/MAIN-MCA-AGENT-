@@ -1814,11 +1814,13 @@ Best regards`;
 
         // Reset form
         document.getElementById('responseStatus').value = '';
+        const positionEl = document.getElementById('responsePosition');
         const offerAmountEl = document.getElementById('responseOfferAmount');
         const factorRateEl = document.getElementById('responseFactorRate');
         const termLengthEl = document.getElementById('responseTermLength');
         const declineReasonEl = document.getElementById('responseDeclineReason');
 
+        if (positionEl) positionEl.value = '';
         if (offerAmountEl) offerAmountEl.value = '';
         if (factorRateEl) factorRateEl.value = '';
         if (termLengthEl) termLengthEl.value = '';
@@ -1884,10 +1886,12 @@ Best regards`;
         const lenderName = modal.dataset.lenderName;
         const conversationId = this.parent.getCurrentConversationId();
 
+        const positionVal = document.getElementById('responsePosition')?.value;
         const responseData = {
             conversation_id: conversationId,
             lender_name: lenderName,
             status: document.getElementById('responseStatus').value,
+            position: positionVal ? parseInt(positionVal) : null,
             offer_amount: document.getElementById('responseOfferAmount')?.value || null,
             offer_rate: document.getElementById('responseFactorRate')?.value || null,
             offer_term: document.getElementById('responseTermLength')?.value || null,
