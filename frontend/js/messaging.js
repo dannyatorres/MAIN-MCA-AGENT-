@@ -1,4 +1,4 @@
-// messaging.js - Fixed version with event delegation
+// messaging.js - Robust Deduplication Version
 
 class MessagingModule {
     constructor(parent) {
@@ -7,6 +7,10 @@ class MessagingModule {
         this.utils = parent.utils;
         this.templates = parent.templates;
         this.messageCache = new Map();
+
+        // NEW: Track pending messages in memory to prevent duplicates
+        this.pendingMessages = [];
+
         this.isSending = false;
         this.lastSendTime = 0;
         this.init();
@@ -18,79 +22,52 @@ class MessagingModule {
     }
 
     // ============================================================
-    // EVENT LISTENERS - Using delegation (attach once, works always)
+    // EVENT LISTENERS
     // ============================================================
 
     setupEventListeners() {
-        // Use document-level delegation - only attach ONCE ever
         if (window._messagingEventsAttached) return;
         window._messagingEventsAttached = true;
 
         console.log('🔧 Attaching messaging event listeners (delegation)');
 
-        // ENTER KEY - Capture at document level
         document.addEventListener('keydown', (e) => {
             const input = document.getElementById('messageInput');
-            if (!input) return;
-            if (document.activeElement !== input) return;
-
+            if (!input || document.activeElement !== input) return;
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 this.sendMessage();
             }
         });
 
-        // SEND BUTTON - Delegation
         document.addEventListener('click', (e) => {
-            const btn = e.target.closest('#sendMessageBtn');
-            if (btn) {
+            if (e.target.closest('#sendMessageBtn')) {
                 e.preventDefault();
                 this.sendMessage();
             }
-        });
-
-        // ATTACHMENT BUTTON
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('#attachmentBtn');
-            if (btn) {
+            if (e.target.closest('#attachmentBtn')) {
                 document.getElementById('fileInput')?.click();
             }
+            const aiBtn = e.target.closest('#aiToggleBtn');
+            if (aiBtn) {
+                this.toggleAI(aiBtn.dataset.state !== 'on');
+            }
         });
 
-        // FILE INPUT CHANGE
         document.addEventListener('change', (e) => {
-            if (e.target.id === 'fileInput') {
-                this.handleFileUpload(e);
-            }
-        });
-
-        // AI TOGGLE
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('#aiToggleBtn');
-            if (btn) {
-                const isCurrentlyOn = btn.dataset.state === 'on';
-                this.toggleAI(!isCurrentlyOn);
-            }
+            if (e.target.id === 'fileInput') this.handleFileUpload(e);
         });
 
         console.log('✅ Messaging listeners ready');
     }
 
     // ============================================================
-    // SEND MESSAGE - Optimistic UI
+    // SEND MESSAGE
     // ============================================================
 
     async sendMessage(textOverride = null, mediaUrl = null) {
-        // INSTANT BLOCK - No async, no delay
         const now = Date.now();
-        if (now - this.lastSendTime < 500) {
-            console.log('⚠️ Blocked: Too fast');
-            return;
-        }
-        if (this.isSending) {
-            console.log('⚠️ Blocked: Already sending');
-            return;
-        }
+        if (now - this.lastSendTime < 500 || this.isSending) return;
 
         this.lastSendTime = now;
         this.isSending = true;
@@ -104,13 +81,20 @@ class MessagingModule {
             return;
         }
 
-        // Clear input IMMEDIATELY (feels responsive)
-        if (input && textOverride === null) {
-            input.value = '';
-        }
+        if (input && textOverride === null) input.value = '';
 
-        // OPTIMISTIC UI: Show message immediately with temp ID
         const tempId = `temp-${Date.now()}`;
+
+        // 1. REGISTER PENDING MESSAGE (The Fix)
+        // Store the clean text and tempID in memory
+        const cleanText = content.replace(/\s+/g, '');
+        this.pendingMessages.push({
+            tempId: tempId,
+            text: cleanText,
+            conversationId: String(convId),
+            timestamp: Date.now()
+        });
+
         const optimisticMessage = {
             id: tempId,
             conversation_id: convId,
@@ -124,10 +108,8 @@ class MessagingModule {
             status: 'sending'
         };
 
-        // Show it NOW
         this.addMessage(optimisticMessage);
 
-        // Fire and forget - don't await
         this.parent.apiCall(`/api/conversations/${convId}/messages`, {
             method: 'POST',
             body: JSON.stringify({
@@ -138,13 +120,11 @@ class MessagingModule {
             })
         }).then(res => {
             if (res?.message) {
-                // Replace temp message with real one
                 this.replaceTempMessage(tempId, res.message);
                 this.parent.conversationUI?.updateConversationPreview(convId, res.message);
             }
         }).catch(e => {
             console.error('Send failed:', e);
-            // Mark message as failed
             this.markMessageFailed(tempId);
             this.parent.utils?.showNotification('Failed to send', 'error');
         });
@@ -152,8 +132,10 @@ class MessagingModule {
         this.isSending = false;
     }
 
-    // Helper: Replace temp message with real one
     replaceTempMessage(tempId, realMessage) {
+        // Clean up memory array
+        this.removePendingMessage(tempId);
+
         const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
         if (tempEl) {
             tempEl.setAttribute('data-message-id', realMessage.id);
@@ -161,25 +143,27 @@ class MessagingModule {
             tempEl.classList.add('sent');
         }
 
-        // Update cache
         const convId = String(realMessage.conversation_id);
         if (this.messageCache.has(convId)) {
             const messages = this.messageCache.get(convId);
             const idx = messages.findIndex(m => m.id === tempId);
-            if (idx !== -1) {
-                messages[idx] = realMessage;
-            }
+            if (idx !== -1) messages[idx] = realMessage;
         }
     }
 
-    // Helper: Mark message as failed
     markMessageFailed(tempId) {
+        this.removePendingMessage(tempId); // Stop tracking failed messages
         const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
         if (tempEl) {
             tempEl.classList.remove('sending');
             tempEl.classList.add('failed');
             tempEl.title = 'Failed to send - click to retry';
         }
+    }
+
+    // Helper to clean array
+    removePendingMessage(tempId) {
+        this.pendingMessages = this.pendingMessages.filter(p => p.tempId !== tempId);
     }
 
     // ============================================================
@@ -231,6 +215,8 @@ class MessagingModule {
         try {
             const data = await this.parent.apiCall(`/api/conversations/${convId}/messages`);
             this.messageCache.set(convId, data || []);
+            // Clear pending messages for this chat on reload
+            this.pendingMessages = this.pendingMessages.filter(p => p.conversationId !== convId);
 
             if (String(this.parent.getCurrentConversationId()) === convId) {
                 this.renderMessages(data || []);
@@ -254,51 +240,49 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 
-        // 1. Check for exact ID match (prevents re-adding known real messages)
+        // 1. Strict ID Check: If this specific ID is already on screen, stop.
         if (container.querySelector(`.message[data-message-id="${message.id}"]`)) return;
 
-        // 2. CHECK FOR DUPLICATE OUTBOUND (The Fix)
-        // If this is an outbound message, look specifically for "temporary" messages we haven't confirmed yet
+        // 2. MEMORY MERGE CHECK (The Robust Fix)
+        // Check if this incoming message matches a pending one in our memory array
         if (message.direction === 'outbound' || message.sender_type === 'user') {
+            const incomingClean = (message.content || message.message_content || '').replace(/\s+/g, '');
+            const convId = String(message.conversation_id);
 
-            // Only look at messages that are still in "sending" state or have temp IDs
-            const tempMessages = container.querySelectorAll('.message[data-message-id^="temp-"], .message.sending');
+            // Find matching pending message in memory
+            const pendingIndex = this.pendingMessages.findIndex(p =>
+                p.text === incomingClean &&
+                p.conversationId === convId
+            );
 
-            // Normalize text for comparison (remove ALL whitespace to ensure match)
-            const incomingText = (message.content || message.message_content || '').replace(/\s+/g, '');
-            const msgTime = new Date(message.created_at).getTime();
-            const now = Date.now();
+            if (pendingIndex !== -1) {
+                const pending = this.pendingMessages[pendingIndex];
+                console.log('🔄 Merging WebSocket echo via Memory Match');
 
-            for (const el of tempMessages) {
-                const contentEl = el.querySelector('.message-content, .message-text');
-                if (!contentEl) continue;
+                // Remove from pending list (we found it!)
+                this.pendingMessages.splice(pendingIndex, 1);
 
-                // Get DOM text and strip all whitespace/newlines
-                const domText = contentEl.textContent.replace(/\s+/g, '');
+                // Find the DOM element using the tempId we stored
+                const el = container.querySelector(`.message[data-message-id="${pending.tempId}"]`);
 
-                if (domText === incomingText) {
-                    // Double check it's recent (within 10 seconds)
-                    if (now - msgTime < 10000) {
-                        console.log('🔄 Merging WebSocket echo with Optimistic message');
+                if (el) {
+                    // Convert Temp Bubble -> Real Bubble
+                    el.setAttribute('data-message-id', message.id);
+                    el.classList.remove('sending');
+                    el.classList.add('sent');
 
-                        // Update the temp message with real ID
-                        el.setAttribute('data-message-id', message.id);
-                        el.classList.remove('sending');
-                        el.classList.add('sent');
-
-                        // Update cache so we don't lose the real ID
-                        const convId = String(message.conversation_id);
-                        if (this.messageCache.has(convId)) {
-                            const cache = this.messageCache.get(convId);
-                            // Find the temp entry in cache and update it
-                            const cachedMsg = cache.find(m => m.id === el.getAttribute('data-temp-id') || m.id.startsWith('temp-'));
-                            if (cachedMsg) {
-                                cachedMsg.id = message.id;
-                                cachedMsg.status = 'sent';
-                            }
+                    // Update cache
+                    if (this.messageCache.has(convId)) {
+                        const cache = this.messageCache.get(convId);
+                        const cachedMsg = cache.find(m => m.id === pending.tempId);
+                        if (cachedMsg) {
+                            cachedMsg.id = message.id;
+                            cachedMsg.status = 'sent';
+                        } else {
+                            cache.push(message);
                         }
-                        return; // STOP here, do not add the new bubble
                     }
+                    return; // STOP here. Do not create a duplicate bubble.
                 }
             }
         }
@@ -314,7 +298,6 @@ class MessagingModule {
 
         const convId = String(message.conversation_id);
         if (this.messageCache.has(convId)) {
-            // Avoid pushing duplicates to cache
             const cache = this.messageCache.get(convId);
             if (!cache.find(m => m.id === message.id)) {
                 cache.push(message);
@@ -344,13 +327,10 @@ class MessagingModule {
         try {
             const formData = new FormData();
             formData.append('file', file);
-
             const response = await fetch('/api/messages/upload', { method: 'POST', body: formData });
             const data = await response.json();
 
-            if (data.url) {
-                await this.sendMessage(null, data.url);
-            }
+            if (data.url) await this.sendMessage(null, data.url);
         } catch (error) {
             console.error('Upload error:', error);
             alert('Failed to upload image');
