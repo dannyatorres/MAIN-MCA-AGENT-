@@ -148,8 +148,9 @@ class ConversationCore {
                 this.conversations.set(conv.id, conv);
             });
 
-            // RENDER (No filtering here anymore!)
-            this.renderConversationsList();
+            // RENDER WITHOUT LOCAL FILTERING
+            // We pass 'true' to tell the renderer "The server already filtered this"
+            this.renderConversationsList(!!searchTerm);
 
         } catch (error) {
             console.error('Error in loadConversations:', error);
@@ -247,32 +248,39 @@ class ConversationCore {
     // 4. RENDERING
     // ============================================================
 
-    renderConversationsList() {
+    renderConversationsList(isServerSearch = false) {
         const container = document.getElementById('conversationsList');
         if (!container) return;
 
         const conversations = Array.from(this.conversations.values());
 
         // --- Filters ---
-        const searchTerm = document.getElementById('searchInput')?.value.trim().toLowerCase();
-        const stateFilter = document.getElementById('stateFilter')?.value;
-
         let visible = conversations;
-        if (stateFilter) {
-            if (stateFilter === 'INTERESTED') {
-                visible = visible.filter(c => c.has_response);
-            } else if (stateFilter === 'UNREAD') {
-                visible = visible.filter(c => c.unread_count > 0);
-            } else {
-                visible = visible.filter(c => c.current_step === stateFilter);
+
+        // ONLY filter locally if we didn't just run a server search
+        // This prevents the "Invisible Data" bug
+        if (!isServerSearch) {
+            const searchTerm = document.getElementById('searchInput')?.value.trim().toLowerCase();
+            const stateFilter = document.getElementById('stateFilter')?.value;
+
+            if (stateFilter) {
+                if (stateFilter === 'INTERESTED') {
+                    visible = visible.filter(c => c.has_response);
+                } else if (stateFilter === 'UNREAD') {
+                    visible = visible.filter(c => c.unread_count > 0);
+                } else {
+                    visible = visible.filter(c => c.current_step === stateFilter);
+                }
             }
-        }
-        if (searchTerm && searchTerm.length >= 2) {
-            visible = visible.filter(c =>
-                (c.business_name || '').toLowerCase().includes(searchTerm) ||
-                (c.lead_phone || '').includes(searchTerm) ||
-                (c.first_name || '').toLowerCase().includes(searchTerm)
-            );
+
+            // Basic fallback local search (only runs if server search wasn't triggered)
+            if (searchTerm && searchTerm.length >= 2) {
+                visible = visible.filter(c =>
+                    (c.business_name || '').toLowerCase().includes(searchTerm) ||
+                    (c.lead_phone || '').includes(searchTerm) ||
+                    (c.first_name || '').toLowerCase().includes(searchTerm)
+                );
+            }
         }
 
         // --- Sort by activity (Newest first) ---
@@ -286,7 +294,7 @@ class ConversationCore {
 
         let html = visible.map(conv => this.generateConversationHTML(conv)).join('');
 
-        if (this.hasMoreConversations && !searchTerm) {
+        if (this.hasMoreConversations) {
             html += `<div class="list-limit-message"><button class="btn-load-more" id="loadMoreBtn">Load More Leads</button></div>`;
         }
 
@@ -569,10 +577,12 @@ class ConversationCore {
             searchInput.addEventListener('input', (e) => {
                 clearTimeout(this.searchTimeout);
                 this.searchTimeout = setTimeout(() => {
-                    // Reload from server with reset=true
+                    // CRITICAL: Force a server reload with reset=true
                     this.loadConversations(true);
-                }, 500); // Increased debounce to 500ms to save server load
+                }, 600); // 600ms delay to wait for you to finish typing
             });
+
+            // Handle "X" button in search field
             searchInput.addEventListener('search', (e) => {
                 if (e.target.value === '') this.loadConversations(true);
             });
