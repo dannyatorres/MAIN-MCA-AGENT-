@@ -1888,57 +1888,73 @@ Best regards`;
     }
 
     async saveLenderResponse() {
-        const modal = document.getElementById('lenderResponseModal');
-        const lenderName = modal.dataset.lenderName;
-        const conversationId = this.parent.getCurrentConversationId();
+        const conversationId = document.getElementById('responseConversationId')?.value || this.parent.getCurrentConversationId();
+        const lenderName = document.getElementById('responseLenderDisplay')?.value || document.getElementById('lenderResponseModal')?.dataset.lenderName;
+        const status = document.getElementById('responseStatus').value;
 
-        const positionVal = document.getElementById('responsePosition')?.value;
-        const existingPositions = document.getElementById('responseExistingPositions')?.value;
-        const dailyWithhold = document.getElementById('responseDailyWithhold')?.value;
-        const daysIntoStack = document.getElementById('responseDaysIntoStack')?.value;
-
-        const responseData = {
-            conversation_id: conversationId,
-            lender_name: lenderName,
-            status: document.getElementById('responseStatus').value,
-            position: positionVal ? parseInt(positionVal) : null,
-            existing_positions_count: existingPositions ? parseInt(existingPositions) : null,
-            total_daily_withhold: dailyWithhold ? parseFloat(dailyWithhold) : null,
-            days_into_stack: daysIntoStack ? parseInt(daysIntoStack) : null,
-            offer_amount: document.getElementById('responseOfferAmount')?.value || null,
-            offer_rate: document.getElementById('responseFactorRate')?.value || null,
-            offer_term: document.getElementById('responseTermLength')?.value || null,
-            decline_reason: document.getElementById('responseDeclineReason')?.value || null,
-            notes: null  // No notes field in current HTML
-        };
-
-        if (!responseData.status) {
-            this.parent.showToast('Please select a response status', 'error');
+        if (!status) {
+            this.utils.showNotification('Please select a status', 'warning');
             return;
         }
 
+        const data = {
+            conversation_id: conversationId,
+            lender_name: lenderName,
+            status: status
+        };
+
+        // Add position
+        const position = document.getElementById('responsePosition')?.value;
+        if (position) data.position = parseInt(position);
+
+        // Add stack info
+        const existingPositions = document.getElementById('responseExistingPositions')?.value;
+        const dailyWithhold = document.getElementById('responseDailyWithhold')?.value;
+        const daysIntoStack = document.getElementById('responseDaysIntoStack')?.value;
+        if (existingPositions) data.existing_positions_count = parseInt(existingPositions);
+        if (dailyWithhold) data.total_daily_withhold = parseFloat(dailyWithhold);
+        if (daysIntoStack) data.days_into_stack = parseInt(daysIntoStack);
+
+        // Add offer fields if applicable
+        if (['OFFER', 'APPROVED', 'FUNDED'].includes(status)) {
+            const amount = document.getElementById('responseOfferAmount')?.value;
+            const factor = document.getElementById('responseFactorRate')?.value;
+            const term = document.getElementById('responseTermLength')?.value;
+            const termUnit = document.getElementById('responseTermUnit')?.value;
+            const frequency = document.getElementById('responsePaymentFrequency')?.value;
+
+            if (amount) data.offer_amount = parseFloat(amount);
+            if (factor) data.factor_rate = parseFloat(factor);
+            if (term) data.term_length = parseInt(term);
+            if (termUnit) data.term_unit = termUnit;
+            if (frequency) data.payment_frequency = frequency;
+        }
+
+        // Add decline reason if applicable
+        if (status === 'DECLINED') {
+            const reason = document.getElementById('responseDeclineReason')?.value;
+            if (reason) data.decline_reason = reason;
+        }
+
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/lenders/log-response`, {
+            // Use apiCall - handles auth automatically
+            const result = await this.parent.apiCall('/api/lenders/log-response', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(responseData)
+                body: JSON.stringify(data)
             });
 
-            const result = await response.json();
-
             if (result.success) {
-                modal.classList.add('hidden');
-                modal.classList.remove('active');
-                this.parent.showToast(`Response logged for ${lenderName}`, 'success');
+                this.utils.showNotification('Response logged successfully', 'success');
+                document.getElementById('lenderResponseModal').classList.add('hidden');
 
                 // Update the lender tag to show the response
-                this.updateLenderTagWithResponse(lenderName, responseData.status);
+                this.updateLenderTagWithResponse(lenderName, status);
             } else {
-                this.parent.showToast(result.error || 'Failed to save response', 'error');
+                throw new Error(result.error || 'Failed to save');
             }
         } catch (err) {
             console.error('Error saving lender response:', err);
-            this.parent.showToast('Failed to save response', 'error');
+            this.utils.showNotification('Failed to save response: ' + err.message, 'error');
         }
     }
 
