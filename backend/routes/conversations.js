@@ -217,13 +217,9 @@ router.get('/:id', async (req, res) => {
         // Check if id is numeric (display_id) or UUID
         const isNumeric = /^\d+$/.test(id);
 
-        // Get conversation with all details
+        // Get conversation with all details (all data now in conversations table)
         const query = `
-            SELECT c.*, ld.business_type, ld.annual_revenue, ld.business_start_date,
-                   ld.funding_amount, ld.factor_rate, ld.funding_date, ld.term_months,
-                   ld.campaign, ld.date_of_birth, ld.tax_id_encrypted as tax_id, ld.ssn_encrypted as ssn
-            FROM conversations c
-            LEFT JOIN lead_details ld ON c.id = ld.conversation_id
+            SELECT * FROM conversations c
             WHERE ${isNumeric ? 'c.display_id = $1' : 'c.id = $1'}
         `;
 
@@ -391,56 +387,7 @@ router.post('/', async (req, res) => {
             newId = insertResult.rows[0].id;
         }
 
-        console.log(`✅ Step 1: Conversation ${isUpdate ? 'updated' : 'created'}: ${newId}`);
-
-        // --- 4. INSERT INTO LEAD_DETAILS ---
-        await db.query(`
-            INSERT INTO lead_details (
-                conversation_id,
-                tax_id_encrypted, business_start_date, business_type,
-                annual_revenue, funding_amount,
-                ssn_encrypted, date_of_birth,
-                owner_ownership_percent, owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
-                owner2_first_name, owner2_last_name,
-                owner2_email, owner2_phone,
-                owner2_ssn, owner2_dob,
-                owner2_ownership_percent,
-                owner2_address, owner2_city, owner2_state, owner2_zip,
-                created_at
-            )
-            VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24,
-                NOW()
-            )
-        `, [
-            newId,
-            data.tax_id || data.federalTaxId || null,
-            data.business_start_date || data.businessStartDate || null,
-            data.business_type || data.industryType || null,
-            data.annual_revenue || data.annualRevenue || null,
-            data.funding_amount || data.requestedAmount || null,
-            data.ssn || data.ownerSSN || null,
-            data.date_of_birth || data.ownerDOB || null,
-            data.ownership_percent || data.ownerPercent || data.ownershipPercent || null,
-            data.owner_home_address || data.ownerHomeAddress || null,
-            data.owner_home_city || data.ownerHomeCity || null,
-            data.owner_home_state || data.ownerHomeState || null,
-            data.owner_home_zip || data.ownerHomeZip || null,
-            data.owner2_first_name || data.owner2FirstName || null,
-            data.owner2_last_name || data.owner2LastName || null,
-            data.owner2_email || data.owner2Email || null,
-            data.owner2_phone || data.owner2Phone || null,
-            data.owner2_ssn || data.owner2SSN || null,
-            data.owner2_dob || data.owner2DOB || null,
-            data.owner2_ownership_percent || data.owner2OwnershipPercent || null,
-            data.owner2_address || data.owner2HomeAddress || null,
-            data.owner2_city || data.owner2HomeCity || null,
-            data.owner2_state || data.owner2HomeState || null,
-            data.owner2_zip || data.owner2HomeZip || null
-        ]);
-
-        console.log(`✅ Step 2: Lead Details saved for ${newId}`);
+        console.log(`✅ Conversation ${isUpdate ? 'updated' : 'created'}: ${newId}`);
 
         // --- 5. RETURN SUCCESS (FIXED) ---
         const finalConversation = await db.query('SELECT * FROM conversations WHERE id = $1', [newId]);
@@ -473,16 +420,27 @@ router.put('/:id', async (req, res) => {
             if (updates[key] === '') updates[key] = null;
         });
 
-        // 2. Define Field Mappings
-        // Fields that belong to the 'conversations' table
-        const convFields = [
-            'business_name', 'state', 'priority', 'first_name', 'last_name',
-            'email', 'address', 'city', 'us_state', 'zip', 'lead_phone', 'cell_phone',
-            'credit_score', 'recent_funding', 'funding_status', 'lead_source', 'notes'
-        ];
+        // 2. Define Field Mappings (all fields now in conversations table)
+        const fieldMap = {
+            // Core fields (direct mapping)
+            'business_name': 'business_name',
+            'state': 'state',
+            'priority': 'priority',
+            'first_name': 'first_name',
+            'last_name': 'last_name',
+            'email': 'email',
+            'address': 'address',
+            'city': 'city',
+            'us_state': 'us_state',
+            'zip': 'zip',
+            'lead_phone': 'lead_phone',
+            'cell_phone': 'cell_phone',
+            'credit_score': 'credit_score',
+            'recent_funding': 'recent_funding',
+            'funding_status': 'funding_status',
+            'lead_source': 'lead_source',
+            'notes': 'notes',
 
-        // Fields that belong to the 'lead_details' table
-        const detailFields = {
             // Financials
             'annual_revenue': 'annual_revenue',
             'annualRevenue': 'annual_revenue',
@@ -495,15 +453,16 @@ router.put('/:id', async (req, res) => {
             'businessStartDate': 'business_start_date',
             'business_type': 'business_type',
             'industry': 'business_type',
-            'tax_id': 'tax_id_encrypted',
-            'federalTaxId': 'tax_id_encrypted',
+            'tax_id': 'tax_id',
+            'federalTaxId': 'tax_id',
 
             // Owner 1
-            'ssn': 'ssn_encrypted',
-            'ownerSSN': 'ssn_encrypted',
+            'ssn': 'ssn',
+            'ownerSSN': 'ssn',
             'date_of_birth': 'date_of_birth',
             'ownerDOB': 'date_of_birth',
             'owner_ownership_percent': 'owner_ownership_percent',
+            'ownershipPercent': 'owner_ownership_percent',
             'owner_home_address': 'owner_home_address',
             'ownerHomeAddress': 'owner_home_address',
             'owner_home_city': 'owner_home_city',
@@ -520,28 +479,19 @@ router.put('/:id', async (req, res) => {
             'owner2_phone': 'owner2_phone',
             'owner2_ssn': 'owner2_ssn',
             'owner2_dob': 'owner2_dob',
+            'owner2_ownership_percent': 'owner2_ownership_percent',
             'owner2_address': 'owner2_address',
             'owner2_city': 'owner2_city',
             'owner2_state': 'owner2_state',
             'owner2_zip': 'owner2_zip'
         };
 
-        // 3. Separate the Updates
+        // 3. Build Updates (all go to conversations table now)
         const convUpdates = {};
-        const detailUpdates = {};
 
         for (const [key, value] of Object.entries(updates)) {
-            // Check Conversations Table
-            if (convFields.includes(key)) {
-                convUpdates[key] = value;
-            }
-            // Check Lead Details Table (using map for camelCase support)
-            else if (detailFields[key]) {
-                detailUpdates[detailFields[key]] = value;
-            }
-            // Allow direct snake_case pass-through for details if not in map but valid
-            else if (key.startsWith('owner_') || key.startsWith('business_')) {
-                 // specific fallback if needed, or ignore
+            if (fieldMap[key]) {
+                convUpdates[fieldMap[key]] = value;
             }
         }
 
@@ -556,32 +506,6 @@ router.put('/:id', async (req, res) => {
                 WHERE id = $1
             `, values);
             console.log(`✅ Updated conversations table (${Object.keys(convUpdates).length} fields)`);
-        }
-
-        // 5. Update 'lead_details' Table
-        if (Object.keys(detailUpdates).length > 0) {
-            const setClauses = Object.keys(detailUpdates).map((k, i) => `${k} = $${i + 2}`);
-            const values = [id, ...Object.values(detailUpdates)];
-
-            // Try UPDATE first
-            const result = await db.query(`
-                UPDATE lead_details
-                SET ${setClauses.join(', ')}
-                WHERE conversation_id = $1
-                RETURNING conversation_id
-            `, values);
-
-            // If no row existed, INSERT it (Upsert logic)
-            if (result.rowCount === 0) {
-                console.log('⚠️ No lead_details found, inserting new record...');
-                const cols = ['conversation_id', ...Object.keys(detailUpdates)];
-                const placeholders = cols.map((_, i) => `$${i + 1}`);
-                await db.query(`
-                    INSERT INTO lead_details (${cols.join(', ')}, created_at)
-                    VALUES (${placeholders.join(', ')}, NOW())
-                `, [id, ...Object.values(detailUpdates)]);
-            }
-            console.log(`✅ Updated lead_details table (${Object.keys(detailUpdates).length} fields)`);
         }
 
         // Return updated object
@@ -645,15 +569,7 @@ router.post('/bulk-delete', async (req, res) => {
             console.error('❌ Error deleting messages:', err.message);
         }
 
-        try {
-            await db.query(
-                `DELETE FROM lead_details WHERE conversation_id IN (${placeholders})`,
-                conversationIds
-            );
-            console.log('✅ Lead details deleted');
-        } catch (err) {
-            console.error('❌ Error deleting lead_details:', err.message);
-        }
+        // lead_details table no longer used - data is in conversations table
 
         // Delete FCS results
         try {

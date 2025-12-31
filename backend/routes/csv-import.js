@@ -258,23 +258,7 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     }
                 });
 
-                if (detailValues.length > 0) {
-                    const detailsQuery = `
-                        INSERT INTO lead_details (
-                            conversation_id, annual_revenue, business_start_date, date_of_birth,
-                            tax_id_encrypted, ssn_encrypted, business_type, funding_amount, created_at
-                        ) VALUES ${detailPlaceholders.join(', ')}
-                        ON CONFLICT (conversation_id) DO UPDATE SET
-                        tax_id_encrypted = EXCLUDED.tax_id_encrypted,
-                        ssn_encrypted = EXCLUDED.ssn_encrypted,
-                        annual_revenue = EXCLUDED.annual_revenue,
-                        business_type = EXCLUDED.business_type,
-                        funding_amount = EXCLUDED.funding_amount,
-                        business_start_date = EXCLUDED.business_start_date,
-                        date_of_birth = EXCLUDED.date_of_birth
-                    `;
-                    await db.query(detailsQuery, detailValues);
-                }
+                // Lead details now stored directly in conversations table (no separate insert needed)
 
                 importedCount += batch.length;
             }
