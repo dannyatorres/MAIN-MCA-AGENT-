@@ -118,11 +118,13 @@ class ConversationCore {
         this.isLoadingMore = true;
 
         try {
+            // GET SEARCH TERM
+            const searchTerm = document.getElementById('searchInput')?.value.trim() || '';
+
             if (reset) {
                 this.conversations.clear();
                 this.paginationOffset = 0;
                 this.hasMoreConversations = true;
-                // NOTE: We do NOT clear this.unreadCounts here. We keep them!
             }
 
             if (!this.hasMoreConversations) {
@@ -131,20 +133,22 @@ class ConversationCore {
             }
 
             const stateFilter = document.getElementById('stateFilter')?.value || '';
+
+            // BUILD URL WITH SEARCH PARAM
             let url = `/api/conversations?limit=${this.pageSize}&offset=${this.paginationOffset}`;
-            if (stateFilter) {
-                url += `&filter=${encodeURIComponent(stateFilter)}`;
-            }
+            if (stateFilter) url += `&filter=${encodeURIComponent(stateFilter)}`;
+            if (searchTerm)  url += `&search=${encodeURIComponent(searchTerm)}`;
+
             const conversations = await this.parent.apiCall(url);
 
             if (conversations.length < this.pageSize) this.hasMoreConversations = false;
             this.paginationOffset += conversations.length;
 
             conversations.forEach(conv => {
-                // Server provides unread_count - just store it
                 this.conversations.set(conv.id, conv);
             });
 
+            // RENDER (No filtering here anymore!)
             this.renderConversationsList();
 
         } catch (error) {
@@ -565,11 +569,12 @@ class ConversationCore {
             searchInput.addEventListener('input', (e) => {
                 clearTimeout(this.searchTimeout);
                 this.searchTimeout = setTimeout(() => {
-                    this.renderConversationsList();
-                }, 300);
+                    // Reload from server with reset=true
+                    this.loadConversations(true);
+                }, 500); // Increased debounce to 500ms to save server load
             });
             searchInput.addEventListener('search', (e) => {
-                if (e.target.value === '') this.renderConversationsList();
+                if (e.target.value === '') this.loadConversations(true);
             });
         }
 
