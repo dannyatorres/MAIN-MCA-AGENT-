@@ -5,6 +5,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 // Adjust this import to match your database setup
 const { getDatabase } = require('../services/database');
+const { predictSuccessForAll } = require('../services/successPredictor');
 
 const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
@@ -602,9 +603,9 @@ router.post('/qualify', async (req, res) => {
             }
         }
 
-        // Sort qualified by tier
+        // Sort qualified by tier first
         qualifiedLenders.sort((a, b) => {
-            const tierOrder = { 'A': 1, 'B': 2, 'C': 3 };
+            const tierOrder = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
             const tierA = tierOrder[a.tier] || 999;
             const tierB = tierOrder[b.tier] || 999;
             if (tierA !== tierB) return tierA - tierB;
@@ -613,9 +614,12 @@ router.post('/qualify', async (req, res) => {
             return 0;
         });
 
+        // Add success predictions
+        const qualifiedWithPredictions = await predictSuccessForAll(qualifiedLenders, criteria);
+
         // Return results
         res.json({
-            qualified: qualifiedLenders,
+            qualified: qualifiedWithPredictions,
             nonQualified: nonQualifiedLenders,
             autoDropped: autoDroppedCount,
             summary: {

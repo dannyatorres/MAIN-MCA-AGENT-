@@ -11,6 +11,7 @@ const {
     analyzeDeclines
 } = require('../services/ruleLearner');
 const { getDatabase } = require('../services/database');
+const { refreshProfiles, getProfiles } = require('../services/successPredictor');
 
 // GET /api/rules/suggestions - Get all pending AI suggestions
 router.get('/suggestions', async (req, res) => {
@@ -160,6 +161,26 @@ router.put('/:id/toggle', async (req, res) => {
         res.json({ success: true, rule: result.rows[0] });
     } catch (err) {
         console.error('Error toggling rule:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/rules/profiles - See lender success profiles
+router.get('/profiles', async (req, res) => {
+    try {
+        const profiles = await getProfiles();
+        res.json({ success: true, profiles });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/rules/profiles/refresh - Force rebuild profiles
+router.post('/profiles/refresh', async (req, res) => {
+    try {
+        const profiles = await refreshProfiles();
+        res.json({ success: true, count: Object.keys(profiles).length });
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
