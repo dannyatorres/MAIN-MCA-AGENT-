@@ -379,6 +379,12 @@ function checkLenderRules(rules, criteria) {
                 }
                 break;
 
+            case 'industry_block':
+                if (industryApplies) {
+                    return rule.decline_message || `${ruleIndustry} not accepted`;
+                }
+                break;
+
             case 'sole_prop_state_block':
                 // Block sole props in specific state
                 if (criteria.isSoleProp && ruleState && merchantState === ruleState) {
