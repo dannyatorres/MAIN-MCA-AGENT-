@@ -590,6 +590,7 @@ router.post('/qualify', async (req, res) => {
                 const isPreferred = checkPreferredIndustry(lender, criteria);
                 qualifiedLenders.push({
                     ...lender,
+                    'Lender Name': lender.name,
                     isPreferred: isPreferred
                 });
             }
