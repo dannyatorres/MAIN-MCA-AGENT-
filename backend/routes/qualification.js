@@ -115,6 +115,36 @@ function isIndustryType(merchantIndustry, keywords) {
     return keywords.some(k => m.includes(k) || k.includes(m));
 }
 
+async function getCanonicalIndustries(db, inputIndustry) {
+    const input = inputIndustry.toLowerCase().trim();
+
+    // Check for exact match first
+    const result = await db.query(
+        `SELECT canonical_industries FROM industry_mappings
+         WHERE LOWER(input_term) = $1`,
+        [input]
+    );
+
+    if (result.rows.length > 0) {
+        return result.rows[0].canonical_industries;
+    }
+
+    // Check for partial match
+    const partialResult = await db.query(
+        `SELECT canonical_industries FROM industry_mappings
+         WHERE LOWER(input_term) LIKE $1 OR $2 LIKE '%' || LOWER(input_term) || '%'
+         LIMIT 1`,
+        [`%${input}%`, input]
+    );
+
+    if (partialResult.rows.length > 0) {
+        return partialResult.rows[0].canonical_industries;
+    }
+
+    // No mapping found, return original as array
+    return [input];
+}
+
 // ============================================
 // CHECK FUNCTIONS (from lenders table)
 // ============================================
@@ -149,19 +179,18 @@ function checkStateRestrictions(lender, criteria) {
     return null;
 }
 
-function checkIndustryRestrictions(lender, criteria) {
+function checkIndustryRestrictions(lender, criteria, canonicalIndustries) {
     const prohibited = (lender.prohibited_industries || '').toLowerCase();
     if (!prohibited) return null;
 
-    const merchantIndustry = criteria.industry.toLowerCase().trim();
-    const classifiedIndustry = criteria.classifiedIndustry || merchantIndustry;
     const prohibitedList = prohibited.split(',').map(i => i.trim());
 
-    for (const prohibitedIndustry of prohibitedList) {
-        // Check both original and AI-classified industry
-        if (industryMatches(merchantIndustry, prohibitedIndustry) ||
-            industryMatches(classifiedIndustry, prohibitedIndustry)) {
-            return `Industry - ${prohibitedIndustry} not accepted`;
+    // Check ALL canonical industries against prohibited list
+    for (const industry of canonicalIndustries) {
+        for (const prohibitedIndustry of prohibitedList) {
+            if (industryMatches(industry, prohibitedIndustry)) {
+                return `Industry - ${prohibitedIndustry} not accepted`;
+            }
         }
     }
     return null;
@@ -430,6 +459,15 @@ router.post('/qualify', async (req, res) => {
         criteria.originalIndustry = criteria.industry;
         criteria.classifiedIndustry = classifiedIndustry;
 
+        // Get canonical industries for the input
+        let canonicalIndustries = [criteria.industry ? criteria.industry.toLowerCase() : ''];
+        if (criteria.industry) {
+            canonicalIndustries = await getCanonicalIndustries(db, classifiedIndustry);
+            // Also include the original input just in case
+            canonicalIndustries.push(criteria.industry.toLowerCase());
+            console.log(`Industry "${criteria.industry}" mapped to:`, canonicalIndustries);
+        }
+
         // Get all lenders
         const lendersResult = await db.query(`
             SELECT * FROM lenders
@@ -500,7 +538,7 @@ router.post('/qualify', async (req, res) => {
             if (!blockingRule) blockingRule = checkMercuryBank(lender, criteria);
 
             // 7. Industry restrictions
-            if (!blockingRule) blockingRule = checkIndustryRestrictions(lender, criteria);
+            if (!blockingRule) blockingRule = checkIndustryRestrictions(lender, criteria, canonicalIndustries);
 
             // 8. Minimum requirements
             if (!blockingRule) blockingRule = checkMinimumRequirements(lender, criteria);
