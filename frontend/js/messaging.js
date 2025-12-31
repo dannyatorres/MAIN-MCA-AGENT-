@@ -254,7 +254,33 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 
+        // Check for exact ID match
         if (container.querySelector(`.message[data-message-id="${message.id}"]`)) return;
+
+        // CHECK FOR DUPLICATE OUTBOUND: If this is an outbound message we just sent,
+        // check if there's already a temp message with same content
+        if (message.direction === 'outbound' || message.sender_type === 'user') {
+            const existingMessages = container.querySelectorAll('.message.outbound, .message.user');
+            for (const el of existingMessages) {
+                const contentEl = el.querySelector('.message-content, .message-text');
+                if (contentEl && contentEl.textContent.trim() === (message.content || message.message_content || '').trim()) {
+                    // Same content - check if it's recent (within 5 seconds)
+                    const msgTime = new Date(message.created_at).getTime();
+                    const now = Date.now();
+                    if (now - msgTime < 5000) {
+                        console.log('⚠️ Duplicate outbound message blocked');
+                        // Update the temp message with real ID if it's a temp
+                        const tempId = el.getAttribute('data-message-id');
+                        if (tempId && tempId.startsWith('temp-')) {
+                            el.setAttribute('data-message-id', message.id);
+                            el.classList.remove('sending');
+                            el.classList.add('sent');
+                        }
+                        return;
+                    }
+                }
+            }
+        }
 
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
 
