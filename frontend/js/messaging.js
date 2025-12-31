@@ -254,34 +254,56 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 
-        // Check for exact ID match
+        // 1. Check for exact ID match (prevents re-adding known real messages)
         if (container.querySelector(`.message[data-message-id="${message.id}"]`)) return;
 
-        // CHECK FOR DUPLICATE OUTBOUND: If this is an outbound message we just sent,
-        // check if there's already a temp message with same content
+        // 2. CHECK FOR DUPLICATE OUTBOUND (The Fix)
+        // If this is an outbound message, look specifically for "temporary" messages we haven't confirmed yet
         if (message.direction === 'outbound' || message.sender_type === 'user') {
-            const existingMessages = container.querySelectorAll('.message.outbound, .message.user');
-            for (const el of existingMessages) {
+
+            // Only look at messages that are still in "sending" state or have temp IDs
+            const tempMessages = container.querySelectorAll('.message[data-message-id^="temp-"], .message.sending');
+
+            // Normalize text for comparison (remove ALL whitespace to ensure match)
+            const incomingText = (message.content || message.message_content || '').replace(/\s+/g, '');
+            const msgTime = new Date(message.created_at).getTime();
+            const now = Date.now();
+
+            for (const el of tempMessages) {
                 const contentEl = el.querySelector('.message-content, .message-text');
-                if (contentEl && contentEl.textContent.trim() === (message.content || message.message_content || '').trim()) {
-                    // Same content - check if it's recent (within 5 seconds)
-                    const msgTime = new Date(message.created_at).getTime();
-                    const now = Date.now();
-                    if (now - msgTime < 5000) {
-                        console.log('⚠️ Duplicate outbound message blocked');
-                        // Update the temp message with real ID if it's a temp
-                        const tempId = el.getAttribute('data-message-id');
-                        if (tempId && tempId.startsWith('temp-')) {
-                            el.setAttribute('data-message-id', message.id);
-                            el.classList.remove('sending');
-                            el.classList.add('sent');
+                if (!contentEl) continue;
+
+                // Get DOM text and strip all whitespace/newlines
+                const domText = contentEl.textContent.replace(/\s+/g, '');
+
+                if (domText === incomingText) {
+                    // Double check it's recent (within 10 seconds)
+                    if (now - msgTime < 10000) {
+                        console.log('🔄 Merging WebSocket echo with Optimistic message');
+
+                        // Update the temp message with real ID
+                        el.setAttribute('data-message-id', message.id);
+                        el.classList.remove('sending');
+                        el.classList.add('sent');
+
+                        // Update cache so we don't lose the real ID
+                        const convId = String(message.conversation_id);
+                        if (this.messageCache.has(convId)) {
+                            const cache = this.messageCache.get(convId);
+                            // Find the temp entry in cache and update it
+                            const cachedMsg = cache.find(m => m.id === el.getAttribute('data-temp-id') || m.id.startsWith('temp-'));
+                            if (cachedMsg) {
+                                cachedMsg.id = message.id;
+                                cachedMsg.status = 'sent';
+                            }
                         }
-                        return;
+                        return; // STOP here, do not add the new bubble
                     }
                 }
             }
         }
 
+        // --- Standard Render Logic ---
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
 
         const html = this.parent.templates.messageItem(message);
@@ -292,7 +314,11 @@ class MessagingModule {
 
         const convId = String(message.conversation_id);
         if (this.messageCache.has(convId)) {
-            this.messageCache.get(convId).push(message);
+            // Avoid pushing duplicates to cache
+            const cache = this.messageCache.get(convId);
+            if (!cache.find(m => m.id === message.id)) {
+                cache.push(message);
+            }
         }
 
         if (isNearBottom) {
