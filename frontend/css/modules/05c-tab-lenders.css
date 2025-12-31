@@ -152,6 +152,25 @@
     background: rgba(210, 153, 34, 0.1);
 }
 
+/* 3c. Form Section Styling for Response Modal */
+.form-section-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #22d3ee;
+    margin: 20px 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.form-group.half {
+    flex: 1;
+}
+
 /* 4. Non-Qualified List */
 .non-qual-toggle {
     width: 100%;

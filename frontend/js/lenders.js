@@ -1803,93 +1803,210 @@ Best regards`;
             return;
         }
 
-        // Set lender name in both hidden input and display input
-        const displayInput = document.getElementById('responseLenderDisplay');
-        if (displayInput) displayInput.value = lenderName;
-        modal.dataset.lenderName = lenderName;
+        // Generate modal HTML
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h3>Log Lender Response</h3>
+                    <button id="closeLenderResponseModal" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="responseConversationId" value="${this.parent.getCurrentConversationId()}">
+                    <input type="hidden" id="responseLenderName" value="${lenderName}">
 
-        // Set conversation ID
-        const convIdInput = document.getElementById('responseConversationId');
-        if (convIdInput) convIdInput.value = this.parent.getCurrentConversationId();
+                    <div class="form-group">
+                        <label>Lender</label>
+                        <input type="text" id="responseLenderDisplay" readonly class="form-input" style="background: #1a1a2e;" value="${lenderName}">
+                    </div>
 
-        // Reset form
-        document.getElementById('responseStatus').value = '';
-        const positionEl = document.getElementById('responsePosition');
-        const existingPosEl = document.getElementById('responseExistingPositions');
-        const dailyWithholdEl = document.getElementById('responseDailyWithhold');
-        const daysIntoStackEl = document.getElementById('responseDaysIntoStack');
-        const offerAmountEl = document.getElementById('responseOfferAmount');
-        const factorRateEl = document.getElementById('responseFactorRate');
-        const termLengthEl = document.getElementById('responseTermLength');
-        const declineReasonEl = document.getElementById('responseDeclineReason');
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="responseStatus" class="form-input">
+                            <option value="">Select...</option>
+                            <option value="OFFER">Offer Received</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="FUNDED">Funded</option>
+                            <option value="DECLINED">Declined</option>
+                        </select>
+                    </div>
 
-        if (positionEl) positionEl.value = '';
-        if (existingPosEl) existingPosEl.value = '';
-        if (dailyWithholdEl) dailyWithholdEl.value = '';
-        if (daysIntoStackEl) daysIntoStackEl.value = '';
-        if (offerAmountEl) offerAmountEl.value = '';
-        if (factorRateEl) factorRateEl.value = '';
-        if (termLengthEl) termLengthEl.value = '';
-        if (declineReasonEl) declineReasonEl.value = '';
+                    <div class="form-group">
+                        <label>Position</label>
+                        <select id="responsePosition" class="form-input">
+                            <option value="">Select...</option>
+                            <option value="1">1st Position</option>
+                            <option value="2">2nd Position</option>
+                            <option value="3">3rd Position</option>
+                            <option value="4">4th Position</option>
+                            <option value="5">5th Position</option>
+                            <option value="6">6th Position</option>
+                            <option value="7">7th Position</option>
+                            <option value="8">8th Position</option>
+                            <option value="9">9th Position</option>
+                            <option value="10">10th Position</option>
+                        </select>
+                    </div>
 
-        // Hide offer/decline sections initially
-        const offerFields = document.getElementById('offerFields');
-        const declineFields = document.getElementById('declineFields');
-        if (offerFields) offerFields.style.display = 'none';
-        if (declineFields) declineFields.style.display = 'none';
+                    <!-- NEW OFFER FIELDS -->
+                    <div id="offerFields" style="display: none;">
+                        <div class="form-section-header">New Offer Details</div>
 
-        // Show modal (supports both 'active' and 'hidden' class patterns)
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Offer Amount ($)</label>
+                                <input type="number" id="responseOfferAmount" class="form-input" placeholder="15000">
+                            </div>
+                            <div class="form-group half">
+                                <label>Factor Rate</label>
+                                <input type="text" id="responseFactorRate" class="form-input" placeholder="1.49">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Term Length</label>
+                                <input type="number" id="responseTermLength" class="form-input" placeholder="60">
+                            </div>
+                            <div class="form-group half">
+                                <label>Term Unit</label>
+                                <select id="responseTermUnit" class="form-input">
+                                    <option value="Days">Days</option>
+                                    <option value="Weeks">Weeks</option>
+                                    <option value="Months">Months</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Payment Frequency</label>
+                            <select id="responsePaymentFrequency" class="form-input">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="bi-weekly">Bi-Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- PREVIOUS POSITION FIELDS (shows if position > 1) -->
+                    <div id="prevPositionFields" style="display: none;">
+                        <div class="form-section-header">Previous Position Info <span style="font-weight: normal; color: #888;">(optional)</span></div>
+
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Amount ($)</label>
+                                <input type="number" id="responsePrevAmount" class="form-input" placeholder="20000">
+                            </div>
+                            <div class="form-group half">
+                                <label>Factor Rate</label>
+                                <input type="text" id="responsePrevFactorRate" class="form-input" placeholder="1.35">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Term Length</label>
+                                <input type="number" id="responsePrevTermLength" class="form-input" placeholder="90">
+                            </div>
+                            <div class="form-group half">
+                                <label>Term Unit</label>
+                                <select id="responsePrevTermUnit" class="form-input">
+                                    <option value="">--</option>
+                                    <option value="Days">Days</option>
+                                    <option value="Weeks">Weeks</option>
+                                    <option value="Months">Months</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Payment Frequency</label>
+                                <select id="responsePrevPaymentFrequency" class="form-input">
+                                    <option value="">--</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="bi-weekly">Bi-Weekly</option>
+                                </select>
+                            </div>
+                            <div class="form-group half">
+                                <label>Daily Withhold ($)</label>
+                                <input type="number" id="responseDailyWithhold" class="form-input" placeholder="343">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Days Into Stack</label>
+                            <input type="number" id="responseDaysIntoStack" class="form-input" placeholder="45">
+                        </div>
+                    </div>
+
+                    <!-- DECLINE FIELDS -->
+                    <div id="declineFields" style="display: none;">
+                        <div class="form-group">
+                            <label>Decline Reason</label>
+                            <textarea id="responseDeclineReason" class="form-input" rows="2" placeholder="e.g., Restricted industry"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancelLenderResponse" class="btn btn-secondary">Cancel</button>
+                    <button id="saveLenderResponse" class="btn btn-primary">Save Response</button>
+                </div>
+            </div>
+        `;
+
+        // Show modal
         modal.classList.remove('hidden');
         modal.classList.add('active');
 
-        // Attach listeners if not already attached
-        if (!this.responseModalListenersAttached) {
-            this.attachResponseModalListeners();
-            this.responseModalListenersAttached = true;
-        }
+        // Attach listeners (always re-attach since we regenerated HTML)
+        this.attachResponseModalListeners();
     }
 
     attachResponseModalListeners() {
         const modal = document.getElementById('lenderResponseModal');
 
-        const closeModal = () => {
-            modal.classList.add('hidden');
-            modal.classList.remove('active');
+        // Status change - show/hide offer/decline fields
+        const statusSelect = document.getElementById('responseStatus');
+        statusSelect.onchange = () => {
+            const status = statusSelect.value;
+            document.getElementById('offerFields').style.display =
+                ['OFFER', 'APPROVED', 'FUNDED'].includes(status) ? 'block' : 'none';
+            document.getElementById('declineFields').style.display =
+                status === 'DECLINED' ? 'block' : 'none';
         };
 
-        // Close button (X)
-        const closeBtn = document.getElementById('closeLenderResponseModal');
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        // Position change - show prev position fields if > 1
+        const positionSelect = document.getElementById('responsePosition');
+        positionSelect.onchange = () => {
+            const pos = parseInt(positionSelect.value) || 0;
+            document.getElementById('prevPositionFields').style.display =
+                pos > 1 ? 'block' : 'none';
+        };
 
-        // Cancel button
-        const cancelBtn = document.getElementById('cancelLenderResponse');
-        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-        // Status change - show/hide relevant sections
-        document.getElementById('responseStatus').addEventListener('change', (e) => {
-            const status = e.target.value;
-            const offerFields = document.getElementById('offerFields');
-            const declineFields = document.getElementById('declineFields');
-
-            // Show offer fields for OFFER, APPROVED, FUNDED
-            if (offerFields) offerFields.style.display = ['OFFER', 'APPROVED', 'FUNDED'].includes(status) ? 'block' : 'none';
-            // Show decline fields for DECLINED
-            if (declineFields) declineFields.style.display = status === 'DECLINED' ? 'block' : 'none';
-        });
+        // Close buttons
+        document.getElementById('closeLenderResponseModal').onclick = () => {
+            modal.classList.add('hidden');
+        };
+        document.getElementById('cancelLenderResponse').onclick = () => {
+            modal.classList.add('hidden');
+        };
 
         // Save button
-        const saveBtn = document.getElementById('saveLenderResponse');
-        if (saveBtn) saveBtn.addEventListener('click', () => this.saveLenderResponse());
+        document.getElementById('saveLenderResponse').onclick = async () => {
+            await this.saveLenderResponse();
+        };
 
         // Click outside to close
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.classList.add('hidden');
+        };
     }
 
     async saveLenderResponse() {
-        const conversationId = document.getElementById('responseConversationId')?.value || this.parent.getCurrentConversationId();
-        const lenderName = document.getElementById('responseLenderDisplay')?.value || document.getElementById('lenderResponseModal')?.dataset.lenderName;
+        const conversationId = document.getElementById('responseConversationId').value;
+        const lenderName = document.getElementById('responseLenderName').value;
         const status = document.getElementById('responseStatus').value;
 
         if (!status) {
@@ -1903,19 +2020,11 @@ Best regards`;
             status: status
         };
 
-        // Add position
+        // Position
         const position = document.getElementById('responsePosition')?.value;
         if (position) data.position = parseInt(position);
 
-        // Add stack info
-        const existingPositions = document.getElementById('responseExistingPositions')?.value;
-        const dailyWithhold = document.getElementById('responseDailyWithhold')?.value;
-        const daysIntoStack = document.getElementById('responseDaysIntoStack')?.value;
-        if (existingPositions) data.existing_positions_count = parseInt(existingPositions);
-        if (dailyWithhold) data.total_daily_withhold = parseFloat(dailyWithhold);
-        if (daysIntoStack) data.days_into_stack = parseInt(daysIntoStack);
-
-        // Add offer fields if applicable
+        // New offer fields
         if (['OFFER', 'APPROVED', 'FUNDED'].includes(status)) {
             const amount = document.getElementById('responseOfferAmount')?.value;
             const factor = document.getElementById('responseFactorRate')?.value;
@@ -1930,14 +2039,33 @@ Best regards`;
             if (frequency) data.payment_frequency = frequency;
         }
 
-        // Add decline reason if applicable
+        // Previous position fields (if position > 1)
+        const pos = parseInt(position) || 0;
+        if (pos > 1) {
+            const prevAmount = document.getElementById('responsePrevAmount')?.value;
+            const prevFactor = document.getElementById('responsePrevFactorRate')?.value;
+            const prevTerm = document.getElementById('responsePrevTermLength')?.value;
+            const prevTermUnit = document.getElementById('responsePrevTermUnit')?.value;
+            const prevFreq = document.getElementById('responsePrevPaymentFrequency')?.value;
+            const dailyWithhold = document.getElementById('responseDailyWithhold')?.value;
+            const daysIntoStack = document.getElementById('responseDaysIntoStack')?.value;
+
+            if (prevAmount) data.prev_amount = parseFloat(prevAmount);
+            if (prevFactor) data.prev_factor_rate = parseFloat(prevFactor);
+            if (prevTerm) data.prev_term_length = parseInt(prevTerm);
+            if (prevTermUnit) data.prev_term_unit = prevTermUnit;
+            if (prevFreq) data.prev_payment_frequency = prevFreq;
+            if (dailyWithhold) data.total_daily_withhold = parseFloat(dailyWithhold);
+            if (daysIntoStack) data.days_into_stack = parseInt(daysIntoStack);
+        }
+
+        // Decline reason
         if (status === 'DECLINED') {
             const reason = document.getElementById('responseDeclineReason')?.value;
             if (reason) data.decline_reason = reason;
         }
 
         try {
-            // Use apiCall - handles auth automatically
             const result = await this.parent.apiCall('/api/lenders/log-response', {
                 method: 'POST',
                 body: JSON.stringify(data)

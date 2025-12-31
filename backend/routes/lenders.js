@@ -571,37 +571,39 @@ router.get('/:lenderId', async (req, res) => {
 
 router.post('/log-response', async (req, res) => {
     try {
+        const db = getDatabase();
         const {
             conversation_id,
             lender_name,
             status,
             position,
-            existing_positions_count,
+            // New offer
+            offer_amount,
+            factor_rate,
+            term_length,
+            term_unit,
+            payment_frequency,
+            // Previous position
+            prev_amount,
+            prev_factor_rate,
+            prev_term_length,
+            prev_term_unit,
+            prev_payment_frequency,
             total_daily_withhold,
             days_into_stack,
-            offer_amount,
-            offer_rate,
-            offer_term,
-            decline_reason,
-            notes
+            // Decline
+            decline_reason
         } = req.body;
 
         if (!conversation_id || !lender_name || !status) {
-            return res.status(400).json({
-                success: false,
-                error: 'conversation_id, lender_name, and status are required'
-            });
+            return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        const db = getDatabase();
-
-        // Capture snapshot of deal at time of submission
+        // Capture snapshot
         let snapshot = null;
         try {
             const convResult = await db.query(`
-                SELECT
-                    industry, us_state, monthly_revenue, fico_score,
-                    time_in_business, business_name
+                SELECT industry, us_state, monthly_revenue, fico_score, time_in_business, business_name
                 FROM conversations WHERE id = $1
             `, [conversation_id]);
 
@@ -613,10 +615,10 @@ router.post('/log-response', async (req, res) => {
                     monthly_revenue: parseFloat(conv.monthly_revenue) || null,
                     fico: parseInt(conv.fico_score) || null,
                     tib_months: parseInt(conv.time_in_business) || null,
-                    position: position ? parseInt(position) : null,
-                    existing_positions_count: existing_positions_count ? parseInt(existing_positions_count) : null,
-                    total_daily_withhold: total_daily_withhold ? parseFloat(total_daily_withhold) : null,
-                    days_into_stack: days_into_stack ? parseInt(days_into_stack) : null,
+                    position: position || null,
+                    total_daily_withhold: total_daily_withhold || null,
+                    days_into_stack: days_into_stack || null,
+                    prev_amount: prev_amount || null,
                     captured_at: new Date().toISOString()
                 };
             }
@@ -624,106 +626,101 @@ router.post('/log-response', async (req, res) => {
             console.error('Error capturing snapshot:', err.message);
         }
 
-        // Check if submission exists for this lender/conversation
+        // Check if exists
         const existing = await db.query(`
             SELECT id FROM lender_submissions
             WHERE conversation_id = $1 AND LOWER(lender_name) = LOWER($2)
-            LIMIT 1
         `, [conversation_id, lender_name]);
 
-        let result;
         if (existing.rows.length > 0) {
-            // Update existing submission
-            result = await db.query(`
+            await db.query(`
                 UPDATE lender_submissions SET
                     status = $1,
                     position = COALESCE($2, position),
-                    existing_positions_count = COALESCE($3, existing_positions_count),
-                    total_daily_withhold = COALESCE($4, total_daily_withhold),
-                    days_into_stack = COALESCE($5, days_into_stack),
-                    offer_amount = COALESCE($6, offer_amount),
-                    factor_rate = COALESCE($7, factor_rate),
-                    term_length = COALESCE($8, term_length),
-                    decline_reason = COALESCE($9, decline_reason),
-                    snapshot = COALESCE(snapshot, $10),
-                    offer_details = COALESCE(offer_details, '{}')::jsonb || $11::jsonb,
+                    offer_amount = COALESCE($3, offer_amount),
+                    factor_rate = COALESCE($4, factor_rate),
+                    term_length = COALESCE($5, term_length),
+                    term_unit = COALESCE($6, term_unit),
+                    payment_frequency = COALESCE($7, payment_frequency),
+                    prev_amount = COALESCE($8, prev_amount),
+                    prev_factor_rate = COALESCE($9, prev_factor_rate),
+                    prev_term_length = COALESCE($10, prev_term_length),
+                    prev_term_unit = COALESCE($11, prev_term_unit),
+                    prev_payment_frequency = COALESCE($12, prev_payment_frequency),
+                    total_daily_withhold = COALESCE($13, total_daily_withhold),
+                    days_into_stack = COALESCE($14, days_into_stack),
+                    decline_reason = COALESCE($15, decline_reason),
+                    snapshot = COALESCE(snapshot, $16),
                     last_response_at = NOW()
-                WHERE id = $12
-                RETURNING *
+                WHERE id = $17
             `, [
                 status,
-                position ? parseInt(position) : null,
-                existing_positions_count ? parseInt(existing_positions_count) : null,
-                total_daily_withhold ? parseFloat(total_daily_withhold) : null,
-                days_into_stack ? parseInt(days_into_stack) : null,
-                offer_amount ? parseFloat(offer_amount) : null,
-                offer_rate ? parseFloat(offer_rate) : null,
-                offer_term ? parseInt(offer_term) : null,
+                position || null,
+                offer_amount || null,
+                factor_rate || null,
+                term_length || null,
+                term_unit || null,
+                payment_frequency || null,
+                prev_amount || null,
+                prev_factor_rate || null,
+                prev_term_length || null,
+                prev_term_unit || null,
+                prev_payment_frequency || null,
+                total_daily_withhold || null,
+                days_into_stack || null,
                 decline_reason || null,
                 snapshot ? JSON.stringify(snapshot) : null,
-                JSON.stringify({ manual_notes: notes, logged_manually: true, logged_at: new Date() }),
                 existing.rows[0].id
             ]);
+
             console.log(`✅ Updated lender response: ${lender_name} -> ${status}`);
+            res.json({ success: true, updated: true });
         } else {
-            // Create new submission record
-            result = await db.query(`
+            await db.query(`
                 INSERT INTO lender_submissions (
                     id, conversation_id, lender_name, status, position,
-                    existing_positions_count, total_daily_withhold, days_into_stack,
-                    offer_amount, factor_rate, term_length,
-                    decline_reason, snapshot, offer_details,
-                    submitted_at, last_response_at, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW(), NOW())
-                RETURNING *
+                    offer_amount, factor_rate, term_length, term_unit, payment_frequency,
+                    prev_amount, prev_factor_rate, prev_term_length, prev_term_unit, prev_payment_frequency,
+                    total_daily_withhold, days_into_stack, decline_reason, snapshot,
+                    submitted_at, last_response_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW())
             `, [
                 uuidv4(),
                 conversation_id,
                 lender_name,
                 status,
-                position ? parseInt(position) : null,
-                existing_positions_count ? parseInt(existing_positions_count) : null,
-                total_daily_withhold ? parseFloat(total_daily_withhold) : null,
-                days_into_stack ? parseInt(days_into_stack) : null,
-                offer_amount ? parseFloat(offer_amount) : null,
-                offer_rate ? parseFloat(offer_rate) : null,
-                offer_term ? parseInt(offer_term) : null,
+                position || null,
+                offer_amount || null,
+                factor_rate || null,
+                term_length || null,
+                term_unit || null,
+                payment_frequency || null,
+                prev_amount || null,
+                prev_factor_rate || null,
+                prev_term_length || null,
+                prev_term_unit || null,
+                prev_payment_frequency || null,
+                total_daily_withhold || null,
+                days_into_stack || null,
                 decline_reason || null,
-                snapshot ? JSON.stringify(snapshot) : null,
-                JSON.stringify({ manual_notes: notes, logged_manually: true, logged_at: new Date() })
+                snapshot ? JSON.stringify(snapshot) : null
             ]);
+
             console.log(`✅ Created lender response: ${lender_name} -> ${status}`);
+            res.json({ success: true, created: true });
         }
 
-        // If offer was logged, update conversation has_offer flag
-        if (status === 'approved' || status === 'offer' || status === 'APPROVED' || status === 'OFFER' || status === 'FUNDED') {
+        // Update conversation if offer
+        if (['OFFER', 'APPROVED', 'FUNDED'].includes(status)) {
             await db.query(`
                 UPDATE conversations SET has_offer = TRUE, last_activity = NOW()
                 WHERE id = $1
             `, [conversation_id]);
         }
 
-        // Emit WebSocket event for real-time updates
-        if (global.io) {
-            global.io.to(`conversation_${conversation_id}`).emit('lender_response_logged', {
-                conversation_id,
-                lender_name,
-                status,
-                position
-            });
-        }
-
-        res.json({
-            success: true,
-            submission: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error('Error logging lender response:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+    } catch (err) {
+        console.error('Error logging response:', err);
+        res.status(500).json({ error: err.message });
     }
 });
 
