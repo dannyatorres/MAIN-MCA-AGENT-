@@ -8,7 +8,11 @@ const EventEmitter = require('events');
 class LenderMatcher extends EventEmitter {
     constructor() {
         super();
-        this.webhookUrl = 'https://dannyatorres.app.n8n.cloud/webhook/lender-qualify';
+        // Use internal API - construct URL based on environment
+        const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN
+            ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+            : `http://localhost:${process.env.PORT || 3000}`;
+        this.webhookUrl = `${baseUrl}/api/qualification/qualify`;
         this.timeout = 30000; // 30 seconds timeout
     }
 
