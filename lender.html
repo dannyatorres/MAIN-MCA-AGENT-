@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lender CSV Import</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 10px 0; }
+        pre { background: #f4f4f4; padding: 15px; overflow: auto; max-height: 400px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Lender CSV Import</h1>
+    
+    <p>1. Select your CSV file:</p>
+    <input type="file" id="csvFile" accept=".csv" />
+    
+    <p>2. Your API URL:</p>
+    <input type="text" id="apiUrl" value="https://your-api.railway.app/api/lenders/import-csv" style="width: 100%; padding: 8px;" />
+    
+    <p>3. Run import:</p>
+    <button onclick="runImport()">Import CSV to Database</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                // Handle quoted fields with commas
+                const row = {};
+                let currentField = '';
+                let fieldIndex = 0;
+                let inQuotes = false;
+                
+                for (let char of lines[i]) {
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        row[headers[fieldIndex]] = currentField.trim();
+                        currentField = '';
+                        fieldIndex++;
+                    } else {
+                        currentField += char;
+                    }
+                }
+                // Don't forget last field
+                if (fieldIndex < headers.length) {
+                    row[headers[fieldIndex]] = currentField.trim();
+                }
+                
+                data.push(row);
+            }
+            
+            return data;
+        }
+
+        async function runImport() {
+            const fileInput = document.getElementById('csvFile');
+            const apiUrl = document.getElementById('apiUrl').value;
+            const resultsDiv = document.getElementById('results');
+            
+            if (!fileInput.files[0]) {
+                alert('Please select a CSV file');
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<p>Reading CSV...</p>';
+            
+            const text = await fileInput.files[0].text();
+            const lenders = parseCSV(text);
+            
+            resultsDiv.innerHTML = `<p>Parsed ${lenders.length} lenders. Sending to API...</p>`;
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lenders })
+                });
+                
+                const result = await response.json();
+                
+                let html = '<h2>Import Results</h2>';
+                html += `<p class="success">✅ Matched: ${result.summary.matched}</p>`;
+                html += `<p class="warning">⚠️ Not Found: ${result.summary.notFound}</p>`;
+                html += `<p class="error">❌ Errors: ${result.summary.errors}</p>`;
+                
+                if (result.notFound && result.notFound.length > 0) {
+                    html += '<h3>Not Found (need to add manually or check name spelling):</h3>';
+                    html += '<pre>' + JSON.stringify(result.notFound, null, 2) + '</pre>';
+                }
+                
+                if (result.errors && result.errors.length > 0) {
+                    html += '<h3>Errors:</h3>';
+                    html += '<pre>' + JSON.stringify(result.errors, null, 2) + '</pre>';
+                }
+                
+                if (result.matched && result.matched.length > 0) {
+                    html += '<h3>Successfully Matched:</h3>';
+                    html += '<pre>' + JSON.stringify(result.matched, null, 2) + '</pre>';
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (err) {
+                resultsDiv.innerHTML = `<p class="error">Error: ${err.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
