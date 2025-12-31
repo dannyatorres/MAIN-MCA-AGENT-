@@ -66,6 +66,27 @@ class Utilities {
                     if (hours < 24) return `${hours}h ago`;
                     if (days < 7) return `${days}d ago`;
                     return dateObj.toLocaleDateString();
+                case 'smart':
+                    const nowSmart = new Date();
+                    const isToday = dateObj.toDateString() === nowSmart.toDateString();
+
+                    const yesterday = new Date(nowSmart);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const isYesterday = dateObj.toDateString() === yesterday.toDateString();
+
+                    const time = dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+                    if (isToday) {
+                        return time;
+                    } else if (isYesterday) {
+                        return `Yesterday ${time}`;
+                    } else if (nowSmart.getFullYear() === dateObj.getFullYear()) {
+                        const monthDay = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return `${monthDay} ${time}`;
+                    } else {
+                        const full = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        return `${full} ${time}`;
+                    }
                 default:
                     return dateObj.toLocaleDateString();
             }
@@ -406,7 +427,7 @@ class Templates {
         if (message.created_at || message.timestamp) {
             const messageDate = new Date(message.created_at || message.timestamp);
             if (!isNaN(messageDate.getTime())) {
-                timestamp = this.utils.formatDate(messageDate, 'time');
+                timestamp = this.utils.formatDate(messageDate, 'smart');
             }
         }
 
