@@ -77,7 +77,7 @@ class MessagingModule {
     }
 
     // ============================================================
-    // SEND MESSAGE - With proper blocking
+    // SEND MESSAGE - Optimistic UI
     // ============================================================
 
     async sendMessage(textOverride = null, mediaUrl = null) {
@@ -109,31 +109,76 @@ class MessagingModule {
             input.value = '';
         }
 
-        try {
-            const res = await this.parent.apiCall(`/api/conversations/${convId}/messages`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    message_content: content,
-                    sender_type: 'user',
-                    media_url: mediaUrl,
-                    message_type: mediaUrl ? 'mms' : 'sms'
-                })
-            });
+        // OPTIMISTIC UI: Show message immediately with temp ID
+        const tempId = `temp-${Date.now()}`;
+        const optimisticMessage = {
+            id: tempId,
+            conversation_id: convId,
+            content: content,
+            message_content: content,
+            sender_type: 'user',
+            direction: 'outbound',
+            media_url: mediaUrl,
+            message_type: mediaUrl ? 'mms' : 'sms',
+            created_at: new Date().toISOString(),
+            status: 'sending'
+        };
 
+        // Show it NOW
+        this.addMessage(optimisticMessage);
+
+        // Fire and forget - don't await
+        this.parent.apiCall(`/api/conversations/${convId}/messages`, {
+            method: 'POST',
+            body: JSON.stringify({
+                message_content: content,
+                sender_type: 'user',
+                media_url: mediaUrl,
+                message_type: mediaUrl ? 'mms' : 'sms'
+            })
+        }).then(res => {
             if (res?.message) {
-                this.addMessage(res.message);
+                // Replace temp message with real one
+                this.replaceTempMessage(tempId, res.message);
                 this.parent.conversationUI?.updateConversationPreview(convId, res.message);
             }
-
-        } catch (e) {
+        }).catch(e => {
             console.error('Send failed:', e);
+            // Mark message as failed
+            this.markMessageFailed(tempId);
             this.parent.utils?.showNotification('Failed to send', 'error');
-            // Restore message on failure
-            if (input && textOverride === null) {
-                input.value = content;
+        });
+
+        this.isSending = false;
+    }
+
+    // Helper: Replace temp message with real one
+    replaceTempMessage(tempId, realMessage) {
+        const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
+        if (tempEl) {
+            tempEl.setAttribute('data-message-id', realMessage.id);
+            tempEl.classList.remove('sending');
+            tempEl.classList.add('sent');
+        }
+
+        // Update cache
+        const convId = String(realMessage.conversation_id);
+        if (this.messageCache.has(convId)) {
+            const messages = this.messageCache.get(convId);
+            const idx = messages.findIndex(m => m.id === tempId);
+            if (idx !== -1) {
+                messages[idx] = realMessage;
             }
-        } finally {
-            this.isSending = false;
+        }
+    }
+
+    // Helper: Mark message as failed
+    markMessageFailed(tempId) {
+        const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
+        if (tempEl) {
+            tempEl.classList.remove('sending');
+            tempEl.classList.add('failed');
+            tempEl.title = 'Failed to send - click to retry';
         }
     }
 
