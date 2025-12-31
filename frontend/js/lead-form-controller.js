@@ -545,7 +545,9 @@ export class LeadFormController {
         }
 
         // Submit Handler
+        console.log('🔧 Attaching submit handler to form:', form?.id, 'mode:', mode, 'id:', id);
         form.addEventListener('submit', async (e) => {
+            console.log('🔥 SUBMIT FIRED');
             e.preventDefault();
             const btn = form.querySelector('button[type="submit"]');
             const originalText = btn.textContent;
@@ -553,6 +555,8 @@ export class LeadFormController {
             btn.disabled = true;
 
             const formData = this.scrapeFormData(new FormData(form));
+            console.log('📤 Scraped formData:', formData);
+            console.log('📤 Mode:', mode, 'ID:', id);
 
             try {
                 if (mode === 'create') {
