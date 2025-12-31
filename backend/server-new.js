@@ -13,6 +13,7 @@ require('dotenv').config();
 // Migration imports
 const { runStrategyMigration } = require('./migrations/strategy-schema');
 const { getDatabase } = require('./services/database');
+const { startRuleLearner } = require('./services/ruleLearner');
 
 // Create Express app
 const app = express();
@@ -118,6 +119,7 @@ app.use('/api/calling', require('./routes/calling'));
 app.use('/api/email', emailRoutes);
 app.use('/api/agent', require('./routes/agent'));
 app.use('/api/cleaner', require('./routes/cleaner'));
+app.use('/api/rules', require('./routes/rule-suggestions'));
 
 // CLEANED UP MODULES
 app.use('/api/integrations', require('./routes/integrationRoutes'));
@@ -145,6 +147,12 @@ try {
     require('./services/processorAgent').startProcessor();
     console.log('✅ Processor Agent Service: INITIALIZED');
 } catch (e) { console.error('⚠️ Failed to start Processor Agent:', e.message); }
+
+// Start Rule Learner
+try {
+    startRuleLearner();
+    console.log('✅ Rule Learner Service: INITIALIZED');
+} catch (e) { console.error('⚠️ Failed to start Rule Learner:', e.message); }
 
 // --- 7b. RUN DATABASE MIGRATIONS ---
 (async () => {
