@@ -140,6 +140,13 @@ async function processEmail(email, db) {
 
     const systemPrompt = getSystemPrompt();
 
+    // Send full email body (up to 3000 chars) instead of just snippet
+    const emailBody = (email.text || email.html || email.snippet || '')
+        .replace(/<[^>]*>/g, ' ')  // Strip HTML tags
+        .replace(/\s+/g, ' ')      // Normalize whitespace
+        .substring(0, 3000)
+        .trim();
+
     const extraction = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{
@@ -147,7 +154,7 @@ async function processEmail(email, db) {
             content: systemPrompt
         }, {
             role: "user",
-            content: `Sender: "${email.from.name}" <${email.from.email}>\nSubject: "${email.subject}"\nBody Snippet: "${email.snippet}"`
+            content: `Sender: "${email.from.name}" <${email.from.email}>\nSubject: "${email.subject}"\n\nFull Email Body:\n${emailBody}`
         }],
         response_format: { type: "json_object" }
     });
