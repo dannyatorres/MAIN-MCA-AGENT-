@@ -80,6 +80,15 @@ class LendersModule {
                 console.log('📧 Send to Lenders button clicked');
                 this.showLenderSubmissionModal();
             }
+
+            // Log Response button click
+            if (e.target.classList.contains('log-response-btn') || e.target.closest('.log-response-btn')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const btn = e.target.classList.contains('log-response-btn') ? e.target : e.target.closest('.log-response-btn');
+                const lenderName = btn.dataset.lender;
+                this.openResponseModal(lenderName);
+            }
         });
 
         // Also restore previous results if they exist
@@ -550,13 +559,19 @@ class LendersModule {
                 html += `<div class="lender-grid">`;
                 tiers[tier].forEach(lender => {
                     const star = lender.isPreferred ? '⭐' : '';
+                    const lenderName = lender['Lender Name'] || lender.name;
                     const prediction = lender.prediction;
                     let rateHtml = '';
                     if (prediction && prediction.successRate !== null) {
                         const rateClass = prediction.confidence || 'low';
                         rateHtml = `<span class="success-rate ${rateClass}" title="${prediction.factors?.join(', ') || 'Historical data'}">${prediction.successRate}%</span>`;
                     }
-                    html += `<div class="lender-tag">${lender['Lender Name']} ${rateHtml}<span>${star}</span></div>`;
+                    html += `
+                        <div class="lender-tag" data-lender-name="${lenderName}">
+                            ${lenderName} ${rateHtml}<span>${star}</span>
+                            <button class="log-response-btn" data-lender="${lenderName}" title="Log Response">📝</button>
+                        </div>
+                    `;
                 });
                 html += `</div></div>`;
             });
@@ -1777,5 +1792,175 @@ Best regards`;
         }
 
         console.log('Event listeners reattached successfully');
+    }
+
+    // ==================== LENDER RESPONSE MODAL ====================
+
+    openResponseModal(lenderName) {
+        const modal = document.getElementById('lenderResponseModal');
+        if (!modal) {
+            console.error('Lender response modal not found');
+            return;
+        }
+
+        // Set lender name in both hidden input and display input
+        const displayInput = document.getElementById('responseLenderDisplay');
+        if (displayInput) displayInput.value = lenderName;
+        modal.dataset.lenderName = lenderName;
+
+        // Set conversation ID
+        const convIdInput = document.getElementById('responseConversationId');
+        if (convIdInput) convIdInput.value = this.parent.getCurrentConversationId();
+
+        // Reset form
+        document.getElementById('responseStatus').value = '';
+        const offerAmountEl = document.getElementById('responseOfferAmount');
+        const factorRateEl = document.getElementById('responseFactorRate');
+        const termLengthEl = document.getElementById('responseTermLength');
+        const declineReasonEl = document.getElementById('responseDeclineReason');
+
+        if (offerAmountEl) offerAmountEl.value = '';
+        if (factorRateEl) factorRateEl.value = '';
+        if (termLengthEl) termLengthEl.value = '';
+        if (declineReasonEl) declineReasonEl.value = '';
+
+        // Hide offer/decline sections initially
+        const offerFields = document.getElementById('offerFields');
+        const declineFields = document.getElementById('declineFields');
+        if (offerFields) offerFields.style.display = 'none';
+        if (declineFields) declineFields.style.display = 'none';
+
+        // Show modal (supports both 'active' and 'hidden' class patterns)
+        modal.classList.remove('hidden');
+        modal.classList.add('active');
+
+        // Attach listeners if not already attached
+        if (!this.responseModalListenersAttached) {
+            this.attachResponseModalListeners();
+            this.responseModalListenersAttached = true;
+        }
+    }
+
+    attachResponseModalListeners() {
+        const modal = document.getElementById('lenderResponseModal');
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('active');
+        };
+
+        // Close button (X)
+        const closeBtn = document.getElementById('closeLenderResponseModal');
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+        // Cancel button
+        const cancelBtn = document.getElementById('cancelLenderResponse');
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        // Status change - show/hide relevant sections
+        document.getElementById('responseStatus').addEventListener('change', (e) => {
+            const status = e.target.value;
+            const offerFields = document.getElementById('offerFields');
+            const declineFields = document.getElementById('declineFields');
+
+            // Show offer fields for OFFER, APPROVED, FUNDED
+            if (offerFields) offerFields.style.display = ['OFFER', 'APPROVED', 'FUNDED'].includes(status) ? 'block' : 'none';
+            // Show decline fields for DECLINED
+            if (declineFields) declineFields.style.display = status === 'DECLINED' ? 'block' : 'none';
+        });
+
+        // Save button
+        const saveBtn = document.getElementById('saveLenderResponse');
+        if (saveBtn) saveBtn.addEventListener('click', () => this.saveLenderResponse());
+
+        // Click outside to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+    }
+
+    async saveLenderResponse() {
+        const modal = document.getElementById('lenderResponseModal');
+        const lenderName = modal.dataset.lenderName;
+        const conversationId = this.parent.getCurrentConversationId();
+
+        const responseData = {
+            conversation_id: conversationId,
+            lender_name: lenderName,
+            status: document.getElementById('responseStatus').value,
+            offer_amount: document.getElementById('responseOfferAmount')?.value || null,
+            offer_rate: document.getElementById('responseFactorRate')?.value || null,
+            offer_term: document.getElementById('responseTermLength')?.value || null,
+            decline_reason: document.getElementById('responseDeclineReason')?.value || null,
+            notes: null  // No notes field in current HTML
+        };
+
+        if (!responseData.status) {
+            this.parent.showToast('Please select a response status', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/lenders/log-response`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(responseData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                modal.classList.add('hidden');
+                modal.classList.remove('active');
+                this.parent.showToast(`Response logged for ${lenderName}`, 'success');
+
+                // Update the lender tag to show the response
+                this.updateLenderTagWithResponse(lenderName, responseData.status);
+            } else {
+                this.parent.showToast(result.error || 'Failed to save response', 'error');
+            }
+        } catch (err) {
+            console.error('Error saving lender response:', err);
+            this.parent.showToast('Failed to save response', 'error');
+        }
+    }
+
+    updateLenderTagWithResponse(lenderName, status) {
+        const lenderTags = document.querySelectorAll('.lender-tag');
+        lenderTags.forEach(tag => {
+            if (tag.dataset.lenderName === lenderName) {
+                // Add status indicator based on status value
+                const statusLower = status.toLowerCase();
+                const statusIcon = ['offer', 'approved', 'funded'].includes(statusLower) ? '✅' :
+                                   statusLower === 'declined' ? '❌' :
+                                   statusLower === 'pending' ? '⏳' : '📋';
+
+                // Remove any existing response classes
+                tag.classList.remove('response-approved', 'response-declined', 'response-pending');
+
+                // Add appropriate class
+                if (['offer', 'approved', 'funded'].includes(statusLower)) {
+                    tag.classList.add('response-approved');
+                } else if (statusLower === 'declined') {
+                    tag.classList.add('response-declined');
+                } else {
+                    tag.classList.add('response-pending');
+                }
+
+                // Update or add status badge
+                let badge = tag.querySelector('.response-badge');
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'response-badge';
+                    const logBtn = tag.querySelector('.log-response-btn');
+                    if (logBtn) {
+                        tag.insertBefore(badge, logBtn);
+                    } else {
+                        tag.appendChild(badge);
+                    }
+                }
+                badge.textContent = statusIcon;
+            }
+        });
     }
 }

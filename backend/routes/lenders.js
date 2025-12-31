@@ -566,6 +566,118 @@ router.get('/:lenderId', async (req, res) => {
 });
 
 // ===========================================
+// LOG LENDER RESPONSE - Manual response entry
+// ===========================================
+
+router.post('/log-response', async (req, res) => {
+    try {
+        const {
+            conversation_id,
+            lender_name,
+            status,
+            offer_amount,
+            offer_rate,
+            offer_term,
+            decline_reason,
+            notes
+        } = req.body;
+
+        if (!conversation_id || !lender_name || !status) {
+            return res.status(400).json({
+                success: false,
+                error: 'conversation_id, lender_name, and status are required'
+            });
+        }
+
+        const db = getDatabase();
+
+        // Check if submission exists for this lender/conversation
+        const existing = await db.query(`
+            SELECT id FROM lender_submissions
+            WHERE conversation_id = $1 AND LOWER(lender_name) = LOWER($2)
+            LIMIT 1
+        `, [conversation_id, lender_name]);
+
+        let result;
+        if (existing.rows.length > 0) {
+            // Update existing submission
+            result = await db.query(`
+                UPDATE lender_submissions SET
+                    status = $2,
+                    offer_amount = $3,
+                    factor_rate = $4,
+                    term_length = $5,
+                    decline_reason = $6,
+                    offer_details = COALESCE(offer_details, '{}')::jsonb || $7::jsonb,
+                    last_response_at = NOW()
+                WHERE id = $1
+                RETURNING *
+            `, [
+                existing.rows[0].id,
+                status,
+                offer_amount ? parseFloat(offer_amount) : null,
+                offer_rate ? parseFloat(offer_rate) : null,
+                offer_term ? parseInt(offer_term) : null,
+                decline_reason || null,
+                JSON.stringify({ manual_notes: notes, logged_manually: true, logged_at: new Date() })
+            ]);
+            console.log(`✅ Updated lender response: ${lender_name} -> ${status}`);
+        } else {
+            // Create new submission record
+            result = await db.query(`
+                INSERT INTO lender_submissions (
+                    id, conversation_id, lender_name, status,
+                    offer_amount, factor_rate, term_length,
+                    decline_reason, offer_details,
+                    submitted_at, last_response_at, created_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), NOW())
+                RETURNING *
+            `, [
+                uuidv4(),
+                conversation_id,
+                lender_name,
+                status,
+                offer_amount ? parseFloat(offer_amount) : null,
+                offer_rate ? parseFloat(offer_rate) : null,
+                offer_term ? parseInt(offer_term) : null,
+                decline_reason || null,
+                JSON.stringify({ manual_notes: notes, logged_manually: true, logged_at: new Date() })
+            ]);
+            console.log(`✅ Created lender response: ${lender_name} -> ${status}`);
+        }
+
+        // If offer was logged, update conversation has_offer flag
+        if (status === 'approved' || status === 'offer') {
+            await db.query(`
+                UPDATE conversations SET has_offer = TRUE, last_activity = NOW()
+                WHERE id = $1
+            `, [conversation_id]);
+        }
+
+        // Emit WebSocket event for real-time updates
+        if (global.io) {
+            global.io.to(`conversation_${conversation_id}`).emit('lender_response_logged', {
+                conversation_id,
+                lender_name,
+                status
+            });
+        }
+
+        res.json({
+            success: true,
+            submission: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Error logging lender response:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ===========================================
 // CSV IMPORT ROUTE - One-time migration
 // ===========================================
 
