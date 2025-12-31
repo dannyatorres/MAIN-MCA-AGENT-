@@ -187,28 +187,37 @@ class ConversationCore {
 
         // 3. Fetch Data
         try {
-            // Check cache for header info first
+            // Show loading header from cache (but don't set selectedConversation yet)
             const cachedConv = this.conversations.get(conversationId);
             if (cachedConv) {
-                this.selectedConversation = cachedConv;
-                this.showConversationDetails();
+                // Only update header, don't set selectedConversation
+                const tempDisplay = cachedConv.business_name || 'Loading...';
+                if (window.updateChatHeader) {
+                    window.updateChatHeader(tempDisplay, '', cachedConv.lead_phone, cachedConv.id);
+                }
             }
 
             // Parallel fetch
             const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
             const msgPromise = this.parent.messaging ?
                 this.parent.messaging.loadConversationMessages(conversationId) : Promise.resolve();
-            const toolsPromise = Promise.allSettled([
-                this.parent.intelligence ? this.parent.intelligence.loadConversationIntelligence(conversationId, cachedConv) : Promise.resolve(),
-                this.parent.documents ? this.parent.documents.loadDocuments() : Promise.resolve()
-            ]);
 
             const data = await dataPromise;
             if (this.currentConversationId !== conversationId) return;
 
+            // NOW set the fresh data as source of truth
             this.selectedConversation = data.conversation || data;
             this.conversations.set(conversationId, this.selectedConversation);
+            if (this.parent) this.parent.selectedConversation = this.selectedConversation;
             this.showConversationDetails();
+
+            // Load intelligence AFTER we have fresh data
+            if (this.parent.intelligence) {
+                this.parent.intelligence.loadConversationIntelligence(conversationId, this.selectedConversation);
+            }
+            if (this.parent.documents) {
+                this.parent.documents.loadDocuments();
+            }
 
             await msgPromise;
 
