@@ -182,27 +182,35 @@ class MessagingModule {
         if (!rawId) return;
 
         const messageConversationId = String(rawId);
-        const currentConversationId = String(this.parent.getCurrentConversationId());
 
-        // Removed && !document.hidden - we want to add messages even when tab is hidden
-        const isCurrentChat = (messageConversationId === currentConversationId);
+        // RESTORED FIX: Skip our own outbound messages
+        // Since sendMessage() handles the optimistic UI and the HTTP response updates the ID,
+        // we strictly ignore the WebSocket echo to prevent duplicates.
+        const isOurOutbound = (message.direction === 'outbound' || message.sender_type === 'user')
+                              && message.sent_by !== 'ai';
 
-        if (!isCurrentChat) {
-            const isLeadMessage = message.direction === 'inbound';
-            const isAiReply = message.sent_by === 'ai' && !message.is_drip;
-
-            if (isLeadMessage || isAiReply) {
-                this.parent.conversationUI?.incrementBadge(messageConversationId);
-            }
+        if (isOurOutbound) {
+            // We still update the sidebar preview so the "Last Message" text updates
+            this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
+            return; // STOP here. Do not add to chat window.
         }
 
+        // --- Standard Handling for Incoming / AI Messages ---
+        const currentConversationId = String(this.parent.getCurrentConversationId());
+        const isCurrentChat = (messageConversationId === currentConversationId);
+
+        // Update preview for incoming messages
         this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
 
         if (isCurrentChat) {
             this.addMessage(message);
-        } else if (message.direction === 'inbound') {
-            this.playNotificationSound();
-            this.showBrowserNotification(data);
+        } else {
+            // Only notify for actual incoming messages
+            if (message.direction === 'inbound') {
+                this.parent.conversationUI?.incrementBadge(messageConversationId);
+                this.playNotificationSound();
+                this.showBrowserNotification(data);
+            }
         }
     }
 
