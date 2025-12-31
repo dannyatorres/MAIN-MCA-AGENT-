@@ -534,4 +534,149 @@ router.get('/:lenderId', async (req, res) => {
     }
 });
 
+// ===========================================
+// CSV IMPORT ROUTE - One-time migration
+// ===========================================
+
+// Import CSV data and merge with existing lenders
+router.post('/import-csv', async (req, res) => {
+    try {
+        const { lenders: csvLenders } = req.body;
+
+        if (!csvLenders || !Array.isArray(csvLenders)) {
+            return res.status(400).json({ error: 'Expected { lenders: [...] } array' });
+        }
+
+        const db = getDatabase();
+        const results = {
+            matched: [],
+            notFound: [],
+            errors: []
+        };
+
+        // Get all existing lenders
+        const existingResult = await db.query('SELECT id, name FROM lenders');
+        const existingLenders = existingResult.rows;
+
+        // Helper: normalize name for matching
+        const normalize = (name) => {
+            return (name || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '') // remove special chars
+                .trim();
+        };
+
+        // Build lookup map
+        const lenderMap = new Map();
+        existingLenders.forEach(l => {
+            lenderMap.set(normalize(l.name), l);
+        });
+
+        // Process each CSV row
+        for (const csv of csvLenders) {
+            const csvName = csv['Lender Name'] || csv.lender_name || csv.name;
+            if (!csvName) continue;
+
+            const normalizedCsvName = normalize(csvName);
+
+            // Try exact match first
+            let match = lenderMap.get(normalizedCsvName);
+
+            // Try fuzzy match if no exact match
+            if (!match) {
+                for (const [key, lender] of lenderMap) {
+                    if (key.includes(normalizedCsvName) || normalizedCsvName.includes(key)) {
+                        match = lender;
+                        break;
+                    }
+                }
+            }
+
+            if (match) {
+                try {
+                    // Update with CSV data
+                    await db.query(`
+                        UPDATE lenders SET
+                            min_tib_months = $2,
+                            min_monthly_revenue = $3,
+                            min_fico = $4,
+                            state_restrictions = $5,
+                            prohibited_industries = $6,
+                            preferred_industries = $7,
+                            other_requirements = $8,
+                            position_info = $9,
+                            pos_min = $10,
+                            pos_max = $11,
+                            tier = $12,
+                            industry_position_restrictions = $13,
+                            accepts_mercury = $14,
+                            min_deposits = $15,
+                            max_negative_days = $16,
+                            accepts_nonprofit = $17,
+                            max_withhold = $18,
+                            updated_at = NOW()
+                        WHERE id = $1
+                    `, [
+                        match.id,
+                        toNum(csv['Min_TIB_Months'] || csv.min_tib_months),
+                        toNum(csv['Min_Monthly_Revenue'] || csv.min_monthly_revenue),
+                        toNum(csv['Min_FICO'] || csv.min_fico),
+                        csv['State_Restrictions'] || csv.state_restrictions || null,
+                        csv['Prohibited_Industries'] || csv.prohibited_industries || null,
+                        csv['Preferred_Industries'] || csv.preferred_industries || null,
+                        csv['Other_Key_Requirements'] || csv.other_requirements || null,
+                        csv['Position_Info'] || csv.position_info || null,
+                        toNum(csv['pos_min'] || csv.pos_min),
+                        toNum(csv['pos_max'] || csv.pos_max),
+                        csv['Tier'] || csv.tier || null,
+                        csv['Industry_Position_Restrictions'] || csv.industry_position_restrictions || null,
+                        (csv['Accepts Mercury Statements'] || csv.accepts_mercury || '').toString().toLowerCase() === 'yes' ||
+                        (csv['Accepts Mercury Statements'] || csv.accepts_mercury || '').toString().toLowerCase() === 'y',
+                        toNum(csv['minDeposits'] || csv.min_deposits),
+                        toNum(csv['negativeDays'] || csv.max_negative_days),
+                        (csv['Accepts_NonProfit'] || csv.accepts_nonprofit || '').toString().toLowerCase() === 'yes' ||
+                        (csv['Accepts_NonProfit'] || csv.accepts_nonprofit || '').toString().toLowerCase() === 'y',
+                        toNum(csv['Max_Withhold'] || csv.max_withhold)
+                    ]);
+
+                    results.matched.push({
+                        csvName: csvName,
+                        dbName: match.name,
+                        dbId: match.id
+                    });
+                } catch (err) {
+                    results.errors.push({
+                        csvName: csvName,
+                        error: err.message
+                    });
+                }
+            } else {
+                results.notFound.push({
+                    csvName: csvName,
+                    normalized: normalizedCsvName
+                });
+            }
+        }
+
+        console.log(`📊 CSV Import: ${results.matched.length} matched, ${results.notFound.length} not found, ${results.errors.length} errors`);
+
+        res.json({
+            success: true,
+            summary: {
+                total: csvLenders.length,
+                matched: results.matched.length,
+                notFound: results.notFound.length,
+                errors: results.errors.length
+            },
+            matched: results.matched,
+            notFound: results.notFound,
+            errors: results.errors
+        });
+
+    } catch (error) {
+        console.error('Error importing CSV:', error);
+        res.status(500).json({ error: 'Failed to import CSV', details: error.message });
+    }
+});
+
 module.exports = router;
