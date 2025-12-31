@@ -539,7 +539,7 @@ class LendersModule {
             // Group by tiers
             const tiers = {};
             data.qualified.forEach(lender => {
-                const tier = lender.Tier || 'Unknown';
+                const tier = lender.tier || lender.Tier || 'Unranked';
                 if (!tiers[tier]) tiers[tier] = [];
                 tiers[tier].push(lender);
             });
@@ -550,7 +550,13 @@ class LendersModule {
                 html += `<div class="lender-grid">`;
                 tiers[tier].forEach(lender => {
                     const star = lender.isPreferred ? '⭐' : '';
-                    html += `<div class="lender-tag">${lender['Lender Name']} <span>${star}</span></div>`;
+                    const prediction = lender.prediction;
+                    let rateHtml = '';
+                    if (prediction && prediction.successRate !== null) {
+                        const rateClass = prediction.confidence || 'low';
+                        rateHtml = `<span class="success-rate ${rateClass}" title="${prediction.factors?.join(', ') || 'Historical data'}">${prediction.successRate}%</span>`;
+                    }
+                    html += `<div class="lender-tag">${lender['Lender Name']} ${rateHtml}<span>${star}</span></div>`;
                 });
                 html += `</div></div>`;
             });
