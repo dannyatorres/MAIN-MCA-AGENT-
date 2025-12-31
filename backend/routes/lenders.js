@@ -603,18 +603,17 @@ router.post('/log-response', async (req, res) => {
         let snapshot = null;
         try {
             const convResult = await db.query(`
-                SELECT industry, us_state, monthly_revenue, fico_score, time_in_business, business_name
+                SELECT industry_type, us_state, monthly_revenue, credit_score, business_start_date, business_name
                 FROM conversations WHERE id = $1
             `, [conversation_id]);
 
             if (convResult.rows.length > 0) {
                 const conv = convResult.rows[0];
                 snapshot = {
-                    industry: conv.industry,
+                    industry: conv.industry_type,
                     state: conv.us_state,
                     monthly_revenue: parseFloat(conv.monthly_revenue) || null,
-                    fico: parseInt(conv.fico_score) || null,
-                    tib_months: parseInt(conv.time_in_business) || null,
+                    fico: parseInt(conv.credit_score) || null,
                     position: position || null,
                     total_daily_withhold: total_daily_withhold || null,
                     days_into_stack: days_into_stack || null,
