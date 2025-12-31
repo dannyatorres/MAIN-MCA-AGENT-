@@ -176,6 +176,16 @@ class MessagingModule {
         if (!rawId) return;
 
         const messageConversationId = String(rawId);
+
+        // NEW: Skip our own outbound messages - already handled by sendMessage() + HTTP response
+        const isOurOutbound = (message.direction === 'outbound' || message.sender_type === 'user')
+                              && message.sent_by !== 'ai';
+        if (isOurOutbound) {
+            // Just update sidebar preview, don't add to chat (prevents duplicate)
+            this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
+            return;
+        }
+
         const currentConversationId = String(this.parent.getCurrentConversationId());
         const isCurrentChat = (messageConversationId === currentConversationId && !document.hidden);
 
