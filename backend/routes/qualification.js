@@ -1,9 +1,82 @@
 // qualification.js - Lender Qualification Route
 const express = require('express');
 const router = express.Router();
+const Anthropic = require('@anthropic-ai/sdk');
 
 // Adjust this import to match your database setup
 const { getDatabase } = require('../services/database');
+
+const anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY
+});
+
+// ============================================
+// AI INDUSTRY CLASSIFICATION
+// ============================================
+
+async function classifyIndustry(inputIndustry) {
+    const prompt = `Classify this business industry into ONE canonical category.
+
+Input: "${inputIndustry}"
+
+Choose from these categories ONLY:
+- pawn
+- trucking
+- construction
+- auto sales
+- auto repair
+- real estate
+- finance
+- cannabis
+- vape
+- adult entertainment
+- gambling
+- restaurant
+- retail
+- medical
+- staffing
+- law firm
+- salon
+- gym
+- daycare
+- church
+- non-profit
+- gas station
+- towing
+- moving
+- landscaping
+- hvac
+- plumbing
+- electrical
+- roofing
+- cleaning
+- food truck
+- bar
+- hotel
+- manufacturing
+- wholesale
+- ecommerce
+- technology
+- consulting
+- marketing
+- security
+- other
+
+Respond with ONLY the category name, nothing else.`;
+
+    try {
+        const response = await anthropic.messages.create({
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 50,
+            messages: [{ role: 'user', content: prompt }]
+        });
+
+        return response.content[0].text.trim().toLowerCase();
+    } catch (error) {
+        console.error('AI classification error:', error);
+        return inputIndustry.toLowerCase(); // Fallback to original
+    }
+}
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -81,10 +154,13 @@ function checkIndustryRestrictions(lender, criteria) {
     if (!prohibited) return null;
 
     const merchantIndustry = criteria.industry.toLowerCase().trim();
+    const classifiedIndustry = criteria.classifiedIndustry || merchantIndustry;
     const prohibitedList = prohibited.split(',').map(i => i.trim());
 
     for (const prohibitedIndustry of prohibitedList) {
-        if (industryMatches(merchantIndustry, prohibitedIndustry)) {
+        // Check both original and AI-classified industry
+        if (industryMatches(merchantIndustry, prohibitedIndustry) ||
+            industryMatches(classifiedIndustry, prohibitedIndustry)) {
             return `Industry - ${prohibitedIndustry} not accepted`;
         }
     }
@@ -174,10 +250,13 @@ function checkPreferredIndustry(lender, criteria) {
     if (!preferredIndustries) return false;
 
     const merchantIndustry = criteria.industry.toLowerCase().trim();
+    const classifiedIndustry = criteria.classifiedIndustry || merchantIndustry;
     const preferredList = preferredIndustries.split(',').map(i => i.trim());
 
     for (const preferred of preferredList) {
-        if (industryMatches(merchantIndustry, preferred)) {
+        // Check both original and AI-classified industry
+        if (industryMatches(merchantIndustry, preferred) ||
+            industryMatches(classifiedIndustry, preferred)) {
             return true;
         }
     }
@@ -190,16 +269,24 @@ function checkPreferredIndustry(lender, criteria) {
 
 function checkLenderRules(rules, criteria) {
     const merchantIndustry = criteria.industry.toLowerCase().trim();
+    const classifiedIndustry = criteria.classifiedIndustry || merchantIndustry;
     const merchantState = normalizeState(criteria.state);
 
-    // Industry type detection
-    const isTransportation = isIndustryType(merchantIndustry, ['trucking', 'transportation', 'logistics', 'freight']);
-    const isConstruction = isIndustryType(merchantIndustry, ['construction']);
-    const isAutoSales = isIndustryType(merchantIndustry, ['auto sales', 'car sales', 'vehicle sales', 'auto dealer', 'car dealer']);
-    const isAutoRepair = isIndustryType(merchantIndustry, ['auto repair', 'auto service', 'mechanic', 'automotive repair']);
-    const isStaffing = isIndustryType(merchantIndustry, ['staffing', 'recruiting', 'recruitment', 'employment agency']);
-    const isLandscaping = isIndustryType(merchantIndustry, ['landscaping', 'lawn care', 'landscape']);
-    const isHVAC = isIndustryType(merchantIndustry, ['hvac', 'plumbing', 'electrical', 'flooring', 'windows']);
+    // Industry type detection (check both original and classified)
+    const isTransportation = isIndustryType(merchantIndustry, ['trucking', 'transportation', 'logistics', 'freight']) ||
+                             isIndustryType(classifiedIndustry, ['trucking', 'transportation', 'logistics', 'freight']);
+    const isConstruction = isIndustryType(merchantIndustry, ['construction']) ||
+                           isIndustryType(classifiedIndustry, ['construction']);
+    const isAutoSales = isIndustryType(merchantIndustry, ['auto sales', 'car sales', 'vehicle sales', 'auto dealer', 'car dealer']) ||
+                        isIndustryType(classifiedIndustry, ['auto sales', 'car sales', 'vehicle sales', 'auto dealer', 'car dealer']);
+    const isAutoRepair = isIndustryType(merchantIndustry, ['auto repair', 'auto service', 'mechanic', 'automotive repair']) ||
+                         isIndustryType(classifiedIndustry, ['auto repair', 'auto service', 'mechanic', 'automotive repair']);
+    const isStaffing = isIndustryType(merchantIndustry, ['staffing', 'recruiting', 'recruitment', 'employment agency']) ||
+                        isIndustryType(classifiedIndustry, ['staffing', 'recruiting', 'recruitment', 'employment agency']);
+    const isLandscaping = isIndustryType(merchantIndustry, ['landscaping', 'lawn care', 'landscape']) ||
+                          isIndustryType(classifiedIndustry, ['landscaping', 'lawn care', 'landscape']);
+    const isHVAC = isIndustryType(merchantIndustry, ['hvac', 'plumbing', 'electrical', 'flooring', 'windows']) ||
+                   isIndustryType(classifiedIndustry, ['hvac', 'plumbing', 'electrical', 'flooring', 'windows']);
 
     for (const rule of rules) {
         if (!rule.is_active) continue;
@@ -331,6 +418,17 @@ router.post('/qualify', async (req, res) => {
         }
 
         const db = getDatabase();
+
+        // Classify industry with AI first
+        let classifiedIndustry = criteria.industry ? criteria.industry.toLowerCase() : '';
+        if (criteria.industry) {
+            classifiedIndustry = await classifyIndustry(criteria.industry);
+            console.log(`"${criteria.industry}" → AI classified as: "${classifiedIndustry}"`);
+        }
+
+        // Store both original and classified for matching
+        criteria.originalIndustry = criteria.industry;
+        criteria.classifiedIndustry = classifiedIndustry;
 
         // Get all lenders
         const lendersResult = await db.query(`
