@@ -595,6 +595,35 @@ router.post('/log-response', async (req, res) => {
 
         const db = getDatabase();
 
+        // Capture snapshot of deal at time of submission
+        let snapshot = null;
+        try {
+            const convResult = await db.query(`
+                SELECT
+                    industry, us_state, monthly_revenue, fico_score,
+                    time_in_business, business_name
+                FROM conversations WHERE id = $1
+            `, [conversation_id]);
+
+            if (convResult.rows.length > 0) {
+                const conv = convResult.rows[0];
+                snapshot = {
+                    industry: conv.industry,
+                    state: conv.us_state,
+                    monthly_revenue: parseFloat(conv.monthly_revenue) || null,
+                    fico: parseInt(conv.fico_score) || null,
+                    tib_months: parseInt(conv.time_in_business) || null,
+                    position: position ? parseInt(position) : null,
+                    existing_positions_count: existing_positions_count ? parseInt(existing_positions_count) : null,
+                    total_daily_withhold: total_daily_withhold ? parseFloat(total_daily_withhold) : null,
+                    days_into_stack: days_into_stack ? parseInt(days_into_stack) : null,
+                    captured_at: new Date().toISOString()
+                };
+            }
+        } catch (err) {
+            console.error('Error capturing snapshot:', err.message);
+        }
+
         // Check if submission exists for this lender/conversation
         const existing = await db.query(`
             SELECT id FROM lender_submissions
@@ -616,9 +645,10 @@ router.post('/log-response', async (req, res) => {
                     factor_rate = COALESCE($7, factor_rate),
                     term_length = COALESCE($8, term_length),
                     decline_reason = COALESCE($9, decline_reason),
-                    offer_details = COALESCE(offer_details, '{}')::jsonb || $10::jsonb,
+                    snapshot = COALESCE(snapshot, $10),
+                    offer_details = COALESCE(offer_details, '{}')::jsonb || $11::jsonb,
                     last_response_at = NOW()
-                WHERE id = $11
+                WHERE id = $12
                 RETURNING *
             `, [
                 status,
@@ -630,6 +660,7 @@ router.post('/log-response', async (req, res) => {
                 offer_rate ? parseFloat(offer_rate) : null,
                 offer_term ? parseInt(offer_term) : null,
                 decline_reason || null,
+                snapshot ? JSON.stringify(snapshot) : null,
                 JSON.stringify({ manual_notes: notes, logged_manually: true, logged_at: new Date() }),
                 existing.rows[0].id
             ]);
@@ -641,9 +672,9 @@ router.post('/log-response', async (req, res) => {
                     id, conversation_id, lender_name, status, position,
                     existing_positions_count, total_daily_withhold, days_into_stack,
                     offer_amount, factor_rate, term_length,
-                    decline_reason, offer_details,
+                    decline_reason, snapshot, offer_details,
                     submitted_at, last_response_at, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW(), NOW())
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW(), NOW())
                 RETURNING *
             `, [
                 uuidv4(),
@@ -658,6 +689,7 @@ router.post('/log-response', async (req, res) => {
                 offer_rate ? parseFloat(offer_rate) : null,
                 offer_term ? parseInt(offer_term) : null,
                 decline_reason || null,
+                snapshot ? JSON.stringify(snapshot) : null,
                 JSON.stringify({ manual_notes: notes, logged_manually: true, logged_at: new Date() })
             ]);
             console.log(`✅ Created lender response: ${lender_name} -> ${status}`);
