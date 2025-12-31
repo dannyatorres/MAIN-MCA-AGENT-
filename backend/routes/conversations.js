@@ -147,23 +147,38 @@ router.get('/', async (req, res) => {
             values.push(priority);
         }
 
-        // 3. SEARCH FILTER (The Fix)
+        // 3. SEARCH FILTER (Fixed for Business Names)
         if (search) {
-            const searchTerm = `%${search.trim()}%`;
-            // Search cleaning for phone: remove non-digits to match raw DB numbers
-            const phoneSearch = `%${search.replace(/\D/g, '')}%`;
+            const term = search.trim();
+            const searchTerm = `%${term}%`;
 
-            query += ` AND (
-                c.business_name ILIKE $${paramIndex} OR
-                c.first_name ILIKE $${paramIndex} OR
-                c.last_name ILIKE $${paramIndex} OR
-                c.email ILIKE $${paramIndex} OR
-                CAST(c.display_id AS TEXT) ILIKE $${paramIndex} OR
-                c.lead_phone LIKE $${paramIndex + 1}
-            )`;
+            // Fix: Check if the user actually typed any digits
+            const digitsOnly = term.replace(/\D/g, '');
+            const phoneSearch = digitsOnly.length > 0 ? `%${digitsOnly}%` : null;
 
-            values.push(searchTerm, phoneSearch);
-            paramIndex += 2;
+            // 1. Setup the text search (Business Name, Person Name, Email)
+            // Note: We use the current paramIndex for all these fields
+            let conditions = [
+                `c.business_name ILIKE $${paramIndex}`,
+                `c.first_name ILIKE $${paramIndex}`,
+                `c.last_name ILIKE $${paramIndex}`,
+                `c.email ILIKE $${paramIndex}`,
+                `CAST(c.display_id AS TEXT) ILIKE $${paramIndex}`
+            ];
+
+            values.push(searchTerm);
+            paramIndex++; // Move index forward for the next value
+
+            // 2. Only add phone search if user typed numbers
+            // This prevents the "Match Everything" bug when searching for names
+            if (phoneSearch) {
+                conditions.push(`c.lead_phone LIKE $${paramIndex}`);
+                values.push(phoneSearch);
+                paramIndex++;
+            }
+
+            // Join them all with OR
+            query += ` AND (${conditions.join(' OR ')})`;
         }
 
         // 4. QUICK FILTERS
