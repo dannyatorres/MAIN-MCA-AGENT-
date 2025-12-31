@@ -106,7 +106,7 @@ async function runCheck() {
         console.log(`   📬 Fetched ${recentEmails.length} emails. Checking DB for duplicates...`);
 
         for (const email of recentEmails) {
-            const exists = await db.query('SELECT 1 FROM processed_emails WHERE message_id = $1', [email.id]);
+            const exists = await db.query('SELECT 1 FROM processed_emails WHERE message_id = $1 OR thread_id = $2', [email.id, email.threadId]);
             
             if (exists.rows.length === 0) {
                 console.log(`      ✨ NEW EMAIL FOUND: "${email.subject || '(No Subject)'}"`);
@@ -137,7 +137,7 @@ async function runCheck() {
 
 async function processEmail(email, db) {
     try {
-        await db.query('INSERT INTO processed_emails (message_id) VALUES ($1)', [email.id]);
+        await db.query('INSERT INTO processed_emails (message_id, thread_id) VALUES ($1, $2)', [email.id, email.threadId]);
     } catch (err) { return; }
 
     console.log(`   🤖 [AI] Analyzing email: "${email.subject}"...`);
