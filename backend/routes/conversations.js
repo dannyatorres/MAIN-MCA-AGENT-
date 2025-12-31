@@ -420,92 +420,134 @@ router.put('/:id', async (req, res) => {
             if (updates[key] === '') updates[key] = null;
         });
 
-        // 2. Define Field Mappings (all fields now in conversations table)
+        // 2. Define Field Mappings (camelCase -> snake_case)
         const fieldMap = {
-            // Core fields (direct mapping)
+            // Basic Info
+            'businessName': 'business_name',
             'business_name': 'business_name',
-            'state': 'state',
-            'priority': 'priority',
-            'first_name': 'first_name',
-            'last_name': 'last_name',
-            'email': 'email',
-            'address': 'address',
-            'city': 'city',
-            'us_state': 'us_state',
-            'zip': 'zip',
+            'dbaName': 'dba_name',
+            'dba_name': 'dba_name',
+            'primaryPhone': 'lead_phone',
             'lead_phone': 'lead_phone',
+            'cellPhone': 'cell_phone',
             'cell_phone': 'cell_phone',
-            'credit_score': 'credit_score',
-            'recent_funding': 'recent_funding',
-            'funding_status': 'funding_status',
-            'lead_source': 'lead_source',
-            'notes': 'notes',
+            'businessEmail': 'email',
+            'email': 'email',
+
+            // Address
+            'businessAddress': 'address',
+            'address': 'address',
+            'businessCity': 'city',
+            'city': 'city',
+            'businessState': 'us_state',
+            'us_state': 'us_state',
+            'businessZip': 'zip',
+            'zip': 'zip',
+
+            // Business Details
+            'entityType': 'entity_type',
+            'entity_type': 'entity_type',
+            'industryType': 'industry_type',
+            'industry_type': 'industry_type',
+            'businessType': 'business_type',
+            'business_type': 'business_type',
+            'businessStartDate': 'business_start_date',
+            'business_start_date': 'business_start_date',
+            'federalTaxId': 'tax_id',
+            'tax_id': 'tax_id',
 
             // Financials
-            'annual_revenue': 'annual_revenue',
             'annualRevenue': 'annual_revenue',
+            'annual_revenue': 'annual_revenue',
+            'monthlyRevenue': 'monthly_revenue',
             'monthly_revenue': 'monthly_revenue',
-            'funding_amount': 'funding_amount',
             'requestedAmount': 'funding_amount',
-
-            // Business Info
-            'business_start_date': 'business_start_date',
-            'businessStartDate': 'business_start_date',
-            'business_type': 'business_type',
-            'industry': 'business_type',
-            'tax_id': 'tax_id',
-            'federalTaxId': 'tax_id',
+            'funding_amount': 'funding_amount',
+            'creditScore': 'credit_score',
+            'credit_score': 'credit_score',
+            'fundingStatus': 'funding_status',
+            'funding_status': 'funding_status',
+            'recentFunding': 'recent_funding',
+            'recent_funding': 'recent_funding',
 
             // Owner 1
-            'ssn': 'ssn',
+            'ownerFirstName': 'first_name',
+            'first_name': 'first_name',
+            'ownerLastName': 'last_name',
+            'last_name': 'last_name',
             'ownerSSN': 'ssn',
-            'date_of_birth': 'date_of_birth',
+            'ssn': 'ssn',
             'ownerDOB': 'date_of_birth',
+            'date_of_birth': 'date_of_birth',
+            'ownerPhone': 'owner_phone',
+            'owner_phone': 'owner_phone',
+            'ownerEmail': 'owner_email',
+            'owner_email': 'owner_email',
+            'ownerPercent': 'owner_ownership_percent',
             'owner_ownership_percent': 'owner_ownership_percent',
-            'ownershipPercent': 'owner_ownership_percent',
-            'owner_home_address': 'owner_home_address',
             'ownerHomeAddress': 'owner_home_address',
-            'owner_home_city': 'owner_home_city',
+            'owner_home_address': 'owner_home_address',
             'ownerHomeCity': 'owner_home_city',
-            'owner_home_state': 'owner_home_state',
+            'owner_home_city': 'owner_home_city',
             'ownerHomeState': 'owner_home_state',
-            'owner_home_zip': 'owner_home_zip',
+            'owner_home_state': 'owner_home_state',
             'ownerHomeZip': 'owner_home_zip',
+            'owner_home_zip': 'owner_home_zip',
 
             // Owner 2
+            'owner2FirstName': 'owner2_first_name',
             'owner2_first_name': 'owner2_first_name',
+            'owner2LastName': 'owner2_last_name',
             'owner2_last_name': 'owner2_last_name',
+            'owner2Email': 'owner2_email',
             'owner2_email': 'owner2_email',
+            'owner2Phone': 'owner2_phone',
             'owner2_phone': 'owner2_phone',
+            'owner2SSN': 'owner2_ssn',
             'owner2_ssn': 'owner2_ssn',
+            'owner2DOB': 'owner2_dob',
             'owner2_dob': 'owner2_dob',
+            'owner2OwnershipPercent': 'owner2_ownership_percent',
             'owner2_ownership_percent': 'owner2_ownership_percent',
+            'owner2HomeAddress': 'owner2_address',
             'owner2_address': 'owner2_address',
+            'owner2HomeCity': 'owner2_city',
             'owner2_city': 'owner2_city',
+            'owner2HomeState': 'owner2_state',
             'owner2_state': 'owner2_state',
-            'owner2_zip': 'owner2_zip'
+            'owner2HomeZip': 'owner2_zip',
+            'owner2_zip': 'owner2_zip',
+
+            // Other
+            'state': 'state',
+            'priority': 'priority',
+            'leadSource': 'lead_source',
+            'lead_source': 'lead_source',
+            'notes': 'notes'
         };
 
-        // 3. Build Updates (all go to conversations table now)
-        const convUpdates = {};
-
+        // 3. Convert incoming data to snake_case
+        const dbUpdates = {};
         for (const [key, value] of Object.entries(updates)) {
-            if (fieldMap[key]) {
-                convUpdates[fieldMap[key]] = value;
+            const dbColumn = fieldMap[key];
+            if (dbColumn && value !== undefined) {
+                dbUpdates[dbColumn] = value;
             }
         }
 
-        // 4. Update 'conversations' Table
-        if (Object.keys(convUpdates).length > 0) {
-            const setClauses = Object.keys(convUpdates).map((k, i) => `${k} = $${i + 2}`);
-            const values = [id, ...Object.values(convUpdates)];
+        console.log('📥 Mapped updates:', dbUpdates);
+
+        // 4. Update conversations table
+        if (Object.keys(dbUpdates).length > 0) {
+            const setClauses = Object.keys(dbUpdates).map((k, i) => `${k} = $${i + 2}`);
+            const values = [id, ...Object.values(dbUpdates)];
 
             await db.query(`
                 UPDATE conversations
                 SET ${setClauses.join(', ')}, last_activity = NOW()
                 WHERE id = $1
             `, values);
-            console.log(`✅ Updated conversations table (${Object.keys(convUpdates).length} fields)`);
+            console.log(`✅ Updated ${Object.keys(dbUpdates).length} fields`);
         }
 
         // Return updated object
