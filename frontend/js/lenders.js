@@ -1496,41 +1496,40 @@ Best regards`;
                 }
             }, 800);
 
-            // 5. Send Request
+            // 5. Send Request (Fire and Forget)
             const conversationId = this.parent.getCurrentConversationId();
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/send-to-lenders`, {
+
+            // Don't await - fire and forget
+            this.parent.apiCall(`/api/conversations/${conversationId}/send-to-lenders`, {
                 method: 'POST',
                 body: JSON.stringify({
                     selectedLenders,
                     businessData,
                     documents: selectedDocuments
                 })
+            }).then(result => {
+                console.log('📧 Background submission result:', result);
+            }).catch(err => {
+                console.error('📧 Background submission error:', err);
             });
 
             clearInterval(progressInterval);
 
-            if (result.success) {
-                // 6. Success State
-                if (progressBar) progressBar.style.width = '100%';
-                if (statusText) statusText.textContent = '✅ Sent Successfully!';
+            // 6. Immediate Success State (assume it worked)
+            if (progressBar) progressBar.style.width = '100%';
+            if (statusText) statusText.textContent = '✅ Queued Successfully!';
 
-                // Wait 500ms so user sees "100%", then close
-                setTimeout(() => {
-                    const successCount = result.results?.successful?.length || 0;
-                    this.utils.showNotification(`Successfully sent to ${successCount} lenders!`, 'success');
+            setTimeout(() => {
+                this.utils.showNotification(`Sending to ${selectedLenders.length} lenders in background!`, 'success');
 
-                    // Hide Overlay
-                    overlay.style.display = 'none';
-                    progressBar.style.width = '0%';
+                // Hide Overlay
+                overlay.style.display = 'none';
+                progressBar.style.width = '0%';
 
-                    // Close Modal
-                    document.getElementById('lenderSubmissionModal').style.display = 'none';
-                    document.getElementById('lenderSubmissionModal').classList.add('hidden');
-                }, 800);
-
-            } else {
-                throw new Error(result.error || 'Failed to send submissions');
-            }
+                // Close Modal
+                document.getElementById('lenderSubmissionModal').style.display = 'none';
+                document.getElementById('lenderSubmissionModal').classList.add('hidden');
+            }, 500)
 
         } catch (error) {
             console.error('Error sending submissions:', error);
