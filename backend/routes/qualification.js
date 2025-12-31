@@ -16,7 +16,8 @@ const anthropic = new Anthropic({
 
 async function classifyIndustry(inputIndustry) {
     const input = inputIndustry.toLowerCase().trim();
-    console.log(`🔍 AI Classification - Input: "${input}"`);
+    console.log(`\n🔍 ========== AI CLASSIFICATION ==========`);
+    console.log(`📥 Input: "${input}"`);
 
     const prompt = `Classify this business industry into ONE canonical category.
 
@@ -68,19 +69,34 @@ Choose from these categories ONLY:
 Respond with ONLY the category name, nothing else.`;
 
     try {
-        console.log(`🤖 Calling Claude Haiku...`);
+        console.log(`🤖 Calling Claude Haiku 4.5...`);
+        const startTime = Date.now();
+
         const response = await anthropic.messages.create({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 50,
             messages: [{ role: 'user', content: prompt }]
         });
 
+        const endTime = Date.now();
         const result = response.content[0].text.trim().toLowerCase();
-        console.log(`✅ AI Classification Result: "${input}" → "${result}"`);
+
+        console.log(`📤 AI Response: "${response.content[0].text}"`);
+        console.log(`🎯 Cleaned result: "${result}"`);
+        console.log(`⏱️  Response time: ${endTime - startTime}ms`);
+        console.log(`📊 Token usage:`);
+        console.log(`   - Input tokens: ${response.usage.input_tokens}`);
+        console.log(`   - Output tokens: ${response.usage.output_tokens}`);
+        console.log(`   - Total tokens: ${response.usage.input_tokens + response.usage.output_tokens}`);
+        console.log(`💰 Estimated cost: $${((response.usage.input_tokens * 0.00025 + response.usage.output_tokens * 0.00125) / 1000).toFixed(6)}`);
+        console.log(`🔍 ==========================================\n`);
+
         return result;
     } catch (error) {
-        console.error('❌ AI classification error:', error.message);
-        return input; // Fallback to original
+        console.error(`❌ AI classification error:`, error.message);
+        console.error(`❌ Full error:`, error);
+        console.log(`🔍 ==========================================\n`);
+        return input;
     }
 }
 
