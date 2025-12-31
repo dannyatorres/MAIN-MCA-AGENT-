@@ -16,6 +16,8 @@ async function buildLenderProfiles() {
         SELECT
             ls.lender_name,
             ls.status,
+            ls.total_daily_withhold,
+            ls.existing_positions_count,
             c.industry,
             c.us_state,
             c.monthly_revenue,
@@ -44,7 +46,11 @@ async function buildLenderProfiles() {
                 avgApprovedTib: [],
                 avgDeclinedRevenue: [],
                 avgDeclinedFico: [],
-                avgDeclinedTib: []
+                avgDeclinedTib: [],
+                avgApprovedWithhold: [],
+                avgDeclinedWithhold: [],
+                avgApprovedPositionCount: [],
+                avgDeclinedPositionCount: []
             };
         }
 
@@ -79,10 +85,14 @@ async function buildLenderProfiles() {
             if (row.monthly_revenue) p.avgApprovedRevenue.push(parseFloat(row.monthly_revenue));
             if (row.fico_score) p.avgApprovedFico.push(parseInt(row.fico_score));
             if (row.time_in_business) p.avgApprovedTib.push(parseInt(row.time_in_business));
+            if (row.total_daily_withhold) p.avgApprovedWithhold.push(parseFloat(row.total_daily_withhold));
+            if (row.existing_positions_count) p.avgApprovedPositionCount.push(parseInt(row.existing_positions_count));
         } else {
             if (row.monthly_revenue) p.avgDeclinedRevenue.push(parseFloat(row.monthly_revenue));
             if (row.fico_score) p.avgDeclinedFico.push(parseInt(row.fico_score));
             if (row.time_in_business) p.avgDeclinedTib.push(parseInt(row.time_in_business));
+            if (row.total_daily_withhold) p.avgDeclinedWithhold.push(parseFloat(row.total_daily_withhold));
+            if (row.existing_positions_count) p.avgDeclinedPositionCount.push(parseInt(row.existing_positions_count));
         }
     }
 
@@ -96,6 +106,10 @@ async function buildLenderProfiles() {
         p.avgDeclinedRevenue = average(p.avgDeclinedRevenue);
         p.avgDeclinedFico = average(p.avgDeclinedFico);
         p.avgDeclinedTib = average(p.avgDeclinedTib);
+        p.avgApprovedWithhold = average(p.avgApprovedWithhold);
+        p.avgDeclinedWithhold = average(p.avgDeclinedWithhold);
+        p.avgApprovedPositionCount = average(p.avgApprovedPositionCount);
+        p.avgDeclinedPositionCount = average(p.avgDeclinedPositionCount);
     }
 
     lenderProfiles = profiles;
@@ -200,6 +214,30 @@ async function predictSuccess(lenderName, criteria) {
         } else if (profile.avgDeclinedTib && tib <= profile.avgDeclinedTib) {
             score -= 0.1;
             factors.push('TIB below avg declined');
+        }
+    }
+
+    // Adjust by daily withhold
+    if (criteria.totalDailyWithhold && profile.avgApprovedWithhold) {
+        const withhold = parseFloat(criteria.totalDailyWithhold);
+        if (withhold <= profile.avgApprovedWithhold) {
+            score += 0.05;
+            factors.push('Daily withhold at/below avg approved');
+        } else if (profile.avgDeclinedWithhold && withhold >= profile.avgDeclinedWithhold) {
+            score -= 0.1;
+            factors.push('Daily withhold above avg declined');
+        }
+    }
+
+    // Adjust by existing position count
+    if (criteria.existingPositions && profile.avgApprovedPositionCount) {
+        const posCount = parseInt(criteria.existingPositions);
+        if (posCount <= profile.avgApprovedPositionCount) {
+            score += 0.05;
+            factors.push('Position count at/below avg approved');
+        } else if (profile.avgDeclinedPositionCount && posCount >= profile.avgDeclinedPositionCount) {
+            score -= 0.1;
+            factors.push('Position count above avg declined');
         }
     }
 

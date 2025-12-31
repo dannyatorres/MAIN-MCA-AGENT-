@@ -576,6 +576,9 @@ router.post('/log-response', async (req, res) => {
             lender_name,
             status,
             position,
+            existing_positions_count,
+            total_daily_withhold,
+            days_into_stack,
             offer_amount,
             offer_rate,
             offer_term,
@@ -606,17 +609,23 @@ router.post('/log-response', async (req, res) => {
                 UPDATE lender_submissions SET
                     status = $1,
                     position = COALESCE($2, position),
-                    offer_amount = COALESCE($3, offer_amount),
-                    factor_rate = COALESCE($4, factor_rate),
-                    term_length = COALESCE($5, term_length),
-                    decline_reason = COALESCE($6, decline_reason),
-                    offer_details = COALESCE(offer_details, '{}')::jsonb || $7::jsonb,
+                    existing_positions_count = COALESCE($3, existing_positions_count),
+                    total_daily_withhold = COALESCE($4, total_daily_withhold),
+                    days_into_stack = COALESCE($5, days_into_stack),
+                    offer_amount = COALESCE($6, offer_amount),
+                    factor_rate = COALESCE($7, factor_rate),
+                    term_length = COALESCE($8, term_length),
+                    decline_reason = COALESCE($9, decline_reason),
+                    offer_details = COALESCE(offer_details, '{}')::jsonb || $10::jsonb,
                     last_response_at = NOW()
-                WHERE id = $8
+                WHERE id = $11
                 RETURNING *
             `, [
                 status,
                 position ? parseInt(position) : null,
+                existing_positions_count ? parseInt(existing_positions_count) : null,
+                total_daily_withhold ? parseFloat(total_daily_withhold) : null,
+                days_into_stack ? parseInt(days_into_stack) : null,
                 offer_amount ? parseFloat(offer_amount) : null,
                 offer_rate ? parseFloat(offer_rate) : null,
                 offer_term ? parseInt(offer_term) : null,
@@ -630,10 +639,11 @@ router.post('/log-response', async (req, res) => {
             result = await db.query(`
                 INSERT INTO lender_submissions (
                     id, conversation_id, lender_name, status, position,
+                    existing_positions_count, total_daily_withhold, days_into_stack,
                     offer_amount, factor_rate, term_length,
                     decline_reason, offer_details,
                     submitted_at, last_response_at, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW(), NOW())
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW(), NOW())
                 RETURNING *
             `, [
                 uuidv4(),
@@ -641,6 +651,9 @@ router.post('/log-response', async (req, res) => {
                 lender_name,
                 status,
                 position ? parseInt(position) : null,
+                existing_positions_count ? parseInt(existing_positions_count) : null,
+                total_daily_withhold ? parseFloat(total_daily_withhold) : null,
+                days_into_stack ? parseInt(days_into_stack) : null,
                 offer_amount ? parseFloat(offer_amount) : null,
                 offer_rate ? parseFloat(offer_rate) : null,
                 offer_term ? parseInt(offer_term) : null,

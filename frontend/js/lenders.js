@@ -1815,12 +1815,18 @@ Best regards`;
         // Reset form
         document.getElementById('responseStatus').value = '';
         const positionEl = document.getElementById('responsePosition');
+        const existingPosEl = document.getElementById('responseExistingPositions');
+        const dailyWithholdEl = document.getElementById('responseDailyWithhold');
+        const daysIntoStackEl = document.getElementById('responseDaysIntoStack');
         const offerAmountEl = document.getElementById('responseOfferAmount');
         const factorRateEl = document.getElementById('responseFactorRate');
         const termLengthEl = document.getElementById('responseTermLength');
         const declineReasonEl = document.getElementById('responseDeclineReason');
 
         if (positionEl) positionEl.value = '';
+        if (existingPosEl) existingPosEl.value = '';
+        if (dailyWithholdEl) dailyWithholdEl.value = '';
+        if (daysIntoStackEl) daysIntoStackEl.value = '';
         if (offerAmountEl) offerAmountEl.value = '';
         if (factorRateEl) factorRateEl.value = '';
         if (termLengthEl) termLengthEl.value = '';
@@ -1887,11 +1893,18 @@ Best regards`;
         const conversationId = this.parent.getCurrentConversationId();
 
         const positionVal = document.getElementById('responsePosition')?.value;
+        const existingPositions = document.getElementById('responseExistingPositions')?.value;
+        const dailyWithhold = document.getElementById('responseDailyWithhold')?.value;
+        const daysIntoStack = document.getElementById('responseDaysIntoStack')?.value;
+
         const responseData = {
             conversation_id: conversationId,
             lender_name: lenderName,
             status: document.getElementById('responseStatus').value,
             position: positionVal ? parseInt(positionVal) : null,
+            existing_positions_count: existingPositions ? parseInt(existingPositions) : null,
+            total_daily_withhold: dailyWithhold ? parseFloat(dailyWithhold) : null,
+            days_into_stack: daysIntoStack ? parseInt(daysIntoStack) : null,
             offer_amount: document.getElementById('responseOfferAmount')?.value || null,
             offer_rate: document.getElementById('responseFactorRate')?.value || null,
             offer_term: document.getElementById('responseTermLength')?.value || null,
