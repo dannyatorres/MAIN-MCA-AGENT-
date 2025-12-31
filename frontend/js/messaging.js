@@ -245,8 +245,9 @@ class MessagingModule {
 
         // 2. MEMORY MERGE CHECK (The Robust Fix)
         // Check if this incoming message matches a pending one in our memory array
-        if (message.direction === 'outbound' || message.sender_type === 'user') {
-            const incomingClean = (message.content || message.message_content || '').replace(/\s+/g, '');
+        if (message.direction === 'outbound' || message.sender_type === 'user' ||
+            message.sent_by === 'user' || (message.direction !== 'inbound' && this.pendingMessages.length > 0)) {
+            const incomingClean = (message.content || message.message_content || message.text || message.body || '').replace(/\s+/g, '');
             const convId = String(message.conversation_id);
 
             // Find matching pending message in memory
