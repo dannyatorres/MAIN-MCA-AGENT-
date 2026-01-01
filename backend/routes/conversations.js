@@ -217,7 +217,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new conversation (SINGLE TABLE VERSION)
+// Create new conversation (SINGLE TABLE VERSION - FIXED MAPPINGS)
 router.post('/', async (req, res) => {
     try {
         const data = req.body;
@@ -225,17 +225,12 @@ router.post('/', async (req, res) => {
 
         console.log('📝 Creating new lead...');
 
-        // --- 1. SANITIZATION ---
-        Object.keys(data).forEach(key => {
-            if (data[key] === '') data[key] = null;
-        });
+        // --- 1. PREP & MAP DATA ---
+        // Fix Phone: Frontend sends 'primaryPhone', DB needs 'lead_phone'
+        const leadPhone = (data.lead_phone || data.primaryPhone || '').replace(/\D/g, '');
 
-        // Clean Phone Numbers
-        ['lead_phone', 'cell_phone', 'owner_phone', 'owner2_phone'].forEach(k => {
-            if (data[k] && typeof data[k] === 'string') {
-                data[k] = data[k].replace(/\D/g, '');
-            }
-        });
+        // Clean other phones
+        const cleanPhone = (val) => (val || '').replace(/\D/g, '');
 
         // Clean Currency
         ['annualRevenue', 'monthlyRevenue', 'requestedAmount', 'funding_amount'].forEach(k => {
@@ -255,7 +250,7 @@ router.post('/', async (req, res) => {
         // --- 3. CHECK FOR DUPLICATES ---
         const existingCheck = await db.query(
             'SELECT id FROM conversations WHERE lead_phone = $1',
-            [data.lead_phone]
+            [leadPhone]
         );
 
         let newId;
@@ -274,7 +269,7 @@ router.post('/', async (req, res) => {
                     last_name = COALESCE($4, last_name),
                     last_activity = NOW()
                 WHERE id = $5
-            `, [data.business_name, data.email, firstName, lastName, newId]);
+            `, [data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
 
         } else {
             // --- 4. INSERT ALL FIELDS INTO CONVERSATIONS ---
@@ -301,41 +296,52 @@ router.post('/', async (req, res) => {
                 )
                 RETURNING id
             `, [
-                data.business_name,
-                data.lead_phone,
-                data.email,
+                // Basic Info
+                data.business_name || data.businessName,
+                leadPhone,
+                data.email || data.businessEmail,
                 data.us_state || data.businessState,
-                data.business_address || data.address,
-                data.business_city || data.city,
-                data.business_zip || data.zip,
+
+                // Address (FIXED: Now checks camelCase businessAddress)
+                data.address || data.business_address || data.businessAddress,
+                data.city || data.business_city || data.businessCity,
+                data.zip || data.business_zip || data.businessZip,
+
                 firstName,
                 lastName,
                 data.lead_source || 'Manual Entry',
                 data.notes || '',
                 data.priority ? parseInt(data.priority) : 1,
-                // New fields
+
+                // Business Details
                 data.tax_id || data.federalTaxId || null,
                 data.business_start_date || data.businessStartDate || null,
                 data.business_type || null,
                 data.entity_type || data.entityType || null,
                 data.industry_type || data.industryType || null,
+
+                // Financials
                 data.annual_revenue || data.annualRevenue || null,
                 data.monthly_revenue || data.monthlyRevenue || null,
                 data.funding_amount || data.requestedAmount || null,
+
+                // Owner 1
                 data.ssn || data.ownerSSN || null,
                 data.date_of_birth || data.ownerDOB || null,
                 data.credit_score || data.creditScore || null,
                 data.funding_status || data.fundingStatus || null,
                 data.recent_funding || data.recentFunding || null,
-                data.owner_ownership_percent || data.ownerPercent || null,
+                data.owner_ownership_percent || data.ownershipPercent || null,
                 data.owner_home_address || data.ownerHomeAddress || null,
                 data.owner_home_city || data.ownerHomeCity || null,
                 data.owner_home_state || data.ownerHomeState || null,
                 data.owner_home_zip || data.ownerHomeZip || null,
+
+                // Owner 2
                 data.owner2_first_name || data.owner2FirstName || null,
                 data.owner2_last_name || data.owner2LastName || null,
                 data.owner2_email || data.owner2Email || null,
-                data.owner2_phone || data.owner2Phone || null,
+                cleanPhone(data.owner2_phone || data.owner2Phone),
                 data.owner2_ssn || data.owner2SSN || null,
                 data.owner2_dob || data.owner2DOB || null,
                 data.owner2_ownership_percent || data.owner2OwnershipPercent || null,
