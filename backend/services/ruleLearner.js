@@ -37,11 +37,11 @@ async function analyzeDeclines() {
                 ls.raw_email_body,
                 ls.conversation_id,
                 c.business_name,
-                c.industry,
+                c.industry_type as industry,
                 c.us_state,
                 c.monthly_revenue,
-                c.fico_score,
-                c.time_in_business
+                c.credit_score as fico_score,
+                c.business_start_date as time_in_business
             FROM lender_submissions ls
             LEFT JOIN conversations c ON ls.conversation_id = c.id
             WHERE ls.status = 'DECLINED'
