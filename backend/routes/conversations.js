@@ -217,15 +217,15 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new conversation (FULL DATA VERSION)
+// Create new conversation (SINGLE TABLE VERSION)
 router.post('/', async (req, res) => {
     try {
         const data = req.body;
         const db = getDatabase();
 
-        console.log('📝 Creating new lead with FULL details...');
+        console.log('📝 Creating new lead...');
 
-        // --- 1. SANITIZATION (Clean up the inputs) ---
+        // --- 1. SANITIZATION ---
         Object.keys(data).forEach(key => {
             if (data[key] === '') data[key] = null;
         });
@@ -252,7 +252,7 @@ router.post('/', async (req, res) => {
             lastName = parts.slice(1).join(' ');
         }
 
-        // --- 3. CHECK FOR DUPLICATES & INSERT/UPDATE ---
+        // --- 3. CHECK FOR DUPLICATES ---
         const existingCheck = await db.query(
             'SELECT id FROM conversations WHERE lead_phone = $1',
             [data.lead_phone]
@@ -262,10 +262,9 @@ router.post('/', async (req, res) => {
         let isUpdate = false;
 
         if (existingCheck.rows.length > 0) {
-            // DUPLICATE FOUND: Update existing
             newId = existingCheck.rows[0].id;
             isUpdate = true;
-            console.log(`⚠️ Lead exists (${newId}). Updating instead of creating.`);
+            console.log(`⚠️ Lead exists (${newId}). Updating instead.`);
 
             await db.query(`
                 UPDATE conversations SET
@@ -275,30 +274,37 @@ router.post('/', async (req, res) => {
                     last_name = COALESCE($4, last_name),
                     last_activity = NOW()
                 WHERE id = $5
-            `, [
-                data.business_name,
-                data.email,
-                firstName,
-                lastName,
-                newId
-            ]);
+            `, [data.business_name, data.email, firstName, lastName, newId]);
+
         } else {
-            // NEW RECORD: Insert normally
+            // --- 4. INSERT ALL FIELDS INTO CONVERSATIONS ---
             const insertResult = await db.query(`
                 INSERT INTO conversations (
                     business_name, lead_phone, email, us_state,
                     address, city, zip,
                     first_name, last_name,
-                    lead_source, notes,
-                    current_step, priority
+                    lead_source, notes, current_step, priority,
+                    tax_id, business_start_date, business_type, entity_type, industry_type,
+                    annual_revenue, monthly_revenue, funding_amount,
+                    ssn, date_of_birth,
+                    credit_score, funding_status, recent_funding,
+                    owner_ownership_percent, owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
+                    owner2_first_name, owner2_last_name, owner2_email, owner2_phone,
+                    owner2_ssn, owner2_dob, owner2_ownership_percent,
+                    owner2_address, owner2_city, owner2_state, owner2_zip
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'initial_contact', $12)
+                VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'initial_contact', $12,
+                    $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
+                    $26, $27, $28, $29, $30,
+                    $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41
+                )
                 RETURNING id
             `, [
                 data.business_name,
                 data.lead_phone,
                 data.email,
-                data.us_state,
+                data.us_state || data.businessState,
                 data.business_address || data.address,
                 data.business_city || data.city,
                 data.business_zip || data.zip,
@@ -306,14 +312,43 @@ router.post('/', async (req, res) => {
                 lastName,
                 data.lead_source || 'Manual Entry',
                 data.notes || '',
-                data.priority ? parseInt(data.priority) : 1
+                data.priority ? parseInt(data.priority) : 1,
+                // New fields
+                data.tax_id || data.federalTaxId || null,
+                data.business_start_date || data.businessStartDate || null,
+                data.business_type || null,
+                data.entity_type || data.entityType || null,
+                data.industry_type || data.industryType || null,
+                data.annual_revenue || data.annualRevenue || null,
+                data.monthly_revenue || data.monthlyRevenue || null,
+                data.funding_amount || data.requestedAmount || null,
+                data.ssn || data.ownerSSN || null,
+                data.date_of_birth || data.ownerDOB || null,
+                data.credit_score || data.creditScore || null,
+                data.funding_status || data.fundingStatus || null,
+                data.recent_funding || data.recentFunding || null,
+                data.owner_ownership_percent || data.ownerPercent || null,
+                data.owner_home_address || data.ownerHomeAddress || null,
+                data.owner_home_city || data.ownerHomeCity || null,
+                data.owner_home_state || data.ownerHomeState || null,
+                data.owner_home_zip || data.ownerHomeZip || null,
+                data.owner2_first_name || data.owner2FirstName || null,
+                data.owner2_last_name || data.owner2LastName || null,
+                data.owner2_email || data.owner2Email || null,
+                data.owner2_phone || data.owner2Phone || null,
+                data.owner2_ssn || data.owner2SSN || null,
+                data.owner2_dob || data.owner2DOB || null,
+                data.owner2_ownership_percent || data.owner2OwnershipPercent || null,
+                data.owner2_address || data.owner2HomeAddress || null,
+                data.owner2_city || data.owner2HomeCity || null,
+                data.owner2_state || data.owner2HomeState || null,
+                data.owner2_zip || data.owner2HomeZip || null
             ]);
             newId = insertResult.rows[0].id;
         }
 
-        console.log(`✅ Conversation ${isUpdate ? 'updated' : 'created'}: ${newId}`);
+        console.log(`✅ Lead ${isUpdate ? 'updated' : 'created'}: ${newId}`);
 
-        // --- 5. RETURN SUCCESS (FIXED) ---
         const finalConversation = await db.query('SELECT * FROM conversations WHERE id = $1', [newId]);
 
         res.json({
