@@ -217,7 +217,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new conversation (SINGLE TABLE VERSION - FIXED MAPPINGS)
+// Create new conversation (FIXED ADDRESS MAPPING)
 router.post('/', async (req, res) => {
     try {
         const data = req.body;
@@ -226,10 +226,10 @@ router.post('/', async (req, res) => {
         console.log('📝 Creating new lead...');
 
         // --- 1. PREP & MAP DATA ---
-        // Fix Phone: Frontend sends 'primaryPhone', DB needs 'lead_phone'
+        // Clean Phone: Frontend sends 'primaryPhone', DB needs 'lead_phone'
         const leadPhone = (data.lead_phone || data.primaryPhone || '').replace(/\D/g, '');
 
-        // Clean other phones
+        // Helper to clean other phones
         const cleanPhone = (val) => (val || '').replace(/\D/g, '');
 
         // Clean Currency
@@ -257,9 +257,10 @@ router.post('/', async (req, res) => {
         let isUpdate = false;
 
         if (existingCheck.rows.length > 0) {
+            // DUPLICATE FOUND: Update specific fields instead of creating
             newId = existingCheck.rows[0].id;
             isUpdate = true;
-            console.log(`⚠️ Lead exists (${newId}). Updating instead.`);
+            console.log(`⚠️ Lead exists (${newId}). Updating basic info.`);
 
             await db.query(`
                 UPDATE conversations SET
@@ -272,7 +273,7 @@ router.post('/', async (req, res) => {
             `, [data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
 
         } else {
-            // --- 4. INSERT ALL FIELDS INTO CONVERSATIONS ---
+            // --- 4. INSERT ALL FIELDS (With Correct Address Mapping) ---
             const insertResult = await db.query(`
                 INSERT INTO conversations (
                     business_name, lead_phone, email, us_state,
@@ -296,36 +297,37 @@ router.post('/', async (req, res) => {
                 )
                 RETURNING id
             `, [
-                // Basic Info
+                // 1-4: Basic Info
                 data.business_name || data.businessName,
                 leadPhone,
                 data.email || data.businessEmail,
-                data.us_state || data.businessState,
+                data.us_state || data.businessState, // Maps businessState -> us_state
 
-                // Address (FIXED: Now checks camelCase businessAddress)
-                data.address || data.business_address || data.businessAddress,
-                data.city || data.business_city || data.businessCity,
-                data.zip || data.business_zip || data.businessZip,
+                // 5-7: Address (THE FIX IS HERE)
+                data.address || data.businessAddress, // Maps businessAddress -> address
+                data.city || data.businessCity,       // Maps businessCity -> city
+                data.zip || data.businessZip,         // Maps businessZip -> zip
 
+                // 8-12: Meta
                 firstName,
                 lastName,
                 data.lead_source || 'Manual Entry',
                 data.notes || '',
                 data.priority ? parseInt(data.priority) : 1,
 
-                // Business Details
+                // 13-17: Business Details
                 data.tax_id || data.federalTaxId || null,
                 data.business_start_date || data.businessStartDate || null,
                 data.business_type || null,
                 data.entity_type || data.entityType || null,
                 data.industry_type || data.industryType || null,
 
-                // Financials
+                // 18-20: Financials
                 data.annual_revenue || data.annualRevenue || null,
                 data.monthly_revenue || data.monthlyRevenue || null,
                 data.funding_amount || data.requestedAmount || null,
 
-                // Owner 1
+                // 21-30: Owner 1
                 data.ssn || data.ownerSSN || null,
                 data.date_of_birth || data.ownerDOB || null,
                 data.credit_score || data.creditScore || null,
@@ -337,7 +339,7 @@ router.post('/', async (req, res) => {
                 data.owner_home_state || data.ownerHomeState || null,
                 data.owner_home_zip || data.ownerHomeZip || null,
 
-                // Owner 2
+                // 31-41: Owner 2
                 data.owner2_first_name || data.owner2FirstName || null,
                 data.owner2_last_name || data.owner2LastName || null,
                 data.owner2_email || data.owner2Email || null,
@@ -355,6 +357,7 @@ router.post('/', async (req, res) => {
 
         console.log(`✅ Lead ${isUpdate ? 'updated' : 'created'}: ${newId}`);
 
+        // Fetch and return the full record to update the frontend state
         const finalConversation = await db.query('SELECT * FROM conversations WHERE id = $1', [newId]);
 
         res.json({
