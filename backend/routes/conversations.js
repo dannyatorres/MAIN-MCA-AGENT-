@@ -452,6 +452,7 @@ router.put('/:id', async (req, res) => {
             'owner_phone': 'owner_phone',
             'ownerEmail': 'owner_email',
             'owner_email': 'owner_email',
+            'ownershipPercent': 'owner_ownership_percent',
             'ownerPercent': 'owner_ownership_percent',
             'owner_ownership_percent': 'owner_ownership_percent',
             'ownerHomeAddress': 'owner_home_address',
