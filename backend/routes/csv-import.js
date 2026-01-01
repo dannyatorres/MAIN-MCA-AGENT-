@@ -183,83 +183,86 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         for (let i = 0; i < validLeads.length; i += BATCH_SIZE) {
             const batch = validLeads.slice(i, i + BATCH_SIZE);
 
-            // A. Insert into Conversations
-            // BULLETPROOF: Using DO UPDATE instead of DO NOTHING
             const convValues = [];
             const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
-                // We are now inserting 14 values per row + NOW()
-                const offset = idx * 14;
-                convPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, $${offset+12}, $${offset+13}, $${offset+14}, NOW())`);
+                // We are now inserting 21 values per row (was 14) + NOW()
+                // Make sure this placeholder count matches the number of variables pushed below
+                const offset = idx * 21;
+
+                // Generates ($1, $2, ... $21, NOW())
+                const placeholderStr = Array.from({length: 21}, (_, k) => `$${offset + k + 1}`).join(', ');
+                convPlaceholders.push(`(${placeholderStr}, NOW())`);
 
                 convValues.push(
+                    // 1-5: Basic
                     lead.id,
                     lead.business_name,
                     lead.lead_phone,
                     lead.email,
                     lead.us_state,
-                    lead.address,         // Business Address
-                    lead.city,            // Business City
-                    lead.zip,             // Business Zip
+
+                    // 6-8: Business Address
+                    lead.address,
+                    lead.city,
+                    lead.zip,
+
+                    // 9-10: Owner Name
                     lead.first_name,
                     lead.last_name,
-                    // Owner Address Fields
+
+                    // 11-14: Owner Address
                     lead.owner_home_address || null,
                     lead.owner_home_city || null,
                     lead.owner_home_state || null,
-                    lead.owner_home_zip || null
+                    lead.owner_home_zip || null,
+
+                    // 15-21: CONSOLIDATED DETAILS (These were missing!)
+                    lead.annual_revenue || null,
+                    lead.business_start_date || null,
+                    lead.date_of_birth || null,
+                    lead.tax_id || null,
+                    lead.ssn || null,
+                    lead.industry || null,
+                    lead.requested_amount || null
                 );
             });
 
             if (batch.length > 0) {
-                // FIXED: Using "DO UPDATE" instead of "DO NOTHING"
-                // This prevents failures when re-uploading or updating existing leads
                 const query = `
                     INSERT INTO conversations (
                         id, business_name, lead_phone, email, us_state,
                         address, city, zip, first_name, last_name,
                         owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
+
+                        -- Newly Added Columns:
+                        annual_revenue, business_start_date, date_of_birth,
+                        tax_id, ssn, industry_type, funding_amount,
+
                         created_at
                     ) VALUES ${convPlaceholders.join(', ')}
                     ON CONFLICT (lead_phone)
                     DO UPDATE SET
-                        owner_home_address = EXCLUDED.owner_home_address,
-                        owner_home_city = EXCLUDED.owner_home_city,
-                        owner_home_state = EXCLUDED.owner_home_state,
-                        owner_home_zip = EXCLUDED.owner_home_zip
+                        business_name = COALESCE(EXCLUDED.business_name, conversations.business_name),
+                        email = COALESCE(EXCLUDED.email, conversations.email),
+
+                        -- Update Address Info
+                        owner_home_address = COALESCE(EXCLUDED.owner_home_address, conversations.owner_home_address),
+                        owner_home_city = COALESCE(EXCLUDED.owner_home_city, conversations.owner_home_city),
+                        owner_home_state = COALESCE(EXCLUDED.owner_home_state, conversations.owner_home_state),
+                        owner_home_zip = COALESCE(EXCLUDED.owner_home_zip, conversations.owner_home_zip),
+
+                        -- Update Financials/Meta
+                        annual_revenue = COALESCE(EXCLUDED.annual_revenue, conversations.annual_revenue),
+                        tax_id = COALESCE(EXCLUDED.tax_id, conversations.tax_id),
+                        ssn = COALESCE(EXCLUDED.ssn, conversations.ssn),
+                        date_of_birth = COALESCE(EXCLUDED.date_of_birth, conversations.date_of_birth),
+
+                        last_activity = NOW()
                 `;
 
                 await db.query(query, convValues);
-
-                // B. Insert into Lead Details
-                // Reverted to original fields (removed owner address)
-                const detailValues = [];
-                const detailPlaceholders = [];
-                let dIdx = 0;
-
-                batch.forEach((lead) => {
-                    // Check if we have details to save (removed owner_home_address check)
-                    if (lead.tax_id || lead.ssn || lead.date_of_birth || lead.annual_revenue || lead.industry || lead.business_start_date) {
-                        const offset = dIdx * 8;
-                        detailPlaceholders.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, NOW())`);
-
-                        detailValues.push(
-                            lead.id,
-                            lead.annual_revenue ? parseFloat(lead.annual_revenue) : null,
-                            lead.business_start_date || null,
-                            lead.date_of_birth || null,
-                            lead.tax_id || null,
-                            lead.ssn || null,
-                            lead.industry || null,
-                            lead.funding_amount ? parseFloat(lead.funding_amount) : null
-                        );
-                        dIdx++;
-                    }
-                });
-
-                // Lead details now stored directly in conversations table (no separate insert needed)
-
                 importedCount += batch.length;
             }
         }
