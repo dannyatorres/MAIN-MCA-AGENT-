@@ -11,7 +11,7 @@ const emailRoutes = require('./routes/emailRoutes');
 require('dotenv').config();
 
 // Migration imports
-const { runStrategyMigration } = require('./migrations/strategy-schema');
+// const { runStrategyMigration } = require('./migrations/strategy-schema'); // DISABLED
 const { getDatabase } = require('./services/database');
 const { startRuleLearner } = require('./services/ruleLearner');
 
@@ -155,12 +155,13 @@ try {
 } catch (e) { console.error('⚠️ Failed to start Rule Learner:', e.message); }
 
 // --- 7b. RUN DATABASE MIGRATIONS ---
-(async () => {
-    try {
-        const db = getDatabase();
-        await runStrategyMigration(db);
-    } catch (e) { console.error('⚠️ Migration error:', e.message); }
-})();
+// DISABLED: Migration already completed
+// (async () => {
+//     try {
+//         const db = getDatabase();
+//         await runStrategyMigration(db);
+//     } catch (e) { console.error('⚠️ Migration error:', e.message); }
+// })();
 
 // --- 8. START SERVER ---
 const PORT = process.env.PORT || 3000;
