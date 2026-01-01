@@ -13,6 +13,82 @@ const { v4: uuidv4 } = require('uuid');
 // Initialize email service
 const emailService = new EmailService();
 
+// 🛠️ FIX ROUTE: Add 'raw_email_body' to lender_submissions
+router.get('/fix/add-email-body-column', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Adding raw_email_body column...');
+
+        await db.query(`
+            ALTER TABLE lender_submissions
+            ADD COLUMN IF NOT EXISTS raw_email_body TEXT;
+        `);
+
+        res.json({ success: true, message: 'Column raw_email_body added successfully!' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 🐴 DEBUG: Check lenders table
+router.get('/debug/lenders-search/:name', async (req, res) => {
+    const { name } = req.params;
+    const db = getDatabase();
+
+    console.log(`🐴 TROJAN: Searching for "${name}"...`);
+
+    const exact = await db.query('SELECT id, name, email, cc_email FROM lenders WHERE name = $1', [name]);
+    const ilike = await db.query('SELECT id, name, email, cc_email FROM lenders WHERE name ILIKE $1', [`%${name}%`]);
+    const trimmed = await db.query('SELECT id, name, email, cc_email FROM lenders WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))', [name]);
+
+    console.log('🐴 Exact match:', exact.rows);
+    console.log('🐴 ILIKE match:', ilike.rows);
+    console.log('🐴 Trimmed match:', trimmed.rows);
+
+    res.json({
+        searchedFor: name,
+        exact: exact.rows,
+        ilike: ilike.rows,
+        trimmed: trimmed.rows
+    });
+});
+
+// ==========================================
+// 🛠️ MIGRATION ROUTE (Place at TOP of file)
+// Run: /api/conversations/fix/upgrade-submissions-schema
+// ==========================================
+router.get('/fix/upgrade-submissions-schema', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Starting Schema Upgrade for Lender Submissions...');
+
+        // 1. Upgrade Lender Submissions (Add Scorecard Columns)
+        await db.query(`
+            ALTER TABLE lender_submissions
+            ADD COLUMN IF NOT EXISTS offer_amount NUMERIC(15,2),
+            ADD COLUMN IF NOT EXISTS factor_rate NUMERIC(5,4),
+            ADD COLUMN IF NOT EXISTS term_months INTEGER,
+            ADD COLUMN IF NOT EXISTS payment_frequency VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS decline_reason TEXT,
+            ADD COLUMN IF NOT EXISTS offer_details JSONB,
+            ADD COLUMN IF NOT EXISTS last_response_at TIMESTAMP;
+        `);
+
+        // 2. Add "Green Button" Flag to Conversations
+        await db.query(`
+            ALTER TABLE conversations
+            ADD COLUMN IF NOT EXISTS has_offer BOOLEAN DEFAULT FALSE;
+        `);
+
+        console.log('✅ Schema Upgrade Complete.');
+        res.json({ success: true, message: 'Database patched! Offers/Declines support active.' });
+
+    } catch (error) {
+        console.error('❌ Migration Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Initialize S3
 const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -1589,6 +1665,60 @@ router.get('/:id/lenders/results', async (req, res) => {
     } catch (error) {
         console.error('❌ Error fetching lender qualifications:', error);
         res.status(500).json({ error: 'Failed to fetch results' });
+    }
+});
+
+// ==========================================
+// 🛠️ PASTE THIS AT THE VERY BOTTOM OF THE FILE
+// ==========================================
+router.get('/fix/schema-patch', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Starting Database Schema Repair...');
+
+        // This runs the SQL command you couldn't run manually
+        await db.query(`
+            ALTER TABLE lender_qualifications
+            ADD COLUMN IF NOT EXISTS qualification_data JSONB,
+            ADD COLUMN IF NOT EXISTS criteria_used JSONB,
+            ADD COLUMN IF NOT EXISTS qualified_lenders JSONB;
+        `);
+
+        res.json({ success: true, message: 'Database patched! You can now save lenders.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==========================================
+// 🛠️ FCS SCHEMA MIGRATION ROUTE
+// Run this once by visiting: /api/conversations/fix/fcs-schema-update
+// ==========================================
+router.get('/fix/fcs-schema-update', async (req, res) => {
+    try {
+        const db = getDatabase();
+        console.log('🛠️ Starting FCS Schema Update...');
+
+        // Add all missing columns in one go
+        await db.query(`
+            ALTER TABLE fcs_analyses
+            ADD COLUMN IF NOT EXISTS average_daily_balance NUMERIC(12,2),
+            ADD COLUMN IF NOT EXISTS average_deposit_count INTEGER,
+            ADD COLUMN IF NOT EXISTS time_in_business_text VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS last_mca_deposit_date VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS withholding_percentage NUMERIC(5,2);
+        `);
+
+        console.log('✅ FCS Schema Updated Successfully!');
+
+        res.json({
+            success: true,
+            message: 'Database patched! Added columns for: Bank Balance, Deposit Count, TIB, MCA Date, and Withholding.'
+        });
+
+    } catch (error) {
+        console.error('❌ Migration Error:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
