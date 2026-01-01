@@ -580,16 +580,33 @@ export class LeadFormController {
                         this.parent.utils.showNotification('Lead created successfully!', 'success');
                     }
                 } else {
-                    await this.parent.apiCall(`/api/conversations/${id}`, {
+                    // === EDIT MODE ===
+                    const res = await this.parent.apiCall(`/api/conversations/${id}`, {
                         method: 'PUT',
                         body: formData
                     });
 
                     document.getElementById('leadModalWrapper')?.remove();
 
-                    if (this.parent.conversationUI.showConversationDetails) {
-                        this.parent.conversationUI.showConversationDetails();
+                    // FIX: Update the frontend state immediately
+                    if (res.success && res.conversation) {
+                        const updatedLead = res.conversation;
+
+                        // 1. Update the main list cache
+                        if (this.parent.conversationUI && this.parent.conversationUI.conversations) {
+                            this.parent.conversationUI.conversations.set(updatedLead.id, updatedLead);
+                        }
+
+                        // 2. If this is the currently selected conversation, update the active view
+                        if (this.parent.conversationUI.currentConversationId === updatedLead.id) {
+                            this.parent.conversationUI.selectedConversation = updatedLead;
+                            this.parent.conversationUI.showConversationDetails(); // Now renders new data
+                        }
+
+                        // 3. Refresh the sidebar list (to show updated name/time)
+                        this.parent.conversationUI.renderConversationsList();
                     }
+
                     this.parent.utils.showNotification('Lead updated successfully!', 'success');
                 }
             } catch (err) {
