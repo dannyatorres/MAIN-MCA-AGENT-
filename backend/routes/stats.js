@@ -44,7 +44,7 @@ router.get('/', async (req, res) => {
         const stateBreakdown = await db.query(`SELECT state, COUNT(*) as count FROM conversations WHERE state IS NOT NULL GROUP BY state ORDER BY count DESC`);
         const leadSourceBreakdown = await db.query(`SELECT COALESCE(lead_source, 'Unknown') as lead_source, COUNT(*) as count FROM conversations GROUP BY lead_source ORDER BY count DESC`);
         const industryBreakdown = await db.query(`SELECT COALESCE(industry_type, 'Unknown') as industry, COUNT(*) as count FROM conversations GROUP BY industry_type ORDER BY count DESC LIMIT 10`);
-        const geoBreakdown = await db.query(`SELECT COALESCE(us_state, business_state, 'Unknown') as region, COUNT(*) as count FROM conversations GROUP BY region ORDER BY count DESC LIMIT 10`);
+        const geoBreakdown = await db.query(`SELECT COALESCE(us_state, 'Unknown') as region, COUNT(*) as count FROM conversations GROUP BY region ORDER BY count DESC LIMIT 10`);
         const creditBreakdown = await db.query(`SELECT COALESCE(credit_score, 'Unknown') as credit_tier, COUNT(*) as count FROM conversations GROUP BY credit_score ORDER BY count DESC`);
         const fundingBreakdown = await db.query(`SELECT COALESCE(funding_status, 'Unknown') as status, COUNT(*) as count FROM conversations GROUP BY funding_status ORDER BY count DESC`);
 
