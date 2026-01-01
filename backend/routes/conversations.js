@@ -370,6 +370,7 @@ router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
+        console.log('📥 RAW body received:', JSON.stringify(updates, null, 2));
         const db = getDatabase();
 
         console.log(`📝 Updating conversation ${id} (Smart Update)...`);
