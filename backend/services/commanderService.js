@@ -215,12 +215,40 @@ async function analyzeAndStrategize(conversationId) {
         const fcs = fcsRes.rows[0];
         const fcsReport = fcs.fcs_report || "No text report available.";
 
+        // 1b. Fetch lead info for industry/state
+        const leadRes = await db.query(`SELECT industry_type, us_state FROM conversations WHERE id = $1`, [conversationId]);
+        const lead = leadRes.rows[0] || {};
+        const leadIndustry = lead.industry_type || fcs.industry || null;
+        const leadState = lead.us_state || fcs.state || null;
+
+        // 1c. Query lender_rules for blocked lenders (THE FIX!)
+        let blockedLendersText = '';
+        if (leadIndustry || leadState) {
+            const rulesRes = await db.query(`
+                SELECT DISTINCT lender_name, rule_type, industry, state, decline_message
+                FROM lender_rules
+                WHERE is_active = TRUE
+                  AND (
+                    (rule_type = 'industry_block' AND LOWER(industry) = LOWER($1))
+                    OR (rule_type = 'state_block' AND UPPER(state) = UPPER($2))
+                  )
+            `, [leadIndustry, leadState]);
+
+            if (rulesRes.rows.length > 0) {
+                blockedLendersText = '\n\n**LENDERS TO AVOID (Based on learned rules):**\n';
+                for (const rule of rulesRes.rows) {
+                    blockedLendersText += `- ${rule.lender_name}: ${rule.decline_message || rule.rule_type}\n`;
+                }
+                console.log(`COMMANDER: Found ${rulesRes.rows.length} blocked lenders for this lead`);
+            }
+        }
+
         // 2. Load Prompt
         const template = loadPrompt('strategy_analysis.md');
         if (!template) return null;
 
         const prompt = injectVariables(template, {
-            fcs_report: fcsReport
+            fcs_report: fcsReport + blockedLendersText
         });
 
         // 3. Run AI

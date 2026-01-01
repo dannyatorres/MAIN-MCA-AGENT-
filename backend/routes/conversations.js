@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const EmailService = require('../services/emailService');
+const successPredictor = require('../services/successPredictor');
 const AWS = require('aws-sdk');
 const path = require('path');
 const fs = require('fs');
@@ -1152,6 +1153,37 @@ router.post('/:id/send-to-lenders', async (req, res) => {
 
         const db = getDatabase();
 
+        // --- STEP 0: SMART LENDER RANKING (THE FIX!) ---
+        // Fetch lead criteria for success prediction
+        const leadRes = await db.query(`
+            SELECT industry_type, us_state, monthly_revenue, credit_score, time_in_business
+            FROM conversations WHERE id = $1
+        `, [conversationId]);
+
+        const lead = leadRes.rows[0] || {};
+        const leadCriteria = {
+            industry: lead.industry_type,
+            state: lead.us_state,
+            monthlyRevenue: lead.monthly_revenue,
+            fico: lead.credit_score,
+            tib: lead.time_in_business
+        };
+
+        // Predict success for all selected lenders and sort by success rate
+        let rankedLenders = selectedLenders;
+        try {
+            const predictions = await successPredictor.predictSuccessForAll(selectedLenders, leadCriteria);
+            rankedLenders = predictions;
+            console.log(`📊 SMART RANKING: Sorted ${predictions.length} lenders by predicted success rate`);
+            predictions.slice(0, 3).forEach(l => {
+                const name = l.name || l['Lender Name'];
+                const rate = l.prediction?.successRate ?? 'N/A';
+                console.log(`   → ${name}: ${rate}% predicted success`);
+            });
+        } catch (predErr) {
+            console.warn('⚠️ Success prediction failed, using original order:', predErr.message);
+        }
+
         // --- STEP 1: PRE-DOWNLOAD DOCUMENTS ---
         const fileAttachments = [];
         if (documents && documents.length > 0) {
@@ -1185,7 +1217,7 @@ router.post('/:id/send-to-lenders', async (req, res) => {
         }
 
         // --- STEP 2: PARALLEL SUBMISSION (WITH LOGGING) ---
-        const submissionPromises = selectedLenders.map(async (lenderData) => {
+        const submissionPromises = rankedLenders.map(async (lenderData) => {
             const lenderName = lenderData.name || lenderData.lender_name;
             let lenderEmail = lenderData.email;
             let lenderCC = lenderData.cc_email || null; // 1. Try to get CC from Frontend
@@ -1295,7 +1327,7 @@ router.post('/:id/send-to-lenders', async (req, res) => {
 
         res.json({
             success: true,
-            results: { successful, failed, total: selectedLenders.length }
+            results: { successful, failed, total: rankedLenders.length }
         });
 
     } catch (error) {
