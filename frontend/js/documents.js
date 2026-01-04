@@ -113,35 +113,22 @@ class DocumentsModule {
         if (!targetId) {
             console.error('❌ No conversation ID available, cannot load documents');
             this.renderDocumentsList([]);
-
-            if (documentsList) {
-                documentsList.innerHTML = `
-                    <div class="doc-state-container">
-                        <div class="doc-state-icon">⚠️</div>
-                        <h4 class="doc-state-title">No Conversation Selected</h4>
-                        <p class="doc-state-text">Please select a conversation from the list to view documents.</p>
-                    </div>
-                `;
-            }
             return;
         }
 
-        // 1. INSTANT RENDER FROM CACHE
-        if (this.documentsCache.has(targetId)) {
+        const cachedDocs = this.documentsCache.get(targetId);
+        if (cachedDocs) {
             console.log(`⚡ [Cache] Rendering documents for ${targetId}`);
-            this.currentDocuments = this.documentsCache.get(targetId);
+            this.currentDocuments = cachedDocs;
             this.renderDocumentsList();
             this.toggleFCSGenerationSection();
             this.setupDocumentsEventListeners();
-        } else {
-            // Only show spinner if we have NO data
-            if (documentsList) {
-                 documentsList.innerHTML = `
-                    <div class="loading-state" id="documentsLoading">
-                        <div class="loading-spinner small"></div>
-                        <span>Loading documents...</span>
-                    </div>`;
-            }
+        } else if (documentsList) {
+            documentsList.innerHTML = `
+                <div class="loading-state" id="documentsLoading">
+                    <div class="loading-spinner small"></div>
+                    <span>Loading documents...</span>
+                </div>`;
         }
 
         try {
@@ -150,27 +137,24 @@ class DocumentsModule {
 
             if (result.success) {
                 const freshDocs = (result.documents || []).map(doc => this.normalizeDocumentFields(doc));
-                
-                // Update Cache & Current State
+
+                const cacheString = JSON.stringify(cachedDocs || []);
+                const freshString = JSON.stringify(freshDocs);
+                const hasChanged = cacheString !== freshString;
+
                 this.documentsCache.set(targetId, freshDocs);
                 this.currentDocuments = freshDocs;
-                
-                // Update UI (only if user is still on this tab)
-                if (this.parent.getCurrentConversationId() == targetId) {
+
+                if (hasChanged && this.parent.getCurrentConversationId() == targetId) {
                     this.renderDocumentsList();
                     this.updateDocumentsSummary();
                     this.toggleFCSGenerationSection();
                     this.setupDocumentsEventListeners();
                 }
-            } else {
-                // If cache existed, we just stay on old data silently. If not, show error.
-                if (!this.documentsCache.has(targetId) && documentsList) {
-                    documentsList.innerHTML = `<div class="doc-state-container error-state">...</div>`;
-                }
             }
         } catch (error) {
             console.error('❌ Error loading documents:', error);
-            if (!this.documentsCache.has(targetId) && documentsList) {
+            if (!cachedDocs && documentsList) {
                 documentsList.innerHTML = `
                     <div class="doc-state-container error-state">
                         <div class="doc-state-icon">❌</div>
@@ -183,7 +167,6 @@ class DocumentsModule {
                     </div>
                 `;
             }
-            this.renderDocumentsList([]);
         }
     }
 
