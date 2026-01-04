@@ -240,18 +240,29 @@ class AIAssistant {
 
         if (!messagesContainer) return;
 
-        // 1. CACHE CHECK
+        // Helper: Render messages without flash
+        const renderMessages = (messages) => {
+            messagesContainer.style.visibility = 'hidden';
+            messagesContainer.style.scrollBehavior = 'auto'; // Force instant scroll
+            messagesContainer.innerHTML = '';
+
+            messages.forEach(msg => {
+                this.addMessageToChat(msg.role, msg.content, false, false);
+            });
+
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            messagesContainer.style.visibility = 'visible';
+            messagesContainer.style.scrollBehavior = 'smooth'; // Restore for user scrolls
+        };
+
+        // 1. CACHE CHECK - Render instantly if available
         if (this.aiChatCache.has(conversationId)) {
             console.log(`⚡ [Cache] Rendering AI history for ${conversationId}`);
             const currentSpinner = document.getElementById('aiInitialSpinner');
             if (currentSpinner) currentSpinner.remove();
 
-            const cachedMsgs = this.aiChatCache.get(conversationId);
-            messagesContainer.innerHTML = '';
-            cachedMsgs.forEach(msg => {
-                this.addMessageToChat(msg.role, msg.content, false, false);
-            });
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            renderMessages(this.aiChatCache.get(conversationId));
+            return; // Skip API call if cache is fresh
         }
 
         try {
@@ -264,22 +275,13 @@ class AIAssistant {
                 return;
             }
 
-            // Remove spinner now that we are sure we want to update THIS screen
+            // Remove spinner
             const activeSpinner = document.getElementById('aiInitialSpinner');
             if (activeSpinner) activeSpinner.remove();
 
             if (data.messages && data.messages.length > 0) {
                 this.aiChatCache.set(conversationId, data.messages);
-
-                // Double-check container existence
-                const currentContainer = document.getElementById('aiChatMessages');
-                if (currentContainer) {
-                    currentContainer.innerHTML = '';
-                    data.messages.forEach(msg => {
-                        this.addMessageToChat(msg.role, msg.content, false, false);
-                    });
-                    currentContainer.scrollTop = currentContainer.scrollHeight;
-                }
+                renderMessages(data.messages);
             } else {
                 // Empty History -> Show Welcome
                 this.triggerSmartIntro();
@@ -288,7 +290,6 @@ class AIAssistant {
         } catch (error) {
             console.log('Error loading history:', error);
 
-            // Only remove spinner/show intro if we are still on the same convo
             if (this.parent.getCurrentConversationId() === conversationId) {
                 const activeSpinner = document.getElementById('aiInitialSpinner');
                 if (activeSpinner) activeSpinner.remove();
