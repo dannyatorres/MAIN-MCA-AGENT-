@@ -23,90 +23,76 @@ class DocumentsModule {
     }
 
     setupDocumentsEventListeners() {
-        console.log('setupDocumentsEventListeners called');
+        const container = document.querySelector('.documents-section');
+        if (!container) return;
 
-        const dragDropZone = document.getElementById('dragDropZone');
-        const fileInput = document.getElementById('documentUpload');
-        const emptyZone = document.getElementById('emptyDropZone');
+        // Only setup once per container instance
+        if (container._documentsListenersAttached) return;
+        container._documentsListenersAttached = true;
 
-        // Universal drop handler
-        const handleDrop = (e) => {
+        console.log('📎 Setting up document event listeners (one-time)');
+
+        // EVENT DELEGATION: Handle all clicks within documents-section
+        container.addEventListener('click', (e) => {
+            const target = e.target;
+
+            // Click on upload bar or empty zone
+            if (target.closest('#dragDropZone') || target.closest('#emptyDropZone')) {
+                document.getElementById('documentUpload')?.click();
+            }
+
+            // Click on Generate FCS button
+            if (target.closest('#generateFCSBtn')) {
+                this.openFCSModal();
+            }
+        });
+
+        // DRAG & DROP: Handle at container level
+        container.addEventListener('dragenter', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            const zone = document.getElementById('dragDropZone') || document.getElementById('emptyDropZone');
+            if (zone) zone.classList.add('drag-active');
+        });
+
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        container.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Only remove if leaving the container entirely
+            if (!container.contains(e.relatedTarget)) {
+                const zone = document.getElementById('dragDropZone') || document.getElementById('emptyDropZone');
+                if (zone) zone.classList.remove('drag-active');
+            }
+        });
+
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const zone = document.getElementById('dragDropZone') || document.getElementById('emptyDropZone');
+            if (zone) zone.classList.remove('drag-active');
+
             const files = Array.from(e.dataTransfer.files);
             if (files.length > 0) {
                 this.handleFileSelection(files);
             }
-        };
+        });
 
-        const handleDragOver = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.currentTarget.classList.add('drag-active');
-        };
-
-        const handleDragLeave = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.currentTarget.classList.remove('drag-active');
-        };
-
-        const handleDropEnd = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.currentTarget.classList.remove('drag-active');
-            handleDrop(e);
-        };
-
-        // Setup dragDropZone (the small upload bar)
-        if (dragDropZone) {
-            // Remove old listeners by replacing element
-            const newZone = dragDropZone.cloneNode(true);
-            dragDropZone.parentNode.replaceChild(newZone, dragDropZone);
-
-            newZone.addEventListener('dragenter', handleDragOver);
-            newZone.addEventListener('dragover', handleDragOver);
-            newZone.addEventListener('dragleave', handleDragLeave);
-            newZone.addEventListener('drop', handleDropEnd);
-            newZone.addEventListener('click', () => {
-                document.getElementById('documentUpload')?.click();
-            });
-        }
-
-        // Setup emptyDropZone (the large empty state)
-        if (emptyZone) {
-            // Remove old listeners by replacing element
-            const newEmpty = emptyZone.cloneNode(true);
-            emptyZone.parentNode.replaceChild(newEmpty, emptyZone);
-
-            newEmpty.addEventListener('dragenter', handleDragOver);
-            newEmpty.addEventListener('dragover', handleDragOver);
-            newEmpty.addEventListener('dragleave', handleDragLeave);
-            newEmpty.addEventListener('drop', handleDropEnd);
-            newEmpty.addEventListener('click', () => {
-                document.getElementById('documentUpload')?.click();
-            });
-        }
-
-        // Setup file input - always replace to ensure fresh listener
-        if (fileInput) {
-            const newInput = fileInput.cloneNode(true);
-            fileInput.parentNode.replaceChild(newInput, fileInput);
-
-            newInput.addEventListener('change', (e) => {
+        // FILE INPUT: Direct listener (this element doesn't get replaced)
+        const fileInput = document.getElementById('documentUpload');
+        if (fileInput && !fileInput._hasListener) {
+            fileInput._hasListener = true;
+            fileInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     this.handleFileSelection(Array.from(e.target.files));
-                    e.target.value = ''; // Reset so same file can be selected again
+                    e.target.value = ''; // Reset so same file can be re-selected
                 }
             });
-        }
-
-        // Generate FCS button
-        const generateFCSBtn = document.getElementById('generateFCSBtn');
-        if (generateFCSBtn) {
-            const newBtn = generateFCSBtn.cloneNode(true);
-            generateFCSBtn.parentNode.replaceChild(newBtn, generateFCSBtn);
-            newBtn.addEventListener('click', () => this.openFCSModal());
         }
     }
 
