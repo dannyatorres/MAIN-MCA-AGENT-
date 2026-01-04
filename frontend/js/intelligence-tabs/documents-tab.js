@@ -27,19 +27,16 @@ export class DocumentsTab {
         container.innerHTML = this.parent.documents.createDocumentsTabTemplate();
 
         // 3. Initialize Logic
-        // We delay slightly to ensure the DOM is painted before attaching listeners
-        setTimeout(async () => {
-            try {
-                // Attach click handlers (Upload, Delete, Download)
-                this.parent.documents.setupDocumentsEventListeners();
+        try {
+            // Attach click handlers (Upload, Delete, Download)
+            this.parent.documents.setupDocumentsEventListeners();
 
-                // Fetch the actual file list from API
-                await this.parent.documents.loadDocuments();
-            } catch (error) {
-                console.error('❌ Failed to initialize documents:', error);
-                this.renderError(container, 'Failed to load document list');
-            }
-        }, 50);
+            // Fetch the actual file list from API
+            this.parent.documents.loadDocuments();
+        } catch (error) {
+            console.error('❌ Failed to initialize documents:', error);
+            this.renderError(container, 'Failed to load document list');
+        }
     }
 
     // --- Helpers ---
