@@ -28,8 +28,10 @@ class DocumentsModule {
         const dragDropZone = document.getElementById('dragDropZone');
         const fileInput = document.getElementById('documentUpload');
 
-        // Drag and drop handlers
-        if (dragDropZone) {
+        // Drag and drop handlers - use flag to prevent duplicates
+        if (dragDropZone && !dragDropZone._hasListeners) {
+            dragDropZone._hasListeners = true;
+
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dragDropZone.addEventListener(eventName, this.utils.preventDefaults, false);
             });
@@ -51,17 +53,18 @@ class DocumentsModule {
                 this.handleFileSelection(files);
             }, false);
 
-            // Click the entire upload bar to browse files
             dragDropZone.addEventListener('click', () => {
                 if (fileInput) fileInput.click();
             });
         }
 
-        // File input change handler
-        if (fileInput) {
+        // File input change handler - use flag to prevent duplicates
+        if (fileInput && !fileInput._hasListener) {
+            fileInput._hasListener = true;
             fileInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     this.handleFileSelection(Array.from(e.target.files));
+                    e.target.value = ''; // Reset immediately so same file can be re-selected
                 }
             });
         }
@@ -314,12 +317,13 @@ class DocumentsModule {
         const documentsList = document.getElementById('documentsList');
         if (!documentsList) return;
 
-        // Clear old listeners by cloning the node
-        const newDocumentsList = documentsList.cloneNode(true);
-        documentsList.parentNode.replaceChild(newDocumentsList, documentsList);
+        // Use event delegation directly - no cloneNode needed
+        // Remove old listener first by using a named function
+        if (this._docListClickHandler) {
+            documentsList.removeEventListener('click', this._docListClickHandler);
+        }
 
-        // Event delegation for action buttons
-        newDocumentsList.addEventListener('click', (event) => {
+        this._docListClickHandler = (event) => {
             const btn = event.target.closest('button');
             if (!btn) return;
 
@@ -341,7 +345,9 @@ class DocumentsModule {
             } else if (btn.classList.contains('document-delete-btn')) {
                 this.deleteDocument(docId);
             }
-        });
+        };
+
+        documentsList.addEventListener('click', this._docListClickHandler);
     }
 
     handleFileSelection(files) {
