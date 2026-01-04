@@ -178,8 +178,9 @@ class ConversationCore {
             msgContainer.innerHTML = `<div class="loading-state-chat"><div class="loading-spinner"></div></div>`;
         }
 
-        // Reset Tabs/Buttons
-        document.querySelectorAll('.tab-btn[data-tab="ai-assistant"]').forEach(btn => btn.click());
+        // Reset Tabs/Buttons (direct class manipulation - no DOM thrashing from .click())
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.tab-btn[data-tab="ai-assistant"]')?.classList.add('active');
         document.getElementById('backHomeBtn')?.classList.remove('hidden');
         document.getElementById('conversationActions')?.classList.remove('hidden');
         document.getElementById('messageInputContainer')?.classList.remove('hidden');
@@ -187,39 +188,49 @@ class ConversationCore {
 
         // 3. Fetch Data
         try {
-            // Show loading state immediately (don't use cached data - causes flash)
-            if (window.updateChatHeader) {
-                window.updateChatHeader('Loading...', '', '', conversationId);
+            const cachedConv = this.conversations.get(conversationId);
+
+            // INSTANT: Use cache immediately if available
+            if (cachedConv) {
+                this.selectedConversation = cachedConv;
+                if (this.parent) this.parent.selectedConversation = cachedConv;
+                this.showConversationDetails();
+
+                // Load intelligence with cached data (instant)
+                if (this.parent.intelligence) {
+                    this.parent.intelligence.loadConversationIntelligence(conversationId, cachedConv);
+                }
             }
 
-            // Parallel fetch
+            // PARALLEL: Fire all requests without waiting
             const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
-            const msgPromise = this.parent.messaging ?
-                this.parent.messaging.loadConversationMessages(conversationId) : Promise.resolve();
 
-            const data = await dataPromise;
-            if (this.currentConversationId !== conversationId) return;
-
-            // NOW set the fresh data as source of truth
-            this.selectedConversation = data.conversation || data;
-            this.conversations.set(conversationId, this.selectedConversation);
-            if (this.parent) this.parent.selectedConversation = this.selectedConversation;
-            this.showConversationDetails();
-
-            // Load intelligence AFTER we have fresh data
-            if (this.parent.intelligence) {
-                this.parent.intelligence.loadConversationIntelligence(conversationId, this.selectedConversation);
+            if (this.parent.messaging) {
+                this.parent.messaging.loadConversationMessages(conversationId); // Don't await
             }
             if (this.parent.documents) {
-                this.parent.documents.loadDocuments();
+                this.parent.documents.loadDocuments(); // Don't await
             }
 
-            await msgPromise;
+            // BACKGROUND: Update with fresh data when ready
+            const data = await dataPromise;
+            if (this.currentConversationId !== conversationId) return; // Stale check
+
+            const freshConv = data.conversation || data;
+            this.selectedConversation = freshConv;
+            this.conversations.set(conversationId, freshConv);
+            if (this.parent) this.parent.selectedConversation = freshConv;
+
+            // Only re-render if data actually changed
+            this.showConversationDetails();
+
+            // Refresh intelligence with fresh data (silent update)
+            if (this.parent.intelligence) {
+                this.parent.intelligence.loadConversationIntelligence(conversationId, freshConv);
+            }
 
         } catch (error) {
             console.error('Error selecting conversation:', error);
-            const inputContainer = document.getElementById('messageInputContainer');
-            if (inputContainer) inputContainer.classList.remove('hidden');
         }
     }
 
@@ -571,6 +582,24 @@ class ConversationCore {
                 this.loadConversations(false);
             }
         });
+
+        // D. Preload on Hover (prefetch data before click)
+        mainContainer.addEventListener('mouseenter', (e) => {
+            const item = e.target.closest('.conversation-item');
+            if (!item) return;
+
+            const id = item.dataset.conversationId;
+            const cached = this.conversations.get(id);
+
+            // Prefetch if not fully loaded yet
+            if (!cached || !cached._fullLoaded) {
+                this.parent.apiCall(`/api/conversations/${id}`).then(data => {
+                    const conv = data.conversation || data;
+                    conv._fullLoaded = true;
+                    this.conversations.set(id, conv);
+                }).catch(() => {}); // Silently fail
+            }
+        }, true); // Use capture for delegation
 
         // Filters & Search
         const stateFilter = document.getElementById('stateFilter');
