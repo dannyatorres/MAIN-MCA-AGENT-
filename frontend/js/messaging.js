@@ -222,21 +222,29 @@ class MessagingModule {
     async loadConversationMessages(conversationId) {
         const convId = String(conversationId);
         const container = document.getElementById('messagesContainer');
+        let displayedFromCache = false;
 
         if (this.messageCache.has(convId)) {
             this.renderMessages(this.messageCache.get(convId));
+            displayedFromCache = true;
         } else if (container) {
             container.innerHTML = '<div class="loading-spinner"></div>';
         }
 
         try {
             const data = await this.parent.apiCall(`/api/messages/${convId}`);
-            this.messageCache.set(convId, data || []);
+            const freshMessages = data || [];
+            const currentCache = this.messageCache.get(convId) || [];
+            const isDataDifferent = JSON.stringify(freshMessages) !== JSON.stringify(currentCache);
+
+            this.messageCache.set(convId, freshMessages);
             // Clear pending messages for this chat on reload
             this.pendingMessages = this.pendingMessages.filter(p => p.conversationId !== convId);
 
             if (String(this.parent.getCurrentConversationId()) === convId) {
-                this.renderMessages(data || []);
+                if (isDataDifferent || !displayedFromCache) {
+                    this.renderMessages(freshMessages);
+                }
             }
             this.updateAIButtonState(convId);
         } catch (e) {
@@ -249,8 +257,15 @@ class MessagingModule {
         if (!container) return;
 
         const sorted = [...messages].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const originalScrollBehavior = container.style.scrollBehavior;
+        container.style.scrollBehavior = 'auto';
+
         container.innerHTML = this.parent.templates.messagesList(sorted);
-        setTimeout(() => container.scrollTop = container.scrollHeight, 50);
+        container.scrollTop = container.scrollHeight;
+
+        requestAnimationFrame(() => {
+            container.style.scrollBehavior = originalScrollBehavior;
+        });
     }
 
     addMessage(message) {
