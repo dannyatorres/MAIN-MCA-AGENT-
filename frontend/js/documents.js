@@ -18,6 +18,14 @@ class DocumentsModule {
         this.init();
     }
 
+    escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, (m) => {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return map[m];
+        });
+    }
+
     init() {
         // Document-specific initialization
     }
@@ -241,9 +249,9 @@ class DocumentsModule {
                         </div>
                         <div class="doc-info">
                             <div class="doc-name"
-                                 title="${doc.originalFilename}"
+                                 title="${this.escapeHtml(doc.originalFilename)}"
                                  ondblclick="window.conversationUI.documents.enableInlineEdit('${doc.id}')">
-                                ${doc.originalFilename}
+                                ${this.escapeHtml(doc.originalFilename)}
                             </div>
                             <div class="doc-meta">
                                 <span class="doc-tag">${docTypeLabel}</span>
@@ -588,7 +596,7 @@ class DocumentsModule {
                         <div class="doc-form-group">
                             <label class="doc-form-label">Document Name:</label>
                             <div class="doc-input-group">
-                                <input type="text" id="editDocumentName" value="${nameWithoutExtension}" class="doc-form-input">
+                                <input type="text" id="editDocumentName" value="${this.escapeHtml(nameWithoutExtension)}" class="doc-form-input">
                                 ${fileExtension ? `<span class="doc-badge">${fileExtension}</span>` : ''}
                             </div>
                             <small class="doc-helper-text">File extension will be preserved automatically</small>
@@ -800,7 +808,7 @@ class DocumentsModule {
 
     async downloadDocument(documentId) {
         const conversation = this.parent.getSelectedConversation();
-        let conversationId = conversation?.id || this.parent.getCurrentConversationId() ||
+        const conversationId = conversation?.id || this.parent.getCurrentConversationId() ||
                           this.getConversationIdFromDocument(documentId);
 
         if (!conversationId) {
@@ -809,16 +817,47 @@ class DocumentsModule {
         }
 
         try {
-            const downloadUrl = `${this.apiBaseUrl}/api/documents/download/${documentId}`;
+            this.utils.showNotification('Preparing download...', 'info');
+
+            const response = await fetch(`${this.apiBaseUrl}/api/documents/download/${documentId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': this.parent.apiAuth
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Download failed: ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = '';
-            link.style.display = 'none';
+
+            const disposition = response.headers.get('Content-Disposition');
+            let filename = `document-${documentId}`;
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
-            setTimeout(() => { document.body.removeChild(link); }, 100);
-            this.utils.showNotification('Download started', 'success');
+
+            setTimeout(() => {
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(downloadUrl);
+            }, 100);
+
+            this.utils.showNotification('Download complete', 'success');
         } catch (error) {
+            console.error(error);
             this.utils.showNotification('Download failed: ' + error.message, 'error');
         }
     }
@@ -1145,9 +1184,11 @@ class DocumentsModule {
 
                 setTimeout(() => {
                     if (syncLoading) syncLoading.style.display = 'none';
-                    if (this.parent.fcs) {
+                    if (this.parent.fcs && this.parent.fcs.reportCache) {
                         this.parent.fcs.reportCache.delete(conversation.id);
-                        this.parent.fcs.loadFCSData();
+                        if (typeof this.parent.fcs.loadFCSData === 'function') {
+                            this.parent.fcs.loadFCSData();
+                        }
                     }
                 }, 1500);
 
