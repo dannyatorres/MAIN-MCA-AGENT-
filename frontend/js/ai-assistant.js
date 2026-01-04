@@ -35,10 +35,13 @@ class AIAssistant {
             this.isInitialized = false;
         }
 
-        // If already initialized for THIS conversation, skip
+        // If already initialized for THIS conversation, skip entirely
         if (this.isInitialized) {
             const existingChat = document.getElementById('aiChatMessages');
-            if (existingChat) return;
+            if (existingChat && existingChat.children.length > 0) {
+                console.log('⚡ AI chat already rendered, skipping');
+                return;
+            }
         }
 
         // Only wipe if we are changing conversations or initializing
@@ -255,14 +258,21 @@ class AIAssistant {
             messagesContainer.style.scrollBehavior = 'smooth'; // Restore for user scrolls
         };
 
-        // 1. CACHE CHECK - Render instantly if available
+        // 1. CACHE CHECK
         if (this.aiChatCache.has(conversationId)) {
-            console.log(`⚡ [Cache] Rendering AI history for ${conversationId}`);
+            const cachedMsgs = this.aiChatCache.get(conversationId);
+
             const currentSpinner = document.getElementById('aiInitialSpinner');
             if (currentSpinner) currentSpinner.remove();
 
-            renderMessages(this.aiChatCache.get(conversationId));
-            return; // Skip API call if cache is fresh
+            if (cachedMsgs.length > 0) {
+                console.log(`⚡ [Cache] Rendering AI history for ${conversationId}`);
+                renderMessages(cachedMsgs);
+            } else {
+                console.log(`⚡ [Cache] Empty history, showing intro for ${conversationId}`);
+                this.triggerSmartIntro();
+            }
+            return;
         }
 
         try {
@@ -283,7 +293,8 @@ class AIAssistant {
                 this.aiChatCache.set(conversationId, data.messages);
                 renderMessages(data.messages);
             } else {
-                // Empty History -> Show Welcome
+                // Empty History -> Cache it and show welcome
+                this.aiChatCache.set(conversationId, []);
                 this.triggerSmartIntro();
             }
 
