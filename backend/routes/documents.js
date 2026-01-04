@@ -316,6 +316,64 @@ router.get('/s3-url/:documentId', async (req, res) => {
     }
 });
 
+// Update document metadata
+router.put('/:documentId', async (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const { filename, originalFilename, documentType } = req.body;
+        const db = getDatabase();
+        const path = require('path');
+
+        const inputFilename = filename || originalFilename;
+
+        if (!inputFilename) {
+            return res.status(400).json({
+                success: false,
+                error: 'Filename is required'
+            });
+        }
+
+        // Get current document to preserve extension
+        const currentDoc = await db.query(
+            'SELECT original_filename FROM documents WHERE id = $1',
+            [documentId]
+        );
+
+        if (currentDoc.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Document not found' });
+        }
+
+        // Preserve the original extension
+        const originalName = currentDoc.rows[0].original_filename;
+        const originalExt = path.extname(originalName);
+        const newNameWithoutExt = path.parse(inputFilename).name;
+        const finalFilename = newNameWithoutExt + originalExt;
+
+        console.log(`📝 Renaming document from "${originalName}" to "${finalFilename}"`);
+
+        // Update document
+        const result = await db.query(`
+            UPDATE documents
+            SET original_filename = $1
+            WHERE id = $2
+            RETURNING *
+        `, [finalFilename, documentId]);
+
+        res.json({
+            success: true,
+            message: 'Document updated successfully',
+            document: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Document update error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update document'
+        });
+    }
+});
+
 // Delete document from S3 and database
 router.delete('/:documentId', async (req, res) => {
     try {

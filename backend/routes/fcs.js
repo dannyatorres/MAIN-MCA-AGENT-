@@ -213,18 +213,69 @@ router.get('/results/:conversationId', async (req, res) => {
         const { conversationId } = req.params;
         const db = getDatabase();
 
-        const result = await db.query(
-            'SELECT * FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1',
-            [conversationId]
-        );
+        const result = await db.query(`
+            SELECT
+                id,
+                extracted_business_name,
+                statement_count,
+                fcs_report,
+                average_deposits,
+                average_revenue,
+                total_negative_days,
+                average_negative_days,
+                state,
+                industry,
+                position_count,
+                status,
+                error_message,
+                created_at,
+                completed_at,
+                average_daily_balance,
+                average_deposit_count,
+                time_in_business_text,
+                last_mca_deposit_date,
+                withholding_percentage
+            FROM fcs_analyses
+            WHERE conversation_id = $1
+            ORDER BY created_at DESC LIMIT 1
+        `, [conversationId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'No FCS results found' });
         }
 
+        const analysis = result.rows[0];
+
+        // Return transformed format (matching frontend expectations)
         res.json({
             success: true,
-            analysis: result.rows[0]
+            analysis: {
+                id: analysis.id,
+                businessName: analysis.extracted_business_name,
+                statementCount: analysis.statement_count,
+                report: analysis.fcs_report,
+                metrics: {
+                    averageDeposits: analysis.average_deposits,
+                    averageRevenue: analysis.average_revenue,
+                    totalNegativeDays: analysis.total_negative_days,
+                    averageNegativeDays: analysis.average_negative_days,
+                    state: analysis.state,
+                    industry: analysis.industry,
+                    positionCount: analysis.position_count,
+                    average_deposit_count: analysis.average_deposit_count,
+                    withholding_percentage: analysis.withholding_percentage,
+                    averageDailyBalance: analysis.average_daily_balance
+                },
+                status: analysis.status,
+                error: analysis.error_message,
+                createdAt: analysis.created_at,
+                completedAt: analysis.completed_at,
+                average_daily_balance: analysis.average_daily_balance,
+                average_deposit_count: analysis.average_deposit_count,
+                time_in_business_text: analysis.time_in_business_text,
+                last_mca_deposit_date: analysis.last_mca_deposit_date,
+                withholding_percentage: analysis.withholding_percentage
+            }
         });
 
     } catch (error) {

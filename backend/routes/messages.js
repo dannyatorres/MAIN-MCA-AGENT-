@@ -39,38 +39,38 @@ async function resolveConversationId(conversationId, db) {
 router.get('/:conversationId', async (req, res) => {
     try {
         const { conversationId } = req.params;
-        const { limit = 100, offset = 0 } = req.query;
         const db = getDatabase();
 
         const actualId = await resolveConversationId(conversationId, db);
 
         if (!actualId) {
-            return res.status(404).json({ success: false, error: 'Conversation not found' });
+            // Return empty array on not found (matches frontend expectation)
+            return res.json([]);
         }
 
         const result = await db.query(`
             SELECT * FROM messages
             WHERE conversation_id = $1
             ORDER BY timestamp ASC
-            LIMIT $2 OFFSET $3
-        `, [actualId, parseInt(limit), parseInt(offset)]);
+        `, [actualId]);
 
-        res.json({
-            success: true,
-            messages: result.rows,
-            conversation_id: actualId
-        });
+        // Return just the array (matching frontend expectation)
+        res.json(result.rows);
 
     } catch (error) {
         console.error('Error fetching messages:', error);
-        res.status(500).json({ success: false, error: error.message });
+        // Return empty array on error (matching frontend expectation)
+        res.json([]);
     }
 });
 
 // Send a new message
 router.post('/send', async (req, res) => {
     try {
-        let { conversation_id, content, direction, message_type, sent_by, sender_type, media_url } = req.body;
+        let { conversation_id, content, message_content, direction, message_type, sent_by, sender_type, media_url } = req.body;
+
+        // Accept both 'content' and 'message_content' (frontend compatibility)
+        content = content || message_content;
 
         // If sent_by is missing, use sender_type (backwards compatibility with frontend)
         sent_by = sent_by || sender_type;

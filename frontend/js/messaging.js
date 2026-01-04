@@ -116,9 +116,10 @@ class MessagingModule {
             this.messageCache.get(convIdStr).push(optimisticMessage);
         }
 
-        this.parent.apiCall(`/api/conversations/${convId}/messages`, {
+        this.parent.apiCall(`/api/messages/send`, {
             method: 'POST',
             body: JSON.stringify({
+                conversation_id: convId,
                 message_content: content,
                 sender_type: 'user',
                 media_url: mediaUrl,
@@ -229,7 +230,7 @@ class MessagingModule {
         }
 
         try {
-            const data = await this.parent.apiCall(`/api/conversations/${convId}/messages`);
+            const data = await this.parent.apiCall(`/api/messages/${convId}`);
             this.messageCache.set(convId, data || []);
             // Clear pending messages for this chat on reload
             this.pendingMessages = this.pendingMessages.filter(p => p.conversationId !== convId);

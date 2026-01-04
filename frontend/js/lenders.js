@@ -349,7 +349,7 @@ class LendersModule {
     async fetchFCSData(conversationId) {
         try {
             // Call the route that returns the analysis + metrics
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/fcs`);
+            const result = await this.parent.apiCall(`/api/fcs/results/${conversationId}`);
 
             if (result.success && result.analysis) {
                 return result.analysis;
@@ -1125,7 +1125,7 @@ class LendersModule {
 
         try {
             console.log('Loading documents for submission modal...');
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/documents`);
+            const result = await this.parent.apiCall(`/api/documents/${conversationId}`);
 
             if (result.success && result.documents) {
                 // Store documents in parent's documents module
@@ -1357,7 +1357,7 @@ class LendersModule {
         }
 
         try {
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/documents`);
+            const result = await this.parent.apiCall(`/api/documents/${conversationId}`);
 
             if (result.success && result.documents) {
                 if (this.parent.documents) {

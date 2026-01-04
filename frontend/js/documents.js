@@ -116,7 +116,7 @@ class DocumentsModule {
 
         try {
             console.log(`📄 Loading documents for conversation: ${targetId}`);
-            const result = await this.parent.apiCall(`/api/conversations/${targetId}/documents`);
+            const result = await this.parent.apiCall(`/api/documents/${targetId}`);
 
             if (result.success) {
                 const freshDocs = (result.documents || []).map(doc => this.normalizeDocumentFields(doc));
@@ -633,7 +633,7 @@ class DocumentsModule {
         if (!conversation) return;
 
         try {
-            const result = await this.parent.apiCall(`/api/conversations/${conversation.id}/documents/${documentId}`, {
+            const result = await this.parent.apiCall(`/api/documents/${documentId}`, {
                 method: 'PUT',
                 body: JSON.stringify({
                     filename: newName,
@@ -745,7 +745,7 @@ class DocumentsModule {
             return;
         }
 
-        const directFileUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/preview?t=${Date.now()}`;
+        const directFileUrl = `${this.apiBaseUrl}/api/documents/view/${documentId}?t=${Date.now()}`;
 
         try {
             this.utils.showNotification('Opening document...', 'info');
@@ -772,7 +772,7 @@ class DocumentsModule {
         }
 
         try {
-            const downloadUrl = `${this.apiBaseUrl}/api/conversations/${conversationId}/documents/${documentId}/download`;
+            const downloadUrl = `${this.apiBaseUrl}/api/documents/download/${documentId}`;
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = '';
@@ -796,7 +796,7 @@ class DocumentsModule {
         if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) return;
 
         try {
-            const result = await this.parent.apiCall(`/api/conversations/${conversationId}/documents/${documentId}`, {
+            const result = await this.parent.apiCall(`/api/documents/${documentId}`, {
                 method: 'DELETE'
             });
 
