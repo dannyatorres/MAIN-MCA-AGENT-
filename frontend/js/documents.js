@@ -501,6 +501,7 @@ class DocumentsModule {
                 setTimeout(() => {
                     this.loadDocuments();
                     this.cancelUpload();
+                    this.resetUploadButton(confirmBtn, cancelBtn);
                 }, 500);
             } else {
                 this.utils.showNotification('All uploads failed. Please try again.', 'error');
