@@ -89,7 +89,6 @@ async function startProcessor() {
 }
 
 async function runCheck() {
-    // Prevent overlapping runs
     if (global.isProcessorRunning) {
         console.log('⚠️ [Processor] Previous cycle still running. Skipping overlap.');
         return;
@@ -97,51 +96,44 @@ async function runCheck() {
     global.isProcessorRunning = true;
 
     const db = getDatabase();
-    // Only log start time occasionally to reduce noise, or keep it if you like the heartbeat
-    // console.log(`🔍 [Processor] Starting check at ${new Date().toLocaleTimeString()}...`);
+    console.log(`\n🔍 [Processor] Checking inbox at ${new Date().toLocaleTimeString()}...`);
 
     try {
-        // Fetch latest emails
         const recentEmails = await gmail.fetchEmails({ limit: 15 });
 
         if (!recentEmails || recentEmails.length === 0) {
-             // console.log('   💤 [Processor] Inbox is empty or connection failed.');
+            console.log('   📭 No emails found in inbox.');
         } else {
             const newEmails = [];
-            // console.log(`   📬 Fetched ${recentEmails.length} emails. Checking DB...`);
+            console.log(`   📬 Fetched ${recentEmails.length} emails. Checking against DB...`);
 
             for (const email of recentEmails) {
                 const exists = await db.query('SELECT 1 FROM processed_emails WHERE message_id = $1 OR thread_id = $2', [email.id, email.threadId]);
 
                 if (exists.rows.length === 0) {
-                    console.log(`      ✨ NEW EMAIL FOUND: "${email.subject || '(No Subject)'}"`);
+                    console.log(`      ✨ NEW: "${email.subject || '(No Subject)'}"`);
                     newEmails.push(email);
                 }
             }
 
             if (newEmails.length > 0) {
-                console.log(`   🚀 Sending ${newEmails.length} new emails to AI...`);
+                console.log(`   🚀 Processing ${newEmails.length} new email(s) with AI...`);
                 for (const email of newEmails) {
                     await processEmail(email, db);
                 }
             } else {
-                // console.log('   🗑️ [Processor] No new emails found.');
+                console.log(`   ✅ All ${recentEmails.length} emails already processed. No AI calls needed.`);
             }
         }
 
-        // ✅ SUCCESSFUL RUN: Schedule next normal check
         global.isProcessorRunning = false;
-        // console.log(`💤 [Processor] Done. Sleeping...`);
+        console.log(`   💤 Next check in ${CHECK_INTERVAL / 1000 / 60} minutes.\n`);
         setTimeout(runCheck, CHECK_INTERVAL);
 
     } catch (err) {
-        // ❌ CRASH DETECTED (ECONNRESET, etc.)
         console.error(`❌ [Processor] CRASHED: ${err.message}`);
-        console.error(`🛡️ [Supervisor] Restarting processor in ${ERROR_RESTART_DELAY / 1000} seconds...`);
-
+        console.error(`🛡️ [Supervisor] Restarting in ${ERROR_RESTART_DELAY / 1000} seconds...`);
         global.isProcessorRunning = false;
-
-        // Force restart faster than normal interval to recover connection
         setTimeout(runCheck, ERROR_RESTART_DELAY);
     }
 }
@@ -175,7 +167,7 @@ async function processEmail(email, db) {
     });
 
     const usage = extraction.usage;
-    // console.log(`      🎟️ [Tokens] Used: ${usage.total_tokens}`);
+    console.log(`      🎟️ [Tokens] Input: ${usage.prompt_tokens} | Output: ${usage.completion_tokens} | Total: ${usage.total_tokens}`);
 
     const data = JSON.parse(extraction.choices[0].message.content);
 
