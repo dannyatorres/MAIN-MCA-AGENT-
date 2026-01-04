@@ -261,7 +261,7 @@ export class DealIntelligenceTab {
         }
 
         try {
-            const response = await fetch(`/api/conversations/${conversationId}/analyze-strategy`, {
+            const response = await fetch(`/api/commander/${conversationId}/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });

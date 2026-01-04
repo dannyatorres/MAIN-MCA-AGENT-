@@ -126,6 +126,8 @@ app.use('/api/integrations', require('./routes/integrationRoutes'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/news', require('./routes/news'));
+app.use('/api/commander', require('./routes/commander'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // Contact Form
 app.post('/api/contact', (req, res) => {
