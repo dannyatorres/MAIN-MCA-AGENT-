@@ -128,6 +128,8 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/commander', require('./routes/commander'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/pdf', require('./routes/pdf'));
+app.use('/api/submissions', require('./routes/submissions'));
 
 // Contact Form
 app.post('/api/contact', (req, res) => {

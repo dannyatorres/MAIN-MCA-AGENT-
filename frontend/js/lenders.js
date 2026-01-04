@@ -309,7 +309,7 @@ class LendersModule {
                     if (conversationId) {
                         console.log('💾 Persisting results to database...');
                         try {
-                            await this.parent.apiCall(`/api/conversations/${conversationId}/lenders/save-results`, {
+                            await this.parent.apiCall(`/api/submissions/${conversationId}/qualifications/save`, {
                                 method: 'POST',
                                 body: JSON.stringify({
                                     results: data,
@@ -1521,7 +1521,7 @@ Best regards`;
             const conversationId = this.parent.getCurrentConversationId();
 
             // Don't await - fire and forget
-            this.parent.apiCall(`/api/conversations/${conversationId}/send-to-lenders`, {
+            this.parent.apiCall(`/api/submissions/${conversationId}/send`, {
                 method: 'POST',
                 body: JSON.stringify({
                     selectedLenders,

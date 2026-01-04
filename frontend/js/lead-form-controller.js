@@ -510,7 +510,7 @@ export class LeadFormController {
                 generateBtn.disabled = true;
 
                 try {
-                    const response = await fetch(`${this.parent.apiBaseUrl}/api/conversations/${id}/generate-pdf-document`, {
+                    const response = await fetch(`${this.parent.apiBaseUrl}/api/pdf/${id}/generate`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
