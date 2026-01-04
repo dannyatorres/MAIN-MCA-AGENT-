@@ -13,11 +13,7 @@ router.get('/', async (req, res) => {
 
         let query = `
             SELECT
-                c.id, c.display_id, c.lead_phone, c.business_name,
-                c.first_name, c.last_name, c.state, c.current_step,
-                c.priority, c.has_offer,
-                COALESCE(c.last_activity, c.created_at) as last_activity,
-                c.created_at,
+                c.*,
 
                 COALESCE((
                     SELECT COUNT(*) FROM messages m

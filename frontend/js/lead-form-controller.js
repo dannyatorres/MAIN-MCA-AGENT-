@@ -387,15 +387,9 @@ export class LeadFormController {
         this.launchModal({}, 'create');
     }
 
-    async openEditModal(data) {
+    openEditModal(data) {
         if (!data) data = this.parent.getSelectedConversation();
-        if (!data?.id) return alert('No conversation selected to edit.');
-
-        if (this.parent.conversationUI?.pendingFetch) {
-            await this.parent.conversationUI.pendingFetch;
-            data = this.parent.getSelectedConversation();
-        }
-
+        if (!data) return alert('No conversation selected to edit.');
         this.launchModal(data, 'edit');
     }
 
