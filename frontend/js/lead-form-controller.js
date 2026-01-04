@@ -418,15 +418,83 @@ export class LeadFormController {
         this.attachListeners(form, mode, data.id);
     }
 
-    renderEditTab(container) {
-        const conv = this.parent.getSelectedConversation();
+    async renderEditTab(container) {
+        let conv = this.parent.getSelectedConversation();
+
         if (!conv) {
             container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i> Select a conversation to edit details.</div>`;
             return;
         }
-        container.innerHTML = this.getFormHTML(conv, 'edit');
-        const form = document.getElementById('editLeadForm');
-        this.attachListeners(form, 'edit', conv.id);
+
+        container.innerHTML = `
+            <div class="loading-state" style="padding: 40px; text-align: center; color: #888;">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 10px;">Loading full lead details...</p>
+                <div id="slowNetworkMsg" style="display: none; margin-top: 15px; color: #f39c12; font-size: 0.9em;">
+                    <i class="fas fa-wifi"></i> Taking longer than usual...
+                </div>
+            </div>
+        `;
+
+        const slowMsgTimer = setTimeout(() => {
+            const msg = document.getElementById('slowNetworkMsg');
+            if (msg) msg.style.display = 'block';
+        }, 3000);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        try {
+            const fullData = await this.parent.apiCall(`/api/conversations/${conv.id}`, {
+                signal: controller.signal
+            });
+
+            if (fullData.conversation || fullData.id) {
+                conv = fullData.conversation || fullData;
+                if (this.parent.conversationUI) {
+                    this.parent.conversationUI.selectedConversation = conv;
+                }
+            }
+
+            container.innerHTML = this.getFormHTML(conv, 'edit');
+            const form = document.getElementById('editLeadForm');
+            this.attachListeners(form, 'edit', conv.id);
+        } catch (error) {
+            console.error('Failed to load details:', error);
+
+            let errorMsg = error.message || 'Connection failed';
+            if (error.name === 'AbortError') {
+                errorMsg = 'Request timed out (server took too long)';
+            }
+
+            container.innerHTML = `
+                <div class="error-state" style="padding: 40px; text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 10px; color: #e74c3c;">⚠️</div>
+                    <h4 style="margin-bottom: 10px;">Could not load latest details</h4>
+                    <p style="color: #888; margin-bottom: 20px; font-size: 0.9em;">
+                        ${errorMsg}
+                    </p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-secondary" id="retryEditBtn">
+                            <i class="fas fa-sync"></i> Retry
+                        </button>
+                        <button class="btn btn-primary" id="forceEditBtn">
+                            Edit Anyway
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            container.querySelector('#retryEditBtn').onclick = () => this.renderEditTab(container);
+            container.querySelector('#forceEditBtn').onclick = () => {
+                container.innerHTML = this.getFormHTML(conv, 'edit');
+                const form = document.getElementById('editLeadForm');
+                this.attachListeners(form, 'edit', conv.id);
+            };
+        } finally {
+            clearTimeout(timeoutId);
+            clearTimeout(slowMsgTimer);
+        }
     }
 
     attachListeners(form, mode, id = null) {
