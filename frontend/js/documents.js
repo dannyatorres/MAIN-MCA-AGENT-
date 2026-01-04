@@ -103,6 +103,7 @@ class DocumentsModule {
             this.currentDocuments = this.documentsCache.get(targetId);
             this.renderDocumentsList();
             this.toggleFCSGenerationSection();
+            this.setupDocumentsEventListeners();
         } else {
             // Only show spinner if we have NO data
             if (documentsList) {
@@ -130,6 +131,7 @@ class DocumentsModule {
                     this.renderDocumentsList();
                     this.updateDocumentsSummary();
                     this.toggleFCSGenerationSection();
+                    this.setupDocumentsEventListeners();
                 }
             } else {
                 // If cache existed, we just stay on old data silently. If not, show error.
@@ -178,17 +180,45 @@ class DocumentsModule {
             this.documentsNeedRefresh = true;
         }
 
-        // Empty State - Clean Card Style
+        // Empty State - Large Drop Zone
         if (docs.length === 0) {
             documentsList.innerHTML = `
-                <div class="empty-state-card">
-                    <div class="empty-state-icon">📁</div>
-                    <div class="empty-state-text">
-                        <h4>No Documents</h4>
-                        <p>Upload bank statements, applications, or other files to get started.</p>
+                <div class="empty-upload-zone" id="emptyDropZone">
+                    <div class="empty-upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
                     </div>
+                    <h4>Drop Files Here</h4>
+                    <p>or click to browse</p>
+                    <span class="empty-upload-hint">Bank statements, applications, IDs • Max 50MB</span>
                 </div>
             `;
+
+            // Make empty zone clickable and droppable
+            const emptyZone = document.getElementById('emptyDropZone');
+            if (emptyZone) {
+                emptyZone.addEventListener('click', () => {
+                    document.getElementById('documentUpload')?.click();
+                });
+
+                ['dragenter', 'dragover'].forEach(evt => {
+                    emptyZone.addEventListener(evt, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        emptyZone.classList.add('drag-active');
+                    });
+                });
+                ['dragleave', 'drop'].forEach(evt => {
+                    emptyZone.addEventListener(evt, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        emptyZone.classList.remove('drag-active');
+                    });
+                });
+                emptyZone.addEventListener('drop', (e) => {
+                    const files = Array.from(e.dataTransfer.files);
+                    this.handleFileSelection(files);
+                });
+            }
             return;
         }
 
