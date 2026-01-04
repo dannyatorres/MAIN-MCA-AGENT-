@@ -238,38 +238,57 @@ router.get('/view/:documentId', async (req, res) => {
         const { documentId } = req.params;
         const db = getDatabase();
 
-        // Get document info from database
         const result = await db.query(
             'SELECT * FROM documents WHERE id = $1',
             [documentId]
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Document not found'
-            });
+            return res.status(404).json({ error: 'Document not found' });
         }
 
         const document = result.rows[0];
 
-        // Generate pre-signed URL for viewing (expires in 1 hour)
-        const url = s3.getSignedUrl('getObject', {
-            Bucket: document.s3_bucket,
-            Key: document.s3_key,
-            Expires: 3600,
-            ResponseContentDisposition: `inline; filename="${document.original_filename}"`
+        if (!document.s3_key) {
+            return res.status(404).json({ error: 'Document not in S3' });
+        }
+
+        // Determine content type
+        const ext = (document.original_filename || '').split('.').pop().toLowerCase();
+        let contentType = document.mime_type || 'application/octet-stream';
+
+        if (ext === 'pdf') contentType = 'application/pdf';
+        else if (['jpg', 'jpeg'].includes(ext)) contentType = 'image/jpeg';
+        else if (ext === 'png') contentType = 'image/png';
+        else if (ext === 'gif') contentType = 'image/gif';
+
+        // Sanitize filename
+        const safeFilename = (document.original_filename || 'document').replace(/"/g, "'").replace(/[\r\n]/g, "");
+
+        // Set headers for INLINE viewing (not download)
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
+
+        // Stream directly from S3
+        const s3Stream = s3.getObject({
+            Bucket: document.s3_bucket || process.env.S3_DOCUMENTS_BUCKET,
+            Key: document.s3_key
+        }).createReadStream();
+
+        s3Stream.on('error', (err) => {
+            console.error('❌ S3 stream error:', err);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Failed to stream file' });
+            }
         });
 
-        // Redirect to pre-signed URL
-        res.redirect(url);
+        s3Stream.pipe(res);
 
     } catch (error) {
-        console.error('Error viewing document:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('View document error:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 
