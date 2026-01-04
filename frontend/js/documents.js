@@ -280,6 +280,9 @@ class DocumentsModule {
 
         const loading = document.getElementById('documentsLoading');
         if (loading) loading.classList.add('hidden');
+
+        // Re-attach event listeners after any render
+        this.setupDocumentsEventListeners();
     }
 
     // Helper: Determine icon color class based on file type

@@ -551,8 +551,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 280px;
-    padding: 40px 20px;
+    min-height: 140px;
+    padding: 24px 20px;
     text-align: center;
     background: linear-gradient(to bottom, rgba(59, 130, 246, 0.02), transparent);
     border: 2px dashed #30363d;
@@ -574,9 +574,9 @@
 }
 
 .empty-upload-icon {
-    font-size: 56px;
+    font-size: 32px;
     color: #3b82f6;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     opacity: 0.8;
     transition: transform 0.2s;
 }
@@ -586,15 +586,15 @@
 }
 
 .empty-upload-zone h4 {
-    margin: 0 0 8px 0;
-    font-size: 18px;
+    margin: 0 0 4px 0;
+    font-size: 15px;
     font-weight: 600;
     color: #e6edf3;
 }
 
 .empty-upload-zone p {
-    margin: 0 0 16px 0;
-    font-size: 14px;
+    margin: 0 0 10px 0;
+    font-size: 13px;
     color: #8b949e;
 }
 
