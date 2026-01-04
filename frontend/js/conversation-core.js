@@ -203,7 +203,9 @@ class ConversationCore {
             }
 
             // PARALLEL: Fire all requests without waiting
-            const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
+            // Store promise so edit modal can await it if needed
+            this.pendingFetch = this.parent.apiCall(`/api/conversations/${conversationId}`);
+            const dataPromise = this.pendingFetch;
 
             if (this.parent.messaging) {
                 this.parent.messaging.loadConversationMessages(conversationId); // Don't await
@@ -220,6 +222,7 @@ class ConversationCore {
             this.selectedConversation = freshConv;
             this.conversations.set(conversationId, freshConv);
             if (this.parent) this.parent.selectedConversation = freshConv;
+            this.pendingFetch = null;
 
             // Only re-render if data actually changed
             this.showConversationDetails();
