@@ -988,30 +988,30 @@ class DocumentsModule {
         // Build modal HTML
         const modalHtml = `
             <div id="fcsGenerateModal" class="doc-modal-overlay" onclick="if(event.target === this) this.remove()">
-                <div class="doc-modal-card" style="max-width: 550px;" onclick="event.stopPropagation()">
+                <div class="doc-modal-card fcs-modal-card" onclick="event.stopPropagation()">
                     <div class="doc-modal-header">
                         <span>📊 Generate FCS Report</span>
                         <button onclick="document.getElementById('fcsGenerateModal').remove()" class="doc-modal-close">×</button>
                     </div>
-                    <div class="doc-modal-body" style="max-height: 400px; overflow-y: auto;">
-                        <p style="color: #8b949e; font-size: 13px; margin-bottom: 16px;">
+                    <div class="doc-modal-body fcs-modal-body">
+                        <p class="fcs-modal-hint">
                             Select the documents to include in the financial analysis:
                         </p>
-                        <div class="fcs-doc-select-all" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #30363d;">
-                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #e6edf3; font-weight: 600;">
-                                <input type="checkbox" id="fcsSelectAll" checked style="width: 18px; height: 18px; accent-color: #2dd4bf;">
+                        <div class="fcs-select-all-row">
+                            <label class="fcs-select-all-label">
+                                <input type="checkbox" id="fcsSelectAll" checked class="fcs-checkbox">
                                 Select All
                             </label>
                         </div>
                         <div id="fcsDocumentList" class="fcs-document-list">
                             ${docs.map(doc => `
-                                <label class="fcs-doc-item" style="display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                                    <input type="checkbox" class="fcs-doc-checkbox" value="${doc.id}" checked style="width: 18px; height: 18px; accent-color: #2dd4bf; flex-shrink: 0;">
-                                    <div style="flex: 1; min-width: 0;">
-                                        <div style="color: #e6edf3; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <label class="fcs-doc-item">
+                                    <input type="checkbox" class="fcs-doc-checkbox fcs-checkbox-flex" value="${doc.id}" checked>
+                                    <div class="fcs-doc-info">
+                                        <div class="fcs-doc-name">
                                             ${doc.originalFilename || doc.original_filename || 'Unknown'}
                                         </div>
-                                        <div style="color: #6e7681; font-size: 11px; margin-top: 2px;">
+                                        <div class="fcs-doc-meta">
                                             ${doc.documentType || doc.document_type || 'Document'} • ${this.utils.formatFileSize(doc.fileSize || doc.file_size || 0)}
                                         </div>
                                     </div>
@@ -1136,9 +1136,9 @@ class DocumentsModule {
             if (result.status === 'completed') {
                 if (syncLoading) {
                     syncLoading.innerHTML = `
-                        <div style="color:#10b981; font-size: 24px;">✅</div>
+                        <div class="fcs-success-icon">✅</div>
                         <div class="sync-loading-text">
-                            <strong style="color:#10b981">Analysis Complete!</strong>
+                            <strong class="fcs-success-text">Analysis Complete!</strong>
                             <span>Loading report...</span>
                         </div>
                     `;
@@ -1162,9 +1162,9 @@ class DocumentsModule {
             if (fcsResults) {
                 fcsResults.style.display = 'block';
                 fcsResults.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    <div class="fcs-error-state">
                         <p><strong>Generation Failed:</strong> ${error.message}</p>
-                        <button onclick="window.conversationUI.documents.openFCSModal()" class="btn btn-primary" style="margin-top: 16px;">Try Again</button>
+                        <button onclick="window.conversationUI.documents.openFCSModal()" class="btn btn-primary fcs-retry-btn">Try Again</button>
                     </div>
                 `;
             }
