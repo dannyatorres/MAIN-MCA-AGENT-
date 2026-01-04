@@ -180,8 +180,12 @@ class DocumentsModule {
             this.documentsNeedRefresh = true;
         }
 
-        // Empty State - Large Drop Zone
+        // Empty State - Large Drop Zone (hides the small upload bar)
         if (docs.length === 0) {
+            // Hide the small upload bar since we're showing the big zone
+            const uploadBar = document.getElementById('dragDropZone');
+            if (uploadBar) uploadBar.style.display = 'none';
+
             documentsList.innerHTML = `
                 <div class="empty-upload-zone" id="emptyDropZone">
                     <div class="empty-upload-icon">
@@ -221,6 +225,10 @@ class DocumentsModule {
             }
             return;
         }
+
+        // Show the upload bar when there ARE documents
+        const uploadBar = document.getElementById('dragDropZone');
+        if (uploadBar) uploadBar.style.display = '';
 
         // Card-Based Document List
         const htmlContent = `
