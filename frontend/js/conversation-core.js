@@ -187,14 +187,9 @@ class ConversationCore {
 
         // 3. Fetch Data
         try {
-            // Show loading header from cache (but don't set selectedConversation yet)
-            const cachedConv = this.conversations.get(conversationId);
-            if (cachedConv) {
-                // Only update header, don't set selectedConversation
-                const tempDisplay = cachedConv.business_name || 'Loading...';
-                if (window.updateChatHeader) {
-                    window.updateChatHeader(tempDisplay, '', cachedConv.lead_phone, cachedConv.id);
-                }
+            // Show loading state immediately (don't use cached data - causes flash)
+            if (window.updateChatHeader) {
+                window.updateChatHeader('Loading...', '', '', conversationId);
             }
 
             // Parallel fetch
