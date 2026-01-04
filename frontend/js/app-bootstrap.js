@@ -202,15 +202,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         });
 
-                        // AI Toggle - uses event delegation
-                        header.addEventListener('click', (e) => {
-                            const aiBtn = e.target.closest('#aiToggleBtn');
-                            if (aiBtn && window.commandCenter?.messaging) {
-                                const isCurrentlyOn = aiBtn.dataset.state === 'on';
-                                window.commandCenter.messaging.toggleAI(!isCurrentlyOn);
-                            }
-                        });
-
                         // Call Button - uses event delegation with closure for phone
                         header.addEventListener('click', async (e) => {
                             if (e.target.closest('#callBtn')) {
