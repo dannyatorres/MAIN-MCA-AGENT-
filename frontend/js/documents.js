@@ -45,7 +45,7 @@ class DocumentsModule {
             const target = e.target;
 
             // Click on upload bar or empty zone
-            if (target.closest('#dragDropZone') || target.closest('#emptyDropZone')) {
+            if (target.closest('#uploadDropZone')) {
                 document.getElementById('documentUpload')?.click();
             }
 
@@ -59,7 +59,7 @@ class DocumentsModule {
         container.addEventListener('dragenter', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const zone = document.getElementById('dragDropZone') || document.getElementById('emptyDropZone');
+            const zone = document.getElementById('uploadDropZone');
             if (zone) zone.classList.add('drag-active');
         });
 
@@ -73,7 +73,7 @@ class DocumentsModule {
             e.stopPropagation();
             // Only remove if leaving the container entirely
             if (!container.contains(e.relatedTarget)) {
-                const zone = document.getElementById('dragDropZone') || document.getElementById('emptyDropZone');
+                const zone = document.getElementById('uploadDropZone');
                 if (zone) zone.classList.remove('drag-active');
             }
         });
@@ -82,7 +82,7 @@ class DocumentsModule {
             e.preventDefault();
             e.stopPropagation();
 
-            const zone = document.getElementById('dragDropZone') || document.getElementById('emptyDropZone');
+            const zone = document.getElementById('uploadDropZone');
             if (zone) zone.classList.remove('drag-active');
 
             const files = Array.from(e.dataTransfer.files);
@@ -209,19 +209,11 @@ class DocumentsModule {
             this.documentsNeedRefresh = true;
         }
 
-        // Empty State - Large Drop Zone
+        // Empty State - just show empty message
         if (docs.length === 0) {
-            const uploadBar = document.getElementById('dragDropZone');
-            if (uploadBar) uploadBar.style.display = 'none';
-
             documentsList.innerHTML = `
-                <div class="empty-upload-zone" id="emptyDropZone">
-                    <div class="empty-upload-icon">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                    </div>
-                    <h4>Drop Files Here</h4>
-                    <p>or click to browse</p>
-                    <span class="empty-upload-hint">Bank statements, applications, IDs • Max 50MB</span>
+                <div class="empty-state-text" style="text-align: center; padding: 20px; color: #8b949e;">
+                    <p>No documents uploaded yet</p>
                 </div>
             `;
 
@@ -229,10 +221,6 @@ class DocumentsModule {
             this.setupDocumentsEventListeners();
             return;
         }
-
-        // Show the upload bar when there ARE documents
-        const uploadBar = document.getElementById('dragDropZone');
-        if (uploadBar) uploadBar.style.display = '';
 
         // Card-Based Document List
         const htmlContent = `
@@ -542,7 +530,7 @@ class DocumentsModule {
 
     showUploadProgress(show) {
         const progressBar = document.getElementById('uploadProgress');
-        const uploadBar = document.getElementById('dragDropZone');
+        const uploadBar = document.getElementById('uploadDropZone');
 
         if (progressBar) {
             // Toggle the class that makes it block/visible
@@ -973,15 +961,13 @@ class DocumentsModule {
                     </button>
                 </div>
 
-                <div class="upload-bar" id="dragDropZone">
-                    <div class="upload-bar-content">
-                        <div class="upload-icon-small"><i class="fas fa-cloud-upload-alt"></i></div>
-                        <div>
-                            <div class="upload-text">Upload Documents</div>
-                            <div class="upload-hint">Drag & drop or click to browse</div>
-                        </div>
+                <div class="empty-upload-zone" id="uploadDropZone">
+                    <div class="empty-upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
                     </div>
-                    <div class="upload-hint">Max 50MB</div>
+                    <h4>Drop Files Here</h4>
+                    <p>or click to browse</p>
+                    <span class="empty-upload-hint">Bank statements, applications, IDs • Max 50MB</span>
                 </div>
 
                 <div class="upload-progress-bar" id="uploadProgress">
