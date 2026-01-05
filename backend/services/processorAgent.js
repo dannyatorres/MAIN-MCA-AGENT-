@@ -58,6 +58,49 @@ function getSimilarity(s1, s2) {
     return (longer.length - costs[shorter.length]) / parseFloat(longer.length);
 }
 
+// Validate and match lender name against actual lenders table
+async function matchToRealLender(extractedLender, db) {
+    if (!extractedLender || extractedLender === 'Unknown Lender') return null;
+
+    const normalizedExtracted = normalizeName(extractedLender);
+
+    const lendersResult = await db.query('SELECT name FROM lenders');
+    const lenders = lendersResult.rows;
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const lender of lenders) {
+        const normalizedLender = normalizeName(lender.name);
+
+        if (normalizedExtracted === normalizedLender) {
+            return lender.name;
+        }
+
+        const score = getSimilarity(normalizedExtracted, normalizedLender);
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = lender.name;
+        }
+    }
+
+    if (bestScore >= 0.75) {
+        console.log(`      🔄 Lender name corrected: "${extractedLender}" -> "${bestMatch}" (${(bestScore * 100).toFixed(0)}%)`);
+        return bestMatch;
+    }
+
+    const words = extractedLender.trim().split(/\s+/);
+    const companyKeywords = /capital|funding|fund|advance|financial|lending|credit|money|cash|business|merchant|express|velocity|fast|quick/i;
+
+    if (words.length <= 3 && !companyKeywords.test(extractedLender)) {
+        console.log(`      ⚠️ Rejected person name as lender: "${extractedLender}"`);
+        return null;
+    }
+
+    console.log(`      ⚠️ Unknown lender (no match found): "${extractedLender}"`);
+    return null;
+}
+
 // Cleanup emails older than 7 days
 async function cleanupOldEmails() {
     const db = getDatabase();
@@ -211,10 +254,17 @@ async function processEmail(email, db) {
 
     console.log(`      ✅ MATCH: "${businessName}" -> Lead ${bestMatchId} (${data.category})`);
 
+    const validatedLender = await matchToRealLender(data.lender, db);
+
+    if (!validatedLender) {
+        console.log(`      ⚠️ Skipping - could not match lender: "${data.lender}"`);
+        return;
+    }
+
     const submissionCheck = await db.query(`
         SELECT id FROM lender_submissions
-        WHERE conversation_id = $1 AND lender_name ILIKE $2
-    `, [bestMatchId, `%${data.lender}%`]);
+        WHERE conversation_id = $1 AND LOWER(lender_name) = LOWER($2)
+    `, [bestMatchId, validatedLender]);
 
     // Build history log entry for this email
     const newLogEntry = {
@@ -225,7 +275,7 @@ async function processEmail(email, db) {
     };
 
     if (submissionCheck.rows.length > 0) {
-        console.log(`      🔄 Updating history for ${data.lender}...`);
+        console.log(`      🔄 Updating history for ${validatedLender}...`);
 
         await db.query(`
             UPDATE lender_submissions
@@ -261,7 +311,7 @@ async function processEmail(email, db) {
             email.snippet || ""
         ]);
     } else {
-        console.log(`      ➕ Creating new record for ${data.lender}...`);
+        console.log(`      ➕ Creating new record for ${validatedLender}...`);
 
         const initialDetails = {
             history: [newLogEntry]
@@ -277,7 +327,7 @@ async function processEmail(email, db) {
         `, [
             uuidv4(),
             bestMatchId,
-            data.lender || 'Unknown Lender',
+            validatedLender,
             data.category,
             data.offer_amount,
             data.factor_rate,
@@ -297,7 +347,7 @@ async function processEmail(email, db) {
         }
     }
 
-    const systemNote = `📩 **INBOX UPDATE (${data.lender}):** ${data.summary}`;
+    const systemNote = `📩 **INBOX UPDATE (${validatedLender}):** ${data.summary}`;
 
     // 🟢 Write to AI Chat (Assistant)
     try {

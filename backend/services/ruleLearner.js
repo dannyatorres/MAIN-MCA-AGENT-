@@ -44,7 +44,7 @@ async function analyzeDeclines() {
                 c.business_start_date as time_in_business
             FROM lender_submissions ls
             LEFT JOIN conversations c ON ls.conversation_id = c.id
-            WHERE ls.status = 'DECLINED'
+            WHERE ls.status IN ('DECLINE', 'DECLINED')
               AND (ls.rule_analyzed = FALSE OR ls.rule_analyzed IS NULL)
               AND ls.decline_reason IS NOT NULL
               AND ls.decline_reason != ''
