@@ -17,7 +17,7 @@ async function buildLenderProfiles() {
             ls.lender_name,
             ls.status,
             ls.total_daily_withhold,
-            ls.existing_positions_count,
+            ls.position,
             c.industry,
             c.us_state,
             c.monthly_revenue,
@@ -86,13 +86,13 @@ async function buildLenderProfiles() {
             if (row.fico_score) p.avgApprovedFico.push(parseInt(row.fico_score));
             if (row.time_in_business) p.avgApprovedTib.push(parseInt(row.time_in_business));
             if (row.total_daily_withhold) p.avgApprovedWithhold.push(parseFloat(row.total_daily_withhold));
-            if (row.existing_positions_count) p.avgApprovedPositionCount.push(parseInt(row.existing_positions_count));
+            if (row.position) p.avgApprovedPositionCount.push(Math.max(0, parseInt(row.position) - 1));
         } else {
             if (row.monthly_revenue) p.avgDeclinedRevenue.push(parseFloat(row.monthly_revenue));
             if (row.fico_score) p.avgDeclinedFico.push(parseInt(row.fico_score));
             if (row.time_in_business) p.avgDeclinedTib.push(parseInt(row.time_in_business));
             if (row.total_daily_withhold) p.avgDeclinedWithhold.push(parseFloat(row.total_daily_withhold));
-            if (row.existing_positions_count) p.avgDeclinedPositionCount.push(parseInt(row.existing_positions_count));
+            if (row.position) p.avgDeclinedPositionCount.push(Math.max(0, parseInt(row.position) - 1));
         }
     }
 
