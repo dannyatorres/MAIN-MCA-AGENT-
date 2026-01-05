@@ -89,6 +89,8 @@ class ConversationCore {
             const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
             if (item) {
                 item.classList.remove('has-offer');
+                const badge = item.querySelector('.offer-badge-small');
+                if (badge) badge.remove();
             }
 
             try {
