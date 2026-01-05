@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
         const mainStats = await db.query(`
             SELECT
                 COUNT(*) as total,
-                COUNT(*) FILTER (WHERE has_offer = true) as offers,
+                (SELECT COUNT(DISTINCT conversation_id) FROM lender_submissions WHERE status = 'OFFER') as offers,
                 COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as new_today,
                 COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as new_this_week,
                 COUNT(*) FILTER (WHERE ai_enabled = true) as ai_enabled,
