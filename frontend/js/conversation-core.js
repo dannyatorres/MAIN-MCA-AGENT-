@@ -173,7 +173,8 @@ class ConversationCore {
 
             // RENDER WITHOUT LOCAL FILTERING
             // We pass 'true' to tell the renderer "The server already filtered this"
-            this.renderConversationsList(!!searchTerm);
+            const hasServerFilter = !!stateFilter || !!searchTerm;
+            this.renderConversationsList(hasServerFilter);
 
         } catch (error) {
             console.error('Error in loadConversations:', error);
@@ -287,7 +288,7 @@ class ConversationCore {
     // 4. RENDERING
     // ============================================================
 
-    renderConversationsList(isServerSearch = false) {
+    renderConversationsList(isServerFiltered = false) {
         const container = document.getElementById('conversationsList');
         if (!container) return;
 
@@ -298,7 +299,7 @@ class ConversationCore {
 
         // ONLY filter locally if we didn't just run a server search
         // This prevents the "Invisible Data" bug
-        if (!isServerSearch) {
+        if (!isServerFiltered) {
             const searchTerm = document.getElementById('searchInput')?.value.trim().toLowerCase();
             const stateFilter = document.getElementById('stateFilter')?.value;
 
@@ -434,36 +435,8 @@ class ConversationCore {
         conv.last_activity = new Date().toISOString();
         this.conversations.set(conversationId, conv);
 
-        // Update sidebar DOM
-        const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
-        const list = document.getElementById('conversationsList');
-
-        if (item && list) {
-            // Item exists in current view - update and move to top
-            const preview = item.querySelector('.message-preview');
-            const time = item.querySelector('.conversation-time');
-            if (preview) preview.textContent = conv.last_message;
-            if (time) time.textContent = 'Just now';
-            list.prepend(item);
-        } else if (list) {
-            // Item not in current view - only add if it matches current filter
-            const searchTerm = document.getElementById('searchInput')?.value.trim();
-            const stateFilter = document.getElementById('stateFilter')?.value;
-
-            // Don't add if search is active
-            if (searchTerm) return;
-
-            // Don't add if filter is active and conversation doesn't match
-            if (stateFilter) {
-                if (stateFilter === 'INTERESTED' && !conv.has_response) return;
-                if (stateFilter === 'UNREAD' && !conv.unread_count) return;
-                if (stateFilter !== 'INTERESTED' && stateFilter !== 'UNREAD' && conv.current_step !== stateFilter) return;
-            }
-
-            // Matches filter (or no filter) - add to list
-            const html = this.generateConversationHTML(conv);
-            list.insertAdjacentHTML('afterbegin', html);
-        }
+        // Re-render the list to keep ordering consistent
+        this.renderConversationsList();
     }
 
     filterConversations() {
@@ -595,10 +568,11 @@ class ConversationCore {
             const checkboxWrapper = e.target.closest('.conversation-checkbox');
             const realInput = e.target.closest('.delete-checkbox');
 
-            if (realInput || (checkboxWrapper && !e.target.closest('.conversation-item'))) {
+            if (realInput || checkboxWrapper) {
                 e.stopPropagation();
-                const id = realInput ? realInput.dataset.conversationId :
-                           checkboxWrapper.querySelector('.delete-checkbox')?.dataset.conversationId;
+                const id = realInput
+                    ? realInput.dataset.conversationId
+                    : checkboxWrapper.querySelector('.delete-checkbox')?.dataset.conversationId;
                 if (id) this.toggleDeleteSelection(id);
                 return;
             }
@@ -659,5 +633,12 @@ class ConversationCore {
 
         const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
         if (deleteSelectedBtn) deleteSelectedBtn.addEventListener('click', () => this.confirmDeleteSelected());
+
+        // Auto-clear unread when tab becomes visible and a conversation is open
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.currentConversationId) {
+                this.clearBadge(this.currentConversationId);
+            }
+        });
     }
 }
