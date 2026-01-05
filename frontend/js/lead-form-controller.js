@@ -563,43 +563,97 @@ export class LeadFormController {
         const generateBtn = form.querySelector('#generateAppBtn');
         if (generateBtn) {
             generateBtn.addEventListener('click', async () => {
-                const rawFormData = this.scrapeFormData(new FormData(form));
+                const currentForm = document.getElementById('editLeadForm');
+                if (!currentForm) {
+                    alert('Form not found');
+                    return;
+                }
+
+                const rawFormData = this.scrapeFormData(new FormData(currentForm));
                 const pdfData = this.mapDataForAppGeneration(rawFormData);
+                const ownerName = `${rawFormData.ownerFirstName || ''} ${rawFormData.ownerLastName || ''}`.trim();
+
                 const btnOriginalText = generateBtn.innerHTML;
                 generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
                 generateBtn.disabled = true;
 
                 try {
-                    const response = await fetch(`${this.parent.apiBaseUrl}/api/pdf/${id}/generate`, {
+                    const htmlResponse = await fetch(`${this.parent.apiBaseUrl}/api/pdf/${id}/generate-html`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ applicationData: pdfData, ownerName })
+                    });
+
+                    if (!htmlResponse.ok) throw new Error('Failed to generate HTML template');
+                    const html = await htmlResponse.text();
+
+                    const iframe = document.createElement('iframe');
+                    iframe.style.cssText = 'position:absolute;left:-9999px;width:800px;height:1200px;';
+                    document.body.appendChild(iframe);
+
+                    iframe.contentDocument.open();
+                    iframe.contentDocument.write(html);
+                    iframe.contentDocument.close();
+
+                    await new Promise(r => setTimeout(r, 500));
+
+                    const canvas = await html2canvas(iframe.contentDocument.body, {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff'
+                    });
+
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jspdf.jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const imgWidth = canvas.width;
+                    const imgHeight = canvas.height;
+                    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+
+                    pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
+
+                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+                    const safeName = (pdfData.legalName || 'Application').replace(/[^a-zA-Z0-9]/g, '_');
+                    const filename = `WCA_${safeName}.pdf`;
+
+                    const saveResponse = await fetch(`${this.parent.apiBaseUrl}/api/pdf/${id}/save`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            applicationData: pdfData,
-                            ownerName: `${rawFormData.ownerFirstName} ${rawFormData.ownerLastName}`
+                            conversationId: id,
+                            pdfBase64,
+                            filename
                         })
                     });
 
-                    const result = await response.json();
+                    const saveResult = await saveResponse.json();
 
-                    if (result.success && result.document) {
-                        document.getElementById('leadModalWrapper').remove();
+                    document.body.removeChild(iframe);
+
+                    if (saveResult.success) {
+                        document.getElementById('leadModalWrapper')?.remove();
                         this.parent.utils.showNotification('Application Generated!', 'success');
                         if (this.parent.intelligence) this.parent.intelligence.switchTab('documents');
                         if (this.parent.documents) {
-                            setTimeout(() => { this.parent.documents.loadDocuments(); }, 1000);
+                            setTimeout(() => this.parent.documents.loadDocuments(), 500);
                         }
                     } else {
-                        throw new Error(result.error || 'Unknown error');
+                        throw new Error(saveResult.error || 'Failed to save PDF');
                     }
                 } catch (error) {
-                    console.error('App Generation Error:', error);
-                    alert('Failed to generate app: ' + error.message);
+                    console.error('PDF Generation Error:', error);
+                    alert('Failed to generate PDF: ' + error.message);
                 } finally {
-                    const stillOpenBtn = document.getElementById('generateAppBtn');
-                    if (stillOpenBtn) {
-                        stillOpenBtn.innerHTML = btnOriginalText;
-                        stillOpenBtn.disabled = false;
-                    }
+                    generateBtn.innerHTML = btnOriginalText;
+                    generateBtn.disabled = false;
                 }
             });
         }
