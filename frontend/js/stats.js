@@ -300,10 +300,11 @@ class StatsModule {
                         <td style="padding: 12px; color: #10b981; font-weight: 600;">${displayAmount}</td>
                         <td style="padding: 12px; color: #8b949e;">${date}</td>
                         <td style="padding: 12px;">
+                            <span style="background: #f59e0b; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 8px;">OFFER</span>
                             <button onclick="window.markAsFunded('${offer.conversation_id}', ${amount})"
                                 style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white;
                                 padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                                Funded
+                                Mark Funded
                             </button>
                         </td>
                     </tr>
