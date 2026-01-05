@@ -363,10 +363,9 @@ class LendersModule {
 
     async populateLenderForm() {
         const conversationId = this.parent.getCurrentConversationId();
-        const conversation = this.parent.getSelectedConversation(); // Needed for Date
+        const conversation = this.parent.getSelectedConversation();
         console.log('🤖 Auto-filling lender form for:', conversationId);
 
-        // Helper to safely set values
         const populateField = (fieldId, value) => {
             const element = document.getElementById(fieldId);
             if (element && value) {
@@ -375,8 +374,8 @@ class LendersModule {
             }
         };
 
-        // --- 1. RESTORED: Business Start Date (from CRM) ---
-        // This pulls the date from the database and formats it MM/DD/YYYY
+        const fcs = await this.fetchFCSData(conversationId);
+
         if (conversation && conversation.business_start_date) {
             const date = new Date(conversation.business_start_date);
             if (!isNaN(date.getTime())) {
@@ -387,70 +386,54 @@ class LendersModule {
             }
         }
 
-        // --- 2. FETCH FCS DATA ---
-        const fcs = await this.fetchFCSData(conversationId);
-
         if (!fcs) {
-             // Fallback: If no FCS exists, try to fill basic info from CRM
-             if (conversation) {
+            if (conversation) {
                 populateField('lenderBusinessName', conversation.business_name);
                 populateField('lenderState', conversation.us_state || conversation.state);
                 populateField('lenderIndustry', conversation.business_type);
                 if (conversation.annual_revenue) {
                     populateField('lenderRevenue', Math.round(conversation.annual_revenue / 12));
                 }
-             }
-             return;
+            }
+            console.log('✨ Lender form populated (CRM only - no FCS)');
+            return;
         }
 
-        // --- 3. RESTORED: Withholding (Original Logic) ---
-        // Pulls from the calculated metric and adds the red border warning
         if (fcs.withholding_percentage) {
-             populateField('lenderWithholding', fcs.withholding_percentage + '%');
-
-             // Visual Warning for High Withholding (> 40%)
-             if (parseFloat(fcs.withholding_percentage) > 40) {
-                 const el = document.getElementById('lenderWithholding');
-                 if(el) el.style.borderColor = '#ef4444';
-             }
+            populateField('lenderWithholding', fcs.withholding_percentage + '%');
+            if (parseFloat(fcs.withholding_percentage) > 40) {
+                const el = document.getElementById('lenderWithholding');
+                if (el) el.style.borderColor = '#ef4444';
+            }
         }
 
-        // --- 4. PARSE TEXT REPORT (The "Smart" Fixes) ---
-        // This overwrites messy data with the clean text from the AI report
         if (fcs.report) {
             const report = fcs.report;
             console.log("✅ Parsing FCS Text Report...");
 
-            // Business Name
             const nameMatch = report.match(/Business Name:\s*(.+?)(?:•|\n|$)/i);
             if (nameMatch) populateField('lenderBusinessName', nameMatch[1].trim());
 
-            // Position (Fixes "0 active -> Looking for 1st")
             const posMatch = report.match(/Looking for\s*(\d+)/i);
             if (posMatch) populateField('lenderPosition', posMatch[1]);
 
-            // Revenue (Raw from text, safer than DB math)
             const revMatch = report.match(/Average True Revenue:\s*\$([\d,]+)/i);
             if (revMatch) populateField('lenderRevenue', revMatch[1].replace(/,/g, ''));
 
-            // Negative Days (Using Average instead of Total)
             const negMatch = report.match(/Average Negative Days:\s*(\d+)/i);
             if (negMatch) populateField('lenderNegativeDays', negMatch[1]);
 
-            // Deposits
             const depMatch = report.match(/Average Number of Deposits:\s*(\d+)/i);
             if (depMatch) populateField('lenderDepositsPerMonth', depMatch[1]);
 
-            // State (Fixes the "STRATEGIZED" bug by pulling "TX" from text)
             const stateMatch = report.match(/State:\s*([A-Z]{2})/i);
             if (stateMatch) populateField('lenderState', stateMatch[1]);
 
-            // Industry
             const indMatch = report.match(/Industry:\s*(.+?)(?:•|\n|$)/i);
             if (indMatch) populateField('lenderIndustry', indMatch[1].trim());
         }
 
-        console.log('✨ Lender form populated (Date + Withholding restored)');
+        console.log('✨ Lender form populated from FCS');
     }
 
     displayLenderResults(data, criteria) {
