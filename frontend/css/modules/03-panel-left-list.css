@@ -205,6 +205,24 @@
     margin-top: 0 !important;
 }
 
+/* Fix for Bulk Delete Button Visibility */
+#deleteSelectedBtn {
+    background-color: #ef4444 !important; /* Bright Red */
+    color: #ffffff !important;            /* White Text */
+    border: 1px solid #dc2626 !important; /* Red Border */
+    font-weight: 700 !important;
+
+    /* Ensure it stands out */
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    transition: all 0.2s ease;
+}
+
+#deleteSelectedBtn:hover {
+    background-color: #dc2626 !important; /* Darker Red on Hover */
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
 /* 4. Conversation Item (Dark Cards with Gradient) */
 .conversation-item {
     display: flex;
