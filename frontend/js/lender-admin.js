@@ -91,6 +91,7 @@ class LenderAdmin {
         modal.style.display = 'flex';
         this.loadLendersList();
         this.loadRuleSuggestions();
+        this.loadNeedsReview();
     }
 
     createManagementTemplate() {
@@ -105,6 +106,18 @@ class LenderAdmin {
                     </div>
                     <div id="ruleSuggestionsContainer" style="max-height: 200px; overflow-y: auto; background: #0d1117;">
                         <div class="loading-state" style="padding: 15px; font-size: 12px; color: #8b949e;">Loading suggestions...</div>
+                    </div>
+                </div>
+
+                <div id="needsReviewSection" style="border-bottom: 1px solid #30363d;">
+                    <div class="submission-col-header" style="border-radius: 0; border: none; background: #161b22;">
+                        <div class="submission-col-title">Needs Manual Review</div>
+                        <button onclick="window.commandCenter.lenderAdmin.loadNeedsReview()" class="action-link" style="font-size: 11px;">
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="needsReviewContainer" style="max-height: 200px; overflow-y: auto; background: #0d1117;">
+                        <div class="loading-state" style="padding: 15px; font-size: 12px; color: #8b949e;">Loading...</div>
                     </div>
                 </div>
 
@@ -482,6 +495,186 @@ class LenderAdmin {
         } catch (error) {
             console.error('Error rejecting rule:', error);
             this.system.utils.showNotification('Failed to reject rule', 'error');
+        }
+    }
+
+    async loadNeedsReview() {
+        const container = document.getElementById('needsReviewContainer');
+        if (!container) return;
+
+        try {
+            const declines = await this.system.apiCall('/api/lenders/needs-review');
+
+            if (!declines || declines.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: 15px; text-align: center; color: #8b949e; font-size: 12px;">
+                        ✅ No declines need review
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = declines.map((decline) => `
+                <div class="needs-review-row" style="padding: 12px 16px; border-bottom: 1px solid #21262d; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <span style="font-weight: 600; font-size: 13px; color: #e6edf3;">${decline.lender_name}</span>
+                            <span style="background: #6b7280; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px;">LOW CONFIDENCE</span>
+                        </div>
+                        <div style="font-size: 12px; color: #f59e0b; margin-bottom: 2px;">
+                            Reason: ${decline.decline_reason || 'Not specified'}
+                        </div>
+                        <div style="font-size: 11px; color: #6e7681;">
+                            Business: ${decline.business_name || 'Unknown'} | Industry: ${decline.industry || 'Unknown'} | State: ${decline.us_state || 'Unknown'}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-left: 12px;">
+                        <button onclick="window.commandCenter.lenderAdmin.showManualRuleModal('${decline.lender_name}', '${decline.decline_reason || ''}', '${decline.industry || ''}', '${decline.us_state || ''}', '${decline.id}')"
+                                class="btn" style="background: #3b82f6; color: white; padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px;">
+                            + Add Rule
+                        </button>
+                        <button onclick="window.commandCenter.lenderAdmin.dismissDecline('${decline.id}')"
+                                class="btn" style="background: #374151; color: white; padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px;">
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading needs review:', error);
+            container.innerHTML = `
+                <div style="padding: 15px; text-align: center; color: #ef4444; font-size: 12px;">
+                    Failed to load
+                </div>
+            `;
+        }
+    }
+
+    showManualRuleModal(lenderName, declineReason, industry, state, submissionId) {
+        const existing = document.getElementById('manualRuleModal');
+        if (existing) existing.remove();
+
+        const modalHtml = `
+            <div id="manualRuleModal" class="modal" style="display: flex; z-index: 2200;">
+                <div class="modal-content modal-sm" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>Add Manual Rule</h3>
+                        <button class="modal-close" onclick="document.getElementById('manualRuleModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 20px;">
+                        <div style="background: #161b22; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+                            <div style="font-size: 12px; color: #8b949e;">Original Decline</div>
+                            <div style="font-size: 14px; color: #e6edf3; margin-top: 4px;">${lenderName}: ${declineReason}</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="field-label">Rule Type *</label>
+                            <select id="manualRuleType" class="form-input">
+                                <option value="">Select...</option>
+                                <option value="industry_block">Industry Block</option>
+                                <option value="state_block">State Block</option>
+                                <option value="minimum_requirement">Minimum Requirement</option>
+                                <option value="position_restriction">Position Restriction</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="field-label">Industry (if applicable)</label>
+                            <input type="text" id="manualRuleIndustry" class="form-input" value="${industry}" placeholder="e.g., Pawn Shops">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="field-label">State (if applicable)</label>
+                            <input type="text" id="manualRuleState" class="form-input" value="${state}" placeholder="e.g., CA">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="field-label">Condition (for minimums)</label>
+                            <div style="display: flex; gap: 8px;">
+                                <select id="manualRuleField" class="form-input" style="flex: 1;">
+                                    <option value="">Field...</option>
+                                    <option value="tib">Time in Business</option>
+                                    <option value="revenue">Monthly Revenue</option>
+                                    <option value="fico">FICO Score</option>
+                                    <option value="position">Position</option>
+                                </select>
+                                <select id="manualRuleOperator" class="form-input" style="width: 80px;">
+                                    <option value="min">Min</option>
+                                    <option value="max">Max</option>
+                                </select>
+                                <input type="number" id="manualRuleValue" class="form-input" style="width: 100px;" placeholder="Value">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="field-label">Rule Description *</label>
+                            <input type="text" id="manualRuleMessage" class="form-input" placeholder="e.g., Does not accept pawn shops">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="document.getElementById('manualRuleModal').remove()">Cancel</button>
+                        <button id="btnSaveManualRule" class="btn btn-primary" onclick="window.commandCenter.lenderAdmin.saveManualRule('${lenderName}', '${submissionId}')">Save Rule</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async saveManualRule(lenderName, submissionId) {
+        const ruleType = document.getElementById('manualRuleType').value;
+        const message = document.getElementById('manualRuleMessage').value.trim();
+
+        if (!ruleType || !message) {
+            alert('Please select a rule type and enter a description');
+            return;
+        }
+
+        const data = {
+            lender_name: lenderName,
+            rule_type: ruleType,
+            industry: document.getElementById('manualRuleIndustry').value.trim() || null,
+            state: document.getElementById('manualRuleState').value.trim().toUpperCase() || null,
+            condition_field: document.getElementById('manualRuleField').value || null,
+            condition_operator: document.getElementById('manualRuleOperator').value || null,
+            condition_value: document.getElementById('manualRuleValue').value || null,
+            decline_message: message,
+            submission_id: submissionId
+        };
+
+        const btn = document.getElementById('btnSaveManualRule');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        try {
+            await this.system.apiCall('/api/lenders/rules/manual', {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+
+            document.getElementById('manualRuleModal').remove();
+            this.system.utils.showNotification(`Rule added for ${lenderName}`, 'success');
+            this.loadNeedsReview();
+            this.loadRuleSuggestions();
+        } catch (error) {
+            console.error('Error saving manual rule:', error);
+            alert('Failed to save rule');
+            btn.disabled = false;
+            btn.textContent = 'Save Rule';
+        }
+    }
+
+    async dismissDecline(submissionId) {
+        if (!confirm("Dismiss this decline? It won't show up for review again.")) return;
+
+        try {
+            await this.system.apiCall(`/api/lenders/decline/${submissionId}/dismiss`, {
+                method: 'POST'
+            });
+            this.loadNeedsReview();
+        } catch (error) {
+            console.error('Error dismissing:', error);
         }
     }
 }

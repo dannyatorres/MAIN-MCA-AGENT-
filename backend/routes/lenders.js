@@ -147,6 +147,123 @@ router.post('/rule-suggestions/:ruleId/reject', async (req, res) => {
     }
 });
 
+// Get declines that need manual review (analyzed but no rule created)
+router.get('/needs-review', async (req, res) => {
+    try {
+        const db = getDatabase();
+        const result = await db.query(`
+            SELECT 
+                ls.id,
+                ls.lender_name,
+                ls.decline_reason,
+                ls.raw_email_body,
+                c.business_name,
+                c.industry_type as industry,
+                c.us_state
+            FROM lender_submissions ls
+            LEFT JOIN conversations c ON ls.conversation_id = c.id
+            WHERE ls.status IN ('DECLINE', 'DECLINED')
+              AND ls.rule_analyzed = TRUE
+              AND ls.dismissed = FALSE
+              AND NOT EXISTS (
+                  SELECT 1 FROM lender_rules lr 
+                  WHERE LOWER(lr.lender_name) = LOWER(ls.lender_name)
+                  AND lr.source = 'ai_suggested'
+              )
+            ORDER BY ls.last_response_at DESC
+            LIMIT 20
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching needs review:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add a manual rule
+router.post('/rules/manual', async (req, res) => {
+    try {
+        const { lender_name, rule_type, industry, state, condition_field, condition_operator, condition_value, decline_message, submission_id } = req.body;
+        const db = getDatabase();
+
+        const lenderMatch = await db.query(`
+            SELECT id FROM lenders WHERE LOWER(name) LIKE LOWER($1) LIMIT 1
+        `, [`%${lender_name.split(' ')[0]}%`]);
+
+        const lenderId = lenderMatch.rows.length > 0 ? lenderMatch.rows[0].id : null;
+
+        await db.query(`
+            INSERT INTO lender_rules (
+                id, lender_id, lender_name, rule_type, industry, state,
+                condition_field, condition_operator, condition_value,
+                decline_message, source, is_active, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual', TRUE, NOW())
+        `, [
+            uuidv4(),
+            lenderId,
+            lender_name,
+            rule_type,
+            industry || null,
+            state || null,
+            condition_field || null,
+            condition_operator || null,
+            condition_value || null,
+            decline_message
+        ]);
+
+        if (lenderId) {
+            if (rule_type === 'industry_block' && industry) {
+                await db.query(`
+                    UPDATE lenders 
+                    SET prohibited_industries = CASE 
+                        WHEN prohibited_industries IS NULL OR prohibited_industries = '' 
+                        THEN $2
+                        ELSE prohibited_industries || ', ' || $2
+                    END
+                    WHERE id = $1
+                `, [lenderId, industry]);
+            }
+
+            if (rule_type === 'state_block' && state) {
+                await db.query(`
+                    UPDATE lenders 
+                    SET state_restrictions = CASE 
+                        WHEN state_restrictions IS NULL OR state_restrictions = '' 
+                        THEN $2
+                        ELSE state_restrictions || ', ' || $2
+                    END
+                    WHERE id = $1
+                `, [lenderId, state]);
+            }
+        }
+
+        if (submission_id) {
+            await db.query(`UPDATE lender_submissions SET dismissed = TRUE WHERE id = $1`, [submission_id]);
+        }
+
+        console.log(`✅ Manual rule added: ${lender_name} - ${rule_type}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error adding manual rule:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Dismiss a decline (don't show for review again)
+router.post('/decline/:id/dismiss', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDatabase();
+
+        await db.query(`UPDATE lender_submissions SET dismissed = TRUE WHERE id = $1`, [id]);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error dismissing decline:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Create new lender
 router.post('/', async (req, res) => {
     try {
