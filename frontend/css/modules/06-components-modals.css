@@ -838,3 +838,96 @@
     justify-content: center;
     gap: 10px;
 }
+
+/* Offer Action Cell */
+.offer-action-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.status-offer {
+    background: #f59e0b;
+    color: #000;
+}
+
+.btn-mark-funded {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.btn-mark-funded:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+}
+
+/* Small Modal Variant */
+.modal-sm {
+    max-width: 400px;
+}
+
+/* Input with prefix ($ sign) */
+.input-with-prefix {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-prefix {
+    position: absolute;
+    left: 12px;
+    color: #8b949e;
+    font-size: 16px;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.input-with-prefix .form-input {
+    padding-left: 28px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* Modal Footer */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #30363d;
+}
+
+/* Success Button */
+.btn-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+}
+
+.btn-success:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

@@ -300,12 +300,12 @@ class StatsModule {
                         <td style="padding: 12px; color: #10b981; font-weight: 600;">${displayAmount}</td>
                         <td style="padding: 12px; color: #8b949e;">${date}</td>
                         <td style="padding: 12px;">
-                            <span style="background: #f59e0b; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 8px;">OFFER</span>
-                            <button onclick="window.markAsFunded('${offer.conversation_id}', ${amount})"
-                                style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white;
-                                padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                                Mark Funded
-                            </button>
+                            <div class="offer-action-cell">
+                                <span class="status-badge status-offer">OFFER</span>
+                                <button class="btn-mark-funded" onclick="window.markAsFunded('${offer.conversation_id}', ${amount})">
+                                    Mark Funded
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -330,40 +330,87 @@ class StatsModule {
     }
 
     async markAsFunded(conversationId, offerAmount) {
-        const amountStr = prompt('Enter final funded amount:', offerAmount || '');
+        document.getElementById('fundedModal')?.remove();
 
-        if (!amountStr) return;
+        const modal = document.createElement('div');
+        modal.id = 'fundedModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content modal-sm">
+                <div class="modal-header">
+                    <h3>Mark Deal as Funded</h3>
+                    <button class="modal-close" onclick="document.getElementById('fundedModal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="fundedAmountInput">Final Funded Amount</label>
+                        <div class="input-with-prefix">
+                            <span class="input-prefix">$</span>
+                            <input type="text"
+                                   id="fundedAmountInput"
+                                   class="form-input"
+                                   value="${(offerAmount || '').toLocaleString()}"
+                                   placeholder="15,000">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="document.getElementById('fundedModal').remove()">Cancel</button>
+                    <button class="btn btn-success" id="confirmFundedBtn">Confirm Funded</button>
+                </div>
+            </div>
+        `;
 
-        const amount = parseFloat(amountStr.replace(/[$,]/g, ''));
+        document.body.appendChild(modal);
 
-        if (isNaN(amount) || amount <= 0) {
-            this.parent.utils.showNotification('Invalid amount', 'error');
-            return;
-        }
+        const input = document.getElementById('fundedAmountInput');
+        input.focus();
+        input.select();
 
-        try {
-            await this.parent.apiCall(`/api/conversations/${conversationId}/mark-funded`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount })
-            });
+        document.getElementById('confirmFundedBtn').onclick = async () => {
+            const amountStr = input.value;
+            const amount = parseFloat(amountStr.replace(/[$,]/g, ''));
 
-            this.parent.utils.showNotification(`Deal funded: $${amount.toLocaleString()}`, 'success');
-
-            // Close modal and refresh stats
-            document.getElementById('statsModal')?.remove();
-            this.statsCache = null;
-            this.loadStats();
-
-            // Refresh conversation list
-            if (this.parent.conversationUI) {
-                this.parent.conversationUI.loadConversations();
+            if (isNaN(amount) || amount <= 0) {
+                this.parent.utils.showNotification('Please enter a valid amount', 'error');
+                return;
             }
 
-        } catch (error) {
-            console.error('Error marking as funded:', error);
-            this.parent.utils.showNotification('Failed to mark as funded', 'error');
-        }
+            try {
+                const confirmBtn = document.getElementById('confirmFundedBtn');
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'Processing...';
+
+                await this.parent.apiCall(`/api/conversations/${conversationId}/mark-funded`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount })
+                });
+
+                this.parent.utils.showNotification(`Deal funded: $${amount.toLocaleString()}`, 'success');
+
+                document.getElementById('fundedModal')?.remove();
+                document.getElementById('statsModal')?.remove();
+                this.statsCache = null;
+                this.loadStats();
+
+                if (this.parent.conversationUI) {
+                    this.parent.conversationUI.loadConversations();
+                }
+            } catch (error) {
+                console.error('Error marking as funded:', error);
+                this.parent.utils.showNotification('Failed to mark as funded', 'error');
+                const confirmBtn = document.getElementById('confirmFundedBtn');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Confirm Funded';
+            }
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('confirmFundedBtn').click();
+            }
+        });
     }
 
     async showSubmittedLeads() {
