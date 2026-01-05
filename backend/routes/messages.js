@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
-const { processLeadWithAI } = require('../services/aiAgent');
+const { processLeadWithAI, trackResponseForTraining } = require('../services/aiAgent');
 const multer = require('multer');
 const AWS = require('aws-sdk');
 const path = require('path');
@@ -172,6 +172,38 @@ router.post('/send', async (req, res) => {
                 conversation_id: actualConversationId,
                 message: newMessage
             });
+        }
+
+        if (sent_by === 'user' || sender_type === 'user') {
+            (async () => {
+                try {
+                    const lastInbound = await db.query(`
+                        SELECT content FROM messages 
+                        WHERE conversation_id = $1 AND direction = 'inbound'
+                        ORDER BY timestamp DESC LIMIT 1
+                    `, [actualConversationId]);
+
+                    const leadMessage = lastInbound.rows[0]?.content || 'N/A';
+
+                    await trackResponseForTraining(
+                        actualConversationId,
+                        leadMessage,
+                        content,
+                        'HUMAN_MANUAL'
+                    );
+
+                    await db.query(`
+                        UPDATE response_training 
+                        SET message_id = $1 
+                        WHERE conversation_id = $2 
+                        AND human_response = $3
+                        AND message_id IS NULL
+                        ORDER BY created_at DESC LIMIT 1
+                    `, [newMessage.id, actualConversationId, content]);
+                } catch (err) {
+                    console.error('Training track failed:', err.message);
+                }
+            })();
         }
 
         res.json({ success: true, message: newMessage });

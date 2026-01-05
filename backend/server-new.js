@@ -14,6 +14,7 @@ require('dotenv').config();
 // const { runStrategyMigration } = require('./migrations/strategy-schema'); // DISABLED
 const { getDatabase } = require('./services/database');
 const { startRuleLearner } = require('./services/ruleLearner');
+const { updateTrainingOutcomes } = require('./services/outcomeTracker');
 
 // Create Express app
 const app = express();
@@ -157,6 +158,16 @@ try {
     startRuleLearner();
     console.log('✅ Rule Learner Service: INITIALIZED');
 } catch (e) { console.error('⚠️ Failed to start Rule Learner:', e.message); }
+
+// Update training outcomes every 6 hours
+setInterval(() => {
+    updateTrainingOutcomes();
+}, 6 * 60 * 60 * 1000);
+
+// Also run once on startup (after 1 minute delay)
+setTimeout(() => {
+    updateTrainingOutcomes();
+}, 60 * 1000);
 
 // --- 7b. RUN DATABASE MIGRATIONS ---
 // DISABLED: Migration already completed

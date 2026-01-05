@@ -709,12 +709,23 @@ router.post('/log-response', async (req, res) => {
             res.json({ success: true, created: true });
         }
 
-        // Update conversation if offer
-        if (['OFFER', 'APPROVED', 'FUNDED'].includes(status)) {
+        // Update conversation based on status
+        if (['OFFER', 'APPROVED'].includes(status)) {
             await db.query(`
                 UPDATE conversations SET has_offer = TRUE, last_activity = NOW()
                 WHERE id = $1
             `, [conversation_id]);
+        }
+
+        if (status === 'FUNDED') {
+            await db.query(`
+                UPDATE conversations SET 
+                    has_offer = TRUE, 
+                    state = 'FUNDED',
+                    last_activity = NOW()
+                WHERE id = $1
+            `, [conversation_id]);
+            console.log(`🎉 Deal FUNDED: ${conversation_id}`);
         }
 
     } catch (err) {

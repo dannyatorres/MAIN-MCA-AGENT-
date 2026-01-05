@@ -712,6 +712,45 @@ router.post('/:id/reset-ai', async (req, res) => {
     }
 });
 
+// Mark a deal as FUNDED
+router.post('/:id/mark-funded', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { amount } = req.body;
+        const db = getDatabase();
+
+        console.log(`🎉 Marking deal ${id} as FUNDED for $${amount}`);
+
+        const result = await db.query(`
+            UPDATE conversations
+            SET state = 'FUNDED',
+                funded_amount = $2,
+                funded_at = NOW(),
+                has_offer = TRUE,
+                last_activity = NOW()
+            WHERE id = $1
+            RETURNING *
+        `, [id, amount || 0]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Conversation not found' });
+        }
+
+        await db.query(`
+            UPDATE lender_submissions
+            SET status = 'FUNDED', last_response_at = NOW()
+            WHERE conversation_id = $1 AND status = 'OFFER'
+        `, [id]);
+
+        console.log(`✅ Deal FUNDED: ${result.rows[0].business_name} - $${amount}`);
+
+        res.json({ success: true, conversation: result.rows[0] });
+    } catch (error) {
+        console.error('❌ Mark funded error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Mark conversation as read
 router.post('/:id/mark-read', async (req, res) => {
     try {

@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const fcsService = require('../services/fcsService'); // <--- CRITICAL IMPORT
+const commanderService = require('../services/commanderService');
 
 // FCS Request Deduplication
 const recentFCSRequests = new Map();
@@ -51,11 +52,19 @@ router.post('/trigger/:conversationId', async (req, res) => {
         // 3. CRITICAL FIX: Trigger the Service Immediately!
         // We do NOT await this, so the frontend gets a response instantly while this runs in background
         fcsService.generateAndSaveFCS(conversationId, businessName || conversation.business_name, db)
-            .then(result => {
+            .then(async result => {
                 console.log(`✅ Background FCS Generation Complete. Analysis ID: ${result.analysisId}`);
                 
                 // Update the Job Queue status to completed
                 db.query(`UPDATE job_queue SET status = 'completed', completed_at = NOW() WHERE id = $1`, [jobResult.rows[0].id]);
+
+                try {
+                    console.log(`🎯 Auto-triggering Commander Strategy for ${conversationId}...`);
+                    await commanderService.analyzeAndStrategize(conversationId);
+                    console.log(`✅ Commander Strategy complete for ${conversationId}`);
+                } catch (strategyErr) {
+                    console.error(`⚠️ Commander Strategy failed (FCS still succeeded):`, strategyErr.message);
+                }
             })
             .catch(err => {
                 console.error('❌ Background FCS Generation Failed:', err.message);
@@ -152,10 +161,19 @@ async function processFCSJob(jobId, conversationId, businessName, documentIds) {
         );
 
         job.status = 'completed';
-        job.progress = 'Complete';
+        job.progress = 'Running strategy analysis...';
         job.result = result;
 
-        console.log(`✅ FCS Job ${jobId} completed`);
+        console.log(`✅ FCS Job ${jobId} completed, triggering Commander...`);
+
+        try {
+            await commanderService.analyzeAndStrategize(conversationId);
+            console.log(`✅ Commander Strategy complete for ${conversationId}`);
+            job.progress = 'Complete';
+        } catch (strategyErr) {
+            console.error(`⚠️ Commander Strategy failed:`, strategyErr.message);
+            job.progress = 'Complete (strategy failed)';
+        }
 
     } catch (err) {
         console.error(`❌ FCS Job ${jobId} failed:`, err);
