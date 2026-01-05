@@ -143,6 +143,16 @@ class LenderMatcher extends EventEmitter {
                 requirements: this.extractRequirements(lender)
             }));
 
+            processedResults.qualified.sort((a, b) => {
+                const tierOrder = { A: 1, B: 2, C: 3, D: 4 };
+                const aTier = tierOrder[a.tier] || 5;
+                const bTier = tierOrder[b.tier] || 5;
+
+                if (aTier !== bTier) return aTier - bTier;
+
+                return (b.match_score || 0) - (a.match_score || 0);
+            });
+
             processedResults.summary.qualified = processedResults.qualified.length;
         }
 
