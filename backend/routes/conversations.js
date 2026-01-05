@@ -776,6 +776,21 @@ router.post('/:id/mark-read', async (req, res) => {
     }
 });
 
+// Clear offer badge
+router.post('/:id/clear-offer', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDatabase();
+
+        await db.query('UPDATE conversations SET has_offer = FALSE WHERE id = $1', [id]);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error clearing offer:', error);
+        res.status(500).json({ error: 'Failed to clear offer' });
+    }
+});
+
 // Commander & Analytics routes moved to /routes/commander.js and /routes/analytics.js
 
 module.exports = router;

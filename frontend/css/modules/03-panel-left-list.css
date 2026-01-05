@@ -519,4 +519,35 @@
     100% { transform: scale(1); }
 }
 
+/* Offer badge - green dot/badge */
+.conversation-item.has-offer {
+    border-left: 3px solid #10b981;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 30%);
+}
+
+.offer-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 14px;
+    animation: pulse-offer 2s ease-in-out infinite;
+}
+
+@keyframes pulse-offer {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Small inline badge next to name */
+.offer-badge-small {
+    background: #10b981;
+    color: white;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
 /* ==========================================================================

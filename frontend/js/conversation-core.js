@@ -78,6 +78,29 @@ class ConversationCore {
         }
     }
 
+    async clearOfferBadge(conversationId) {
+        const id = String(conversationId);
+
+        const conv = this.conversations.get(id);
+        if (conv && conv.has_offer) {
+            conv.has_offer = false;
+            this.conversations.set(id, conv);
+
+            const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
+            if (item) {
+                item.classList.remove('has-offer');
+                const badge = item.querySelector('.offer-badge');
+                if (badge) badge.remove();
+            }
+
+            try {
+                await this.parent.apiCall(`/api/conversations/${id}/clear-offer`, { method: 'POST' });
+            } catch (e) {
+                console.error('Failed to clear offer:', e);
+            }
+        }
+    }
+
     updateBadgeUI(conversationId, count) {
         const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
         if (!item) return;
@@ -166,8 +189,9 @@ class ConversationCore {
     async selectConversation(conversationId) {
         if (this.currentConversationId === conversationId) return;
 
-        // 1. Clear badge immediately (Optimistic UI)
+        // 1. Clear badges immediately (Optimistic UI)
         this.clearBadge(conversationId);
+        this.clearOfferBadge(conversationId);
 
         this.currentConversationId = conversationId;
         if (this.parent) this.parent.currentConversationId = conversationId;
@@ -298,8 +322,16 @@ class ConversationCore {
             }
         }
 
-        // --- Sort by activity (Newest first) ---
-        visible.sort((a, b) => new Date(b.last_activity || 0) - new Date(a.last_activity || 0));
+        // --- Sort: Offers first, then unread, then by activity ---
+        visible.sort((a, b) => {
+            if (a.has_offer && !b.has_offer) return -1;
+            if (!a.has_offer && b.has_offer) return 1;
+
+            if ((a.unread_count > 0) && !(b.unread_count > 0)) return -1;
+            if (!(a.unread_count > 0) && (b.unread_count > 0)) return 1;
+
+            return new Date(b.last_activity || 0) - new Date(a.last_activity || 0);
+        });
 
         // --- Render ---
         if (visible.length === 0) {
@@ -346,7 +378,7 @@ class ConversationCore {
         let displayCid = conv.display_id || String(conv.id).slice(-6);
 
         return `
-            <div class="conversation-item ${isSelected} ${unread > 0 ? 'unread' : ''}" data-conversation-id="${conv.id}">
+            <div class="conversation-item ${isSelected} ${unread > 0 ? 'unread' : ''} ${conv.has_offer ? 'has-offer' : ''}" data-conversation-id="${conv.id}">
                 <div class="conversation-avatar"><div class="avatar-circle">${initials}</div></div>
                 <div class="conversation-content">
                     <div class="conversation-header">
@@ -364,6 +396,7 @@ class ConversationCore {
                 <div class="conversation-checkbox">
                     <input type="checkbox" class="delete-checkbox" data-conversation-id="${conv.id}" ${isChecked}>
                 </div>
+                ${conv.has_offer ? `<div class="offer-badge">💰</div>` : ''}
                 ${unread > 0 ? `<div class="conversation-badge">${unread}</div>` : ''}
             </div>
         `;
