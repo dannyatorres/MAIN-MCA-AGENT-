@@ -182,6 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <div class="drag-handle-icon"><i class="fas fa-grip-lines"></i></div>
                                 <div class="call-avatar-pulse"><i class="fas fa-phone"></i></div>
                                 <h3 class="call-contact-name">${displayOwner}</h3>
+                                <div class="call-status" style="color: #6b7280; font-size: 13px; margin-bottom: 10px;">Connecting...</div>
                                 <div class="call-timer" id="callTimer">00:00</div>
                                 <div class="call-actions-row">
                                     <button class="call-control-btn" id="muteBtn"><i class="fas fa-microphone"></i></button>
