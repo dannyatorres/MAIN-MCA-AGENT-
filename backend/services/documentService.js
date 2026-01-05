@@ -104,12 +104,12 @@ exports.generateLeadPDF = async (conversationId, applicationData, ownerName, cli
 
         if (!owner2FullName) {
             htmlContent = htmlContent.replace(
-                /<div class="section">[\s\S]*?Owner \/ Officer 2 Information[\s\S]*?<\/div>\s*<\/div>/,
+                /<!-- OWNER2_INFO_START -->[\s\S]*?<!-- OWNER2_INFO_END -->/g,
                 ''
             );
 
             htmlContent = htmlContent.replace(
-                /<div class="sig-row">[\s\S]*?Owner 2 Signature[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/,
+                /<!-- OWNER2_SIG_START -->[\s\S]*?<!-- OWNER2_SIG_END -->/g,
                 ''
             );
         }
@@ -131,7 +131,7 @@ exports.generateLeadPDF = async (conversationId, applicationData, ownerName, cli
         console.log('🌐 Puppeteer browser launched');
 
         // 5. Set content and wait for resources
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        await page.setContent(htmlContent, { waitUntil: 'load' });
         console.log('✅ HTML content loaded in Puppeteer');
 
         // 6. Generate PDF
@@ -256,12 +256,12 @@ exports.generatePopulatedTemplate = (applicationData, ownerName, clientIp) => {
 
     if (!owner2FullName) {
         htmlContent = htmlContent.replace(
-            /<div class="section">[\s\S]*?Owner \/ Officer 2 Information[\s\S]*?<\/div>\s*<\/div>/,
+            /<!-- OWNER2_INFO_START -->[\s\S]*?<!-- OWNER2_INFO_END -->/g,
             ''
         );
 
         htmlContent = htmlContent.replace(
-            /<div class="sig-row">[\s\S]*?Owner 2 Signature[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/,
+            /<!-- OWNER2_SIG_START -->[\s\S]*?<!-- OWNER2_SIG_END -->/g,
             ''
         );
     }
