@@ -31,17 +31,28 @@ router.post('/:id/send', async (req, res) => {
 
         // Fetch lead criteria for success prediction
         const leadRes = await db.query(`
-            SELECT industry_type, us_state, monthly_revenue, credit_score, time_in_business
+            SELECT industry_type, us_state, monthly_revenue, credit_score, business_start_date
             FROM conversations WHERE id = $1
         `, [conversationId]);
 
         const lead = leadRes.rows[0] || {};
+
+        // Calculate TIB from business_start_date (handle null)
+        let tib = 0;
+        if (lead.business_start_date) {
+            const startDate = new Date(lead.business_start_date);
+            if (!isNaN(startDate.getTime())) {
+                const today = new Date();
+                tib = Math.floor((today - startDate) / (1000 * 60 * 60 * 24 * 30));
+            }
+        }
+
         const leadCriteria = {
-            industry: lead.industry_type,
-            state: lead.us_state,
-            monthlyRevenue: lead.monthly_revenue,
-            fico: lead.credit_score,
-            tib: lead.time_in_business
+            industry: lead.industry_type || null,
+            state: lead.us_state || null,
+            monthlyRevenue: lead.monthly_revenue || 0,
+            fico: lead.credit_score || 0,
+            tib: tib
         };
 
         // Predict success for all selected lenders and sort
