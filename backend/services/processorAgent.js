@@ -350,6 +350,62 @@ async function processEmail(email, db) {
 
     if (data.category === 'OFFER') {
         await db.query(`UPDATE conversations SET has_offer = TRUE, last_activity = NOW() WHERE id = $1`, [bestMatchId]);
+
+        // Record offer comparison for ML training
+        try {
+            // Get the submission ID we just created/updated
+            const submissionRes = await db.query(`
+                SELECT id FROM lender_submissions
+                WHERE conversation_id = $1 AND LOWER(lender_name) = LOWER($2)
+            `, [bestMatchId, validatedLender]);
+
+            const submissionId = submissionRes.rows[0]?.id;
+
+            // Get strategy predictions
+            const strategyRes = await db.query(`
+                SELECT id, recommended_funding_max, recommended_term, recommended_payment
+                FROM lead_strategy WHERE conversation_id = $1
+            `, [bestMatchId]);
+
+            const strategy = strategyRes.rows[0];
+
+            if (strategy) {
+                const predictedFunding = strategy.recommended_funding_max || 0;
+                const actualFunding = data.offer_amount || 0;
+                const fundingVariance = actualFunding - predictedFunding;
+                const fundingVariancePct = predictedFunding > 0
+                    ? ((fundingVariance / predictedFunding) * 100).toFixed(2)
+                    : 0;
+
+                await db.query(`
+                    INSERT INTO offer_comparisons (
+                        conversation_id, strategy_id, lender_submission_id, lender_name,
+                        predicted_funding, predicted_term, predicted_payment, predicted_factor,
+                        actual_funding, actual_term, actual_payment, actual_factor,
+                        funding_variance, funding_variance_pct
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1.49, $8, $9, $10, $11, $12, $13)
+                `, [
+                    bestMatchId,
+                    strategy.id,
+                    submissionId,
+                    validatedLender,
+                    predictedFunding,
+                    strategy.recommended_term || 0,
+                    strategy.recommended_payment || 0,
+                    actualFunding,
+                    data.term_length || 0,
+                    data.payment_amount || 0,
+                    data.factor_rate || 0,
+                    fundingVariance,
+                    fundingVariancePct
+                ]);
+
+                console.log(`      📊 Recorded comparison: Predicted $${predictedFunding} vs Actual $${actualFunding} (${fundingVariancePct}% variance)`);
+            }
+        } catch (compareErr) {
+            console.error(`      ⚠️ Failed to record comparison: ${compareErr.message}`);
+        }
+
         if (global.io) {
             global.io.emit('refresh_lead_list', { conversationId: bestMatchId });
         }
