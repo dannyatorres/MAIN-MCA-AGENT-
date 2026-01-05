@@ -209,7 +209,7 @@ function checkIndustryRestrictions(lender, criteria, canonicalIndustries) {
     const prohibited = (lender.prohibited_industries || '').toLowerCase();
     if (!prohibited) return null;
 
-    const prohibitedList = prohibited.split(',').map(i => i.trim());
+    const prohibitedList = prohibited.split(/[,;]+/).map(i => i.trim()).filter(i => i);
 
     // Check ALL canonical industries against prohibited list
     for (const industry of canonicalIndustries) {
