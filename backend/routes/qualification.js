@@ -480,6 +480,37 @@ router.post('/qualify', async (req, res) => {
 
         const db = getDatabase();
 
+        // Check for reverse consolidation mode - return only reverse lenders
+        if (criteria.reverseConsolidation) {
+            console.log('🔄 Reverse Consolidation mode - returning only reverse lenders');
+
+            const reverseLendersResult = await db.query(`
+                SELECT * FROM lenders
+                WHERE does_reverse_consolidation = true
+                ORDER BY tier, name
+            `);
+
+            const reverseLenders = reverseLendersResult.rows.map(lender => ({
+                ...lender,
+                'Lender Name': lender.name,
+                isPreferred: false
+            }));
+
+            return res.json({
+                qualified: reverseLenders,
+                nonQualified: [],
+                autoDropped: 0,
+                summary: {
+                    totalProcessed: reverseLenders.length,
+                    qualified: reverseLenders.length,
+                    nonQualified: 0,
+                    autoDropped: 0
+                },
+                criteria: criteria,
+                mode: 'reverse_consolidation'
+            });
+        }
+
         // Classify industry with AI first
         let classifiedIndustry = criteria.industry ? criteria.industry.toLowerCase() : '';
         if (criteria.industry) {

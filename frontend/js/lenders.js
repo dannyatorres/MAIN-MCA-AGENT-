@@ -43,7 +43,8 @@ class LendersModule {
         this.lenderFormCheckboxes = [
             { id: 'lenderSoleProp', label: 'Sole Proprietorship' },
             { id: 'lenderNonProfit', label: 'Non-Profit' },
-            { id: 'lenderMercuryBank', label: 'Has Mercury Bank' }
+            { id: 'lenderMercuryBank', label: 'Has Mercury Bank' },
+            { id: 'lenderReverseConsolidation', label: 'Reverse Consolidation Only' }
         ];
 
         this.init();
@@ -275,6 +276,7 @@ class LendersModule {
                     nonProfit: document.getElementById('lenderNonProfit')?.checked || false,
                     hasMercuryBank: document.getElementById('lenderMercuryBank')?.checked || false,
                     mercuryBank: document.getElementById('lenderMercuryBank')?.checked || false,
+                    reverseConsolidation: document.getElementById('lenderReverseConsolidation')?.checked || false,
                     currentPositions: document.getElementById('lenderCurrentPositions')?.value || '',
                     additionalNotes: document.getElementById('lenderAdditionalNotes')?.value || ''
                 };
