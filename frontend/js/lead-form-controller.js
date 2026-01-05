@@ -570,8 +570,11 @@ export class LeadFormController {
                 }
 
                 const rawFormData = this.scrapeFormData(new FormData(currentForm));
+                console.log('📝 RAW FORM DATA:', rawFormData);
                 const pdfData = this.mapDataForAppGeneration(rawFormData);
+                console.log('📝 PDF DATA:', pdfData);
                 const ownerName = `${rawFormData.ownerFirstName || ''} ${rawFormData.ownerLastName || ''}`.trim();
+                console.log('📝 OWNER NAME:', ownerName);
 
                 const btnOriginalText = generateBtn.innerHTML;
                 generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
