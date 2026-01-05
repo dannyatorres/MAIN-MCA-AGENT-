@@ -429,37 +429,14 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                 else if (tool.function.name === 'consult_analyst') {
                     const args = JSON.parse(tool.function.arguments);
-                    console.log(`🎓 HANDOFF: GPT-4o -> Gemini 2.5 Pro`);
+                    console.log(`🎓 HANDOFF: Collected all info - passing to human`);
 
-                    // 🔒 LOCK: Update status to HUMAN_REVIEW so AI stops replying after this
+                    // 🔒 LOCK: Update status to HUMAN_REVIEW so AI stops replying
                     await db.query("UPDATE conversations SET state = 'HUMAN_REVIEW' WHERE id = $1", [conversationId]);
                     console.log(`🔒 Lead locked to HUMAN_REVIEW - AI will stop autonomous replies`);
 
-                    const fcsRes = await db.query(`
-                        SELECT average_revenue, total_negative_days
-                        FROM fcs_analyses
-                        WHERE conversation_id = $1
-                        ORDER BY created_at DESC LIMIT 1
-                    `, [conversationId]);
-
-                    if (fcsRes.rows.length > 0) {
-                        const fcs = fcsRes.rows[0];
-                        const rev = Math.round(fcs.average_revenue || 0).toLocaleString();
-
-                        const analystPrompt = `
-                            You are the Senior Analyst at JMS Global.
-                            DATA: Revenue: ${rev}/mo, Negatives: ${fcs.total_negative_days}, Credit: ${args.credit_score}, Funding: ${args.recent_funding}
-                            TASK: Write the CLOSING text message. Mention revenue. Give a "Soft Offer". End with: "I'm generating the PDF now."
-                        `;
-                        try {
-                             const result = await geminiModel.generateContent(analystPrompt);
-                             toolResult = result.response.text().replace(/"/g, '').trim();
-                        } catch (e) {
-                             toolResult = "Got it. I'm finalizing the PDF offer now.";
-                        }
-                    } else {
-                        toolResult = `Analysis pending. Tell user you will email them in 5 mins.`;
-                    }
+                    // Simple handoff message - NO offer, NO numbers
+                    toolResult = "Tell the lead: 'give me a few minutes to run the numbers and ill text you back shortly'";
                 }
 
                 else if (tool.function.name === 'generate_offer') {

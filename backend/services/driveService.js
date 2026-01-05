@@ -82,21 +82,33 @@ async function syncDriveFiles(conversationId, businessName) {
 
         // B. AI MATCHING
         const prompt = `
-            I have a business named: "${businessName}".
-            Here are the Google Drive folders:
-            ${JSON.stringify(folders.map(f => f.name))}
+I have a business named: "${businessName}".
 
-            Rules:
-            1. Find the folder that best matches the business name.
-            2. Fuzzy match is okay (e.g. "Project Capital LLC" -> "Project").
-            3. Return ONLY the exact folder name. If no match, return "NO_MATCH".
-        `;
+Here are the Google Drive folders:
+${JSON.stringify(folders.map(f => f.name))}
+
+MATCHING RULES:
+1. Ignore case (ABC = abc)
+2. Ignore spaces and special characters (faithfulroofingllc = Faithful Roofing LLC)
+3. Ignore suffixes: LLC, Inc, Corp, Co, Company, Holdings, Group
+4. Handle concatenated/compressed names (projectcapital = Project Capital)
+5. Handle typos and minor misspellings
+
+EXAMPLES:
+- "Faith Full Roofing LLC" → "faithfulroofingllc" ✓
+- "ABC Trucking Inc" → "abctrucking" ✓
+- "Joe's Pizza" → "joespizza" ✓
+
+USE YOUR BEST JUDGMENT. If the core business name is recognizable, it's a match. Only return "NO_MATCH" if there's truly no reasonable connection.
+
+Return ONLY the exact folder name as it appears in the list, or "NO_MATCH".
+`;
 
         // 🧠 DEBUG: Log the input prompt
         console.log(`🧠 [DEBUG] GPT-4 Input Prompt:\n${prompt}`);
 
         const completion = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
+            model: "gpt-4o",
             messages: [{ role: "system", content: prompt }],
             temperature: 0
         });
