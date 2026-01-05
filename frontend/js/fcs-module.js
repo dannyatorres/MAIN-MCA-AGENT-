@@ -209,9 +209,9 @@ class FCSModule {
 
             if (result.success && result.analysis) {
                 const reportData = {
-                    report_content: result.analysis.fcs_report,
-                    generated_at: result.analysis.completed_at,
-                    business_name: result.analysis.extracted_business_name
+                    report_content: result.analysis.report,
+                    generated_at: result.analysis.completedAt,
+                    business_name: result.analysis.businessName
                 };
 
                 this.reportCache.set(conversationId, reportData);
