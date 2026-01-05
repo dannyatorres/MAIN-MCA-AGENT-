@@ -15,6 +15,40 @@ const s3 = new AWS.S3({
     region: process.env.AWS_REGION || 'us-east-1'
 });
 
+let globalBrowser = null;
+
+async function getBrowser() {
+    if (!globalBrowser || !globalBrowser.isConnected()) {
+        console.log('🚀 Launching new Puppeteer instance...');
+        globalBrowser = await puppeteer.launch({
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ]
+        });
+    }
+    return globalBrowser;
+}
+
+async function closeBrowser() {
+    if (globalBrowser) {
+        try {
+            await globalBrowser.close();
+            console.log('🔒 Puppeteer browser closed');
+        } catch (error) {
+            console.error('❌ Failed to close Puppeteer browser:', error);
+        } finally {
+            globalBrowser = null;
+        }
+    }
+}
+
+process.on('SIGINT', () => { closeBrowser().finally(() => process.exit(0)); });
+process.on('SIGTERM', () => { closeBrowser().finally(() => process.exit(0)); });
+
 /**
  * Generates a PDF from the application template with dynamic field replacement
  * @param {string} conversationId - The conversation ID
@@ -24,7 +58,6 @@ const s3 = new AWS.S3({
  * @returns {object} - { success, s3Key, filename, docId }
  */
 exports.generateLeadPDF = async (conversationId, applicationData, ownerName, clientIp) => {
-    let browser = null;
     try {
         console.log('🚀 Starting PDF generation...');
 
@@ -117,18 +150,9 @@ exports.generateLeadPDF = async (conversationId, applicationData, ownerName, cli
         console.log('📝 HTML template populated');
 
         // 4. Launch Puppeteer
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu'
-            ]
-        });
-
+        const browser = await getBrowser();
         const page = await browser.newPage();
-        console.log('🌐 Puppeteer browser launched');
+        console.log('🌐 Puppeteer page opened');
 
         // 5. Set content and wait for resources
         await page.setContent(htmlContent, { waitUntil: 'load' });
@@ -171,16 +195,12 @@ exports.generateLeadPDF = async (conversationId, applicationData, ownerName, cli
 
         console.log('💾 PDF metadata saved to database');
 
+        await page.close();
         return { success: true, s3Key, filename, docId };
 
     } catch (error) {
         console.error('❌ PDF Generation Error:', error);
         throw error;
-    } finally {
-        if (browser) {
-            await browser.close();
-            console.log('🔒 Puppeteer browser closed');
-        }
     }
 };
 
