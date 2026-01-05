@@ -302,32 +302,49 @@ async function analyzeAndStrategize(conversationId) {
             console.log('===========================');
         }
 
-        // 7. Build Game Plan Object
-        const leadGrade = data.avgRevenue > 40000 ? "A" : (data.avgRevenue > 25000 ? "B" : "C");
-        const strategyType = data.revenueTrend?.direction === 'upward' ? "PURSUE_HARD" : "STANDARD";
+        // 7. Build Game Plan Object - Pass through AI response + add computed fields
+        const leadGrade = data.lead_grade || (data.avgRevenue > 40000 ? "A" : (data.avgRevenue > 25000 ? "B" : "C"));
+        const strategyType = data.strategy_type || (data.revenueTrend?.direction === 'upward' ? "PURSUE_HARD" : "STANDARD");
 
+        // Build gamePlan - pass through all AI fields + add computed data
         const gamePlan = {
-            businessOverview: {
-                name: data.businessName,
-                industry: data.industry,
-                state: data.state,
-                currentPositions: data.currentPositionCount || 0,
-                nextPosition: data.nextPosition,
-                avgRevenue: data.avgRevenue || 0,
-                avgBankBalance: data.avgBankBalance || 0,
-                negativeDays: data.negativeDays
-            },
-            withholding: withholdingData,
-            revenueTrend: data.revenueTrend,
-            lastPositionAnalysis: data.lastPositionAnalysis,
-            nextPositionScenarios: nextPositionScenarios,
+            // Pass through all AI-generated fields
+            ...data,
+
+            // Override/ensure these are set correctly
             lead_grade: leadGrade,
             strategy_type: strategyType,
-            offer_range: {
+
+            // Add computed withholding data
+            withholding: withholdingData,
+
+            // Add generated scenarios
+            nextPositionScenarios: nextPositionScenarios,
+
+            // Ensure offer_range exists
+            offer_range: data.offer_range || {
                 min: nextPositionScenarios?.conservative?.[0]?.funding || 0,
                 max: nextPositionScenarios?.aggressive?.[0]?.funding || nextPositionScenarios?.moderate?.[0]?.funding || 0
+            },
+
+            // Legacy businessOverview for backward compatibility
+            businessOverview: {
+                name: data.businessName || data.business_name,
+                industry: data.industry,
+                state: data.state,
+                currentPositions: data.stacking_assessment?.current_positions || data.currentPositionCount || 0,
+                nextPosition: data.stacking_assessment?.next_position_number || data.nextPosition,
+                avgRevenue: data.revenue_trend?.floor_month?.amount || data.avgRevenue || 0,
+                avgBankBalance: data.avgBankBalance || 0,
+                negativeDays: data.negativeDays
             }
         };
+
+        // Extract recommended values for analytics (from AI or computed)
+        const recommendedFunding = data.recommended_funding || gamePlan.offer_range.max || 0;
+        const recommendedTerm = data.recommended_term || nextPositionScenarios?.moderate?.[0]?.term || 24;
+        const recommendedTermUnit = data.recommended_term_unit || nextPositionScenarios?.moderate?.[0]?.termUnit || 'weeks';
+        const recommendedPayment = data.recommended_payment || nextPositionScenarios?.moderate?.[0]?.payment || 0;
 
         console.log(`COMMANDER VERDICT:`);
         console.log(`   Grade: ${gamePlan.lead_grade}`);
@@ -376,15 +393,15 @@ async function analyzeAndStrategize(conversationId) {
             gamePlan.strategy_type,
             JSON.stringify(gamePlan),
             JSON.stringify(data),
-            data.avgRevenue || 0,
+            data.revenue_trend?.floor_month?.amount || data.avgRevenue || 0,
             data.avgBankBalance || 0,
-            data.currentPositionCount || 0,
-            withholdingData.totalWithhold,
+            data.stacking_assessment?.current_positions || data.currentPositionCount || 0,
+            data.withholding_analysis?.current_withholding_pct || withholdingData.totalWithhold,
             gamePlan.offer_range.min,
-            gamePlan.offer_range.max,
-            leadOffer?.payment || 0,
-            leadOffer?.term || 0,
-            leadOffer?.termUnit || 'weeks',
+            recommendedFunding,
+            recommendedPayment,
+            recommendedTerm,
+            recommendedTermUnit,
             'v1'
         ]);
 
