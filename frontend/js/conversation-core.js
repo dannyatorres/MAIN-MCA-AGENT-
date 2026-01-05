@@ -89,8 +89,6 @@ class ConversationCore {
             const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
             if (item) {
                 item.classList.remove('has-offer');
-                const badge = item.querySelector('.offer-badge');
-                if (badge) badge.remove();
             }
 
             try {
@@ -396,7 +394,6 @@ class ConversationCore {
                 <div class="conversation-checkbox">
                     <input type="checkbox" class="delete-checkbox" data-conversation-id="${conv.id}" ${isChecked}>
                 </div>
-                ${conv.has_offer ? `<div class="offer-badge">💰</div>` : ''}
                 ${unread > 0 ? `<div class="conversation-badge">${unread}</div>` : ''}
             </div>
         `;
