@@ -559,97 +559,40 @@ export class LeadFormController {
             });
         }
 
-        // --- APP GENERATION HANDLER ---
+        // --- APP GENERATION HANDLER (RESTORED TO SERVER-SIDE) ---
         const generateBtn = form.querySelector('#generateAppBtn');
         if (generateBtn) {
             generateBtn.addEventListener('click', async () => {
                 const currentForm = document.getElementById('editLeadForm');
-                if (!currentForm) {
-                    alert('Form not found');
-                    return;
-                }
+                if (!currentForm) return alert('Form not found');
 
                 const rawFormData = this.scrapeFormData(new FormData(currentForm));
-                console.log('📝 RAW FORM DATA:', rawFormData);
                 const pdfData = this.mapDataForAppGeneration(rawFormData);
-                console.log('📝 PDF DATA:', pdfData);
                 const ownerName = `${rawFormData.ownerFirstName || ''} ${rawFormData.ownerLastName || ''}`.trim();
-                console.log('📝 OWNER NAME:', ownerName);
 
                 const btnOriginalText = generateBtn.innerHTML;
                 generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
                 generateBtn.disabled = true;
 
                 try {
-                    const htmlResponse = await fetch(`${this.parent.apiBaseUrl}/api/pdf/${id}/generate-html`, {
+                    const result = await this.parent.apiCall(`/api/pdf/${id}/generate`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ applicationData: pdfData, ownerName })
+                        body: {
+                            applicationData: pdfData,
+                            ownerName: ownerName
+                        }
                     });
 
-                    if (!htmlResponse.ok) throw new Error('Failed to generate HTML template');
-                    const html = await htmlResponse.text();
-
-                    const iframe = document.createElement('iframe');
-                    iframe.style.cssText = 'position:absolute;left:-9999px;width:800px;height:1200px;';
-                    document.body.appendChild(iframe);
-
-                    iframe.contentDocument.open();
-                    iframe.contentDocument.write(html);
-                    iframe.contentDocument.close();
-
-                    await new Promise(r => setTimeout(r, 500));
-
-                    const canvas = await html2canvas(iframe.contentDocument.body, {
-                        scale: 2,
-                        useCORS: true,
-                        allowTaint: true,
-                        backgroundColor: '#ffffff'
-                    });
-
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdf = new jspdf.jsPDF({
-                        orientation: 'portrait',
-                        unit: 'mm',
-                        format: 'a4'
-                    });
-
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = pdf.internal.pageSize.getHeight();
-                    const imgWidth = canvas.width;
-                    const imgHeight = canvas.height;
-                    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-                    const imgX = (pdfWidth - imgWidth * ratio) / 2;
-
-                    pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
-
-                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const safeName = (pdfData.legalName || 'Application').replace(/[^a-zA-Z0-9]/g, '_');
-                    const filename = `WCA_${safeName}.pdf`;
-
-                    const saveResponse = await fetch(`${this.parent.apiBaseUrl}/api/pdf/${id}/save`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            conversationId: id,
-                            pdfBase64,
-                            filename
-                        })
-                    });
-
-                    const saveResult = await saveResponse.json();
-
-                    document.body.removeChild(iframe);
-
-                    if (saveResult.success) {
+                    if (result.success) {
                         document.getElementById('leadModalWrapper')?.remove();
-                        this.parent.utils.showNotification('Application Generated!', 'success');
+                        this.parent.utils.showNotification('Application Generated Successfully!', 'success');
+
                         if (this.parent.intelligence) this.parent.intelligence.switchTab('documents');
                         if (this.parent.documents) {
                             setTimeout(() => this.parent.documents.loadDocuments(), 500);
                         }
                     } else {
-                        throw new Error(saveResult.error || 'Failed to save PDF');
+                        throw new Error(result.error || 'Server failed to generate PDF');
                     }
                 } catch (error) {
                     console.error('PDF Generation Error:', error);
