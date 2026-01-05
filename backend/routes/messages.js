@@ -1,27 +1,21 @@
-// routes/messages.js - HANDLES: Sending and receiving messages
-// URLs like: /api/messages/:conversationId, /api/messages/send
-
+// routes/messages.js - FIXED: Sending Logic & SQL Syntax
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { processLeadWithAI, trackResponseForTraining } = require('../services/aiAgent');
 const multer = require('multer');
 const AWS = require('aws-sdk');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
-// 1. Configure AWS S3 (Same as conversations.js)
+// 1. Configure AWS S3
 const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     region: process.env.AWS_REGION || 'us-east-1'
 });
 
-// 2. Configure Multer to use MEMORY (RAM) instead of Disk
-// We hold the file in memory just long enough to upload to S3
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Helper function to convert display_id to UUID if needed
 async function resolveConversationId(conversationId, db) {
     const isNumeric = /^\d+$/.test(conversationId);
     if (isNumeric) {
@@ -35,18 +29,14 @@ async function resolveConversationId(conversationId, db) {
     return conversationId;
 }
 
-// Get messages for a conversation
+// Get messages
 router.get('/:conversationId', async (req, res) => {
     try {
         const { conversationId } = req.params;
         const db = getDatabase();
-
         const actualId = await resolveConversationId(conversationId, db);
 
-        if (!actualId) {
-            // Return empty array on not found (matches frontend expectation)
-            return res.json([]);
-        }
+        if (!actualId) return res.json([]);
 
         const result = await db.query(`
             SELECT * FROM messages
@@ -54,12 +44,9 @@ router.get('/:conversationId', async (req, res) => {
             ORDER BY timestamp ASC
         `, [actualId]);
 
-        // Return just the array (matching frontend expectation)
         res.json(result.rows);
-
     } catch (error) {
         console.error('Error fetching messages:', error);
-        // Return empty array on error (matching frontend expectation)
         res.json([]);
     }
 });
@@ -69,15 +56,16 @@ router.post('/send', async (req, res) => {
     try {
         let { conversation_id, content, message_content, direction, message_type, sent_by, sender_type, media_url } = req.body;
 
-        // Accept both 'content' and 'message_content' (frontend compatibility)
-        content = content || message_content;
+        // --- FIX 1: Set Default Direction Immediately ---
+        // This ensures the Twilio block below actually runs
+        direction = direction || 'outbound';
 
-        // If sent_by is missing, use sender_type (backwards compatibility with frontend)
+        content = content || message_content;
         sent_by = sent_by || sender_type;
 
         const db = getDatabase();
 
-        console.log('📤 Sending message:', { conversation_id, content, media_url });
+        console.log('📤 Sending message:', { conversation_id, content, media_url, direction });
 
         const actualConversationId = await resolveConversationId(conversation_id, db);
 
@@ -85,7 +73,6 @@ router.post('/send', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Conversation not found' });
         }
 
-        // Get conversation details for phone number
         const convResult = await db.query(
             'SELECT lead_phone, business_name FROM conversations WHERE id = $1',
             [actualConversationId]
@@ -96,8 +83,6 @@ router.post('/send', async (req, res) => {
         }
 
         const { lead_phone } = convResult.rows[0];
-
-        // Determine message type
         const type = media_url ? 'mms' : (message_type || 'sms');
 
         // Insert message into database FIRST
@@ -111,7 +96,7 @@ router.post('/send', async (req, res) => {
         `, [
             actualConversationId,
             content || '',
-            direction || 'outbound',
+            direction,
             type,
             sent_by || 'system',
             media_url || null
@@ -119,7 +104,7 @@ router.post('/send', async (req, res) => {
 
         const newMessage = result.rows[0];
 
-        // ACTUALLY SEND VIA TWILIO (if outbound)
+        // ACTUALLY SEND VIA TWILIO (Now this check will pass)
         if (direction === 'outbound') {
             try {
                 if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
@@ -135,7 +120,6 @@ router.post('/send', async (req, res) => {
                     to: lead_phone
                 };
 
-                // Add Image URL if MMS
                 if (media_url) {
                     msgOptions.mediaUrl = [media_url];
                 }
@@ -154,19 +138,15 @@ router.post('/send', async (req, res) => {
             } catch (twilioError) {
                 console.error('❌ Twilio error:', twilioError.message);
                 await db.query('UPDATE messages SET status = $1 WHERE id = $2', ['failed', newMessage.id]);
-
-                // Don't crash the response, just log the error
                 newMessage.status = 'failed';
             }
         }
 
-        // Update conversation last_activity
         await db.query(
             'UPDATE conversations SET last_activity = NOW() WHERE id = $1',
             [actualConversationId]
         );
 
-        // Emit WebSocket event
         if (global.io) {
             global.io.emit('new_message', {
                 conversation_id: actualConversationId,
@@ -174,32 +154,40 @@ router.post('/send', async (req, res) => {
             });
         }
 
+        // --- FIX 2: Correct SQL Syntax for Training Update ---
         if (sent_by === 'user' || sender_type === 'user') {
             (async () => {
                 try {
                     const lastInbound = await db.query(`
-                        SELECT content FROM messages 
+                        SELECT content FROM messages
                         WHERE conversation_id = $1 AND direction = 'inbound'
                         ORDER BY timestamp DESC LIMIT 1
                     `, [actualConversationId]);
 
                     const leadMessage = lastInbound.rows[0]?.content || 'N/A';
 
-                    await trackResponseForTraining(
-                        actualConversationId,
-                        leadMessage,
-                        content,
-                        'HUMAN_MANUAL'
-                    );
+                    if (trackResponseForTraining) {
+                        await trackResponseForTraining(
+                            actualConversationId,
+                            leadMessage,
+                            content,
+                            'HUMAN_MANUAL'
+                        );
 
-                    await db.query(`
-                        UPDATE response_training 
-                        SET message_id = $1 
-                        WHERE conversation_id = $2 
-                        AND human_response = $3
-                        AND message_id IS NULL
-                        ORDER BY created_at DESC LIMIT 1
-                    `, [newMessage.id, actualConversationId, content]);
+                        // FIXED SQL: Use Subquery instead of ORDER BY in UPDATE
+                        await db.query(`
+                            UPDATE response_training
+                            SET message_id = $1
+                            WHERE id = (
+                                SELECT id FROM response_training
+                                WHERE conversation_id = $2
+                                AND human_response = $3
+                                AND message_id IS NULL
+                                ORDER BY created_at DESC
+                                LIMIT 1
+                            )
+                        `, [newMessage.id, actualConversationId, content]);
+                    }
                 } catch (err) {
                     console.error('Training track failed:', err.message);
                 }
@@ -214,19 +202,12 @@ router.post('/send', async (req, res) => {
     }
 });
 
-// S3 UPLOAD ROUTE (Railway + Twilio Compatible)
+// S3 Upload Route
 router.post('/upload', upload.single('file'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     try {
-        console.log('☁️ Uploading MMS to S3...');
-
-        // Generate unique filename
         const filename = `mms/${Date.now()}_${uuidv4()}_${req.file.originalname.replace(/\s/g, '_')}`;
-
-        // Upload to S3
         const uploadResult = await s3.upload({
             Bucket: process.env.S3_DOCUMENTS_BUCKET,
             Key: filename,
@@ -234,23 +215,14 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             ContentType: req.file.mimetype
         }).promise();
 
-        // Twilio needs a public URL
-        const fileUrl = uploadResult.Location;
-
-        console.log('✅ S3 Upload Success:', fileUrl);
-
-        res.json({
-            success: true,
-            url: fileUrl
-        });
-
+        res.json({ success: true, url: uploadResult.Location });
     } catch (error) {
         console.error('❌ S3 Upload Error:', error);
-        res.status(500).json({ error: 'Failed to upload image to storage' });
+        res.status(500).json({ error: 'Failed to upload image' });
     }
 });
 
-// Webhook for Incoming Messages (UPDATED WITH AI AUTO-REPLY)
+// Webhook for Incoming Messages
 router.post('/webhook/receive', async (req, res) => {
     try {
         const { From, Body, MessageSid, NumMedia } = req.body;
@@ -265,9 +237,6 @@ router.post('/webhook/receive', async (req, res) => {
             if (url) mediaUrls.push(url);
         }
 
-        console.log(`📷 Found ${mediaUrls.length} media attachments`);
-
-        // 1. Find the Conversation
         const cleanPhone = From.replace(/\D/g, '');
         const searchPhone = (cleanPhone.length === 11 && cleanPhone.startsWith('1'))
             ? cleanPhone.substring(1)
@@ -283,10 +252,7 @@ router.post('/webhook/receive', async (req, res) => {
         if (convResult.rows.length === 0) return res.status(200).send('No conversation found');
         const conversation = convResult.rows[0];
 
-        // 2. Save User's Message to DB
-        const mediaUrlValue = mediaUrls.length > 1
-            ? JSON.stringify(mediaUrls)
-            : (mediaUrls[0] || null);
+        const mediaUrlValue = mediaUrls.length > 1 ? JSON.stringify(mediaUrls) : (mediaUrls[0] || null);
 
         const msgResult = await db.query(`
             INSERT INTO messages (
@@ -305,15 +271,11 @@ router.post('/webhook/receive', async (req, res) => {
 
         const newMessage = msgResult.rows[0];
 
-        // 🔔 Auto-mark as INTERESTED when lead replies
         await db.query(`
             UPDATE conversations
-            SET state = 'INTERESTED', current_step = 'INTERESTED'
-            WHERE id = $1 AND state IN ('NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3')
+            SET state = 'INTERESTED', current_step = 'INTERESTED', last_activity = NOW()
+            WHERE id = $1
         `, [conversation.id]);
-
-        // 3. Update Conversation & Notify Frontend
-        await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversation.id]);
 
         if (global.io) {
             global.io.emit('new_message', {
@@ -323,58 +285,48 @@ router.post('/webhook/receive', async (req, res) => {
             });
         }
 
-        // --- 🤖 AI AUTO-REPLY START ---
-        // Acknowledge Twilio FIRST so it doesn't timeout while AI thinks
         res.set('Content-Type', 'text/xml');
         res.send('<Response></Response>');
 
-        // Run AI Logic in Background
-        (async () => {
-            try {
-                console.log(`🤖 AI thinking for ${conversation.business_name}...`);
-                
-                const aiResult = await processLeadWithAI(conversation.id, "The user just replied. Read the history and respond naturally.");
+        // AI Logic
+        if (processLeadWithAI) {
+            (async () => {
+                try {
+                    console.log(`🤖 AI thinking for ${conversation.business_name}...`);
+                    const aiResult = await processLeadWithAI(conversation.id, 'The user just replied. Read the history and respond naturally.');
 
-                if (aiResult.shouldReply && aiResult.content) {
-                    console.log(`🗣️ AI generating reply: "${aiResult.content}"`);
+                    if (aiResult.shouldReply && aiResult.content) {
+                        const aiMsgResult = await db.query(`
+                            INSERT INTO messages (conversation_id, content, direction, message_type, sent_by, status, timestamp)
+                            VALUES ($1, $2, 'outbound', 'sms', 'ai', 'pending', NOW())
+                            RETURNING *
+                        `, [conversation.id, aiResult.content]);
 
-                    // A. Insert AI Reply to DB
-                    const aiMsgResult = await db.query(`
-                        INSERT INTO messages (conversation_id, content, direction, message_type, sent_by, status, timestamp)
-                        VALUES ($1, $2, 'outbound', 'sms', 'ai', 'pending', NOW())
-                        RETURNING *
-                    `, [conversation.id, aiResult.content]);
-                    
-                    const aiMessage = aiMsgResult.rows[0];
+                        const aiMessage = aiMsgResult.rows[0];
 
-                    // B. Send via Twilio
-                    const twilio = require('twilio');
-                    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-                    
-                    const sentMsg = await client.messages.create({
-                        body: aiResult.content,
-                        from: process.env.TWILIO_PHONE_NUMBER,
-                        to: From
-                    });
+                        const twilio = require('twilio');
+                        const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-                    // C. Mark Sent in DB
-                    await db.query("UPDATE messages SET status = 'sent', twilio_sid = $1 WHERE id = $2", [sentMsg.sid, aiMessage.id]);
-
-                    // D. Notify Frontend of AI Reply
-                    if (global.io) {
-                        global.io.emit('new_message', {
-                            conversation_id: conversation.id,
-                            message: { ...aiMessage, status: 'sent', twilio_sid: sentMsg.sid }
+                        const sentMsg = await client.messages.create({
+                            body: aiResult.content,
+                            from: process.env.TWILIO_PHONE_NUMBER,
+                            to: From
                         });
+
+                        await db.query('UPDATE messages SET status = \'sent\', twilio_sid = $1 WHERE id = $2', [sentMsg.sid, aiMessage.id]);
+
+                        if (global.io) {
+                            global.io.emit('new_message', {
+                                conversation_id: conversation.id,
+                                message: { ...aiMessage, status: 'sent', twilio_sid: sentMsg.sid }
+                            });
+                        }
                     }
-                } else {
-                    console.log('🤫 AI decided not to reply.');
+                } catch (err) {
+                    console.error('❌ AI Auto-Reply Failed:', err);
                 }
-            } catch (err) {
-                console.error("❌ AI Auto-Reply Failed:", err);
-            }
-        })();
-        // --- 🤖 AI AUTO-REPLY END ---
+            })();
+        }
 
     } catch (error) {
         console.error('Webhook Error:', error);
@@ -382,31 +334,21 @@ router.post('/webhook/receive', async (req, res) => {
     }
 });
 
-// Get message count for a conversation
 router.get('/:conversationId/count', async (req, res) => {
     try {
         const { conversationId } = req.params;
         const db = getDatabase();
-
         const actualId = await resolveConversationId(conversationId, db);
+        if (!actualId) return res.status(404).json({ success: false, error: 'Conversation not found' });
 
-        if (!actualId) {
-            return res.status(404).json({ success: false, error: 'Conversation not found' });
-        }
-
-        const result = await db.query(
-            'SELECT COUNT(*) as total FROM messages WHERE conversation_id = $1',
-            [actualId]
-        );
+        const result = await db.query('SELECT COUNT(*) as total FROM messages WHERE conversation_id = $1', [actualId]);
 
         res.json({
             success: true,
             conversation_id: actualId,
             message_count: parseInt(result.rows[0].total)
         });
-
     } catch (error) {
-        console.error('Error counting messages:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
