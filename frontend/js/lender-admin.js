@@ -90,11 +90,24 @@ class LenderAdmin {
 
         modal.style.display = 'flex';
         this.loadLendersList();
+        this.loadRuleSuggestions();
     }
 
     createManagementTemplate() {
         return `
             <div style="display: flex; flex-direction: column; height: 100%;">
+                <div id="ruleSuggestionsSection" style="border-bottom: 1px solid #30363d;">
+                    <div class="submission-col-header" style="border-radius: 0; border: none; background: #161b22;">
+                        <div class="submission-col-title">🧠 AI Rule Suggestions</div>
+                        <button onclick="window.commandCenter.lenderAdmin.loadRuleSuggestions()" class="action-link" style="font-size: 11px;">
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="ruleSuggestionsContainer" style="max-height: 200px; overflow-y: auto; background: #0d1117;">
+                        <div class="loading-state" style="padding: 15px; font-size: 12px; color: #8b949e;">Loading suggestions...</div>
+                    </div>
+                </div>
+
                 <div class="submission-col-header" style="border-radius: 0; border-left: none; border-right: none; border-top: none;">
                     <div class="submission-col-title">Network Directory</div>
                     <div class="header-actions">
@@ -368,6 +381,107 @@ class LenderAdmin {
             alert('Failed to update lender');
             btn.innerText = originalText;
             btn.disabled = false;
+        }
+    }
+
+    // --- RULE SUGGESTIONS ---
+
+    async loadRuleSuggestions() {
+        const container = document.getElementById('ruleSuggestionsContainer');
+        if (!container) return;
+
+        try {
+            const suggestions = await this.system.apiCall('/api/lenders/rule-suggestions');
+
+            if (!suggestions || suggestions.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: 15px; text-align: center; color: #8b949e; font-size: 12px;">
+                        ✅ No pending suggestions
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = suggestions.map(rule => `
+                <div class="rule-suggestion-row" style="padding: 12px 16px; border-bottom: 1px solid #21262d; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <span style="font-weight: 600; font-size: 13px; color: #e6edf3;">${rule.lender_name}</span>
+                            <span class="rule-type-badge" style="background: ${this.getRuleTypeBadgeColor(rule.rule_type)}; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+                                ${rule.rule_type.replace('_', ' ').toUpperCase()}
+                            </span>
+                        </div>
+                        <div style="font-size: 12px; color: #8b949e;">
+                            ${rule.industry ? `<span style="color: #f59e0b;">Industry: ${rule.industry}</span>` : ''}
+                            ${rule.state ? `<span style="color: #3b82f6;">State: ${rule.state}</span>` : ''}
+                            ${rule.condition_field ? `<span>${rule.condition_field} ${rule.condition_operator} ${rule.condition_value}</span>` : ''}
+                        </div>
+                        <div style="font-size: 11px; color: #6e7681; margin-top: 4px;">
+                            💡 ${rule.decline_message}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-left: 12px;">
+                        <button onclick="window.commandCenter.lenderAdmin.approveRule('${rule.id}', '${rule.lender_name}')"
+                                class="btn" style="background: #10b981; color: white; padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px;">
+                            ✓ Approve
+                        </button>
+                        <button onclick="window.commandCenter.lenderAdmin.rejectRule('${rule.id}')"
+                                class="btn" style="background: #ef4444; color: white; padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px;">
+                            ✗ Reject
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading rule suggestions:', error);
+            container.innerHTML = `
+                <div style="padding: 15px; text-align: center; color: #ef4444; font-size: 12px;">
+                    Failed to load suggestions
+                </div>
+            `;
+        }
+    }
+
+    getRuleTypeBadgeColor(type) {
+        const colors = {
+            industry_block: '#f59e0b',
+            state_block: '#3b82f6',
+            minimum_requirement: '#8b5cf6',
+            position_restriction: '#ec4899',
+            other: '#6b7280'
+        };
+        return colors[type] || colors.other;
+    }
+
+    async approveRule(ruleId, lenderName) {
+        if (!confirm(`Approve this rule for ${lenderName}?\n\nThis will also update the lender's restrictions.`)) return;
+
+        try {
+            await this.system.apiCall(`/api/lenders/rule-suggestions/${ruleId}/approve`, {
+                method: 'POST'
+            });
+
+            this.system.utils.showNotification(`Rule approved for ${lenderName}`, 'success');
+            this.loadRuleSuggestions();
+        } catch (error) {
+            console.error('Error approving rule:', error);
+            this.system.utils.showNotification('Failed to approve rule', 'error');
+        }
+    }
+
+    async rejectRule(ruleId) {
+        if (!confirm('Reject this rule suggestion?')) return;
+
+        try {
+            await this.system.apiCall(`/api/lenders/rule-suggestions/${ruleId}/reject`, {
+                method: 'POST'
+            });
+
+            this.system.utils.showNotification('Rule rejected', 'success');
+            this.loadRuleSuggestions();
+        } catch (error) {
+            console.error('Error rejecting rule:', error);
+            this.system.utils.showNotification('Failed to reject rule', 'error');
         }
     }
 }

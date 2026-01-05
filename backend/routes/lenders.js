@@ -62,6 +62,91 @@ async function run(){
 </script></body></html>`);
 });
 
+// Get pending rule suggestions
+router.get('/rule-suggestions', async (req, res) => {
+    try {
+        const db = getDatabase();
+        const result = await db.query(`
+            SELECT * FROM lender_rules
+            WHERE source = 'ai_suggested' AND is_active = FALSE
+            ORDER BY created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching rule suggestions:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Approve a rule suggestion
+router.post('/rule-suggestions/:ruleId/approve', async (req, res) => {
+    try {
+        const { ruleId } = req.params;
+        const db = getDatabase();
+
+        const ruleResult = await db.query('SELECT * FROM lender_rules WHERE id = $1', [ruleId]);
+        if (ruleResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Rule not found' });
+        }
+
+        const rule = ruleResult.rows[0];
+
+        await db.query(`
+            UPDATE lender_rules 
+            SET is_active = TRUE, source = 'ai_applied' 
+            WHERE id = $1
+        `, [ruleId]);
+
+        if (rule.lender_id) {
+            if (rule.rule_type === 'industry_block' && rule.industry) {
+                await db.query(`
+                    UPDATE lenders 
+                    SET prohibited_industries = CASE 
+                        WHEN prohibited_industries IS NULL OR prohibited_industries = '' 
+                        THEN $2
+                        ELSE prohibited_industries || ', ' || $2
+                    END
+                    WHERE id = $1
+                `, [rule.lender_id, rule.industry]);
+            }
+
+            if (rule.rule_type === 'state_block' && rule.state) {
+                await db.query(`
+                    UPDATE lenders 
+                    SET state_restrictions = CASE 
+                        WHEN state_restrictions IS NULL OR state_restrictions = '' 
+                        THEN $2
+                        ELSE state_restrictions || ', ' || $2
+                    END
+                    WHERE id = $1
+                `, [rule.lender_id, rule.state]);
+            }
+        }
+
+        console.log(`✅ Rule approved: ${rule.lender_name} - ${rule.rule_type}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error approving rule:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Reject a rule suggestion
+router.post('/rule-suggestions/:ruleId/reject', async (req, res) => {
+    try {
+        const { ruleId } = req.params;
+        const db = getDatabase();
+
+        await db.query('DELETE FROM lender_rules WHERE id = $1', [ruleId]);
+
+        console.log(`❌ Rule rejected: ${ruleId}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error rejecting rule:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Create new lender
 router.post('/', async (req, res) => {
     try {
