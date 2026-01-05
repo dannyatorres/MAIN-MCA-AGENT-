@@ -1,0 +1,123 @@
+%%{init: {'theme': 'dark'}}%%
+
+sequenceDiagram
+    autonumber
+    participant U as 👤 User
+    participant UI as 🖥️ UI Layer
+    participant CC as ⚙️ CommandCenter
+    participant ConvCore as 📊 ConversationCore
+    participant MSG as 💬 MessagingModule
+    participant WS as 🔌 WebSocket
+    participant API as 🌐 Backend API
+
+    Note over U,API: 🚀 Application Initialization
+
+    U->>UI: Load Page
+    UI->>CC: DOMContentLoaded
+    CC->>WS: new WebSocketManager()
+    WS->>API: Connect (Socket.io)
+    API-->>WS: Connected ✓
+    CC->>ConvCore: new ConversationCore()
+    ConvCore->>API: GET /api/conversations
+    API-->>ConvCore: [conversations...]
+    ConvCore->>UI: renderConversationsList()
+
+    Note over U,API: 📋 Lead Selection Flow
+
+    U->>UI: Click Lead #123
+    UI->>ConvCore: selectConversation(123)
+    
+    rect rgb(30, 64, 175)
+        Note right of ConvCore: Optimistic UI
+        ConvCore->>ConvCore: Check cache
+        ConvCore->>UI: showConversationDetails() [cached]
+    end
+
+    par Parallel Requests
+        ConvCore->>API: GET /api/conversations/123
+        ConvCore->>MSG: loadConversationMessages(123)
+        MSG->>API: GET /api/messages/123
+    end
+
+    API-->>ConvCore: {conversation: {...}}
+    API-->>MSG: [messages...]
+    
+    MSG->>UI: renderMessages()
+    ConvCore->>UI: Update with fresh data
+
+    Note over U,API: 💬 Send Message Flow
+
+    U->>UI: Type "Hello" + Send
+    UI->>MSG: sendMessage("Hello")
+    
+    rect rgb(22, 101, 52)
+        Note right of MSG: Optimistic UI
+        MSG->>MSG: Create temp-123456
+        MSG->>MSG: Add to pendingMessages[]
+        MSG->>UI: addMessage(optimistic)
+    end
+
+    MSG->>API: POST /api/messages/send
+    API-->>MSG: {message: {id: "real-789"}}
+    MSG->>MSG: replaceTempMessage(temp→real)
+    MSG->>UI: Update message ID
+
+    rect rgb(126, 34, 206)
+        Note right of WS: WebSocket Echo
+        API->>WS: emit("new_message", {...})
+        WS->>MSG: handleIncomingMessage()
+        MSG->>MSG: Check pendingMessages[]
+        Note right of MSG: Match found → BLOCK duplicate
+    end
+
+    Note over U,API: ⚡ Incoming Message (from another user)
+
+    API->>WS: emit("new_message", {from: "lead"})
+    WS->>MSG: handleIncomingMessage()
+    
+    alt Is Current Chat
+        MSG->>UI: addMessage()
+    else Different Chat
+        MSG->>ConvCore: incrementBadge()
+        MSG->>UI: Show notification
+    end
+
+    ConvCore->>UI: updateConversationPreview()
+
+    Note over U,API: 📄 Document Upload Flow
+
+    U->>UI: Drop file on zone
+    UI->>CC: documents.handleFileSelection()
+    CC->>API: POST /api/documents/upload
+    API-->>CC: {success: true}
+    
+    rect rgb(126, 34, 206)
+        API->>WS: emit("document_uploaded")
+        WS->>CC: documents.loadDocuments()
+    end
+
+    CC->>API: GET /api/documents/123
+    API-->>CC: [documents...]
+    CC->>UI: renderDocumentsList()
+
+    Note over U,API: 📊 FCS Analysis Flow
+
+    U->>UI: Click "Run FCS Analysis"
+    UI->>CC: fcs.triggerSyncAndAnalyze()
+    CC->>API: POST /api/integrations/drive/sync
+    API-->>CC: {jobId: "job-456"}
+
+    loop Poll Every 3s
+        CC->>API: GET /api/.../status/job-456
+        API-->>CC: {status: "processing"}
+        CC->>UI: Update progress bar
+    end
+
+    API-->>CC: {status: "completed"}
+    
+    rect rgb(126, 34, 206)
+        API->>WS: emit("fcs_completed")
+        WS->>CC: fcs.loadFCSData()
+    end
+
+    CC->>UI: Display FCS Report

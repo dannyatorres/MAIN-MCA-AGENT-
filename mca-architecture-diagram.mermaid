@@ -1,0 +1,97 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#3b82f6', 'primaryTextColor': '#fff', 'primaryBorderColor': '#60a5fa', 'lineColor': '#94a3b8', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a'}}}%%
+
+flowchart TB
+    subgraph UI["🖥️ User Interface Layer"]
+        LP["📋 Left Panel<br/>Lead List"]
+        CP["💬 Center Panel<br/>Chat / Dashboard"]
+        RP["🧠 Right Panel<br/>Intelligence Tabs"]
+    end
+
+    subgraph Core["⚙️ Application Core"]
+        CC["🎯 CommandCenter<br/>(app-core.js)<br/>━━━━━━━━━━━━━<br/>• Module Registry<br/>• API Gateway<br/>• Global State"]
+        
+        subgraph StateHub["📊 State Management"]
+            ConvCore["ConversationCore<br/>━━━━━━━━━━━━━<br/>conversations: Map<br/>currentId: string<br/>selectedConv: object"]
+        end
+    end
+
+    subgraph Modules["📦 Feature Modules"]
+        direction LR
+        MSG["💬 MessagingModule<br/>━━━━━━━━━━━━━<br/>• Send/Receive SMS<br/>• Deduplication<br/>• File Upload"]
+        DOC["📄 DocumentsModule<br/>━━━━━━━━━━━━━<br/>• Drag & Drop<br/>• Type Classification<br/>• Document Cache"]
+        AI["🤖 AIAssistant<br/>━━━━━━━━━━━━━<br/>• Chat Interface<br/>• History Cache<br/>• Context Mgmt"]
+        FCS["📊 FCSModule<br/>━━━━━━━━━━━━━<br/>• Financial Analysis<br/>• Job Polling<br/>• Report Display"]
+        LND["🏦 LendersModule<br/>━━━━━━━━━━━━━<br/>• Qualification<br/>• Multi-Submit<br/>• Response Log"]
+        STATS["📈 StatsModule<br/>━━━━━━━━━━━━━<br/>• Dashboard Stats<br/>• Funding Goals<br/>• Metrics"]
+    end
+
+    subgraph RealTime["⚡ Real-Time Layer"]
+        WS["🔌 WebSocketManager<br/>━━━━━━━━━━━━━<br/>Events:<br/>• new_message<br/>• conversation_updated<br/>• refresh_lead_list<br/>• document_uploaded<br/>• fcs_completed"]
+    end
+
+    subgraph Infra["🔧 Infrastructure"]
+        API["🌐 ApiService<br/>GET/POST/PUT/DELETE"]
+        UTIL["🛠️ Utilities<br/>Date, Currency, Phone"]
+        TPL["📝 Templates<br/>HTML Generators"]
+        FMT["✨ Formatters<br/>Phone, SSN, Currency"]
+    end
+
+    subgraph External["☁️ External Services"]
+        BE["🖥️ Backend API<br/>(REST + Socket.io)"]
+        TWILIO["📞 Twilio Voice"]
+        GDRIVE["📁 Google Drive"]
+    end
+
+    %% UI to Core connections
+    LP --> ConvCore
+    CP --> MSG
+    RP --> AI
+    RP --> DOC
+    RP --> FCS
+    RP --> LND
+
+    %% Core orchestration
+    CC --> ConvCore
+    CC --> MSG
+    CC --> DOC
+    CC --> AI
+    CC --> FCS
+    CC --> LND
+    CC --> STATS
+    CC --> WS
+
+    %% Real-time event flow
+    WS --> MSG
+    WS --> ConvCore
+    WS --> DOC
+    WS --> FCS
+
+    %% Infrastructure usage
+    CC --> API
+    MSG --> UTIL
+    DOC --> UTIL
+    ConvCore --> TPL
+
+    %% External connections
+    API --> BE
+    WS --> BE
+    FCS --> GDRIVE
+    
+    subgraph CallMgr["📞 Calling"]
+        CALL["CallManager<br/>Twilio Voice Client"]
+    end
+    
+    CALL --> TWILIO
+
+    %% Styling
+    classDef coreClass fill:#1e40af,stroke:#3b82f6,color:#fff
+    classDef moduleClass fill:#166534,stroke:#22c55e,color:#fff
+    classDef infraClass fill:#7c2d12,stroke:#f97316,color:#fff
+    classDef rtClass fill:#7e22ce,stroke:#a855f7,color:#fff
+    classDef extClass fill:#4c1d95,stroke:#8b5cf6,color:#fff
+    
+    class CC,ConvCore coreClass
+    class MSG,DOC,AI,FCS,LND,STATS moduleClass
+    class API,UTIL,TPL,FMT infraClass
+    class WS rtClass
+    class BE,TWILIO,GDRIVE extClass

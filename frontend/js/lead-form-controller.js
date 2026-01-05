@@ -575,7 +575,7 @@ export class LeadFormController {
                 generateBtn.disabled = true;
 
                 try {
-                    const result = await this.parent.apiCall(`/api/pdf/${id}/generate`, {
+                    const result = await this.parent.apiCall(`/api/conversations/${id}/generate-pdf-document`, {
                         method: 'POST',
                         body: {
                             applicationData: pdfData,
