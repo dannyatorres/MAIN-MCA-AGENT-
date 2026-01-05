@@ -1483,9 +1483,12 @@ Best regards`;
             const conversation = this.parent.getSelectedConversation();
             const businessData = {
                 businessName: conversation?.business_name || 'Unknown Business',
-                industry: conversation?.industry || '',
-                state: conversation?.state || '',
+                industry: conversation?.industry_type || conversation?.industry || '',
+                state: conversation?.us_state || '',
                 monthlyRevenue: conversation?.monthly_revenue || 0,
+                fico: conversation?.credit_score || '',
+                tib: conversation?.time_in_business || '',
+                position: conversation?.position || '',
                 customMessage: message
             };
 
