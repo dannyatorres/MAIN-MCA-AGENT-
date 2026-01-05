@@ -186,17 +186,23 @@
 .conversations-list {
     flex: 1;
     overflow-y: auto;
-
-    /* CHANGE: Transparent list allows Grey container to show */
     background: transparent;
-
-    /* Remove scrollbar visual but keep function */
     scrollbar-width: none;
-    /* 5. FIX THE LIST SCROLLING */
-    padding-top: 4px;  /* Add a tiny bit of top padding so shadow of first card shows */
+
+    /* 1. REMOVE TOP PADDING */
+    padding-top: 0 !important;
+
+    /* Keep these to prevent scrollbar overlap */
+    padding-left: 0;
+    padding-right: 0;
 }
 .conversations-list::-webkit-scrollbar {
     display: none;
+}
+
+/* 2. FORCE FIRST CARD TO TOUCH TOP */
+.conversations-list .conversation-item:first-child {
+    margin-top: 0 !important;
 }
 
 /* 4. Conversation Item (Dark Cards with Gradient) */
