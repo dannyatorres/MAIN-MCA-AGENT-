@@ -537,4 +537,36 @@
     text-transform: uppercase;
 }
 
+/* Snappy, responsive conversation items */
+.conversation-item {
+    cursor: pointer;
+    transition: background-color 0.1s ease, transform 0.08s ease, border-left-color 0.1s ease;
+}
+
+.conversation-item:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Immediate press feedback */
+.conversation-item:active {
+    transform: scale(0.985);
+    background-color: rgba(59, 130, 246, 0.15);
+}
+
+/* Selected state - make it obvious */
+.conversation-item.selected {
+    background-color: rgba(59, 130, 246, 0.12);
+    border-left: 3px solid #3b82f6;
+}
+
+/* Brief flash on selection (optional) */
+.conversation-item.just-selected {
+    animation: select-flash 0.2s ease;
+}
+
+@keyframes select-flash {
+    0% { background-color: rgba(59, 130, 246, 0.3); }
+    100% { background-color: rgba(59, 130, 246, 0.12); }
+}
+
 /* ==========================================================================
