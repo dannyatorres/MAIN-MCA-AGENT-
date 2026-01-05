@@ -614,8 +614,14 @@ router.post('/qualify', async (req, res) => {
             return 0;
         });
 
-        // Add success predictions
-        const qualifiedWithPredictions = await predictSuccessForAll(qualifiedLenders, criteria);
+        // Add success predictions (wrapped to prevent crash)
+        let qualifiedWithPredictions = qualifiedLenders;
+        try {
+            qualifiedWithPredictions = await predictSuccessForAll(qualifiedLenders, criteria);
+        } catch (predictionError) {
+            console.error('[SuccessPredictor] Failed, continuing without predictions:', predictionError.message);
+            qualifiedWithPredictions = qualifiedLenders.map((lender) => ({ ...lender, prediction: null }));
+        }
 
         // Return results
         res.json({

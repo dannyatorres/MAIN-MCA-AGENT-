@@ -18,11 +18,11 @@ async function buildLenderProfiles() {
             ls.status,
             ls.total_daily_withhold,
             ls.position,
-            c.industry,
+            c.industry_type as industry,
             c.us_state,
             c.monthly_revenue,
-            c.fico_score,
-            c.time_in_business
+            c.credit_score as fico_score,
+            c.business_start_date
         FROM lender_submissions ls
         JOIN conversations c ON ls.conversation_id = c.id
         WHERE ls.status IN ('APPROVED', 'OFFER', 'DECLINED', 'FUNDED')
@@ -80,17 +80,21 @@ async function buildLenderProfiles() {
         p.states[state].total++;
         if (isApproved) p.states[state].approved++;
 
+        const tibMonths = row.business_start_date
+            ? Math.floor((Date.now() - new Date(row.business_start_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
+            : null;
+
         // Track metrics for approved vs declined
         if (isApproved) {
             if (row.monthly_revenue) p.avgApprovedRevenue.push(parseFloat(row.monthly_revenue));
             if (row.fico_score) p.avgApprovedFico.push(parseInt(row.fico_score));
-            if (row.time_in_business) p.avgApprovedTib.push(parseInt(row.time_in_business));
+            if (tibMonths) p.avgApprovedTib.push(tibMonths);
             if (row.total_daily_withhold) p.avgApprovedWithhold.push(parseFloat(row.total_daily_withhold));
             if (row.position) p.avgApprovedPositionCount.push(Math.max(0, parseInt(row.position) - 1));
         } else {
             if (row.monthly_revenue) p.avgDeclinedRevenue.push(parseFloat(row.monthly_revenue));
             if (row.fico_score) p.avgDeclinedFico.push(parseInt(row.fico_score));
-            if (row.time_in_business) p.avgDeclinedTib.push(parseInt(row.time_in_business));
+            if (tibMonths) p.avgDeclinedTib.push(tibMonths);
             if (row.total_daily_withhold) p.avgDeclinedWithhold.push(parseFloat(row.total_daily_withhold));
             if (row.position) p.avgDeclinedPositionCount.push(Math.max(0, parseInt(row.position) - 1));
         }
