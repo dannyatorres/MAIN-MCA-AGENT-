@@ -191,9 +191,17 @@ async function processEmail(email, db) {
     const systemPrompt = getSystemPrompt();
 
     // Send full email body (up to 3000 chars) instead of just snippet
-    const emailBody = (email.text || email.html || email.snippet || '')
+    let emailBody = (email.text || email.html || email.snippet || '')
         .replace(/<[^>]*>/g, ' ')  // Strip HTML tags
         .replace(/\s+/g, ' ')      // Normalize whitespace
+        .trim();
+
+    // Strip quoted replies to prevent duplicate parsing
+    emailBody = emailBody
+        .replace(/On\s+\w+\s+\d+,?\s+\d{4}.*?wrote:[\s\S]*/i, '')
+        .replace(/From:.*?Sent:[\s\S]*/i, '')
+        .replace(/-{3,}\s*Original Message\s*-{3,}[\s\S]*/i, '')
+        .replace(/>{1,}\s*.*/g, '')
         .substring(0, 3000)
         .trim();
 
@@ -349,12 +357,24 @@ async function processEmail(email, db) {
 
     const systemNote = `📩 **INBOX UPDATE (${validatedLender}):** ${data.summary}`;
 
-    // 🟢 Write to AI Chat (Assistant)
+    // 🟢 Write to AI Chat - check for EXACT duplicate (same lender + same summary)
     try {
-        await db.query(`
-            INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
-            VALUES ($1, 'assistant', $2, NOW())
+        const recentNote = await db.query(`
+            SELECT 1 FROM ai_chat_messages 
+            WHERE conversation_id = $1 
+              AND content = $2
+              AND created_at > NOW() - INTERVAL '24 hours'
+            LIMIT 1
         `, [bestMatchId, systemNote]);
+
+        if (recentNote.rows.length === 0) {
+            await db.query(`
+                INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
+                VALUES ($1, 'assistant', $2, NOW())
+            `, [bestMatchId, systemNote]);
+        } else {
+            console.log(`      ⏭️ Skipping duplicate AI note (exact match)`);
+        }
     } catch (err) {
         console.error('      ⚠️ [AI] Failed to log to assistant history:', err.message);
     }
