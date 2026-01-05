@@ -135,18 +135,6 @@ exports.generateLeadPDF = async (conversationId, applicationData, ownerName, cli
         // Clean up any remaining unreplaced placeholders
         htmlContent = htmlContent.replace(/{{[^}]+}}/g, '');
 
-        if (!owner2FullName) {
-            htmlContent = htmlContent.replace(
-                /<!-- OWNER2_INFO_START -->[\s\S]*?<!-- OWNER2_INFO_END -->/g,
-                ''
-            );
-
-            htmlContent = htmlContent.replace(
-                /<!-- OWNER2_SIG_START -->[\s\S]*?<!-- OWNER2_SIG_END -->/g,
-                ''
-            );
-        }
-
         console.log('📝 HTML template populated');
 
         // 4. Launch Puppeteer
@@ -273,18 +261,6 @@ exports.generatePopulatedTemplate = (applicationData, ownerName, clientIp) => {
 
     // Clean up unreplaced placeholders
     htmlContent = htmlContent.replace(/{{[^}]+}}/g, '');
-
-    if (!owner2FullName) {
-        htmlContent = htmlContent.replace(
-            /<!-- OWNER2_INFO_START -->[\s\S]*?<!-- OWNER2_INFO_END -->/g,
-            ''
-        );
-
-        htmlContent = htmlContent.replace(
-            /<!-- OWNER2_SIG_START -->[\s\S]*?<!-- OWNER2_SIG_END -->/g,
-            ''
-        );
-    }
 
     return htmlContent;
 };
