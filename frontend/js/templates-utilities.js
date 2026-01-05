@@ -431,14 +431,43 @@ class Templates {
             }
         }
 
-        // 1. Handle MMS images
+        // 1. Handle MMS images (single or multiple)
         let mediaHtml = '';
         if (message.media_url) {
-            mediaHtml = `
-                <div class="message-media">
-                    <img src="${message.media_url}" alt="Attachment" onclick="window.open(this.src, '_blank')">
-                </div>
-            `;
+            let urls = [];
+
+            try {
+                if (message.media_url.startsWith('[')) {
+                    urls = JSON.parse(message.media_url);
+                } else {
+                    urls = [message.media_url];
+                }
+            } catch (e) {
+                urls = [message.media_url];
+            }
+
+            if (urls.length === 1) {
+                mediaHtml = `
+                    <div class="message-media">
+                        <img src="${urls[0]}" alt="Attachment" onclick="window.open(this.src, '_blank')">
+                    </div>
+                `;
+            } else {
+                const previewUrls = urls.slice(0, 3);
+                const remaining = urls.length - 3;
+
+                mediaHtml = `
+                    <div class="message-media-stack" onclick="window.openImageGallery(${JSON.stringify(urls).replace(/"/g, '&quot;')})">
+                        <div class="stack-preview">
+                            ${previewUrls.map((url, i) => `
+                                <img src="${url}" alt="Attachment ${i + 1}" class="stack-img" style="--stack-index: ${i};">
+                            `).join('')}
+                        </div>
+                        ${remaining > 0 ? `<div class="stack-count">+${remaining} more</div>` : ''}
+                        <div class="stack-badge">${urls.length} photos</div>
+                    </div>
+                `;
+            }
         }
 
         // 2. Handle Text Content - Only show bubble if there's actual text
@@ -562,3 +591,85 @@ class Templates {
         `;
     }
 }
+
+// Image Gallery - Global Functions
+window.openImageGallery = function(urls) {
+    document.getElementById('imageGalleryModal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'imageGalleryModal';
+    modal.className = 'image-gallery-modal';
+    modal.innerHTML = `
+        <div class="gallery-backdrop" onclick="closeImageGallery()"></div>
+        <div class="gallery-container">
+            <div class="gallery-header">
+                <span class="gallery-count">${urls.length} Photos</span>
+                <div class="gallery-actions">
+                    <button onclick="downloadAllImages(${JSON.stringify(urls).replace(/"/g, '&quot;')})" class="gallery-download-btn">
+                        <i class="fas fa-download"></i> Download All
+                    </button>
+                    <button onclick="closeImageGallery()" class="gallery-close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="gallery-grid">
+                ${urls.map((url, i) => `
+                    <div class="gallery-item" onclick="viewFullImage('${url}')">
+                        <img src="${url}" alt="Photo ${i + 1}">
+                        <a href="${url}" download class="gallery-item-download" onclick="event.stopPropagation()">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('open'), 10);
+};
+
+window.closeImageGallery = function() {
+    const modal = document.getElementById('imageGalleryModal');
+    if (modal) {
+        modal.classList.remove('open');
+        setTimeout(() => modal.remove(), 300);
+    }
+};
+
+window.viewFullImage = function(url) {
+    window.open(url, '_blank');
+};
+
+window.downloadAllImages = async function(urls) {
+    const btn = document.querySelector('.gallery-download-btn');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+        btn.disabled = true;
+    }
+
+    for (let i = 0; i < urls.length; i++) {
+        try {
+            const response = await fetch(urls[i]);
+            const blob = await response.blob();
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `image_${i + 1}.jpg`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            await new Promise(r => setTimeout(r, 300));
+        } catch (e) {
+            console.error('Download failed for', urls[i], e);
+        }
+    }
+
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-check"></i> Done!';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-download"></i> Download All';
+            btn.disabled = false;
+        }, 2000);
+    }
+};

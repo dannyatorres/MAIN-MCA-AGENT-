@@ -253,10 +253,19 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 // Webhook for Incoming Messages (UPDATED WITH AI AUTO-REPLY)
 router.post('/webhook/receive', async (req, res) => {
     try {
-        const { From, Body, MessageSid, MediaUrl0 } = req.body;
+        const { From, Body, MessageSid, NumMedia } = req.body;
         const db = getDatabase();
 
-        console.log('📥 Webhook Inbound:', { From, Body });
+        console.log('📥 Webhook Inbound:', { From, Body, NumMedia });
+
+        const mediaUrls = [];
+        const numMedia = parseInt(NumMedia) || 0;
+        for (let i = 0; i < numMedia; i++) {
+            const url = req.body[`MediaUrl${i}`];
+            if (url) mediaUrls.push(url);
+        }
+
+        console.log(`📷 Found ${mediaUrls.length} media attachments`);
 
         // 1. Find the Conversation
         const cleanPhone = From.replace(/\D/g, '');
@@ -275,6 +284,10 @@ router.post('/webhook/receive', async (req, res) => {
         const conversation = convResult.rows[0];
 
         // 2. Save User's Message to DB
+        const mediaUrlValue = mediaUrls.length > 1
+            ? JSON.stringify(mediaUrls)
+            : (mediaUrls[0] || null);
+
         const msgResult = await db.query(`
             INSERT INTO messages (
                 conversation_id, content, direction, message_type,
@@ -285,9 +298,9 @@ router.post('/webhook/receive', async (req, res) => {
         `, [
             conversation.id,
             Body || '',
-            MediaUrl0 ? 'mms' : 'sms',
+            mediaUrls.length > 0 ? 'mms' : 'sms',
             MessageSid,
-            MediaUrl0 || null
+            mediaUrlValue
         ]);
 
         const newMessage = msgResult.rows[0];
