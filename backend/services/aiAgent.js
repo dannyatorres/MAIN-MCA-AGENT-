@@ -118,39 +118,19 @@ const BASE_TOOLS = [
 // 📖 HELPER: Load Persona + Strategy
 function getGlobalPrompt() {
     try {
-        const promptsDir = path.join(__dirname, '../prompts');
-        
-        // List of strategy files to load (in order)
-        const strategyFiles = [
-            'persona.md',              // Optional: identity/tone
-            'strategy_objectives.md',  // What we're trying to accomplish
-            'strategy_vetting.md',     // How to collect info
-            'strategy_objections.md',  // Handling pushback
-            'strategy_engagement.md'   // Reading the conversation
-        ];
-        
-        let combinedPrompt = "";
+        const promptPath = path.join(__dirname, '../prompts/dan_torres.md');
 
-        for (const filename of strategyFiles) {
-            const filePath = path.join(promptsDir, filename);
-            if (fs.existsSync(filePath)) {
-                combinedPrompt += fs.readFileSync(filePath, 'utf8') + "\n\n---\n\n";
-                console.log(`✅ Loaded: ${filename}`);
-            } else {
-                console.log(`⚠️ Missing: ${filename}`);
-            }
+        if (fs.existsSync(promptPath)) {
+            console.log('✅ Loaded: dan_torres.md');
+            return fs.readFileSync(promptPath, 'utf8');
         }
 
-        // Fallback if no files found
-        if (!combinedPrompt) {
-            combinedPrompt = "You are Dan Torres, an underwriter at JMS Global. Keep texts short and professional.";
-        }
-
-        return combinedPrompt;
+        console.log('⚠️ Missing: dan_torres.md');
+        return 'You are Dan Torres, an underwriter at JMS Global. Keep texts short and professional.';
 
     } catch (err) {
-        console.error('⚠️ Error loading prompt files:', err.message);
-        return "You are Dan Torres. Keep texts short.";
+        console.error('⚠️ Error loading prompt:', err.message);
+        return 'You are Dan Torres. Keep texts short.';
     }
 }
 
