@@ -44,7 +44,7 @@ class LendersModule {
             { id: 'lenderSoleProp', label: 'Sole Proprietorship' },
             { id: 'lenderNonProfit', label: 'Non-Profit' },
             { id: 'lenderMercuryBank', label: 'Has Mercury Bank' },
-            { id: 'lenderReverseConsolidation', label: 'Reverse Consolidation Only' }
+            { id: 'lenderReverseConsolidation', label: 'Reverse Consolidation' }
         ];
 
         this.init();

@@ -484,10 +484,18 @@ router.post('/qualify', async (req, res) => {
         if (criteria.reverseConsolidation) {
             console.log('🔄 Reverse Consolidation mode - returning only reverse lenders');
 
+            // Get reverse lenders (qualified)
             const reverseLendersResult = await db.query(`
                 SELECT * FROM lenders
                 WHERE does_reverse_consolidation = true
                 ORDER BY tier, name
+            `);
+
+            // Get non-reverse lenders (non-qualified)
+            const nonReverseLendersResult = await db.query(`
+                SELECT name FROM lenders
+                WHERE does_reverse_consolidation = false OR does_reverse_consolidation IS NULL
+                ORDER BY name
             `);
 
             const reverseLenders = reverseLendersResult.rows.map(lender => ({
@@ -496,14 +504,19 @@ router.post('/qualify', async (req, res) => {
                 isPreferred: false
             }));
 
+            const nonReverseLenders = nonReverseLendersResult.rows.map(lender => ({
+                lender: lender.name,
+                blockingRule: 'Does not offer reverse consolidation'
+            }));
+
             return res.json({
                 qualified: reverseLenders,
-                nonQualified: [],
+                nonQualified: nonReverseLenders,
                 autoDropped: 0,
                 summary: {
-                    totalProcessed: reverseLenders.length,
+                    totalProcessed: reverseLenders.length + nonReverseLenders.length,
                     qualified: reverseLenders.length,
-                    nonQualified: 0,
+                    nonQualified: nonReverseLenders.length,
                     autoDropped: 0
                 },
                 criteria: criteria,
