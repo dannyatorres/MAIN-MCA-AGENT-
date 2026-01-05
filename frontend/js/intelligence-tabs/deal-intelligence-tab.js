@@ -8,235 +8,207 @@ export class DealIntelligenceTab {
         const conv = this.parent.getSelectedConversation();
 
         if (!conv) {
-            container.innerHTML = '<div class="deal-intel-empty-state"><p class="empty-text">No conversation selected.</p></div>';
+            container.innerHTML = '<div class="di-empty">No conversation selected.</div>';
             return;
         }
 
         const strategy = conv.lead_strategy || {};
         const gamePlan = strategy.game_plan || {};
 
-        // --- 1. EMPTY STATE ---
+        // Empty state
         if (!gamePlan.businessOverview) {
             container.innerHTML = `
-                <div class="deal-intel-empty-state">
-                    <div class="empty-icon">
-                        <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="empty-title">Awaiting Strategy Analysis</h3>
-                    <p class="empty-text">Run the Commander to analyze bank statements, detect competitors, and generate offer scenarios.</p>
-
-                    <button id="runAnalysisBtn" class="run-analysis-btn">
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                        Run FCS Analysis
-                    </button>
-                    <p id="analysisStatus" class="analysis-status"></p>
+                <div class="di-empty">
+                    <p>No strategy analysis yet.</p>
+                    <button id="runAnalysisBtn" class="di-btn">Run FCS Analysis</button>
+                    <p id="analysisStatus" class="di-status"></p>
                 </div>
             `;
-
             container.querySelector('#runAnalysisBtn')?.addEventListener('click', () => this.runAnalysis(conv.id));
             return;
         }
 
-        // --- 2. PREPARE DATA ---
         const overview = gamePlan.businessOverview || {};
         const withholding = gamePlan.withholding || {};
+        const trend = gamePlan.revenueTrend || {};
+        const lastPos = gamePlan.lastPositionAnalysis || {};
         const scenarios = gamePlan.nextPositionScenarios || {};
-        const isFirstPosition = (overview.currentPositions === 0);
+        const guidance = scenarios.guidance || {};
 
-        // --- 3. RENDER DATA VIEW ---
         container.innerHTML = `
-            <div class="deal-intelligence-panel">
+            <div class="di-panel">
 
-                <div class="panel-header-row">
-                    <h2 class="panel-title">Deal Intelligence</h2>
-                    <span class="strategy-badge ${strategy.strategy_type || ''}">
-                        ${strategy.strategy_type ? strategy.strategy_type.replace('_', ' ') : 'Ready'}
-                    </span>
+                <!-- Header -->
+                <div class="di-header">
+                    <span class="di-grade grade-${gamePlan.lead_grade || 'C'}">${gamePlan.lead_grade || '?'}</span>
+                    <span class="di-strategy ${gamePlan.strategy_type || ''}">${(gamePlan.strategy_type || 'PENDING').replace('_', ' ')}</span>
+                    <span class="di-position">→ ${overview.nextPosition || '?'}${this.ordinal(overview.nextPosition)} Position</span>
                 </div>
 
-                <div class="data-grid">
-                    <div class="data-item">
-                        <div class="data-label">Avg Revenue</div>
-                        <div class="data-value">${(overview.avgRevenue || 0).toLocaleString()}</div>
+                <!-- Overview Row -->
+                <div class="di-row">
+                    <div class="di-cell">
+                        <span class="di-label">Revenue</span>
+                        <span class="di-value">$${(overview.avgRevenue || 0).toLocaleString()}</span>
                     </div>
-                    <div class="data-item">
-                        <div class="data-label">Positions</div>
-                        <div class="data-value">${overview.currentPositions || 0} Active</div>
+                    <div class="di-cell">
+                        <span class="di-label">Balance</span>
+                        <span class="di-value">$${(overview.avgBankBalance || 0).toLocaleString()}</span>
                     </div>
-                    <div class="data-item">
-                        <div class="data-label">Avg Balance</div>
-                        <div class="data-value">${(overview.avgBankBalance || 0).toLocaleString()}</div>
+                    <div class="di-cell">
+                        <span class="di-label">Neg Days</span>
+                        <span class="di-value">${overview.negativeDays ?? '-'}</span>
                     </div>
-                    <div class="data-item">
-                        <div class="data-label">Negative Days</div>
-                        <div class="data-value">${overview.negativeDays !== undefined ? overview.negativeDays : '-'}</div>
+                    <div class="di-cell">
+                        <span class="di-label">Withhold</span>
+                        <span class="di-value">${(withholding.totalWithhold || 0).toFixed(1)}%</span>
                     </div>
                 </div>
 
-                <div class="withholding-section">
-                    <div class="withholding-header">
-                        <h3 class="section-title">Withholding Analysis</h3>
-                        <div class="withholding-total-display">
-                            <div class="total-value">${(withholding.totalWithhold || 0).toFixed(1)}%</div>
-                            <div class="total-label">Total Usage</div>
+                <!-- Revenue Trend -->
+                ${trend.direction ? `
+                <div class="di-section">
+                    <div class="di-section-title">Revenue Trend</div>
+                    <div class="di-row">
+                        <div class="di-cell">
+                            <span class="di-label">Direction</span>
+                            <span class="di-value trend-${trend.direction}">${trend.direction}</span>
+                        </div>
+                        <div class="di-cell">
+                            <span class="di-label">Floor</span>
+                            <span class="di-value">$${(trend.floorMonth?.amount || 0).toLocaleString()} <small>(${trend.floorMonth?.month || '?'})</small></span>
+                        </div>
+                        <div class="di-cell">
+                            <span class="di-label">Ceiling</span>
+                            <span class="di-value">$${(trend.fundingCeiling || 0).toLocaleString()}</span>
                         </div>
                     </div>
-                    ${this.renderWithholdingList(withholding.breakdown)}
+                    ${trend.trendAnalysis ? `<div class="di-note">${trend.trendAnalysis}</div>` : ''}
+                    ${trend.ceilingReasoning ? `<div class="di-note"><strong>Ceiling:</strong> ${trend.ceilingReasoning}</div>` : ''}
+                </div>
+                ` : ''}
+
+                <!-- Withholding Breakdown -->
+                ${withholding.breakdown?.length > 0 ? `
+                <div class="di-section">
+                    <div class="di-section-title">Active Positions</div>
+                    <table class="di-table">
+                        <thead>
+                            <tr><th>Lender</th><th>Payment</th><th>Freq</th><th>%</th></tr>
+                        </thead>
+                        <tbody>
+                            ${withholding.breakdown.map(p => `
+                                <tr>
+                                    <td>${p.lender}</td>
+                                    <td>$${p.payment.toLocaleString()}</td>
+                                    <td>${p.frequency}</td>
+                                    <td>${p.withholdPct}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
+
+                <!-- Last Position Analysis -->
+                ${lastPos.scenarios?.length > 0 ? `
+                <div class="di-section">
+                    <div class="di-section-title">Last Position Analysis</div>
+                    ${lastPos.reason ? `<div class="di-note">${lastPos.reason}</div>` : ''}
+                    <table class="di-table">
+                        <thead>
+                            <tr><th>Funding</th><th>Term</th><th>Factor</th><th>Fee%</th><th>Confidence</th></tr>
+                        </thead>
+                        <tbody>
+                            ${lastPos.scenarios.slice(0, 3).map((s, i) => `
+                                <tr class="${i === 0 ? 'di-highlight' : ''}">
+                                    <td>$${(s.originalFunding || s.funding || 0).toLocaleString()}</td>
+                                    <td>${s.term} ${s.termUnit}</td>
+                                    <td>${s.factor || '-'}</td>
+                                    <td>${s.feePercentage || '-'}%</td>
+                                    <td>${s.confidence || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
+
+                <!-- Offer Range -->
+                <div class="di-section">
+                    <div class="di-section-title">Recommended Offer</div>
+                    <div class="di-row">
+                        <div class="di-cell">
+                            <span class="di-label">Range</span>
+                            <span class="di-value">$${(gamePlan.offer_range?.min || 0).toLocaleString()} - $${(gamePlan.offer_range?.max || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="di-cell">
+                            <span class="di-label">Add Withhold</span>
+                            <span class="di-value">+${guidance.recommendedWithholdingAddition || '?'}%</span>
+                        </div>
+                        <div class="di-cell">
+                            <span class="di-label">Frequency</span>
+                            <span class="di-value">${guidance.paymentFrequency || '-'}</span>
+                        </div>
+                    </div>
+                    ${guidance.reasoning ? `<div class="di-note">${guidance.reasoning}</div>` : ''}
+                    ${guidance.frequencyReasoning ? `<div class="di-note"><strong>Frequency:</strong> ${guidance.frequencyReasoning}</div>` : ''}
                 </div>
 
-                <h3 class="section-title scenarios-title">
-                    ${isFirstPosition ? 'Recommended Opening Offer' : 'Stacking Options'}
-                </h3>
+                <!-- Scenarios -->
+                <div class="di-section">
+                    <div class="di-section-title">Scenarios</div>
+                    <div class="di-scenarios">
+                        ${this.renderScenarioTable(scenarios.conservative, 'Conservative')}
+                        ${this.renderScenarioTable(scenarios.moderate, 'Moderate')}
+                        ${this.renderScenarioTable(scenarios.aggressive, 'Aggressive')}
+                    </div>
+                </div>
 
-                ${this.renderScenarios(scenarios, isFirstPosition)}
-
-                ${this.renderLastPosition(gamePlan.lastPositionAnalysis)}
+                <!-- Risk Considerations -->
+                ${scenarios.considerations?.length > 0 ? `
+                <div class="di-section">
+                    <div class="di-section-title">Risk Factors</div>
+                    <ul class="di-list">
+                        ${scenarios.considerations.map(c => c.points?.map(p => `<li>${p}</li>`).join('') || '').join('')}
+                    </ul>
+                </div>
+                ` : ''}
 
             </div>
         `;
     }
 
-    renderWithholdingList(breakdown) {
-        if (!breakdown || breakdown.length === 0) {
-            return '<div class="no-data-message">No active positions found.</div>';
-        }
-
-        return breakdown.map(item => `
-            <div class="withholding-item">
-                <div class="withholding-info">
-                    <div class="lender-name">${item.lender}</div>
-                    <div class="payment-info">${item.payment.toLocaleString()} ${item.frequency}</div>
-                </div>
-                <div class="withholding-pct">
-                    <span class="pct-badge">${item.withholdPct}%</span>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    renderScenarios(nps, isFirstPosition) {
-        if (!nps) return '';
-
-        const getOffer = (tier) => nps[tier] && nps[tier][0] ? nps[tier][0] : null;
-        const leadOffer = getOffer('aggressive') || getOffer('moderate') || getOffer('conservative');
-
-        if (!leadOffer) {
-            return '<div class="no-data-message">No scenarios generated.</div>';
-        }
-
-        // First Position - Show single offer card
-        if (isFirstPosition) {
-            return `
-                <div class="offer-card">
-                    <div class="offer-grid">
-                        <div class="offer-stat">
-                            <div class="data-label">Funding</div>
-                            <div class="offer-big-value">${leadOffer.funding.toLocaleString()}</div>
-                        </div>
-                        <div class="offer-stat">
-                            <div class="data-label">Term</div>
-                            <div class="offer-big-value secondary">${leadOffer.term} ${leadOffer.termUnit}</div>
-                        </div>
-                        <div class="offer-stat">
-                            <div class="data-label">Payment</div>
-                            <div class="offer-big-value secondary">${leadOffer.payment.toLocaleString()}</div>
-                        </div>
-                    </div>
-
-                    <div class="offer-details">
-                        <div class="detail-row">
-                            <span>Factor Rate:</span>
-                            <span class="detail-value">${leadOffer.factor}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span>Withholding:</span>
-                            <span class="detail-value highlight">+${leadOffer.withholdAddition}%</span>
-                        </div>
-                    </div>
-
-                    <div class="offer-note">
-                        ${leadOffer.frequency === 'daily' ? 'Daily' : 'Weekly'} payment based on revenue analysis.
-                    </div>
-                </div>
-            `;
-        }
-
-        // Stacking - Show tables
-        return `
-            <div class="scenarios-container">
-                ${this.renderScenarioTable(nps.conservative, 'Conservative', 'conservative')}
-                ${this.renderScenarioTable(nps.moderate, 'Moderate', 'moderate')}
-                ${this.renderScenarioTable(nps.aggressive, 'Aggressive', 'aggressive')}
-            </div>
-        `;
-    }
-
-    renderScenarioTable(rows, title, typeClass) {
+    renderScenarioTable(rows, title) {
         if (!rows || rows.length === 0) return '';
 
-        const rowsHtml = rows.slice(0, 3).map(r => `
-            <tr>
-                <td class="cell-funding">${r.funding.toLocaleString()}</td>
-                <td>${r.term} ${r.termUnit}</td>
-                <td>${r.payment.toLocaleString()}</td>
-                <td class="cell-cap">+${r.withholdAddition}%</td>
-            </tr>
-        `).join('');
-
         return `
-            <div class="scenario-box">
-                <div class="scenario-header ${typeClass}">${title} Options</div>
-                <table>
+            <div class="di-scenario">
+                <div class="di-scenario-title">${title}</div>
+                <table class="di-table compact">
                     <thead>
-                        <tr>
-                            <th>Fund</th>
-                            <th>Term</th>
-                            <th>Payment</th>
-                            <th>Cap</th>
-                        </tr>
+                        <tr><th>$</th><th>Term</th><th>Pmt</th><th>+%</th></tr>
                     </thead>
-                    <tbody>${rowsHtml}</tbody>
+                    <tbody>
+                        ${rows.slice(0, 3).map(r => `
+                            <tr>
+                                <td>${(r.funding / 1000).toFixed(0)}k</td>
+                                <td>${r.term}${r.termUnit === 'weeks' ? 'w' : 'd'}</td>
+                                <td>${r.payment.toLocaleString()}</td>
+                                <td>+${r.withholdAddition}%</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
                 </table>
             </div>
         `;
     }
 
-    renderLastPosition(lp) {
-        // Guard against missing data
-        if (!lp || !lp.scenarios || lp.scenarios.length === 0) return '';
-
-        const deal = lp.scenarios[0];
-
-        // Guard against missing fields
-        if (!deal) return '';
-
-        const funding = deal.originalFunding || deal.funding || 0;
-        const term = deal.term || '?';
-        const termUnit = deal.termUnit || '';
-        const reasoning = deal.reasoning || 'Standard deal structure detected.';
-
-        return `
-            <div class="competitor-box">
-                <h3 class="section-title">Last Position Analysis</h3>
-                <div class="competitor-grid">
-                    <div>
-                        <div class="competitor-value">${funding.toLocaleString()}</div>
-                        <div class="competitor-label">Est. Original Funding</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="competitor-value">${term} ${termUnit}</div>
-                        <div class="competitor-label">Term Length</div>
-                    </div>
-                </div>
-                <div class="competitor-insight">
-                    <strong>Insight:</strong> ${reasoning}
-                </div>
-            </div>
-        `;
+    ordinal(n) {
+        if (!n) return '';
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return (s[(v - 20) % 10] || s[v] || s[0]);
     }
 
     async runAnalysis(conversationId) {
@@ -247,18 +219,9 @@ export class DealIntelligenceTab {
 
         this.isAnalyzing = true;
         btn.disabled = true;
-        btn.innerHTML = `
-            <svg class="spin" width="20" height="20" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"></circle>
-                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"></path>
-            </svg>
-            Analyzing...
-        `;
+        btn.textContent = 'Analyzing...';
 
-        if (status) {
-            status.textContent = 'Running FCS analysis with Commander AI...';
-            status.classList.remove('error');
-        }
+        if (status) status.textContent = 'Running Commander AI...';
 
         try {
             const response = await fetch(`/api/commander/${conversationId}/analyze`, {
@@ -269,26 +232,16 @@ export class DealIntelligenceTab {
             const result = await response.json();
 
             if (result.success) {
-                if (status) status.textContent = 'Analysis complete! Loading results...';
+                if (status) status.textContent = 'Done. Loading...';
                 await this.parent.intelligence.loadConversationIntelligence(conversationId);
             } else {
                 throw new Error(result.error || 'Analysis failed');
             }
-
         } catch (error) {
             console.error('Analysis error:', error);
-            if (status) {
-                status.textContent = `Error: ${error.message}`;
-                status.classList.add('error');
-            }
-
+            if (status) status.textContent = `Error: ${error.message}`;
             btn.disabled = false;
-            btn.innerHTML = `
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-                Retry Analysis
-            `;
+            btn.textContent = 'Retry';
         }
 
         this.isAnalyzing = false;

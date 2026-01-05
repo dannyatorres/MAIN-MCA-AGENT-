@@ -1,420 +1,51 @@
-/* ==========================================================================
-   DEAL INTELLIGENCE TAB - Dark Theme
-   ========================================================================== */
+.di-panel { padding: 12px; font-size: 13px; }
+.di-empty { padding: 40px; text-align: center; color: #64748b; }
+.di-btn { padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 12px; }
+.di-status { margin-top: 8px; font-size: 12px; color: #94a3b8; }
 
-/* --- MAIN PANEL --- */
-.deal-intelligence-panel {
-    padding: 20px;
-    height: 100%;
-    overflow-y: auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-    color: #e6edf3;
-    background: #0d1117;
-}
+/* Header */
+.di-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.di-grade { padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 14px; }
+.di-grade.grade-A { background: #10b981; color: white; }
+.di-grade.grade-B { background: #f59e0b; color: white; }
+.di-grade.grade-C { background: #ef4444; color: white; }
+.di-strategy { padding: 4px 10px; background: #1e293b; border-radius: 4px; font-size: 12px; color: #94a3b8; }
+.di-strategy.PURSUE_HARD { background: #065f46; color: #6ee7b7; }
+.di-strategy.DEAD { background: #7f1d1d; color: #fca5a5; }
+.di-position { margin-left: auto; color: #64748b; font-size: 12px; }
 
-/* --- HEADER ROW --- */
-.panel-header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-}
+/* Rows */
+.di-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.di-cell { flex: 1; min-width: 80px; }
+.di-label { display: block; font-size: 10px; color: #64748b; text-transform: uppercase; }
+.di-value { font-size: 14px; color: #e2e8f0; font-weight: 500; }
+.di-value small { font-size: 11px; color: #64748b; }
 
-.panel-header-row .panel-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #e6edf3;
-    margin: 0;
-}
+/* Trend colors */
+.trend-upward { color: #10b981; }
+.trend-stable { color: #f59e0b; }
+.trend-downward { color: #ef4444; }
+.trend-volatile { color: #a855f7; }
 
-.strategy-badge {
-    padding: 6px 12px;
-    background: rgba(45, 212, 191, 0.15);
-    color: #2dd4bf;
-    font-size: 11px;
-    font-weight: 700;
-    border-radius: 20px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+/* Sections */
+.di-section { margin-top: 16px; padding-top: 12px; border-top: 1px solid #1e293b; }
+.di-section-title { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
 
-.strategy-badge.PURSUE_HARD {
-    background: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
-}
+/* Notes */
+.di-note { font-size: 12px; color: #94a3b8; line-height: 1.4; margin-top: 6px; padding: 6px 8px; background: #0f172a; border-radius: 4px; }
 
-.strategy-badge.DEAD {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-}
+/* Tables */
+.di-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.di-table th { text-align: left; padding: 6px 8px; color: #64748b; font-weight: 500; border-bottom: 1px solid #1e293b; }
+.di-table td { padding: 6px 8px; color: #e2e8f0; border-bottom: 1px solid #1e293b; }
+.di-table tr.di-highlight td { background: rgba(59, 130, 246, 0.1); }
 
-/* --- DATA GRID --- */
-.deal-intelligence-panel .data-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 24px;
-}
+/* Scenarios grid */
+.di-scenarios { display: flex; gap: 12px; flex-wrap: wrap; }
+.di-scenario { flex: 1; min-width: 140px; }
+.di-scenario-title { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+.di-table.compact th, .di-table.compact td { padding: 4px 6px; font-size: 11px; }
 
-.deal-intelligence-panel .data-item {
-    background: #161b22;
-    padding: 16px;
-    border-radius: 12px;
-    border: 1px solid #30363d;
-}
-
-.deal-intelligence-panel .data-label {
-    font-size: 11px;
-    color: #8b949e;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-}
-
-.deal-intelligence-panel .data-value {
-    font-size: 18px;
-    font-weight: 700;
-    color: #e6edf3;
-}
-
-/* --- SECTION TITLES --- */
-.section-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #8b949e;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 0 16px 0;
-}
-
-.scenarios-title {
-    margin-top: 24px;
-}
-
-/* --- WITHHOLDING SECTION --- */
-.withholding-section {
-    background: #161b22;
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px solid #30363d;
-    margin-bottom: 24px;
-}
-
-.withholding-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 16px;
-}
-
-.withholding-total-display {
-    text-align: right;
-}
-
-.withholding-total-display .total-value {
-    font-size: 28px;
-    font-weight: 800;
-    color: #2dd4bf;
-}
-
-.withholding-total-display .total-label {
-    font-size: 11px;
-    color: #8b949e;
-    text-transform: uppercase;
-}
-
-.withholding-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #30363d;
-}
-
-.withholding-item:last-child {
-    border-bottom: none;
-}
-
-.withholding-info .lender-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #e6edf3;
-}
-
-.withholding-info .payment-info {
-    font-size: 12px;
-    color: #8b949e;
-    margin-top: 2px;
-}
-
-.pct-badge {
-    background: #21262d;
-    color: #8b949e;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 6px;
-}
-
-/* --- OFFER CARD (First Position) --- */
-.offer-card {
-    background: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
-    border: 1px solid #30363d;
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 24px;
-}
-
-.offer-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.offer-stat .data-label {
-    margin-bottom: 8px;
-}
-
-.offer-big-value {
-    font-size: 24px;
-    font-weight: 800;
-    color: #2dd4bf;
-}
-
-.offer-big-value.secondary {
-    color: #e6edf3;
-}
-
-.offer-details {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 16px;
-    border-radius: 10px;
-    margin-bottom: 16px;
-}
-
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #8b949e;
-}
-
-.detail-value {
-    font-weight: 700;
-    color: #e6edf3;
-}
-
-.detail-value.highlight {
-    color: #2dd4bf;
-}
-
-.offer-note {
-    text-align: center;
-    font-size: 13px;
-    color: #8b949e;
-    font-style: italic;
-    padding-top: 12px;
-    border-top: 1px solid #30363d;
-}
-
-/* --- SCENARIO TABLES --- */
-.scenarios-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.scenario-box {
-    background: #161b22;
-    border-radius: 12px;
-    border: 1px solid #30363d;
-    overflow: hidden;
-}
-
-.scenario-header {
-    padding: 10px 16px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #8b949e;
-    background: #21262d;
-}
-
-.scenario-header.conservative { background: #21262d; }
-.scenario-header.moderate { background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
-.scenario-header.aggressive { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
-
-.deal-intelligence-panel table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.deal-intelligence-panel th {
-    text-align: left;
-    padding: 12px 16px;
-    font-size: 11px;
-    color: #6e7681;
-    font-weight: 600;
-    text-transform: uppercase;
-    border-bottom: 1px solid #30363d;
-}
-
-.deal-intelligence-panel td {
-    padding: 14px 16px;
-    font-size: 14px;
-    color: #e6edf3;
-    border-bottom: 1px solid #21262d;
-}
-
-.deal-intelligence-panel tr:last-child td {
-    border-bottom: none;
-}
-
-.cell-funding {
-    font-weight: 700;
-    color: #e6edf3;
-}
-
-.cell-cap {
-    font-weight: 700;
-    color: #2dd4bf;
-}
-
-/* --- COMPETITOR BOX --- */
-.competitor-box {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 24px;
-}
-
-.competitor-grid {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
-
-.competitor-value {
-    font-size: 22px;
-    font-weight: 800;
-    color: #e6edf3;
-}
-
-.competitor-label {
-    font-size: 11px;
-    color: #8b949e;
-    text-transform: uppercase;
-    margin-top: 4px;
-}
-
-.text-right {
-    text-align: right;
-}
-
-.competitor-insight {
-    font-size: 13px;
-    color: #8b949e;
-    background: #0d1117;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #30363d;
-}
-
-.competitor-insight strong {
-    color: #e6edf3;
-}
-
-/* --- NO DATA MESSAGE --- */
-.no-data-message {
-    font-size: 14px;
-    color: #6e7681;
-    font-style: italic;
-    padding: 16px;
-    text-align: center;
-}
-
-/* --- EMPTY STATE --- */
-.deal-intel-empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    padding: 40px 20px;
-    text-align: center;
-}
-
-.deal-intel-empty-state .empty-icon {
-    color: #30363d;
-    margin-bottom: 20px;
-}
-
-.deal-intel-empty-state .empty-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #e6edf3;
-    margin: 0 0 8px 0;
-}
-
-.deal-intel-empty-state .empty-text {
-    font-size: 14px;
-    color: #8b949e;
-    max-width: 280px;
-    margin: 0 0 24px 0;
-    line-height: 1.5;
-}
-
-.run-analysis-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, #2dd4bf 0%, #0ea5e9 100%);
-    color: #000;
-    font-size: 14px;
-    font-weight: 600;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    box-shadow: 0 0 20px rgba(45, 212, 191, 0.3);
-    transition: all 0.2s;
-}
-
-.run-analysis-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 30px rgba(45, 212, 191, 0.5);
-}
-
-.run-analysis-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.analysis-status {
-    margin-top: 16px;
-    font-size: 13px;
-    color: #8b949e;
-    min-height: 20px;
-}
-
-.analysis-status.error {
-    color: #f87171;
-}
-
-/* Spinner animation */
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.run-analysis-btn .spin {
-    animation: spin 1s linear infinite;
-}
+/* List */
+.di-list { margin: 0; padding-left: 20px; color: #fca5a5; font-size: 12px; }
+.di-list li { margin-bottom: 4px; }
