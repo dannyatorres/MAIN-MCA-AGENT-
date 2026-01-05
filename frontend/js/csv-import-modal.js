@@ -436,6 +436,20 @@ function createStandardRow(first, last, phone, company, email, originalRow) {
 }
 
 function createCRMFile(normalizedData) {
+    // DEDUPE by phone number before creating CSV
+    const seen = new Set();
+    const dedupedData = normalizedData.filter(row => {
+        const phone = row['Phone Number'];
+        if (!phone || seen.has(phone)) {
+            console.log(`⚠️ Skipping duplicate or empty phone: ${phone || 'EMPTY'}`);
+            return false;
+        }
+        seen.add(phone);
+        return true;
+    });
+
+    console.log(`📊 Deduped: ${normalizedData.length} → ${dedupedData.length} rows`);
+
     const crmHeaders = [
         'First Name', 'Last Name', 'Phone Number', 'Cell Phone',
         'Company Name', 'Email', 'Lead Source', 'Address',
@@ -448,16 +462,16 @@ function createCRMFile(normalizedData) {
 
     // --- DEBUG LOG START ---
     console.log('🔍 STEP 2: Final Headers being sent to server:', crmHeaders);
-    if (normalizedData.length > 0) {
+    if (dedupedData.length > 0) {
         console.log('🔍 STEP 2: Checking first row data mapping:');
-        console.log('   - Original Home Address:', normalizedData[0]['Home Address']);
+        console.log('   - Original Home Address:', dedupedData[0]['Home Address']);
         console.log('   - Mapped to Column index 23 (Owner 1 Address)');
     }
     // --- DEBUG LOG END ---
 
     const rows = [crmHeaders.join(',')];
 
-    normalizedData.forEach(row => {
+    dedupedData.forEach(row => {
         const crmRow = [
             row['First Name'],
             row['Last Name'],
