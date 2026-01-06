@@ -449,7 +449,7 @@
     background: #fef2f2 !important;
 }
 
-/* 10. Checkbox Mode (For Deleting) */
+/* 10. Checkbox Mode (Sleek Custom Design) */
 .conversation-checkbox {
     width: 40px;
     min-width: 40px;
@@ -460,25 +460,70 @@
     height: 100%;
 }
 
+/* The Input: Remove default "White Box" and make it custom */
 .conversation-checkbox input.delete-checkbox {
-    width: 18px;
-    height: 18px;
+    /* 1. Reset Browser Defaults */
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    margin: 0;
+
+    /* 2. Define the "Ring" Shape */
+    width: 22px;
+    height: 22px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
     cursor: pointer;
+    position: relative;
+
+    /* 3. Animation: Pop-in effect */
     opacity: 0;
-    transform: scale(0.8);
+    transform: scale(0.5);
     pointer-events: none;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    accent-color: #ef4444;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+/* VISIBLE STATE: When Delete Mode is ON */
 body.delete-mode .conversation-checkbox input.delete-checkbox {
     opacity: 1;
     transform: scale(1);
     pointer-events: auto;
 }
 
+/* HOVER (Unchecked): Glows slightly red to indicate action */
+.conversation-checkbox input.delete-checkbox:hover {
+    border-color: rgba(239, 68, 68, 0.6);
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* CHECKED STATE: Solid Red Circle with Glow */
+.conversation-checkbox input.delete-checkbox:checked {
+    background-color: #ef4444;
+    border-color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+/* THE CHECKMARK: Created with pure CSS (no images needed) */
+.conversation-checkbox input.delete-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* OPTIONAL: Highlight the entire row when in Delete Mode */
+body.delete-mode .conversation-item {
+    border: 1px dashed rgba(239, 68, 68, 0.2) !important;
+}
+
+/* OPTIONAL: Highlight row when hovered in Delete Mode */
 body.delete-mode .conversation-item:hover {
-    background-color: rgba(239, 68, 68, 0.05);
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, rgba(20, 20, 20, 1) 100%) !important;
 }
 
 /* Make the connection status interactive */

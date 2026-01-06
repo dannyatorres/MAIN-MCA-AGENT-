@@ -562,8 +562,21 @@ class ConversationCore {
         if (!btn) return;
 
         const count = this.selectedForDeletion.size;
-        btn.classList.toggle('hidden', count === 0);
-        if (count > 0) btn.textContent = `Delete ${count} Lead${count > 1 ? 's' : ''}`;
+        const isDeleteMode = document.body.classList.contains('delete-mode');
+
+        // Show button if in delete mode, hide if not
+        btn.classList.toggle('hidden', !isDeleteMode);
+
+        // Update text and disabled state based on selection count
+        if (count > 0) {
+            btn.textContent = `Delete ${count} Lead${count > 1 ? 's' : ''}`;
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        } else {
+            btn.textContent = 'Select Leads';
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+        }
     }
 
     async confirmDeleteSelected() {
