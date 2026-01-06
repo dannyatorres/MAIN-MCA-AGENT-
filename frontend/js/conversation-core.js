@@ -367,7 +367,12 @@ class ConversationCore {
     generateConversationHTML(conv) {
         const timeSince = (d) => {
             if(!d) return '';
-            const s = Math.floor((new Date() - new Date(d)) / 1000);
+            // Normalize PostgreSQL timestamp format for JS Date parsing
+            const dateStr = String(d)
+                .replace(' ', 'T')
+                .replace(/([+-]\\d{2})$/, '$1:00');
+            const serverDate = new Date(dateStr);
+            const s = Math.floor((Date.now() - serverDate.getTime()) / 1000);
             if(s < 60) return 'Just now';
             if(s < 3600) return Math.floor(s/60) + 'm ago';
             if(s < 86400) return Math.floor(s/3600) + 'h ago';
