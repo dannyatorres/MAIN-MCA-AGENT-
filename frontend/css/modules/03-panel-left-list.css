@@ -451,11 +451,34 @@
 
 /* 10. Checkbox Mode (For Deleting) */
 .conversation-checkbox {
-    display: none;
-}
-.conversations-list.delete-mode .conversation-checkbox {
+    width: 40px;
+    min-width: 40px;
     display: flex;
-    margin-right: 8px;
+    justify-content: center;
+    align-items: center;
+    margin-left: auto;
+    height: 100%;
+}
+
+.conversation-checkbox input.delete-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    accent-color: #ef4444;
+}
+
+body.delete-mode .conversation-checkbox input.delete-checkbox {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+body.delete-mode .conversation-item:hover {
+    background-color: rgba(239, 68, 68, 0.05);
 }
 
 /* Make the connection status interactive */

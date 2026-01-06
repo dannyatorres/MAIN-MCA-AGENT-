@@ -152,6 +152,7 @@ class ConversationCore {
                 this.conversations.clear();
                 this.paginationOffset = 0;
                 this.hasMoreConversations = true;
+                this.clearDeleteSelection();
             }
 
             if (!this.hasMoreConversations) {
