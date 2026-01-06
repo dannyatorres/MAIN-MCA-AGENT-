@@ -399,6 +399,9 @@ class LendersModule {
                 if (conversation.annual_revenue) {
                     populateField('lenderRevenue', Math.round(conversation.annual_revenue / 12));
                 }
+                if (conversation.credit_score) {
+                    populateField('lenderFico', conversation.credit_score);
+                }
             }
             console.log('✨ Lender form populated (CRM only - no FCS)');
             return;
@@ -436,6 +439,14 @@ class LendersModule {
 
             const indMatch = report.match(/Industry:\s*(.+?)(?:•|\n|$)/i);
             if (indMatch) populateField('lenderIndustry', indMatch[1].trim());
+
+            // Fallback to conversation credit score if not in FCS report
+            if (conversation && conversation.credit_score) {
+                const ficoField = document.getElementById('lenderFico');
+                if (ficoField && !ficoField.value) {
+                    populateField('lenderFico', conversation.credit_score);
+                }
+            }
         }
 
         console.log('✨ Lender form populated from FCS');
