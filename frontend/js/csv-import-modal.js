@@ -529,12 +529,20 @@ function formatSSN(ssn) {
 
 function formatDate(dateStr) {
     if (!dateStr) return '';
-    const ddmmyyyyPattern = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/;
-    const match = dateStr.toString().match(ddmmyyyyPattern);
+    const datePattern = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/;
+    const match = dateStr.toString().match(datePattern);
 
     if (match) {
-        // Simple heuristic: if day > 12, it must be DD/MM, otherwise assume MM/DD or let backend handle
-        return `${match[2].padStart(2,'0')}/${match[1].padStart(2,'0')}/${match[3]}`;
+        let month = match[1];
+        let day = match[2];
+
+        // Only swap if first number > 12 (must be DD/MM format)
+        if (parseInt(match[1]) > 12) {
+            month = match[2];
+            day = match[1];
+        }
+
+        return `${month.padStart(2,'0')}/${day.padStart(2,'0')}/${match[3]}`;
     }
     return dateStr;
 }
