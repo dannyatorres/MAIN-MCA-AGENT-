@@ -135,6 +135,41 @@ async function callTracers(payload) {
     }
 }
 
+function parsePartialDob(dobValue, age) {
+    // Estimate from age if no DOB
+    if (!dobValue && age) {
+        const estimatedYear = new Date().getFullYear() - age;
+        return `01/01/${estimatedYear}`;
+    }
+
+    if (!dobValue) return null;
+
+    const str = dobValue.toString().trim();
+
+    // Already MM/DD/YYYY format
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+        return str;
+    }
+
+    // Month + Year: "Nov 1925"
+    const monthYearMatch = str.match(/^([A-Za-z]+)\s+(\d{4})$/);
+    if (monthYearMatch) {
+        const months = {
+            jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+            jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+        };
+        const monthNum = months[monthYearMatch[1].toLowerCase().substring(0, 3)];
+        if (monthNum) return `${monthNum}/01/${monthYearMatch[2]}`;
+    }
+
+    // Year only: "1925"
+    if (/^\d{4}$/.test(str)) {
+        return `01/01/${str}`;
+    }
+
+    return str;
+}
+
 function parseTracersResponse(person) {
     // 1. Get best phone (wireless preferred, must be connected)
     let mobile = null;
@@ -167,7 +202,8 @@ function parseTracersResponse(person) {
         address: streetAddress?.trim() || null,
         city: addr?.city || null,
         state: addr?.state || null,
-        zip: addr?.zip || null
+        zip: addr?.zip || null,
+        dob: parsePartialDob(person.dob, person.age) || null
     };
 }
 
