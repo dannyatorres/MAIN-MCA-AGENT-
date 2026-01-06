@@ -51,6 +51,7 @@ router.post('/trigger', async (req, res) => {
 
             // 🔔 Notify frontend of AI message
             if (global.io) {
+                console.log('🔴 BACKEND EMIT: new_message (agent)', { conversation_id: conversation_id, message_id: messageId });
                 global.io.emit('new_message', {
                     conversation_id: conversation_id,
                     message: {

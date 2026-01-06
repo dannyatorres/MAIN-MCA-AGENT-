@@ -407,6 +407,7 @@ async function processEmail(email, db) {
         }
 
         if (global.io) {
+            console.log('🔴 BACKEND EMIT: refresh_lead_list', { conversation_id: bestMatchId });
             global.io.emit('refresh_lead_list', { conversationId: bestMatchId });
         }
     }

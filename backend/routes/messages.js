@@ -147,6 +147,7 @@ router.post('/send', async (req, res) => {
             [actualConversationId]
         );
 
+        console.log('🔴 BACKEND EMIT: new_message', { conversation_id: actualConversationId, message_id: newMessage.id });
         if (global.io) {
             global.io.emit('new_message', {
                 conversation_id: actualConversationId,
@@ -277,6 +278,7 @@ router.post('/webhook/receive', async (req, res) => {
             WHERE id = $1
         `, [conversation.id]);
 
+        console.log('🔴 BACKEND EMIT: new_message (inbound)', { conversation_id: conversation.id, message_id: newMessage.id });
         if (global.io) {
             global.io.emit('new_message', {
                 conversation_id: conversation.id,
@@ -315,6 +317,7 @@ router.post('/webhook/receive', async (req, res) => {
 
                         await db.query('UPDATE messages SET status = \'sent\', twilio_sid = $1 WHERE id = $2', [sentMsg.sid, aiMessage.id]);
 
+                        console.log('🔴 BACKEND EMIT: new_message (ai)', { conversation_id: conversation.id, message_id: aiMessage.id });
                         if (global.io) {
                             global.io.emit('new_message', {
                                 conversation_id: conversation.id,

@@ -83,6 +83,7 @@ class WebSocketManager {
 
         // 1. New Message - Hand off to Messaging Module completely
         this.socket.on('new_message', (data) => {
+            console.log('⚡ WS EVENT: new_message', data.conversation_id);
             console.log('📨 WebSocket: new_message received', data);
             if (this.app.messaging) {
                 this.app.messaging.handleIncomingMessage(data);
@@ -91,6 +92,7 @@ class WebSocketManager {
 
         // 2. Conversation Updated (Status change, etc)
         this.socket.on('conversation_updated', (data) => {
+            console.log('⚡ WS EVENT: conversation_updated', data.conversation_id);
             console.log('📋 WebSocket: conversation_updated', data);
 
             // If we are looking at it, refresh details only (header, AI button, etc.)
@@ -111,6 +113,7 @@ class WebSocketManager {
         // FIX: Delegate strictly to ConversationUI to prevent duplicates
         // No more direct DOM manipulation here - single source of truth
         this.socket.on('refresh_lead_list', async (data) => {
+            console.log('⚡ WS EVENT: refresh_lead_list', data);
             console.log('⚡ WebSocket: refresh_lead_list', data);
 
             if (!this.app.conversationUI) return;

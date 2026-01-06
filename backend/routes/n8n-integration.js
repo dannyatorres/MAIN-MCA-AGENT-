@@ -610,6 +610,7 @@ router.post('/websocket/emit', (req, res) => {
         }
 
         if (global.io) {
+            console.log('🔴 BACKEND EMIT: websocket/emit', { event, data });
             global.io.emit(event, data);
             console.log(`🔔 WebSocket event emitted: ${event}`);
         }
@@ -650,6 +651,7 @@ router.get('/test-websocket', (req, res) => {
 
         // Try emitting via io
         if (global.io) {
+            console.log('🔴 BACKEND EMIT: test-websocket new_message', { conversation_id: testMessageData.conversation_id });
             global.io.emit('new_message', testMessageData);
             console.log('Test WebSocket event emitted via io');
         }
