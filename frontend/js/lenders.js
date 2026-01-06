@@ -13,6 +13,7 @@ class LendersModule {
         this.lastLenderCriteria = null;
         this.lenderResultsCache = new Map();
         this.modalListenersAttached = false;
+        this.globalListenersAttached = false;
 
         // Form field configurations
         this.lenderFormFields = [
@@ -50,6 +51,16 @@ class LendersModule {
         this.init();
     }
 
+    escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     init() {
         // Initialize lender module
     }
@@ -73,6 +84,8 @@ class LendersModule {
     }
 
     setupGlobalEventListeners() {
+        if (this.globalListenersAttached) return;
+        this.globalListenersAttached = true;
         // FIX: Attach to body so the listener survives DOM refreshes
         document.body.addEventListener('click', (e) => {
             // Check if the clicked element is (or is inside) the Send button
@@ -98,7 +111,7 @@ class LendersModule {
 
     restoreCachedResults() {
         // Get the ID so we only load THIS conversation's data
-        const conversationId = this.parent.getCurrentConversationId();
+        const conversationId = String(this.parent.getCurrentConversationId() || '');
         if (!conversationId) return;
 
         try {
@@ -180,21 +193,18 @@ class LendersModule {
         const calculateTIB = (dateString) => {
             if (!dateString) return 0;
 
-            const datePattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-            const match = dateString.match(datePattern);
-
-            if (match) {
-                const month = parseInt(match[1]);
-                const day = parseInt(match[2]);
-                const year = parseInt(match[3]);
-
-                const startDate = new Date(year, month - 1, day);
-                const today = new Date();
-
-                const monthsDiff = (today.getFullYear() - startDate.getFullYear()) * 12 +
-                                 (today.getMonth() - startDate.getMonth());
-
-                return Math.max(0, monthsDiff);
+            const parts = dateString.split('/');
+            if (parts.length === 3) {
+                const month = parts[0].padStart(2, '0');
+                const day = parts[1].padStart(2, '0');
+                const year = parts[2];
+                const startDate = new Date(`${year}-${month}-${day}`);
+                if (!isNaN(startDate.getTime())) {
+                    const today = new Date();
+                    const monthsDiff = (today.getFullYear() - startDate.getFullYear()) * 12 +
+                                     (today.getMonth() - startDate.getMonth());
+                    return Math.max(0, monthsDiff);
+                }
             }
             return 0;
         };
@@ -291,19 +301,12 @@ class LendersModule {
                 resultsEl.classList.remove('active');
 
                 try {
-                    const response = await fetch(QUALIFICATION_URL, {
+                    const response = await this.parent.apiCall(QUALIFICATION_URL, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
                         body: JSON.stringify(criteria)
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
+                    const data = response;
                     this.displayLenderResults(data, criteria);
 
                     // Save results to database (So AI can reference them)
@@ -487,7 +490,7 @@ class LendersModule {
         data.nonQualified = cleanNonQualified;
 
         // Save to conversation-specific key
-        const conversationId = this.parent.getCurrentConversationId();
+        const conversationId = String(this.parent.getCurrentConversationId() || '');
         if (conversationId) {
             localStorage.setItem(`lender_results_${conversationId}`, JSON.stringify({
                 data: data,
@@ -539,22 +542,26 @@ class LendersModule {
             });
 
             Object.keys(tiers).sort().forEach(tier => {
+                const safeTier = this.escapeHtml(tier);
                 html += `<div class="tier-group">`;
-                html += `<div class="tier-header">Tier ${tier}</div>`;
+                html += `<div class="tier-header">Tier ${safeTier}</div>`;
                 html += `<div class="lender-grid">`;
                 tiers[tier].forEach(lender => {
                     const star = lender.isPreferred ? '⭐' : '';
                     const lenderName = lender['Lender Name'] || lender.name;
+                    const safeLenderName = this.escapeHtml(lenderName);
                     const prediction = lender.prediction;
                     let rateHtml = '';
                     if (prediction && prediction.successRate !== null) {
                         const rateClass = prediction.confidence || 'low';
-                        rateHtml = `<span class="success-rate ${rateClass}" title="${prediction.factors?.join(', ') || 'Historical data'}">${prediction.successRate}%</span>`;
+                        const factorsText = prediction.factors?.join(', ') || 'Historical data';
+                        const safeFactors = this.escapeHtml(factorsText);
+                        rateHtml = `<span class="success-rate ${rateClass}" title="${safeFactors}">${prediction.successRate}%</span>`;
                     }
                     html += `
-                        <div class="lender-tag" data-lender-name="${lenderName}">
-                            ${lenderName} ${rateHtml}<span>${star}</span>
-                            <button class="log-response-btn" data-lender="${lenderName}" title="Log Response">📝</button>
+                        <div class="lender-tag" data-lender-name="${safeLenderName}">
+                            ${safeLenderName} ${rateHtml}<span>${star}</span>
+                            <button class="log-response-btn" data-lender="${safeLenderName}" title="Log Response">📝</button>
                         </div>
                     `;
                 });
@@ -573,8 +580,8 @@ class LendersModule {
                     <div id="nonQualList" style="display: none; margin-top: 10px;">
                         ${data.nonQualified.map(item => `
                             <div class="non-qual-item">
-                                <span style="font-weight: 500; color: #e6edf3;">${item.lender}</span>
-                                <span class="non-qual-reason">${item.blockingRule}</span>
+                                <span style="font-weight: 500; color: #e6edf3;">${this.escapeHtml(item.lender)}</span>
+                                <span class="non-qual-reason">${this.escapeHtml(item.blockingRule)}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -670,7 +677,7 @@ class LendersModule {
     initializeLenderFormCaching() {
         console.log('Initializing lender form caching...');
 
-        const conversationId = this.parent.getCurrentConversationId();
+        const conversationId = String(this.parent.getCurrentConversationId() || '');
         if (!conversationId) {
             console.warn('No conversation ID available for caching');
             return;
@@ -771,7 +778,7 @@ class LendersModule {
     }
 
     clearLenderFormCache(conversationId = null) {
-        const id = conversationId || this.parent.getCurrentConversationId();
+        const id = String(conversationId || this.parent.getCurrentConversationId() || '');
         if (id) {
             const cacheKey = `lender_form_data_${id}`;
             localStorage.removeItem(cacheKey);
@@ -786,7 +793,7 @@ class LendersModule {
                 const confirmed = confirm('Are you sure you want to clear the cached form data?');
 
                 if (confirmed) {
-                    this.clearLenderFormCache(conversationId);
+                    this.clearLenderFormCache(String(conversationId || ''));
                     this.clearLenderFormFields();
                     this.populateLenderForm();
                     this.utils.showNotification('Form cache cleared successfully', 'success');
@@ -1791,6 +1798,9 @@ Best regards`;
             return;
         }
 
+        const safeLenderName = this.escapeHtml(lenderName);
+        const safeConversationId = this.escapeHtml(String(this.parent.getCurrentConversationId() || ''));
+
         // Generate modal HTML
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 450px;">
@@ -1799,12 +1809,12 @@ Best regards`;
                     <button id="closeLenderResponseModal" class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" id="responseConversationId" value="${this.parent.getCurrentConversationId()}">
-                    <input type="hidden" id="responseLenderName" value="${lenderName}">
+                    <input type="hidden" id="responseConversationId" value="${safeConversationId}">
+                    <input type="hidden" id="responseLenderName" value="${safeLenderName}">
 
                     <div class="form-group">
                         <label>Lender</label>
-                        <input type="text" id="responseLenderDisplay" readonly class="form-input" style="background: #1a1a2e;" value="${lenderName}">
+                        <input type="text" id="responseLenderDisplay" readonly class="form-input" style="background: #1a1a2e;" value="${safeLenderName}">
                     </div>
 
                     <div class="form-group">
@@ -1990,6 +2000,10 @@ Best regards`;
         modal.onclick = (e) => {
             if (e.target === modal) modal.classList.add('hidden');
         };
+
+        // Ensure initial field visibility matches current selections
+        statusSelect.dispatchEvent(new Event('change'));
+        positionSelect.dispatchEvent(new Event('change'));
     }
 
     async saveLenderResponse() {
