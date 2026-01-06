@@ -581,36 +581,51 @@ class ConversationCore {
 
     toggleDeleteMode(forceState = null) {
         const body = document.body;
-        const btn = document.getElementById('toggleDeleteModeBtn');
+        const toggleBtn = document.getElementById('toggleDeleteModeBtn');
 
-        // Determine new state (if forceState is provided, use it; otherwise toggle)
+        // 1. Determine what the new state should be
+        // If forceState is false, we are turning it OFF.
+        // Otherwise, we just flip whatever it is currently.
         const isCurrentlyOn = body.classList.contains('delete-mode');
-        const newState = forceState !== null ? forceState : !isCurrentlyOn;
+        const turnOn = forceState !== null ? forceState : !isCurrentlyOn;
 
-        if (newState) {
-            // TURN ON
+        if (turnOn) {
+            // --- TURN ON ---
             body.classList.add('delete-mode');
-            if (btn) btn.classList.add('active');
+            if (toggleBtn) toggleBtn.classList.add('active');
+
+            // Ensure button visibility is checked immediately
+            this.updateDeleteButtonVisibility();
+
         } else {
-            // TURN OFF
+            // --- TURN OFF ---
             body.classList.remove('delete-mode');
-            if (btn) btn.classList.remove('active');
-            this.clearDeleteSelection(); // Auto-clear data when turning off
+            if (toggleBtn) toggleBtn.classList.remove('active');
+
+            // Clear all selections so no "ghost" circles remain
+            this.clearDeleteSelection();
+
+            // Force the button to hide
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+            if (deleteBtn) deleteBtn.classList.add('hidden');
         }
     }
 
     async confirmDeleteSelected() {
         if (this.selectedForDeletion.size === 0) return;
+
+        // 1. Confirm with user
         if (confirm(`Delete ${this.selectedForDeletion.size} leads?`)) {
             const btn = document.getElementById('deleteSelectedBtn');
             const originalText = btn ? btn.textContent : 'Delete';
 
-            // 1. Show loading state
+            // Show loading text
             if (btn) btn.textContent = 'Deleting...';
 
             try {
                 const ids = Array.from(this.selectedForDeletion);
 
+                // 2. Perform the API call
                 await this.parent.apiCall('/api/conversations/bulk-delete', {
                     method: 'POST',
                     body: JSON.stringify({ conversationIds: ids })
@@ -618,16 +633,17 @@ class ConversationCore {
 
                 this.utils.showNotification('Leads deleted', 'success');
 
-                // 2. TURN OFF DELETE MODE cleanly using the new method
+                // 3. CRITICAL FIX: Force everything OFF immediately
+                // This turns off the Red Header AND Hides the circles/buttons
                 this.toggleDeleteMode(false);
 
-                // 3. Reload data
+                // 4. Reload the list to show the new empty slots
                 await this.loadConversations(true);
 
             } catch (error) {
                 console.error(error);
                 this.utils.showNotification('Delete failed', 'error');
-                // Restore text if it failed
+                // If it fails, restore the button text
                 if (btn) btn.textContent = originalText;
             }
         }
