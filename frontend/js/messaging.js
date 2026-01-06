@@ -87,6 +87,7 @@ class MessagingModule {
     // ============================================================
 
     async sendMessage(textOverride = null, mediaUrl = null) {
+        this.cleanStalePendingMessages();
         const now = Date.now();
         if (now - this.lastSendTime < 500 || this.isSending) return;
 
@@ -108,10 +109,10 @@ class MessagingModule {
 
         // 1. REGISTER PENDING MESSAGE (The Fix)
         // Store the clean text and tempID in memory
-        const cleanText = (content || '').trim() + '|' + (mediaUrl || '');
         this.pendingMessages.push({
             tempId: tempId,
-            text: cleanText,
+            content: (content || '').trim(),
+            mediaUrl: mediaUrl || '',
             conversationId: String(convId),
             timestamp: Date.now()
         });
@@ -133,13 +134,11 @@ class MessagingModule {
         this.addMessage(optimisticMessage);
 
         // Store original content for retry
-        setTimeout(() => {
-            const el = document.querySelector(`.message[data-message-id="${tempId}"]`);
-            if (el) {
-                el.dataset.originalContent = content || '';
-                el.dataset.originalMedia = mediaUrl || '';
-            }
-        }, 0);
+        const el = document.querySelector(`.message[data-message-id="${tempId}"]`);
+        if (el) {
+            el.dataset.originalContent = content || '';
+            el.dataset.originalMedia = mediaUrl || '';
+        }
 
         // Add to cache immediately so it persists if we switch tabs quickly
         const convIdStr = String(convId);
@@ -187,7 +186,6 @@ class MessagingModule {
         if (el) {
             el.setAttribute('data-message-id', String(realMessage.id));
             el.classList.remove('sending');
-
             if (realMessage.status === 'failed') {
                 el.classList.add('failed');
                 el.title = 'Failed to send - click to retry';
@@ -244,9 +242,12 @@ class MessagingModule {
         if (isOurOutbound) {
             // We still update the sidebar preview so the "Last Message" text updates
             this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
-            const incomingClean = (message.content || message.message_content || '').trim() + '|' + (message.media_url || '');
+            const incomingContent = (message.content || message.message_content || '').trim();
+            const incomingMedia = message.media_url || '';
             const isPendingHere = this.pendingMessages.some(p =>
-                p.text === incomingClean && p.conversationId === messageConversationId
+                p.content === incomingContent &&
+                p.mediaUrl === incomingMedia &&
+                p.conversationId === messageConversationId
             );
             if (isPendingHere) {
                 return; // We sent this, skip (addMessage will merge it)
@@ -363,13 +364,14 @@ class MessagingModule {
         // Check if this incoming message matches a pending one in our memory array
         if (message.direction === 'outbound' || message.sender_type === 'user' ||
             message.sent_by === 'user' || (message.direction !== 'inbound' && this.pendingMessages.length > 0)) {
-            const incomingClean = (message.content || message.message_content || message.text || message.body || '').trim()
-                + '|' + (message.media_url || '');
+            const incomingContent = (message.content || message.message_content || message.text || message.body || '').trim();
+            const incomingMedia = message.media_url || '';
             const convId = String(message.conversation_id);
 
             // Find matching pending message in memory
             const pendingIndex = this.pendingMessages.findIndex(p =>
-                p.text === incomingClean &&
+                p.content === incomingContent &&
+                p.mediaUrl === incomingMedia &&
                 p.conversationId === convId
             );
 
