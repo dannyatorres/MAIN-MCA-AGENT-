@@ -380,8 +380,9 @@ class MessagingModule {
 
         // 2. MEMORY MERGE CHECK (The Robust Fix)
         // Check if this incoming message matches a pending one in our memory array
-        if (message.direction === 'outbound' || message.sender_type === 'user' ||
-            message.sent_by === 'user' || (message.direction !== 'inbound' && this.pendingMessages.length > 0)) {
+        const isRealId = !String(message.id).startsWith('temp-');
+        if (isRealId && (message.direction === 'outbound' || message.sender_type === 'user' ||
+            message.sent_by === 'user' || (message.direction !== 'inbound' && this.pendingMessages.length > 0))) {
             const incomingContent = (message.content || message.message_content || message.text || message.body || '').trim();
             const incomingMedia = message.media_url || '';
             const convId = String(message.conversation_id);
