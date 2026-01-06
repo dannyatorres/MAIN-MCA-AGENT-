@@ -243,6 +243,8 @@ class ConversationCore {
             if (this.currentConversationId !== convoId) return; // Stale check
 
             const freshConv = data.conversation || data;
+            // FIX: We just performed a full fetch, so mark it as fully loaded
+            freshConv._fullLoaded = true;
             this.selectedConversation = freshConv;
             this.conversations.set(convoId, freshConv);
             if (this.parent) this.parent.selectedConversation = freshConv;
@@ -283,6 +285,16 @@ class ConversationCore {
                 c.id
             );
         }
+    }
+
+    escapeHtml(unsafe) {
+        if (unsafe == null) return '';
+        return String(unsafe)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     // ============================================================
@@ -369,34 +381,42 @@ class ConversationCore {
             return match ? `(${match[1]}) ${match[2]}-${match[3]}` : phone;
         };
 
-        const initials = (conv.business_name || 'U').substring(0,2).toUpperCase();
+        // 1. DATA PREPARATION (Defense in Depth)
+        const rawInitials = (conv.business_name || 'U').substring(0,2).toUpperCase();
+        const safeInitials = this.escapeHtml(rawInitials);
+
+        const safeName = this.escapeHtml(conv.business_name || 'Unknown');
+        const safeMessage = this.escapeHtml(conv.last_message || 'No messages yet');
+        const safePhone = this.escapeHtml(formatPhone(conv.lead_phone));
+
+        const safeId = this.escapeHtml(conv.id);
+        const safeCid = this.escapeHtml(conv.display_id || String(conv.id).slice(-6));
+
         const isSelected = String(this.currentConversationId) === String(conv.id) ? 'selected' : '';
         const isChecked = this.selectedForDeletion.has(String(conv.id)) ? 'checked' : '';
-
-        // Get unread count from server-provided data
         const unread = conv.unread_count || 0;
 
         let offerBadge = conv.has_offer ? `<span class="offer-badge-small">OFFER</span>` : '';
-        let displayCid = conv.display_id || String(conv.id).slice(-6);
 
         return `
-            <div class="conversation-item ${isSelected} ${unread > 0 ? 'unread' : ''} ${conv.has_offer ? 'has-offer' : ''}" data-conversation-id="${conv.id}">
-                <div class="conversation-avatar"><div class="avatar-circle">${initials}</div></div>
+            <div class="conversation-item ${isSelected} ${unread > 0 ? 'unread' : ''} ${conv.has_offer ? 'has-offer' : ''}"
+                 data-conversation-id="${safeId}">
+                <div class="conversation-avatar"><div class="avatar-circle">${safeInitials}</div></div>
                 <div class="conversation-content">
                     <div class="conversation-header">
-                        <div class="business-name">${conv.business_name || 'Unknown'}${offerBadge}</div>
+                        <div class="business-name">${safeName}${offerBadge}</div>
                         <div class="conversation-time">${timeSince(conv.last_activity)}</div>
                     </div>
                     <div class="message-preview-row">
-                         <span class="message-preview">${conv.last_message || 'No messages yet'}</span>
+                         <span class="message-preview">${safeMessage}</span>
                     </div>
                     <div class="conversation-meta">
-                        <span class="phone-number">${formatPhone(conv.lead_phone)}</span>
-                        <span class="cid-tag">CID# ${displayCid}</span>
+                        <span class="phone-number">${safePhone}</span>
+                        <span class="cid-tag">CID# ${safeCid}</span>
                     </div>
                 </div>
                 <div class="conversation-checkbox">
-                    <input type="checkbox" class="delete-checkbox" data-conversation-id="${conv.id}" ${isChecked}>
+                    <input type="checkbox" class="delete-checkbox" data-conversation-id="${safeId}" ${isChecked}>
                 </div>
                 ${unread > 0 ? `<div class="conversation-badge">${unread}</div>` : ''}
             </div>
