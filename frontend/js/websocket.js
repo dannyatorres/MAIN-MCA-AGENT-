@@ -93,17 +93,15 @@ class WebSocketManager {
         this.socket.on('conversation_updated', (data) => {
             console.log('📋 WebSocket: conversation_updated', data);
 
-            // If we are looking at it, refresh details
+            // If we are looking at it, refresh details only (header, AI button, etc.)
             if (String(this.app.currentConversationId) === String(data.conversation_id)) {
                 if (this.app.conversationUI) {
                     this.app.conversationUI.showConversationDetails();
                 }
-                if (this.app.messaging) {
-                    this.app.messaging.loadConversationMessages();
-                }
+                // DON'T reload messages - new_message event handles that
             }
 
-            // Always refresh list
+            // Always refresh the conversations list (moves active one to top, updates previews)
             if (this.app.conversationUI) {
                 this.app.conversationUI.loadConversations();
             }
