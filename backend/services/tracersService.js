@@ -119,8 +119,8 @@ async function callTracers(payload) {
 
         const data = response.data;
 
-        if (data.persons?.[0]) {
-            console.log('📋 Tracers response fields:', JSON.stringify(data.persons[0], null, 2));
+        if (data.persons?.length > 0) {
+            console.log(`[Tracers] Found ${data.persons.length} candidate(s)`);
         }
 
         if (!data.persons || data.persons.length === 0) {

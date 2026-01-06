@@ -10,6 +10,7 @@ class MessagingModule {
 
         // NEW: Track pending messages in memory to prevent duplicates
         this.pendingMessages = [];
+        this.PENDING_TTL = 60000; // 60 seconds
 
         this.isSending = false;
         this.lastSendTime = 0;
@@ -58,6 +59,16 @@ class MessagingModule {
             if (e.target.closest('#attachmentBtn')) {
                 document.getElementById('fileInput')?.click();
             }
+            // Retry failed messages
+            const failedMsg = e.target.closest('.message.failed');
+            if (failedMsg) {
+                const content = failedMsg.querySelector('.message-text, .message-content')?.textContent || '';
+                const mediaUrl = failedMsg.querySelector('img')?.src || null;
+                if (content || mediaUrl) {
+                    failedMsg.remove();
+                    this.sendMessage(content, mediaUrl);
+                }
+            }
             const aiBtn = e.target.closest('#aiToggleBtn');
             if (aiBtn) {
                 this.toggleAI(aiBtn.dataset.state !== 'on');
@@ -97,7 +108,7 @@ class MessagingModule {
 
         // 1. REGISTER PENDING MESSAGE (The Fix)
         // Store the clean text and tempID in memory
-        const cleanText = (content || '').replace(/\s+/g, '') + (mediaUrl || '');
+        const cleanText = (content || '').trim() + (mediaUrl || '');
         this.pendingMessages.push({
             tempId: tempId,
             text: cleanText,
@@ -145,9 +156,9 @@ class MessagingModule {
             console.error('Send failed:', e);
             this.markMessageFailed(tempId);
             this.parent.utils?.showNotification('Failed to send', 'error');
+        }).finally(() => {
+            this.isSending = false;
         });
-
-        this.isSending = false;
     }
 
     replaceTempMessage(tempId, realMessage) {
@@ -159,25 +170,6 @@ class MessagingModule {
             tempEl.setAttribute('data-message-id', realMessage.id);
             tempEl.classList.remove('sending');
             tempEl.classList.add('sent');
-        }
-
-        // FIX: Sync timestamp with server truth to prevent clock skew issues
-        if (realMessage.created_at) {
-            if (tempEl) {
-                const timeEl = tempEl.querySelector('.timestamp');
-                const messageDate = new Date(realMessage.created_at);
-                if (timeEl && this.utils?.formatDate && !isNaN(messageDate.getTime())) {
-                    timeEl.textContent = this.utils.formatDate(messageDate, 'smart');
-                }
-            }
-
-            if (this.messageCache.has(String(realMessage.conversation_id))) {
-                const cache = this.messageCache.get(String(realMessage.conversation_id));
-                const cachedMsg = cache.find(m => m.id === tempId);
-                if (cachedMsg) {
-                    cachedMsg.created_at = realMessage.created_at;
-                }
-            }
         }
 
         const convId = String(realMessage.conversation_id);
@@ -203,6 +195,11 @@ class MessagingModule {
         this.pendingMessages = this.pendingMessages.filter(p => p.tempId !== tempId);
     }
 
+    cleanStalePendingMessages() {
+        const now = Date.now();
+        this.pendingMessages = this.pendingMessages.filter(p => now - p.timestamp < this.PENDING_TTL);
+    }
+
     // ============================================================
     // INCOMING EVENTS
     // ============================================================
@@ -223,7 +220,14 @@ class MessagingModule {
         if (isOurOutbound) {
             // We still update the sidebar preview so the "Last Message" text updates
             this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
-            return; // STOP here. Do not add to chat window.
+            const incomingClean = (message.content || message.message_content || '').trim() + (message.media_url || '');
+            const isPendingHere = this.pendingMessages.some(p =>
+                p.text === incomingClean && p.conversationId === messageConversationId
+            );
+            if (isPendingHere) {
+                return; // We sent this, skip (addMessage will merge it)
+            }
+            // Fall through for messages from other tabs/devices
         }
 
         // --- Standard Handling for Incoming / AI Messages ---
@@ -270,6 +274,7 @@ class MessagingModule {
             this.messageCache.set(convId, freshMessages);
             // Clear pending messages for this chat on reload
             this.pendingMessages = this.pendingMessages.filter(p => p.conversationId !== convId);
+            this.cleanStalePendingMessages();
 
             if (String(this.parent.getCurrentConversationId()) === convId) {
                 if (isDataDifferent || !displayedFromCache) {
@@ -334,7 +339,7 @@ class MessagingModule {
         // Check if this incoming message matches a pending one in our memory array
         if (message.direction === 'outbound' || message.sender_type === 'user' ||
             message.sent_by === 'user' || (message.direction !== 'inbound' && this.pendingMessages.length > 0)) {
-            const incomingClean = (message.content || message.message_content || message.text || message.body || '').replace(/\s+/g, '')
+        const incomingClean = (message.content || message.message_content || message.text || message.body || '').trim()
                 + (message.media_url || '');
             const convId = String(message.conversation_id);
 
@@ -363,10 +368,9 @@ class MessagingModule {
                     // Update cache
                     if (this.messageCache.has(convId)) {
                         const cache = this.messageCache.get(convId);
-                        const cachedMsg = cache.find(m => m.id === pending.tempId);
-                        if (cachedMsg) {
-                            cachedMsg.id = message.id;
-                            cachedMsg.status = 'sent';
+                        const idx = cache.findIndex(m => m.id === pending.tempId);
+                        if (idx !== -1) {
+                            cache[idx] = { ...message, _escaped: true };
                         } else {
                             cache.push(message);
                         }

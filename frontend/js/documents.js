@@ -429,6 +429,11 @@ class DocumentsModule {
                 this.updateProgressBar((index / totalFiles) * 100);
 
                 const file = this.selectedFiles[index];
+                if (!file) {
+                    console.warn(`File at index ${index} is undefined, skipping`);
+                    uploadResults.push({ success: false, filename: `File ${index + 1} (missing)` });
+                    continue;
+                }
                 const documentType = typeSelects[index] ? typeSelects[index].value : 'Other';
 
                 const formData = new FormData();
