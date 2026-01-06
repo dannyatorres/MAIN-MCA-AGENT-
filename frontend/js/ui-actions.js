@@ -49,6 +49,8 @@ const globalActions = {
     }
 };
 
+window.toggleDeleteMode = globalActions['toggle-delete-mode'];
+
 // Central Event Listener
 document.addEventListener('click', (e) => {
     // Find the closest element with a data-action attribute
