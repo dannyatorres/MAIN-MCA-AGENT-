@@ -62,11 +62,11 @@ class MessagingModule {
             // Retry failed messages
             const failedMsg = e.target.closest('.message.failed');
             if (failedMsg) {
-                const content = failedMsg.querySelector('.message-text, .message-content')?.textContent || '';
-                const mediaUrl = failedMsg.querySelector('img')?.src || null;
+                const content = failedMsg.dataset.originalContent || '';
+                const mediaUrl = failedMsg.dataset.originalMedia || null;
                 if (content || mediaUrl) {
                     failedMsg.remove();
-                    this.sendMessage(content, mediaUrl);
+                    this.sendMessage(content, mediaUrl || null);
                 }
             }
             const aiBtn = e.target.closest('#aiToggleBtn');
@@ -108,7 +108,7 @@ class MessagingModule {
 
         // 1. REGISTER PENDING MESSAGE (The Fix)
         // Store the clean text and tempID in memory
-        const cleanText = (content || '').trim() + (mediaUrl || '');
+        const cleanText = (content || '').trim() + '|' + (mediaUrl || '');
         this.pendingMessages.push({
             tempId: tempId,
             text: cleanText,
@@ -132,6 +132,15 @@ class MessagingModule {
 
         this.addMessage(optimisticMessage);
 
+        // Store original content for retry
+        setTimeout(() => {
+            const el = document.querySelector(`.message[data-message-id="${tempId}"]`);
+            if (el) {
+                el.dataset.originalContent = content || '';
+                el.dataset.originalMedia = mediaUrl || '';
+            }
+        }, 0);
+
         // Add to cache immediately so it persists if we switch tabs quickly
         const convIdStr = String(convId);
         if (this.messageCache.has(convIdStr)) {
@@ -149,7 +158,12 @@ class MessagingModule {
             })
         }).then(res => {
             if (res?.message) {
-                this.replaceTempMessage(tempId, res.message);
+                if (res.message.status === 'failed') {
+                    this.markMessageFailed(tempId);
+                    this.parent.utils?.showNotification('Message failed to send', 'error');
+                } else {
+                    this.replaceTempMessage(tempId, res.message);
+                }
                 this.parent.conversationUI?.updateConversationPreview(convId, res.message);
             }
         }).catch(e => {
@@ -200,6 +214,16 @@ class MessagingModule {
         this.pendingMessages = this.pendingMessages.filter(p => now - p.timestamp < this.PENDING_TTL);
     }
 
+    parseMediaUrls(mediaUrl) {
+        if (!mediaUrl) return [];
+        try {
+            const parsed = JSON.parse(mediaUrl);
+            return Array.isArray(parsed) ? parsed : [mediaUrl];
+        } catch {
+            return [mediaUrl];
+        }
+    }
+
     // ============================================================
     // INCOMING EVENTS
     // ============================================================
@@ -220,7 +244,7 @@ class MessagingModule {
         if (isOurOutbound) {
             // We still update the sidebar preview so the "Last Message" text updates
             this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
-            const incomingClean = (message.content || message.message_content || '').trim() + (message.media_url || '');
+            const incomingClean = (message.content || message.message_content || '').trim() + '|' + (message.media_url || '');
             const isPendingHere = this.pendingMessages.some(p =>
                 p.text === incomingClean && p.conversationId === messageConversationId
             );
@@ -339,8 +363,8 @@ class MessagingModule {
         // Check if this incoming message matches a pending one in our memory array
         if (message.direction === 'outbound' || message.sender_type === 'user' ||
             message.sent_by === 'user' || (message.direction !== 'inbound' && this.pendingMessages.length > 0)) {
-        const incomingClean = (message.content || message.message_content || message.text || message.body || '').trim()
-                + (message.media_url || '');
+            const incomingClean = (message.content || message.message_content || message.text || message.body || '').trim()
+                + '|' + (message.media_url || '');
             const convId = String(message.conversation_id);
 
             // Find matching pending message in memory
