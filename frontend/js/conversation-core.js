@@ -583,29 +583,35 @@ class ConversationCore {
         const body = document.body;
         const toggleBtn = document.getElementById('toggleDeleteModeBtn');
 
-        // 1. Determine what the new state should be
-        // If forceState is false, we are turning it OFF.
-        // Otherwise, we just flip whatever it is currently.
+        // 1. Determine if we are turning ON or OFF
         const isCurrentlyOn = body.classList.contains('delete-mode');
-        const turnOn = forceState !== null ? forceState : !isCurrentlyOn;
+        const shouldBeOn = forceState !== null ? forceState : !isCurrentlyOn;
 
-        if (turnOn) {
-            // --- TURN ON ---
+        if (shouldBeOn) {
+            // --- TURN ON (RED MODE) ---
             body.classList.add('delete-mode');
-            if (toggleBtn) toggleBtn.classList.add('active');
 
-            // Ensure button visibility is checked immediately
+            // Sync the Button Color using the correct CSS class
+            if (toggleBtn) {
+                toggleBtn.classList.add('active-danger');
+                toggleBtn.classList.add('active');
+            }
+
+            // Force the Delete Button to show immediately
             this.updateDeleteButtonVisibility();
 
         } else {
-            // --- TURN OFF ---
+            // --- TURN OFF (NORMAL MODE) ---
             body.classList.remove('delete-mode');
-            if (toggleBtn) toggleBtn.classList.remove('active');
 
-            // Clear all selections so no "ghost" circles remain
+            // Force the Button back to White
+            if (toggleBtn) {
+                toggleBtn.classList.remove('active-danger');
+                toggleBtn.classList.remove('active');
+            }
+
+            // Cleanup: Uncheck everything and hide the red button
             this.clearDeleteSelection();
-
-            // Force the button to hide
             const deleteBtn = document.getElementById('deleteSelectedBtn');
             if (deleteBtn) deleteBtn.classList.add('hidden');
         }
