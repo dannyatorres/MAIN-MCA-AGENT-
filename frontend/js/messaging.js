@@ -158,32 +158,42 @@ class MessagingModule {
             })
         }).then(res => {
             if (res?.message) {
-                if (res.message.status === 'failed') {
-                    this.markMessageFailed(tempId);
-                    this.parent.utils?.showNotification('Message failed to send', 'error');
-                } else {
-                    this.replaceTempMessage(tempId, res.message);
-                }
+                this.upgradeMessageBubble(tempId, res.message);
                 this.parent.conversationUI?.updateConversationPreview(convId, res.message);
+                if (res.message.status === 'failed') {
+                    this.parent.utils?.showNotification('Message failed to send', 'error');
+                }
             }
         }).catch(e => {
             console.error('Send failed:', e);
-            this.markMessageFailed(tempId);
+            // Full HTTP failure - no real ID available, keep tempId
+            this.removePendingMessage(tempId);
+            const el = document.querySelector(`.message[data-message-id="${tempId}"]`);
+            if (el) {
+                el.classList.remove('sending');
+                el.classList.add('failed');
+                el.title = 'Failed to send - click to retry';
+            }
             this.parent.utils?.showNotification('Failed to send', 'error');
         }).finally(() => {
             this.isSending = false;
         });
     }
 
-    replaceTempMessage(tempId, realMessage) {
-        // Clean up memory array
+    upgradeMessageBubble(tempId, realMessage) {
         this.removePendingMessage(tempId);
 
-        const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
-        if (tempEl) {
-            tempEl.setAttribute('data-message-id', realMessage.id);
-            tempEl.classList.remove('sending');
-            tempEl.classList.add('sent');
+        const el = document.querySelector(`.message[data-message-id="${tempId}"]`);
+        if (el) {
+            el.setAttribute('data-message-id', String(realMessage.id));
+            el.classList.remove('sending');
+
+            if (realMessage.status === 'failed') {
+                el.classList.add('failed');
+                el.title = 'Failed to send - click to retry';
+            } else {
+                el.classList.add('sent');
+            }
         }
 
         const convId = String(realMessage.conversation_id);
@@ -191,16 +201,6 @@ class MessagingModule {
             const messages = this.messageCache.get(convId);
             const idx = messages.findIndex(m => m.id === tempId);
             if (idx !== -1) messages[idx] = realMessage;
-        }
-    }
-
-    markMessageFailed(tempId) {
-        this.removePendingMessage(tempId); // Stop tracking failed messages
-        const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
-        if (tempEl) {
-            tempEl.classList.remove('sending');
-            tempEl.classList.add('failed');
-            tempEl.title = 'Failed to send - click to retry';
         }
     }
 
@@ -385,9 +385,14 @@ class MessagingModule {
 
                 if (el) {
                     // Convert Temp Bubble -> Real Bubble
-                    el.setAttribute('data-message-id', message.id);
+                    el.setAttribute('data-message-id', String(message.id));
                     el.classList.remove('sending');
-                    el.classList.add('sent');
+                    if (message.status === 'failed') {
+                        el.classList.add('failed');
+                        el.title = 'Failed to send - click to retry';
+                    } else {
+                        el.classList.add('sent');
+                    }
 
                     // Update cache
                     if (this.messageCache.has(convId)) {
@@ -406,6 +411,13 @@ class MessagingModule {
 
         // --- Standard Render Logic ---
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+        const mediaUrls = this.parseMediaUrls(renderMessage.media_url);
+        if (mediaUrls.length > 1) {
+            renderMessage.media_url = JSON.stringify(mediaUrls);
+        } else if (mediaUrls.length === 1) {
+            renderMessage.media_url = mediaUrls[0];
+        }
 
         const html = this.parent.templates.messageItem(renderMessage);
         const list = container.querySelector('.messages-list');

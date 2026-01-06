@@ -17,7 +17,7 @@ const s3 = new AWS.S3({
 const upload = multer({ storage: multer.memoryStorage() });
 
 async function resolveConversationId(conversationId, db) {
-    const isNumeric = /^\d+$/.test(conversationId);
+    const isNumeric = /^\d+$/.test(String(conversationId));
     if (isNumeric) {
         const result = await db.query(
             'SELECT id FROM conversations WHERE display_id = $1',

@@ -213,6 +213,9 @@ class ConversationCore {
 
         this.currentConversationId = convoId;
         if (this.parent) this.parent.currentConversationId = convoId;
+        if (this.parent.wsManager?.joinConversation) {
+            this.parent.wsManager.joinConversation(convoId);
+        }
 
         // 2. Prepare UI
         const msgContainer = document.getElementById('messagesContainer');
