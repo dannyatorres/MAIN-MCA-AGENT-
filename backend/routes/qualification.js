@@ -24,48 +24,14 @@ async function classifyIndustry(inputIndustry) {
 
 Input: "${inputIndustry}"
 
-Choose from these categories ONLY:
-- pawn
-- trucking
-- construction
-- auto sales
-- auto repair
-- real estate
-- finance
-- cannabis
-- vape
-- adult entertainment
-- gambling
-- restaurant
-- retail
-- medical
-- staffing
-- law firm
-- salon
-- gym
-- daycare
-- church
-- non-profit
-- gas station
-- towing
-- moving
-- landscaping
-- hvac
-- plumbing
-- electrical
-- roofing
-- cleaning
-- food truck
-- bar
-- hotel
-- manufacturing
-- wholesale
-- ecommerce
-- technology
-- consulting
-- marketing
-- security
-- other
+Categories:
+pawn, trucking, construction, auto sales, auto repair, real estate, finance, cannabis, vape, adult entertainment, gambling, restaurant, retail, medical, staffing, law firm, salon, gym, daycare, church, non-profit, gas station, towing, moving, landscaping, hvac, plumbing, electrical, roofing, cleaning, food truck, bar, hotel, manufacturing, wholesale, ecommerce, technology, consulting, marketing, security, parking, transportation, automotive services, other
+
+Rules:
+1. Pick the MOST SPECIFIC category that fits
+2. "other" is valid - use it when nothing fits well
+3. Do NOT force unrelated matches (e.g., "valet parking" is NOT "real estate")
+4. Service businesses without a specific category → "other"
 
 Respond with ONLY the category name, nothing else.`;
 
@@ -74,7 +40,7 @@ Respond with ONLY the category name, nothing else.`;
         const startTime = Date.now();
 
         const response = await anthropic.messages.create({
-            model: 'claude-haiku-4-5-20251001',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 50,
             messages: [{ role: 'user', content: prompt }]
         });
