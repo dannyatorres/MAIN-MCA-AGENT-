@@ -437,11 +437,8 @@ class ConversationCore {
                         <span class="cid-tag">CID# ${safeCid}</span>
                     </div>
                 </div>
-                <div class="conversation-actions" style="margin-left: auto; padding-right: 8px;">
-                    <button class="delete-btn-inline" data-id="${safeId}" title="Delete Lead" 
-                            style="background: none; border: none; color: #888; cursor: pointer; padding: 5px;">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <div class="conversation-checkbox">
+                    <input type="checkbox" class="delete-checkbox" data-conversation-id="${safeId}" ${isChecked}>
                 </div>
                 ${unread > 0 ? `<div class="conversation-badge">${unread}</div>` : ''}
             </div>
