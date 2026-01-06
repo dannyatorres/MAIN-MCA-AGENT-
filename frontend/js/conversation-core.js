@@ -136,13 +136,17 @@ class ConversationCore {
         }
     }
 
+    isClientSideFilter(filter) {
+        return ['UNREAD', 'INTERESTED'].includes(filter);
+    }
+
     async loadConversations(reset = false) {
         if (this.isLoadingMore) return;
         this.isLoadingMore = true;
 
         try {
-            // GET SEARCH TERM
             const searchTerm = document.getElementById('searchInput')?.value.trim() || '';
+            const stateFilter = document.getElementById('stateFilter')?.value || '';
 
             if (reset) {
                 this.conversations.clear();
@@ -155,12 +159,12 @@ class ConversationCore {
                 return;
             }
 
-            const stateFilter = document.getElementById('stateFilter')?.value || '';
-
             // BUILD URL WITH SEARCH PARAM
             let url = `/api/conversations?limit=${this.pageSize}&offset=${this.paginationOffset}`;
-            if (stateFilter) url += `&filter=${encodeURIComponent(stateFilter)}`;
-            if (searchTerm)  url += `&search=${encodeURIComponent(searchTerm)}`;
+            if (stateFilter && !this.isClientSideFilter(stateFilter)) {
+                url += `&filter=${encodeURIComponent(stateFilter)}`;
+            }
+            if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
 
             const conversations = await this.parent.apiCall(url);
 
@@ -171,10 +175,7 @@ class ConversationCore {
                 this.conversations.set(String(conv.id), conv);
             });
 
-            // RENDER WITHOUT LOCAL FILTERING
-            // We pass 'true' to tell the renderer "The server already filtered this"
-            const hasServerFilter = !!stateFilter || !!searchTerm;
-            this.renderConversationsList(hasServerFilter);
+            this.renderConversationsList();
 
         } catch (error) {
             console.error('Error in loadConversations:', error);
@@ -245,6 +246,12 @@ class ConversationCore {
             if (freshConv) {
                 // FIX: We just performed a full fetch, so mark it as fully loaded
                 freshConv._fullLoaded = true;
+
+                // FIX: If this is still the active conversation, force unread to 0
+                if (String(freshConv.id) === String(this.currentConversationId)) {
+                    freshConv.unread_count = 0;
+                }
+
                 this.conversations.set(convoId, freshConv);
             }
 
@@ -305,39 +312,30 @@ class ConversationCore {
     // 4. RENDERING
     // ============================================================
 
-    renderConversationsList(isServerFiltered = false) {
+    renderConversationsList() {
         const container = document.getElementById('conversationsList');
         if (!container) return;
 
-        const conversations = Array.from(this.conversations.values());
+        let visible = Array.from(this.conversations.values());
 
-        // --- Filters ---
-        let visible = conversations;
+        // GET CURRENT FILTER STATES
+        const searchTerm = document.getElementById('searchInput')?.value.trim().toLowerCase();
+        const stateFilter = document.getElementById('stateFilter')?.value;
 
-        // ONLY filter locally if we didn't just run a server search
-        // This prevents the "Invisible Data" bug
-        if (!isServerFiltered) {
-            const searchTerm = document.getElementById('searchInput')?.value.trim().toLowerCase();
-            const stateFilter = document.getElementById('stateFilter')?.value;
+        // APPLY CLIENT-SIDE FILTERS (UNREAD / INTERESTED)
+        if (stateFilter === 'INTERESTED') {
+            visible = visible.filter(c => c.has_response);
+        } else if (stateFilter === 'UNREAD') {
+            visible = visible.filter(c => c.unread_count > 0);
+        }
 
-            if (stateFilter) {
-                if (stateFilter === 'INTERESTED') {
-                    visible = visible.filter(c => c.has_response);
-                } else if (stateFilter === 'UNREAD') {
-                    visible = visible.filter(c => c.unread_count > 0);
-                } else {
-                    visible = visible.filter(c => c.current_step === stateFilter);
-                }
-            }
-
-            // Basic fallback local search (only runs if server search wasn't triggered)
-            if (searchTerm && searchTerm.length >= 2) {
-                visible = visible.filter(c =>
-                    (c.business_name || '').toLowerCase().includes(searchTerm) ||
-                    (c.lead_phone || '').includes(searchTerm) ||
-                    (c.first_name || '').toLowerCase().includes(searchTerm)
-                );
-            }
+        // APPLY LOCAL SEARCH FALLBACK
+        if (searchTerm && searchTerm.length >= 2) {
+            visible = visible.filter(c =>
+                (c.business_name || '').toLowerCase().includes(searchTerm) ||
+                (c.lead_phone || '').includes(searchTerm) ||
+                (c.first_name || '').toLowerCase().includes(searchTerm)
+            );
         }
 
         // --- Sort: Offers first, then unread, then by activity ---
@@ -562,17 +560,15 @@ class ConversationCore {
                     method: 'POST', body: JSON.stringify({ conversationIds: ids })
                 });
 
-                ids.forEach(id => this.conversations.delete(String(id)));
-                // FIX: Adjust offset so we don't skip records on next load
-                this.paginationOffset = Math.max(0, this.paginationOffset - ids.length);
                 this.selectedForDeletion.clear();
+                this.updateDeleteButtonVisibility();
 
                 if (this.currentConversationId && ids.includes(String(this.currentConversationId))) {
                     this.clearConversationDetails();
                 }
 
-                this.renderConversationsList();
                 this.utils.showNotification('Leads deleted', 'success');
+                this.loadConversations(true);
                 if (window.toggleDeleteMode) window.toggleDeleteMode();
 
             } catch (error) {
