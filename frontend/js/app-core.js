@@ -1,3 +1,23 @@
+// --- Global Error Boundary (Safety Net) ---
+window.addEventListener('error', (event) => {
+    console.error('🚨 Global Error:', event.error);
+    if (window.utils?.showNotification) {
+        window.utils.showNotification(`System Error: ${event.message}`, 'error');
+    }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    // Filter out "ResizeObserver loop" noise which is harmless
+    if (event.reason?.message?.includes('ResizeObserver')) return;
+
+    console.error('🚨 Async Error:', event.reason);
+    if (window.utils?.showNotification) {
+        const msg = event.reason?.message || 'An operation failed silently.';
+        window.utils.showNotification(`Error: ${msg}`, 'error');
+    }
+});
+// ------------------------------------------
+
 // MCA Command Center Main Application (App Core - Source of Truth)
 
 // ⚠️ NO IMPORTS HERE - This is a standard script, not a module

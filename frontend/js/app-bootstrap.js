@@ -388,3 +388,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 50);
 });
+// Safety net: surface runtime errors instead of a silent white screen
+window.addEventListener('error', (event) => {
+    console.error('🚨 Global Error:', event.error);
+    if (window.utils && window.utils.showNotification) {
+        window.utils.showNotification(`System Error: ${event.message}`, 'error');
+    }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('🚨 Unhandled Promise:', event.reason);
+    if (window.utils && window.utils.showNotification) {
+        const msg = event.reason?.message || 'An asynchronous operation failed silently.';
+        window.utils.showNotification(`Error: ${msg}`, 'error');
+    }
+});

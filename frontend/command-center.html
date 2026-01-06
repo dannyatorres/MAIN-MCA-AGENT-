@@ -46,15 +46,15 @@
                         <input type="text" class="search-field-clean" id="searchInput" placeholder="Search...">
 
                         <div class="action-group">
-                            <button class="tool-btn primary" onclick="openRichCreateModal()" title="New Conversation">
+                            <button class="tool-btn primary" data-action="open-rich-create" title="New Conversation">
                                 <i class="fas fa-plus"></i>
                             </button>
 
-                            <button class="tool-btn" onclick="openCsvImportModal()" title="Import">
+                            <button class="tool-btn" data-action="open-csv-import" title="Import">
                                 <i class="fas fa-file-import"></i>
                             </button>
 
-                            <button class="tool-btn danger-hover" id="toggleDeleteModeBtn" title="Delete">
+                            <button class="tool-btn danger-hover" id="toggleDeleteModeBtn" data-action="toggle-delete-mode" title="Delete">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
@@ -90,12 +90,12 @@
                                 <div class="stat-value" id="activeCount">-</div>
                                 <div class="stat-label">Active</div>
                             </div>
-                            <div class="stat-card" style="cursor: pointer;" onclick="window.showSubmittedLeads && window.showSubmittedLeads()">
+                            <div class="stat-card" style="cursor: pointer;" data-action="show-submitted">
                                 <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
                                 <div class="stat-value" id="submittedCount">-</div>
                                 <div class="stat-label">Submitted</div>
                             </div>
-                            <div class="stat-card" style="cursor: pointer;" onclick="window.showOffersModal && window.showOffersModal()">
+                            <div class="stat-card" style="cursor: pointer;" data-action="show-offers">
                                 <div class="stat-icon" style="color: #10b981;"><i class="fas fa-dollar-sign"></i></div>
                                 <div class="stat-value" id="offersCount">-</div>
                                 <div class="stat-label">Offers</div>
@@ -103,7 +103,7 @@
                         </div>
 
                         <!-- Monthly Funding Goal -->
-                        <div class="goal-card" id="fundingGoalCard" onclick="window.editMonthlyGoal()" style="cursor: pointer;" title="Click to edit goal">
+                        <div class="goal-card" id="fundingGoalCard" data-action="edit-goal" style="cursor: pointer;" title="Click to edit goal">
                             <div class="goal-header">
                                 <div>
                                     <div class="goal-title">Monthly Funding Goal</div>
@@ -128,19 +128,19 @@
 
                         <!-- Quick Actions Row -->
                         <div class="quick-actions-grid">
-                            <div class="action-card" onclick="window.open('/lead_reformatter.html', '_blank')">
+                            <div class="action-card" data-action="open-formatter">
                                 <div class="action-icon"><i class="fas fa-table"></i></div>
                                 <div class="action-label">Formatter</div>
                             </div>
-                            <div class="action-card" onclick="if(window.openLenderManagementModal) window.openLenderManagementModal(); else alert('Loading...');">
+                            <div class="action-card" data-action="open-lender-management">
                                 <div class="action-icon"><i class="fas fa-university"></i></div>
                                 <div class="action-label">Lenders</div>
                             </div>
-                            <div class="action-card" onclick="openCleanerModal()">
+                            <div class="action-card" data-action="open-verifier">
                                 <div class="action-icon"><i class="fas fa-user-check"></i></div>
                                 <div class="action-label">Verify</div>
                             </div>
-                            <div class="action-card" onclick="window.openSettingsModal && window.openSettingsModal()">
+                            <div class="action-card" data-action="open-settings">
                                 <div class="action-icon"><i class="fas fa-cog"></i></div>
                                 <div class="action-label">Settings</div>
                             </div>
@@ -452,113 +452,7 @@
     </div>
 
     <!-- Lender Response Modal -->
-    <div id="lenderResponseModal" class="modal hidden">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header">
-                <h3>Log Lender Response</h3>
-                <button id="closeLenderResponseModal" class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="responseConversationId">
-                <input type="hidden" id="responseLenderName">
-
-                <div class="form-group">
-                    <label>Lender</label>
-                    <input type="text" id="responseLenderDisplay" readonly class="form-input" style="background: #1a1a2e;">
-                </div>
-
-                <div class="form-group">
-                    <label>Status</label>
-                    <select id="responseStatus" class="form-input">
-                        <option value="">Select...</option>
-                        <option value="OFFER">Offer Received</option>
-                        <option value="APPROVED">Approved</option>
-                        <option value="FUNDED">Funded</option>
-                        <option value="DECLINED">Declined</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Position</label>
-                    <select id="responsePosition" class="form-input">
-                        <option value="">Select...</option>
-                        <option value="1">1st Position</option>
-                        <option value="2">2nd Position</option>
-                        <option value="3">3rd Position</option>
-                        <option value="4">4th Position</option>
-                        <option value="5">5th Position</option>
-                        <option value="6">6th Position</option>
-                        <option value="7">7th Position</option>
-                        <option value="8">8th Position</option>
-                        <option value="9">9th Position</option>
-                        <option value="10">10th Position</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Existing Positions (at time of send)</label>
-                    <input type="number" id="responseExistingPositions" class="form-input" placeholder="e.g., 2">
-                </div>
-
-                <div class="form-group">
-                    <label>Total Daily Withhold ($)</label>
-                    <input type="number" id="responseDailyWithhold" class="form-input" placeholder="e.g., 450">
-                </div>
-
-                <div class="form-group">
-                    <label>Days Into Current Stack</label>
-                    <input type="number" id="responseDaysIntoStack" class="form-input" placeholder="e.g., 45">
-                </div>
-
-                <div id="offerFields" style="display: none;">
-                    <div class="form-group">
-                        <label>Offer Amount</label>
-                        <input type="number" id="responseOfferAmount" class="form-input" placeholder="50000">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Factor Rate</label>
-                        <input type="text" id="responseFactorRate" class="form-input" placeholder="1.35">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Term Length</label>
-                        <input type="number" id="responseTermLength" class="form-input" placeholder="6">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Term Unit</label>
-                        <select id="responseTermUnit" class="form-input">
-                            <option value="Months">Months</option>
-                            <option value="Weeks">Weeks</option>
-                            <option value="Days">Days</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Payment Frequency</label>
-                        <select id="responsePaymentFrequency" class="form-input">
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="bi-weekly">Bi-Weekly</option>
-                            <option value="monthly">Monthly</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="declineFields" style="display: none;">
-                    <div class="form-group">
-                        <label>Decline Reason</label>
-                        <textarea id="responseDeclineReason" class="form-input" rows="2" placeholder="e.g., Restricted industry"></textarea>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="cancelLenderResponse" class="btn btn-secondary">Cancel</button>
-                <button id="saveLenderResponse" class="btn btn-primary">Save Response</button>
-            </div>
-        </div>
-    </div>
+    <div id="lenderResponseModal" class="modal hidden"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
@@ -588,6 +482,7 @@
     <script src="js/stats.js"></script>
     <script src="js/csv-import-modal.js"></script>
     <script src="js/calling.js"></script>
+    <script src="js/ui-actions.js"></script>
 
     <script type="module" src="js/app-bootstrap.js"></script>
     <script src="js/background-verification.js"></script>
