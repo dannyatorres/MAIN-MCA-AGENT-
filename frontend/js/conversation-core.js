@@ -240,13 +240,17 @@ class ConversationCore {
 
             // BACKGROUND: Update with fresh data when ready
             const data = await dataPromise;
+            const freshConv = data.conversation || data;
+
+            if (freshConv) {
+                // FIX: We just performed a full fetch, so mark it as fully loaded
+                freshConv._fullLoaded = true;
+                this.conversations.set(convoId, freshConv);
+            }
+
             if (this.currentConversationId !== convoId) return; // Stale check
 
-            const freshConv = data.conversation || data;
-            // FIX: We just performed a full fetch, so mark it as fully loaded
-            freshConv._fullLoaded = true;
             this.selectedConversation = freshConv;
-            this.conversations.set(convoId, freshConv);
             if (this.parent) this.parent.selectedConversation = freshConv;
 
             // Only re-render if data actually changed
