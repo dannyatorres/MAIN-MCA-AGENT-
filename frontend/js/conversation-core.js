@@ -43,7 +43,7 @@ class ConversationCore {
         // Update local cache
         const conv = this.conversations.get(id);
         if (conv) {
-            conv.unread_count = (conv.unread_count || 0) + 1;
+            conv.unread_count = parseInt(conv.unread_count || 0, 10) + 1;
             this.conversations.set(id, conv);
         }
 
@@ -168,7 +168,7 @@ class ConversationCore {
             this.paginationOffset += conversations.length;
 
             conversations.forEach(conv => {
-                this.conversations.set(conv.id, conv);
+                this.conversations.set(String(conv.id), conv);
             });
 
             // RENDER WITHOUT LOCAL FILTERING
@@ -188,14 +188,15 @@ class ConversationCore {
     // ============================================================
 
     async selectConversation(conversationId) {
-        if (this.currentConversationId === conversationId) return;
+        const convoId = String(conversationId);
+        if (this.currentConversationId === convoId) return;
 
         // 1. Clear badges immediately (Optimistic UI)
-        this.clearBadge(conversationId);
-        this.clearOfferBadge(conversationId);
+        this.clearBadge(convoId);
+        this.clearOfferBadge(convoId);
 
-        this.currentConversationId = conversationId;
-        if (this.parent) this.parent.currentConversationId = conversationId;
+        this.currentConversationId = convoId;
+        if (this.parent) this.parent.currentConversationId = convoId;
 
         // 2. Prepare UI
         const msgContainer = document.getElementById('messagesContainer');
@@ -213,7 +214,7 @@ class ConversationCore {
 
         // 3. Fetch Data
         try {
-            const cachedConv = this.conversations.get(conversationId);
+            const cachedConv = this.conversations.get(convoId);
 
             // INSTANT: Use cache immediately if available
             if (cachedConv) {
@@ -223,15 +224,15 @@ class ConversationCore {
 
                 // Load intelligence with cached data (instant)
                 if (this.parent.intelligence) {
-                    this.parent.intelligence.loadConversationIntelligence(conversationId, cachedConv);
+                    this.parent.intelligence.loadConversationIntelligence(convoId, cachedConv);
                 }
             }
 
             // PARALLEL: Fire all requests without waiting
-            const dataPromise = this.parent.apiCall(`/api/conversations/${conversationId}`);
+            const dataPromise = this.parent.apiCall(`/api/conversations/${convoId}`);
 
             if (this.parent.messaging) {
-                this.parent.messaging.loadConversationMessages(conversationId); // Don't await
+                this.parent.messaging.loadConversationMessages(convoId); // Don't await
             }
             if (this.parent.documents) {
                 this.parent.documents.loadDocuments(); // Don't await
@@ -239,11 +240,11 @@ class ConversationCore {
 
             // BACKGROUND: Update with fresh data when ready
             const data = await dataPromise;
-            if (this.currentConversationId !== conversationId) return; // Stale check
+            if (this.currentConversationId !== convoId) return; // Stale check
 
             const freshConv = data.conversation || data;
             this.selectedConversation = freshConv;
-            this.conversations.set(conversationId, freshConv);
+            this.conversations.set(convoId, freshConv);
             if (this.parent) this.parent.selectedConversation = freshConv;
 
             // Only re-render if data actually changed
@@ -251,7 +252,7 @@ class ConversationCore {
 
             // Refresh intelligence with fresh data (silent update)
             if (this.parent.intelligence) {
-                this.parent.intelligence.loadConversationIntelligence(conversationId, freshConv);
+                this.parent.intelligence.loadConversationIntelligence(convoId, freshConv);
             }
 
         } catch (error) {
@@ -370,7 +371,7 @@ class ConversationCore {
 
         const initials = (conv.business_name || 'U').substring(0,2).toUpperCase();
         const isSelected = String(this.currentConversationId) === String(conv.id) ? 'selected' : '';
-        const isChecked = this.selectedForDeletion.has(conv.id) ? 'checked' : '';
+        const isChecked = this.selectedForDeletion.has(String(conv.id)) ? 'checked' : '';
 
         // Get unread count from server-provided data
         const unread = conv.unread_count || 0;
@@ -413,17 +414,16 @@ class ConversationCore {
     // ============================================================
 
     async updateConversationPreview(conversationId, message) {
-        let conv = this.conversations.get(conversationId);
+        const convoId = String(conversationId);
+        let conv = this.conversations.get(convoId);
 
         if (!conv) {
             try {
-                const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
-                if (data && (data.conversation || data)) {
-                    conv = data.conversation || data;
-                    this.conversations.set(conversationId, conv);
-                } else {
-                    return;
-                }
+                const data = await this.parent.apiCall(`/api/conversations/${convoId}`);
+                const freshConv = data?.conversation || data;
+                if (!freshConv?.id) return;
+                conv = freshConv;
+                this.conversations.set(convoId, conv);
             } catch (e) {
                 console.error("Error fetching missing conversation:", e);
                 return;
@@ -433,7 +433,7 @@ class ConversationCore {
         // Update data
         conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
         conv.last_activity = new Date().toISOString();
-        this.conversations.set(conversationId, conv);
+        this.conversations.set(convoId, conv);
 
         // Re-render the list to keep ordering consistent
         this.renderConversationsList();
@@ -455,15 +455,23 @@ class ConversationCore {
 
         try {
             // 1. Fetch the latest data for this specific conversation
-            const data = await this.parent.apiCall(`/api/conversations/${conversationId}`);
+            const convoId = String(conversationId);
+            const data = await this.parent.apiCall(`/api/conversations/${convoId}`);
             const freshConv = data.conversation || data;
 
             if (!freshConv || !freshConv.id) return;
 
             // 2. Update the Source of Truth (The Map)
             // This overwrites the existing entry if present, preventing duplicates
-            freshConv.last_activity = new Date().toISOString(); // Ensure it sorts to top
-            this.conversations.set(freshConv.id, freshConv);
+            if (!freshConv.last_activity) {
+                freshConv.last_activity = new Date().toISOString();
+            }
+            // FIX: Preserve the _fullLoaded flag if it exists locally
+            const existing = this.conversations.get(String(freshConv.id));
+            if (existing && existing._fullLoaded) {
+                freshConv._fullLoaded = true;
+            }
+            this.conversations.set(String(freshConv.id), freshConv);
 
             // 3. Re-render the list (auto-sorts by last_activity)
             this.renderConversationsList();
@@ -525,10 +533,12 @@ class ConversationCore {
                     method: 'POST', body: JSON.stringify({ conversationIds: ids })
                 });
 
-                ids.forEach(id => this.conversations.delete(id));
+                ids.forEach(id => this.conversations.delete(String(id)));
+                // FIX: Adjust offset so we don't skip records on next load
+                this.paginationOffset = Math.max(0, this.paginationOffset - ids.length);
                 this.selectedForDeletion.clear();
 
-                if (ids.includes(this.currentConversationId)) {
+                if (this.currentConversationId && ids.includes(String(this.currentConversationId))) {
                     this.clearConversationDetails();
                 }
 
@@ -590,9 +600,11 @@ class ConversationCore {
         });
 
         // D. Preload on Hover (prefetch data before click)
-        mainContainer.addEventListener('mouseenter', (e) => {
+        this._lastHoveredItem = null;
+        mainContainer.addEventListener('mouseover', (e) => {
             const item = e.target.closest('.conversation-item');
-            if (!item) return;
+            if (!item || item === this._lastHoveredItem) return;
+            this._lastHoveredItem = item;
 
             const id = item.dataset.conversationId;
             const cached = this.conversations.get(id);
@@ -605,7 +617,7 @@ class ConversationCore {
                     this.conversations.set(id, conv);
                 }).catch(() => {}); // Silently fail
             }
-        }, true); // Use capture for delegation
+        });
 
         // Filters & Search
         const stateFilter = document.getElementById('stateFilter');
@@ -623,7 +635,10 @@ class ConversationCore {
 
             // Handle "X" button in search field
             searchInput.addEventListener('search', (e) => {
-                if (e.target.value === '') this.loadConversations(true);
+                if (e.target.value === '') {
+                    clearTimeout(this.searchTimeout);
+                    this.loadConversations(true);
+                }
             });
         }
 
