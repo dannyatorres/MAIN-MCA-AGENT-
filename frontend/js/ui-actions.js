@@ -27,11 +27,25 @@ const globalActions = {
     // --- Toolbar Actions ---
     'toggle-delete-mode': () => {
         const btn = document.getElementById('toggleDeleteModeBtn');
-        if (btn) btn.classList.toggle('active');
-        document.body.classList.toggle('delete-mode');
+        const body = document.body;
 
-        // Call the original function if it exists
-        if (window.toggleDeleteMode) window.toggleDeleteMode();
+        // Check current state
+        const isDeleteModeOn = body.classList.contains('delete-mode');
+
+        if (isDeleteModeOn) {
+            // 1. Turn OFF
+            body.classList.remove('delete-mode');
+            if (btn) btn.classList.remove('active');
+
+            // 2. Clear any selections in the core app
+            if (window.conversationUI?.core?.clearDeleteSelection) {
+                window.conversationUI.core.clearDeleteSelection();
+            }
+        } else {
+            // 1. Turn ON
+            body.classList.add('delete-mode');
+            if (btn) btn.classList.add('active');
+        }
     }
 };
 
