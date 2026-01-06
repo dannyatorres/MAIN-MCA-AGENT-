@@ -474,7 +474,7 @@ class Templates {
         // XSS FIX: Escape user content before rendering
         let contentHtml = '';
         if (message.content && message.content.trim().length > 0) {
-            const safeContent = this.utils.escapeHtml(message.content);
+            const safeContent = message._escaped ? message.content : this.utils.escapeHtml(message.content);
             contentHtml = `<div class="message-content">${safeContent}</div>`;
         }
 

@@ -21,6 +21,16 @@ class MessagingModule {
         this.requestNotificationPermissionOnDemand();
     }
 
+    escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     // ============================================================
     // EVENT LISTENERS
     // ============================================================
@@ -87,7 +97,7 @@ class MessagingModule {
 
         // 1. REGISTER PENDING MESSAGE (The Fix)
         // Store the clean text and tempID in memory
-        const cleanText = content.replace(/\s+/g, '');
+        const cleanText = (content || '').replace(/\s+/g, '') + (mediaUrl || '');
         this.pendingMessages.push({
             tempId: tempId,
             text: cleanText,
@@ -98,14 +108,15 @@ class MessagingModule {
         const optimisticMessage = {
             id: tempId,
             conversation_id: convId,
-            content: content,
-            message_content: content,
+            content: this.escapeHtml(content),
+            message_content: this.escapeHtml(content),
             sender_type: 'user',
             direction: 'outbound',
             media_url: mediaUrl,
             message_type: mediaUrl ? 'mms' : 'sms',
             created_at: new Date().toISOString(),
-            status: 'sending'
+            status: 'sending',
+            _escaped: true
         };
 
         this.addMessage(optimisticMessage);
@@ -148,6 +159,25 @@ class MessagingModule {
             tempEl.setAttribute('data-message-id', realMessage.id);
             tempEl.classList.remove('sending');
             tempEl.classList.add('sent');
+        }
+
+        // FIX: Sync timestamp with server truth to prevent clock skew issues
+        if (realMessage.created_at) {
+            if (tempEl) {
+                const timeEl = tempEl.querySelector('.timestamp');
+                const messageDate = new Date(realMessage.created_at);
+                if (timeEl && this.utils?.formatDate && !isNaN(messageDate.getTime())) {
+                    timeEl.textContent = this.utils.formatDate(messageDate, 'smart');
+                }
+            }
+
+            if (this.messageCache.has(String(realMessage.conversation_id))) {
+                const cache = this.messageCache.get(String(realMessage.conversation_id));
+                const cachedMsg = cache.find(m => m.id === tempId);
+                if (cachedMsg) {
+                    cachedMsg.created_at = realMessage.created_at;
+                }
+            }
         }
 
         const convId = String(realMessage.conversation_id);
@@ -257,10 +287,23 @@ class MessagingModule {
         if (!container) return;
 
         const sorted = [...messages].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const sanitized = sorted.map(msg => {
+            const copy = { ...msg };
+            const textFields = ['content', 'message_content', 'text', 'body'];
+            if (!copy._escaped) {
+                textFields.forEach(field => {
+                    if (copy[field] != null) {
+                        copy[field] = this.escapeHtml(copy[field]);
+                    }
+                });
+                copy._escaped = true;
+            }
+            return copy;
+        });
         const originalScrollBehavior = container.style.scrollBehavior;
         container.style.scrollBehavior = 'auto';
 
-        container.innerHTML = this.parent.templates.messagesList(sorted);
+        container.innerHTML = this.parent.templates.messagesList(sanitized);
         container.scrollTop = container.scrollHeight;
 
         requestAnimationFrame(() => {
@@ -275,11 +318,24 @@ class MessagingModule {
         // 1. Strict ID Check: If this specific ID is already on screen, stop.
         if (container.querySelector(`.message[data-message-id="${message.id}"]`)) return;
 
+        // SECURE FIX: Sanitize all text fields before rendering
+        const renderMessage = { ...message };
+        const textFields = ['content', 'message_content', 'text', 'body'];
+        if (!renderMessage._escaped) {
+            textFields.forEach(field => {
+                if (renderMessage[field] != null) {
+                    renderMessage[field] = this.escapeHtml(renderMessage[field]);
+                }
+            });
+            renderMessage._escaped = true;
+        }
+
         // 2. MEMORY MERGE CHECK (The Robust Fix)
         // Check if this incoming message matches a pending one in our memory array
         if (message.direction === 'outbound' || message.sender_type === 'user' ||
             message.sent_by === 'user' || (message.direction !== 'inbound' && this.pendingMessages.length > 0)) {
-            const incomingClean = (message.content || message.message_content || message.text || message.body || '').replace(/\s+/g, '');
+            const incomingClean = (message.content || message.message_content || message.text || message.body || '').replace(/\s+/g, '')
+                + (message.media_url || '');
             const convId = String(message.conversation_id);
 
             // Find matching pending message in memory
@@ -323,7 +379,7 @@ class MessagingModule {
         // --- Standard Render Logic ---
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
 
-        const html = this.parent.templates.messageItem(message);
+        const html = this.parent.templates.messageItem(renderMessage);
         const list = container.querySelector('.messages-list');
 
         if (list) list.insertAdjacentHTML('beforeend', html);
@@ -360,8 +416,11 @@ class MessagingModule {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            const response = await fetch('/api/messages/upload', { method: 'POST', body: formData });
-            const data = await response.json();
+            const data = await this.parent.apiCall('/api/messages/upload', {
+                method: 'POST',
+                body: formData,
+                skipContentType: true
+            });
 
             if (data.url) await this.sendMessage(null, data.url);
         } catch (error) {
