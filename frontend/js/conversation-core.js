@@ -437,8 +437,11 @@ class ConversationCore {
                         <span class="cid-tag">CID# ${safeCid}</span>
                     </div>
                 </div>
-                <div class="conversation-checkbox">
-                    <input type="checkbox" class="delete-checkbox" data-conversation-id="${safeId}" ${isChecked}>
+                <div class="conversation-actions" style="margin-left: auto; padding-right: 8px;">
+                    <button class="delete-btn-inline" data-id="${safeId}" title="Delete Lead" 
+                            style="background: none; border: none; color: #888; cursor: pointer; padding: 5px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
                 ${unread > 0 ? `<div class="conversation-badge">${unread}</div>` : ''}
             </div>
@@ -584,17 +587,22 @@ class ConversationCore {
         if (confirm(`Delete ${this.selectedForDeletion.size} leads?`)) {
             const ids = Array.from(this.selectedForDeletion);
 
-            const deleteBtn = document.getElementById('deleteSelectedBtn');
-            if (deleteBtn) {
-                deleteBtn.textContent = 'Deleting...';
-                deleteBtn.disabled = true;
-            }
+            // 1. Change button text so you know it's working
+            const btn = document.getElementById('deleteSelectedBtn');
+            if (btn) btn.textContent = 'Deleting...';
 
             try {
+                // 2. Perform the delete
                 await this.parent.apiCall('/api/conversations/bulk-delete', {
                     method: 'POST', body: JSON.stringify({ conversationIds: ids })
                 });
 
+                // 3. THE FIX: Forcefully turn off "Delete Mode" so it doesn't freeze
+                document.body.classList.remove('delete-mode');
+                const toggleBtn = document.getElementById('toggleDeleteModeBtn');
+                if (toggleBtn) toggleBtn.classList.remove('active');
+
+                // 4. Clear data and reload
                 this.selectedForDeletion.clear();
                 this.updateDeleteButtonVisibility();
 
@@ -603,10 +611,6 @@ class ConversationCore {
                 }
 
                 this.utils.showNotification('Leads deleted', 'success');
-                document.body.classList.remove('delete-mode');
-                const toggleBtn = document.getElementById('toggleDeleteModeBtn');
-                if (toggleBtn) toggleBtn.classList.remove('active');
-                this.updateDeleteButtonVisibility();
                 await this.loadConversations(true);
 
             } catch (error) {
