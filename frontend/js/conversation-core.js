@@ -579,41 +579,56 @@ class ConversationCore {
         }
     }
 
+    toggleDeleteMode(forceState = null) {
+        const body = document.body;
+        const btn = document.getElementById('toggleDeleteModeBtn');
+
+        // Determine new state (if forceState is provided, use it; otherwise toggle)
+        const isCurrentlyOn = body.classList.contains('delete-mode');
+        const newState = forceState !== null ? forceState : !isCurrentlyOn;
+
+        if (newState) {
+            // TURN ON
+            body.classList.add('delete-mode');
+            if (btn) btn.classList.add('active');
+        } else {
+            // TURN OFF
+            body.classList.remove('delete-mode');
+            if (btn) btn.classList.remove('active');
+            this.clearDeleteSelection(); // Auto-clear data when turning off
+        }
+    }
+
     async confirmDeleteSelected() {
         if (this.selectedForDeletion.size === 0) return;
         if (confirm(`Delete ${this.selectedForDeletion.size} leads?`)) {
-            const ids = Array.from(this.selectedForDeletion);
-
-            // 1. Change button text so you know it's working
             const btn = document.getElementById('deleteSelectedBtn');
+            const originalText = btn ? btn.textContent : 'Delete';
+
+            // 1. Show loading state
             if (btn) btn.textContent = 'Deleting...';
 
             try {
-                // 2. Perform the delete
+                const ids = Array.from(this.selectedForDeletion);
+
                 await this.parent.apiCall('/api/conversations/bulk-delete', {
-                    method: 'POST', body: JSON.stringify({ conversationIds: ids })
+                    method: 'POST',
+                    body: JSON.stringify({ conversationIds: ids })
                 });
 
-                // 3. THE FIX: Forcefully turn off "Delete Mode" so it doesn't freeze
-                document.body.classList.remove('delete-mode');
-                const toggleBtn = document.getElementById('toggleDeleteModeBtn');
-                if (toggleBtn) toggleBtn.classList.remove('active');
-
-                // 4. Clear data and reload
-                this.selectedForDeletion.clear();
-                this.updateDeleteButtonVisibility();
-
-                if (this.currentConversationId && ids.includes(String(this.currentConversationId))) {
-                    this.clearConversationDetails();
-                }
-
                 this.utils.showNotification('Leads deleted', 'success');
+
+                // 2. TURN OFF DELETE MODE cleanly using the new method
+                this.toggleDeleteMode(false);
+
+                // 3. Reload data
                 await this.loadConversations(true);
 
             } catch (error) {
                 console.error(error);
                 this.utils.showNotification('Delete failed', 'error');
-                this.updateDeleteButtonVisibility();
+                // Restore text if it failed
+                if (btn) btn.textContent = originalText;
             }
         }
     }
