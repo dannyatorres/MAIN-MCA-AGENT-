@@ -414,7 +414,7 @@ class ConversationCore {
         const safeId = this.escapeHtml(conv.id);
         const safeCid = this.escapeHtml(conv.display_id || String(conv.id).slice(-6));
 
-        const isSelected = String(this.currentConversationId) === String(conv.id) ? 'selected' : '';
+        const isSelected = String(this.currentConversationId) === String(conv.id) ? 'active' : '';
         const isChecked = this.selectedForDeletion.has(String(conv.id)) ? 'checked' : '';
         const unread = conv.unread_count || 0;
 
@@ -447,7 +447,7 @@ class ConversationCore {
 
     updateConversationSelection() {
         document.querySelectorAll('.conversation-item').forEach(el => {
-            el.classList.toggle('selected', el.dataset.conversationId === String(this.currentConversationId));
+            el.classList.toggle('active', el.dataset.conversationId === String(this.currentConversationId));
         });
     }
 
@@ -583,6 +583,13 @@ class ConversationCore {
         if (this.selectedForDeletion.size === 0) return;
         if (confirm(`Delete ${this.selectedForDeletion.size} leads?`)) {
             const ids = Array.from(this.selectedForDeletion);
+
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+            if (deleteBtn) {
+                deleteBtn.textContent = 'Deleting...';
+                deleteBtn.disabled = true;
+            }
+
             try {
                 await this.parent.apiCall('/api/conversations/bulk-delete', {
                     method: 'POST', body: JSON.stringify({ conversationIds: ids })
@@ -596,12 +603,16 @@ class ConversationCore {
                 }
 
                 this.utils.showNotification('Leads deleted', 'success');
-                this.loadConversations(true);
-                if (window.toggleDeleteMode) window.toggleDeleteMode();
+                document.body.classList.remove('delete-mode');
+                const toggleBtn = document.getElementById('toggleDeleteModeBtn');
+                if (toggleBtn) toggleBtn.classList.remove('active');
+                this.updateDeleteButtonVisibility();
+                await this.loadConversations(true);
 
             } catch (error) {
                 console.error(error);
                 this.utils.showNotification('Delete failed', 'error');
+                this.updateDeleteButtonVisibility();
             }
         }
     }
