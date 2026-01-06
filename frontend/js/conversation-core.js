@@ -173,7 +173,21 @@ class ConversationCore {
             this.paginationOffset += conversations.length;
 
             conversations.forEach(conv => {
-                this.conversations.set(String(conv.id), conv);
+                const id = String(conv.id);
+                const existing = this.conversations.get(id);
+
+                if (existing && existing._fullLoaded) {
+                    // Keep full data, just update dynamic fields
+                    existing.unread_count = conv.unread_count;
+                    existing.has_response = conv.has_response;
+                    existing.last_message = conv.last_message;
+                    existing.last_activity = conv.last_activity;
+                    existing.has_offer = conv.has_offer;
+                    existing.state = conv.state;
+                } else {
+                    conv._fullLoaded = false;
+                    this.conversations.set(id, conv);
+                }
             });
 
             this.renderConversationsList();
@@ -506,7 +520,7 @@ class ConversationCore {
 
             // 4. Flash the row to indicate an update
             setTimeout(() => {
-                const row = document.querySelector(`.conversation-item[data-conversation-id="${freshConv.id}"]`);
+                const row = document.querySelector(`.conversation-item[data-conversation-id="${String(freshConv.id)}"]`);
                 if (row) {
                     row.style.transition = "background-color 0.5s ease";
                     row.style.backgroundColor = "rgba(0, 255, 136, 0.2)";
@@ -647,7 +661,7 @@ class ConversationCore {
 
         // Filters & Search
         const stateFilter = document.getElementById('stateFilter');
-        if (stateFilter) stateFilter.addEventListener('change', () => this.filterConversations());
+        if (stateFilter) stateFilter.addEventListener('change', () => this.loadConversations(true));
 
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {

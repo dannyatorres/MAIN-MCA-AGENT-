@@ -388,19 +388,23 @@ export class LeadFormController {
     }
 
     openEditModal(data) {
-        const convId = data?.id || this.parent.getCurrentConversationId();
+        const convId = String(data?.id || this.parent.getCurrentConversationId());
         if (!convId) return alert('No conversation selected to edit.');
 
-        // Get the most up-to-date cached version from the Map
-        const cached = this.parent.conversationUI?.conversations.get(String(convId));
+        // Always get from the Map (updated by prefetch + background fetch)
+        const mapData = this.parent.conversationUI?.conversations.get(convId);
 
-        // Use cached if fully loaded, otherwise fall back
-        const conv = (cached && cached._fullLoaded)
-            ? cached
-            : (data || this.parent.getSelectedConversation());
+        // Prefer fully-loaded Map data, then passed data, then selectedConversation
+        let conv;
+        if (mapData && mapData._fullLoaded) {
+            conv = mapData;
+        } else if (mapData) {
+            conv = { ...mapData, ...data };
+        } else {
+            conv = data || this.parent.getSelectedConversation();
+        }
 
         if (!conv) return alert('No conversation data available.');
-
         this.launchModal(conv, 'edit');
     }
 
