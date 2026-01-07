@@ -36,7 +36,7 @@ class ConversationCore {
         const id = String(conversationId);
 
         // If currently viewing this chat, do NOTHING
-        if (String(this.currentConversationId) === id && !document.hidden) {
+        if (String(this.currentConversationId) === id) {
             return;
         }
 
@@ -390,7 +390,7 @@ class ConversationCore {
             // Normalize PostgreSQL timestamp format for JS Date parsing
             const dateStr = String(d)
                 .replace(' ', 'T')
-                .replace(/([+-]\\d{2})$/, '$1:00');
+                .replace(/([+-]\d{2})$/, '$1:00');
             const serverDate = new Date(dateStr);
             const s = Math.floor((Date.now() - serverDate.getTime()) / 1000);
             if(s < 60) return 'Just now';

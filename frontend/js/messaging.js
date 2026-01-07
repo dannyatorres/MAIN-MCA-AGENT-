@@ -87,7 +87,6 @@ class MessagingModule {
     // ============================================================
 
     async sendMessage(textOverride = null, mediaUrl = null) {
-        console.log('🟢 SEND START', { textOverride, mediaUrl, convId: this.parent.getCurrentConversationId() });
         this.cleanStalePendingMessages();
         const now = Date.now();
         if (now - this.lastSendTime < 500 || this.isSending) return;
@@ -133,8 +132,6 @@ class MessagingModule {
         };
 
         this.addMessage(optimisticMessage);
-        console.log('🟢 OPTIMISTIC ADDED', { tempId, content: content.substring(0, 20) });
-
         // Store original content for retry
         const el = document.querySelector(`.message[data-message-id="${tempId}"]`);
         if (el) {
@@ -158,7 +155,6 @@ class MessagingModule {
                 message_type: mediaUrl ? 'mms' : 'sms'
             })
         }).then(res => {
-            console.log('🟢 HTTP RESPONSE', { messageId: res?.message?.id, status: res?.message?.status });
             if (res?.message) {
                 this.upgradeMessageBubble(tempId, res.message);
                 this.parent.conversationUI?.updateConversationPreview(convId, res.message);
@@ -186,7 +182,6 @@ class MessagingModule {
         this.removePendingMessage(tempId);
 
         const el = document.querySelector(`.message[data-message-id="${tempId}"]`);
-        console.log('🟢 UPGRADE BUBBLE', { tempId, realId: realMessage.id, foundEl: !!el });
         if (el) {
             el.setAttribute('data-message-id', String(realMessage.id));
             el.classList.remove('sending');
@@ -231,12 +226,6 @@ class MessagingModule {
     // ============================================================
 
     handleIncomingMessage(data) {
-        const incoming = data.message || data;
-        console.log('🟡 WS INCOMING', {
-            id: incoming.id,
-            direction: incoming.direction,
-            content: (incoming.content || '').substring(0, 20)
-        });
         const message = data.message || data;
         const rawId = data.conversation_id || message.conversation_id;
         if (!rawId) return;
@@ -289,8 +278,6 @@ class MessagingModule {
     // ============================================================
 
     async loadConversationMessages(conversationId) {
-        const stackLine = new Error().stack?.split('\n')[2]?.trim();
-        console.log('🟣 FULL RELOAD TRIGGERED', { conversationId, stack: stackLine });
         const convId = String(conversationId);
         const container = document.getElementById('messagesContainer');
         let displayedFromCache = false;
@@ -355,12 +342,6 @@ class MessagingModule {
 
     addMessage(message) {
         const container = document.getElementById('messagesContainer');
-        const allIds = container ? [...container.querySelectorAll('.message')].map(el => el.dataset.messageId) : [];
-        console.log('🔵 ADD MESSAGE', {
-            id: message.id,
-            existingIds: allIds,
-            willSkip: allIds.includes(String(message.id))
-        });
         if (!container) return;
 
         // 1. Strict ID Check: If this specific ID is already on screen, stop.
@@ -396,8 +377,6 @@ class MessagingModule {
 
             if (pendingIndex !== -1) {
                 const pending = this.pendingMessages[pendingIndex];
-                console.log('🔄 Merging WebSocket echo via Memory Match');
-
                 // Remove from pending list (we found it!)
                 this.pendingMessages.splice(pendingIndex, 1);
 
