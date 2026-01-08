@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const { OpenAI } = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const AWS = require('aws-sdk');
 const { getDatabase } = require('./database');
 const path = require('path');
@@ -12,7 +12,7 @@ const { getDriveFolderId, isServiceEnabled } = require('../middleware/serviceAcc
 
 // CONFIGURATION
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // S3 Setup
 const s3 = new AWS.S3({
@@ -90,7 +90,7 @@ async function syncDriveFiles(conversationId, businessName, userId = null) {
 
         console.log(`📚 Found ${folders.length} candidate folders. Asking AI to match "${businessName}"...`);
 
-        // B. AI MATCHING
+        // B. AI MATCHING WITH GEMINI
         const prompt = `
 I have a business named: "${businessName}".
 
@@ -111,26 +111,22 @@ EXAMPLES:
 
 USE YOUR BEST JUDGMENT. If the core business name is recognizable, it's a match. Only return "NO_MATCH" if there's truly no reasonable connection.
 
-Return ONLY the exact folder name as it appears in the list, or "NO_MATCH".
+Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No explanation, no quotes, just the folder name.
 `;
 
-        // 🧠 DEBUG: Log the input prompt
-        console.log(`🧠 [DEBUG] GPT-4 Input Prompt:\n${prompt}`);
+        console.log(`🧠 [DEBUG] Gemini Input Prompt:\n${prompt}`);
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "system", content: prompt }],
-            temperature: 0
-        });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro-preview-05-06" });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const matchedName = response.text().trim().replace(/['"]/g, "");
 
-        const matchedName = completion.choices[0].message.content.trim().replace(/['"]/g, "");
+        console.log(`🧠 [DEBUG] Gemini Raw Response: "${matchedName}"`);
 
-        // 🧠 DEBUG: Log the raw AI response
-        console.log(`🧠 [DEBUG] GPT-4 Raw Response: "${matchedName}"`);
-
-        // 🎟️ TOKEN USAGE: Log input/output tokens and total
-        if (completion.usage) {
-            console.log(`🎟️ [TOKENS] Input: ${completion.usage.prompt_tokens} | Output: ${completion.usage.completion_tokens} | Total: ${completion.usage.total_tokens}`);
+        // Token usage (if available)
+        if (result.response.usageMetadata) {
+            const usage = result.response.usageMetadata;
+            console.log(`🎟️ [TOKENS] Input: ${usage.promptTokenCount} | Output: ${usage.candidatesTokenCount} | Total: ${usage.totalTokenCount}`);
         }
 
         if (matchedName === "NO_MATCH") {
