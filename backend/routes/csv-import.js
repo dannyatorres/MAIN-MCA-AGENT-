@@ -187,12 +187,12 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             const convPlaceholders = [];
 
             batch.forEach((lead, idx) => {
-                // We are now inserting 21 values per row (was 14) + NOW()
+                // We are now inserting 23 values per row (was 21) + NOW()
                 // Make sure this placeholder count matches the number of variables pushed below
-                const offset = idx * 21;
+                const offset = idx * 23;
 
-                // Generates ($1, $2, ... $21, NOW())
-                const placeholderStr = Array.from({length: 21}, (_, k) => `$${offset + k + 1}`).join(', ');
+                // Generates ($1, $2, ... $23, NOW())
+                const placeholderStr = Array.from({length: 23}, (_, k) => `$${offset + k + 1}`).join(', ');
                 convPlaceholders.push(`(${placeholderStr}, NOW())`);
 
                 convValues.push(
@@ -225,7 +225,11 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     lead.tax_id || null,
                     lead.ssn || null,
                     lead.industry || null,
-                    lead.requested_amount || null
+                    lead.requested_amount || null,
+
+                    // 22-23: User tracking
+                    req.user?.id || null,
+                    req.user?.id || null
                 );
             });
 
@@ -239,6 +243,9 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                         -- Newly Added Columns:
                         annual_revenue, business_start_date, date_of_birth,
                         tax_id, ssn, industry_type, funding_amount,
+
+                        -- User tracking:
+                        created_by_user_id, assigned_user_id,
 
                         created_at
                     ) VALUES ${convPlaceholders.join(', ')}
