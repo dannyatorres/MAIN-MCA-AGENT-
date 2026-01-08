@@ -8,10 +8,10 @@ require('dotenv').config();
 
 // IMPORT THE FCS SERVICE
 const fcsService = require('./fcsService');
+const { getDriveFolderId, isServiceEnabled } = require('../middleware/serviceAccess');
 
 // CONFIGURATION
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
-const FOLDER_ID = process.env.GDRIVE_PARENT_FOLDER_ID;
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // S3 Setup
@@ -43,9 +43,19 @@ const auth = new google.auth.GoogleAuth({
 });
 const drive = google.drive({ version: 'v3', auth });
 
-async function syncDriveFiles(conversationId, businessName) {
+async function syncDriveFiles(conversationId, businessName, userId = null) {
     const db = getDatabase();
-    console.log(`📂 Starting Drive Sync for: "${businessName}"...`);
+
+    // Check if service is enabled for this user
+    if (userId && !(await isServiceEnabled(userId, 'driveSync'))) {
+        console.log(`⏸️ Drive sync disabled for user ${userId}`);
+        return { success: false, error: 'Drive sync disabled for this user' };
+    }
+
+    // Get user-specific folder ID (or fall back to env var)
+    const FOLDER_ID = await getDriveFolderId(userId);
+
+    console.log(`📂 Starting Drive Sync for: "${businessName}" (Folder: ${FOLDER_ID})...`);
 
     function extractFolderId(input) {
         if (!input) return null;
@@ -213,20 +223,26 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH".
             console.log(`🎉 Success! Synced ${uploadedCount} documents. Lead is FCS_READY.`);
 
             // --- ⚡ AUTO-TRIGGER FCS ANALYSIS ---
-            console.log("⚡ Auto-Triggering Financial Analysis (FCS)...");
-            try {
-                await fcsService.generateAndSaveFCS(conversationId, businessName, db);
-                console.log("✅ Auto-FCS Completed Successfully.");
+            if (await isServiceEnabled(userId, 'fcs')) {
+                console.log("⚡ Auto-Triggering Financial Analysis (FCS)...");
+                try {
+                    await fcsService.generateAndSaveFCS(conversationId, businessName, db);
+                    console.log("✅ Auto-FCS Completed Successfully.");
 
-                // --- 🧠 AUTO-TRIGGER COMMANDER ---
-                const commanderService = require('./commanderService');
-                console.log("🧠 Triggering Commander Strategy Analysis...");
-                const gamePlan = await commanderService.analyzeAndStrategize(conversationId);
-                if (gamePlan) {
-                    console.log(`🎖️ Commander Verdict: Grade ${gamePlan.lead_grade} | ${gamePlan.strategy_type}`);
+                    // --- 🧠 AUTO-TRIGGER COMMANDER ---
+                    if (await isServiceEnabled(userId, 'commander')) {
+                        const commanderService = require('./commanderService');
+                        console.log("🧠 Triggering Commander Strategy Analysis...");
+                        const gamePlan = await commanderService.analyzeAndStrategize(conversationId);
+                        if (gamePlan) {
+                            console.log(`🎖️ Commander Verdict: Grade ${gamePlan.lead_grade} | ${gamePlan.strategy_type}`);
+                        }
+                    }
+                } catch (fcsErr) {
+                    console.error("⚠️ Auto-FCS/Commander Failed:", fcsErr.message);
                 }
-            } catch (fcsErr) {
-                console.error("⚠️ Auto-FCS/Commander Failed:", fcsErr.message);
+            } else {
+                console.log("⏸️ FCS disabled for this user, skipping auto-analysis");
             }
         }
 

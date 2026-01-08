@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { requireRole } = require('../middleware/auth');
+const { clearSettingsCache, getDefaultSettings } = require('../middleware/serviceAccess');
 
 // All routes require admin role
 router.use(requireRole('admin'));
@@ -209,6 +210,56 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deactivating user:', error);
     res.status(500).json({ error: 'Failed to deactivate user' });
+  }
+});
+
+// GET /api/users/:id/settings - Get user service settings
+router.get('/:id/settings', async (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = await db.query(
+      'SELECT service_settings FROM users WHERE id = $1',
+      [req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.rows[0].service_settings || getDefaultSettings());
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/users/:id/settings - Update user service settings
+router.put('/:id/settings', async (req, res) => {
+  try {
+    const { drive_folder_id, services } = req.body;
+    const db = getDatabase();
+
+    const settings = {
+      drive_folder_id: drive_folder_id || null,
+      services: {
+        aiAgent: services?.aiAgent !== false,
+        commander: services?.commander !== false,
+        fcs: services?.fcs !== false,
+        driveSync: services?.driveSync !== false,
+        lenderMatcher: services?.lenderMatcher !== false,
+        successPredictor: services?.successPredictor !== false
+      }
+    };
+
+    await db.query(
+      'UPDATE users SET service_settings = $1 WHERE id = $2',
+      [JSON.stringify(settings), req.params.id]
+    );
+
+    clearSettingsCache(req.params.id);
+
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
