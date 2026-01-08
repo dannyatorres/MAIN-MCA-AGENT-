@@ -8,11 +8,14 @@ const { getDatabase } = require('../services/database');
 router.post('/login', async (req, res) => {
   try {
     const { email, password, username } = req.body;
+    console.log('🔐 Login attempt:', { email, username });
+
     const db = getDatabase();
 
     // Support login by email OR username
     const loginField = email || username;
     if (!loginField || !password) {
+      console.log('❌ Missing credentials');
       return res.status(400).json({ error: 'Email/username and password required' });
     }
 
@@ -21,21 +24,29 @@ router.post('/login', async (req, res) => {
       [loginField]
     );
 
+    console.log('🔍 User found:', result.rows.length > 0);
+
     if (result.rows.length === 0) {
+      console.log('❌ No user found for:', loginField);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = result.rows[0];
+    console.log('👤 User details:', { email: user.email, hasHash: !!user.password_hash, isActive: user.is_active });
 
     if (!user.is_active) {
+      console.log('❌ Account disabled');
       return res.status(401).json({ error: 'Account is disabled' });
     }
 
     if (!user.password_hash) {
+      console.log('❌ No password hash');
       return res.status(401).json({ error: 'Password not set - contact admin' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password_hash);
+    console.log('🔑 Password valid:', validPassword);
+
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -46,6 +57,8 @@ router.post('/login', async (req, res) => {
     // Set session
     req.session.userId = user.id;
     req.session.isAuthenticated = true; // Keep for backward compatibility
+
+    console.log('✅ Login successful:', { userId: user.id, email: user.email });
 
     res.json({
       success: true,
@@ -59,7 +72,7 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
     res.status(500).json({ error: 'Login failed' });
   }
 });
