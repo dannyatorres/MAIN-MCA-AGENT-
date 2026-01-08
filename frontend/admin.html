@@ -399,6 +399,7 @@
       document.getElementById('passwordGroup').style.display = 'block';
       document.getElementById('userPassword').required = true;
       document.getElementById('formError').style.display = 'none';
+      // Hide service settings for new users (they get defaults)
       document.getElementById('serviceSettingsSection').style.display = 'none';
       userModal.classList.add('show');
     });
@@ -417,22 +418,25 @@
       document.getElementById('passwordGroup').style.display = 'none';
       document.getElementById('userPassword').required = false;
       document.getElementById('formError').style.display = 'none';
+
+      // Show service settings section for editing
       document.getElementById('serviceSettingsSection').style.display = 'block';
 
-      // Load user service settings
+      // Load service settings
       try {
         const res = await fetch(`${API_BASE}/${id}/settings`, { credentials: 'include' });
-        const settings = await res.json();
-
-        document.getElementById('userDriveFolderId').value = settings.drive_folder_id || '';
-        document.getElementById('svc_aiAgent').checked = settings.services?.aiAgent !== false;
-        document.getElementById('svc_driveSync').checked = settings.services?.driveSync !== false;
-        document.getElementById('svc_fcs').checked = settings.services?.fcs !== false;
-        document.getElementById('svc_commander').checked = settings.services?.commander !== false;
-        document.getElementById('svc_lenderMatcher').checked = settings.services?.lenderMatcher !== false;
-        document.getElementById('svc_successPredictor').checked = settings.services?.successPredictor !== false;
+        if (res.ok) {
+          const settings = await res.json();
+          document.getElementById('userDriveFolderId').value = settings.drive_folder_id || '';
+          document.getElementById('svc_aiAgent').checked = settings.services?.aiAgent !== false;
+          document.getElementById('svc_driveSync').checked = settings.services?.driveSync !== false;
+          document.getElementById('svc_fcs').checked = settings.services?.fcs !== false;
+          document.getElementById('svc_commander').checked = settings.services?.commander !== false;
+          document.getElementById('svc_lenderMatcher').checked = settings.services?.lenderMatcher !== false;
+          document.getElementById('svc_successPredictor').checked = settings.services?.successPredictor !== false;
+        }
       } catch (err) {
-        console.error('Failed to load user settings:', err);
+        console.error('Failed to load service settings:', err);
       }
 
       userModal.classList.add('show');
@@ -469,7 +473,7 @@
           return;
         }
 
-        // Save service settings if editing existing user
+        // If editing, also save service settings
         if (id) {
           const serviceSettings = {
             drive_folder_id: document.getElementById('userDriveFolderId').value.trim() || null,
