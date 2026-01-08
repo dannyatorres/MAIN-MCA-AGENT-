@@ -116,7 +116,7 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
 
         console.log(`🧠 [DEBUG] Gemini Input Prompt:\n${prompt}`);
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro-preview-05-06" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const matchedName = response.text().trim().replace(/['"]/g, "");
