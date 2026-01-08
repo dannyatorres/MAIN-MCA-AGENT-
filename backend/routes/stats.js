@@ -110,6 +110,11 @@ router.get('/', async (req, res) => {
 
         res.json({
             success: true,
+            user: {
+                name: req.user?.name || 'Boss',
+                firstName: req.user?.name?.split(' ')[0] || 'Boss',
+                role: req.user?.role
+            },
             active: parseInt(stats.total || 0),
             submitted: parseInt(submittedResult.rows[0]?.count || 0),
             offers: parseInt(stats.offers || 0),

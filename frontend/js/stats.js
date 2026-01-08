@@ -105,27 +105,30 @@ class StatsModule {
         }
     }
 
-    updateHeroCard() {
+    updateHeroCard(userName = null) {
+        // Get user name from localStorage if not passed
+        if (!userName) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            userName = user.name?.split(' ')[0] || 'Boss';
+        }
+
         const greetings = [
-            "Peace, God!",
-            "What's good, son?",
-            "Yo, what's the word?",
-            "What up, kid?",
-            "Salute, king!",
-            "What's really good?",
-            "Yo, what's poppin?",
-            "What the deal, son?",
-            "Peace, king!",
-            "What's the science?",
-            "Blessings, God!",
-            "Talk to me!",
-            "What's the knowledge?",
-            "Word up, let's work!",
-            "It's only right!",
-            "What's good, family?",
-            "Yo, we here!",
-            "You already know!",
-            "Let's build, God!"
+            `Peace, ${userName}!`,
+            `What's good, ${userName}?`,
+            `Yo, what's the word, ${userName}?`,
+            `What up, ${userName}!`,
+            `Salute, ${userName}!`,
+            `What's really good, ${userName}?`,
+            `Yo, what's poppin, ${userName}?`,
+            `Peace, king!`,
+            `What's the science?`,
+            `Blessings, ${userName}!`,
+            `Talk to me, ${userName}!`,
+            `Word up, let's work!`,
+            `It's only right, ${userName}!`,
+            `Yo, we here!`,
+            `You already know, ${userName}!`,
+            `Let's build, ${userName}!`
         ];
         const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
