@@ -92,10 +92,12 @@ app.use(session({
 // --- 4b. AUTH MIDDLEWARE ---
 const { attachUser, requireAuth } = require('./middleware/auth');
 app.use(attachUser);
-app.use(requireAuth);
 
-// Auth routes
+// Auth routes (BEFORE requireAuth - these are public)
 app.use('/api/auth', require('./routes/auth'));
+
+// Apply auth check to all other routes
+app.use(requireAuth);
 
 // User management (admin only)
 app.use('/api/users', require('./routes/users'));
