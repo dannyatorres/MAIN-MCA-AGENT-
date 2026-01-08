@@ -931,3 +931,45 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* ==========================================================================
+   [MODULE: SETTINGS MODAL]
+   Settings menu styling
+   ========================================================================== */
+
+/* Small Modal Variant */
+.small-modal {
+    max-width: 320px;
+}
+
+/* Settings Menu */
+.settings-menu {
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    color: var(--text-primary, #c9d1d9);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.settings-menu-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.settings-menu-item:last-child {
+    border-bottom: none;
+}
+
+.settings-menu-item i:first-child {
+    width: 20px;
+    text-align: center;
+    color: var(--text-muted, #8b949e);
+}

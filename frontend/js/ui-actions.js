@@ -15,7 +15,24 @@ const globalActions = {
         else alert('Lender management module is still loading...');
     },
 
-    'open-settings': () => window.openSettingsModal?.(),
+    'open-settings': () => {
+        const modal = document.getElementById('settingsModal');
+        if (modal) modal.classList.remove('hidden');
+    },
+    'close-settings': () => {
+        const modal = document.getElementById('settingsModal');
+        if (modal) modal.classList.add('hidden');
+    },
+    'logout': async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            localStorage.removeItem('currentUser');
+            window.location.href = '/';
+        } catch (err) {
+            console.error('Logout failed:', err);
+            window.location.href = '/';
+        }
+    },
     'open-rich-create': () => window.openRichCreateModal?.(),
     'open-csv-import': () => window.openCsvImportModal?.(),
 
@@ -52,6 +69,13 @@ document.addEventListener('click', (e) => {
         } else {
             console.warn(`No handler found for action: ${actionName}`);
         }
+    }
+});
+
+// Close settings modal when clicking backdrop
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'settingsModal') {
+        e.target.classList.add('hidden');
     }
 });
 
