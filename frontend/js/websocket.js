@@ -8,6 +8,8 @@ class WebSocketManager {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 3000;
+        this.ioLoadRetries = 0;
+        this.maxIoLoadRetries = 10;
 
         console.log('WebSocketManager: Initializing...');
         this.connect();
@@ -21,9 +23,15 @@ class WebSocketManager {
         console.log(`WebSocketManager: Connecting to ${wsUrl}...`);
 
         try {
-            // Ensure socket.io is loaded
+            // Ensure socket.io is loaded (with max retries to prevent infinite loop)
             if (typeof io === 'undefined') {
-                console.warn('Socket.io not found, retrying...');
+                this.ioLoadRetries++;
+                if (this.ioLoadRetries >= this.maxIoLoadRetries) {
+                    console.error('Socket.io failed to load after max retries');
+                    this.isConnecting = false;
+                    return;
+                }
+                console.warn(`Socket.io not found, retrying (${this.ioLoadRetries}/${this.maxIoLoadRetries})...`);
                 setTimeout(() => this.connect(), 1000);
                 this.isConnecting = false;
                 return;
@@ -92,20 +100,20 @@ class WebSocketManager {
 
         // 2. Conversation Updated (Status change, etc)
         this.socket.on('conversation_updated', (data) => {
-            console.log('⚡ WS EVENT: conversation_updated', data.conversation_id);
-            console.log('📋 WebSocket: conversation_updated', data);
+            const convoId = data.conversation_id || data.conversationId;
+            console.log('⚡ WS EVENT: conversation_updated', convoId);
 
             // If we are looking at it, refresh details only (header, AI button, etc.)
-            if (String(this.app.currentConversationId) === String(data.conversation_id)) {
+            if (String(this.app.currentConversationId) === String(convoId)) {
                 if (this.app.conversationUI) {
                     this.app.conversationUI.showConversationDetails();
                 }
                 // DON'T reload messages - new_message event handles that
             }
 
-            // Always refresh the conversations list (moves active one to top, updates previews)
-            if (this.app.conversationUI) {
-                this.app.conversationUI.loadConversations();
+            // Update just this conversation instead of full list reload
+            if (this.app.conversationUI && convoId) {
+                this.app.conversationUI.handleConversationUpdate(convoId);
             }
         });
 
@@ -113,13 +121,13 @@ class WebSocketManager {
         // FIX: Delegate strictly to ConversationUI to prevent duplicates
         // No more direct DOM manipulation here - single source of truth
         this.socket.on('refresh_lead_list', async (data) => {
-            console.log('⚡ WS EVENT: refresh_lead_list', data);
-            console.log('⚡ WebSocket: refresh_lead_list', data);
+            const convoId = data.conversation_id || data.conversationId;
+            console.log('⚡ WS EVENT: refresh_lead_list', convoId);
 
             if (!this.app.conversationUI) return;
 
             // Delegate to ConversationCore to handle update
-            await this.app.conversationUI.handleConversationUpdate(data.conversationId);
+            await this.app.conversationUI.handleConversationUpdate(convoId);
         });
 
         // 4. Document Events

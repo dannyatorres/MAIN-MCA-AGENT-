@@ -483,22 +483,28 @@ class ConversationCore {
 
             if (!freshConv || !freshConv.id) return;
 
-            // 2. Update the Source of Truth (The Map)
-            // This overwrites the existing entry if present, preventing duplicates
+            // 2. Check if this is a NEW conversation (for pagination offset fix)
+            const existing = this.conversations.get(String(freshConv.id));
+            const isNew = !existing;
+
+            // 3. Update the Source of Truth (The Map)
             if (!freshConv.last_activity) {
                 freshConv.last_activity = new Date().toISOString();
             }
-            // FIX: Preserve the _fullLoaded flag if it exists locally
-            const existing = this.conversations.get(String(freshConv.id));
-            if (existing && existing._fullLoaded) {
-                freshConv._fullLoaded = true;
-            }
+            // Always set _fullLoaded = true since we fetched the full detail
+            freshConv._fullLoaded = true;
             this.conversations.set(String(freshConv.id), freshConv);
 
-            // 3. Re-render the list (auto-sorts by last_activity)
+            // 4. If this is a NEW conversation, increment pagination offset
+            // This prevents duplicate items when user clicks "Load More"
+            if (isNew) {
+                this.paginationOffset++;
+            }
+
+            // 5. Re-render the list (auto-sorts by last_activity)
             this.renderConversationsList();
 
-            // 4. Flash the row to indicate an update
+            // 6. Flash the row to indicate an update
             setTimeout(() => {
                 const row = document.querySelector(`.conversation-item[data-conversation-id="${String(freshConv.id)}"]`);
                 if (row) {
