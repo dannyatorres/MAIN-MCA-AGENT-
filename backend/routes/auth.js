@@ -88,29 +88,6 @@ router.post('/logout', (req, res) => {
   });
 });
 
-// TEMPORARY - Remove after setting password
-router.post('/set-password', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const db = getDatabase();
-
-    console.log('🔧 Setting password for:', email);
-
-    const hash = await bcrypt.hash(password, 12);
-    const result = await db.query('UPDATE users SET password_hash = $1 WHERE email = $2 RETURNING id, email', [hash, email]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    console.log('✅ Password set for:', result.rows[0].email);
-    res.json({ success: true, message: 'Password set', user: result.rows[0] });
-  } catch (error) {
-    console.error('❌ Set password error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 // GET /api/auth/me
 router.get('/me', (req, res) => {
   if (!req.user) {
