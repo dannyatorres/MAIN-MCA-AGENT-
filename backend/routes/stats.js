@@ -1,61 +1,110 @@
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
+const { getConversationAccessClause } = require('../middleware/dataAccess');
 
 // 1. MAIN DASHBOARD STATS
 router.get('/', async (req, res) => {
     try {
         const db = getDatabase();
+        const access = getConversationAccessClause(req.user, 'c');
 
         // A. Basic Counts
         const mainStats = await db.query(`
             SELECT
                 COUNT(*) as total,
-                (SELECT COUNT(DISTINCT conversation_id) FROM lender_submissions WHERE status = 'OFFER') as offers,
-                COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as new_today,
-                COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as new_this_week,
-                COUNT(*) FILTER (WHERE ai_enabled = true) as ai_enabled,
-                COUNT(*) FILTER (WHERE ai_enabled = false) as ai_disabled,
-                COALESCE(SUM(monthly_revenue), 0) as total_monthly_revenue,
-                COALESCE(AVG(monthly_revenue), 0) as avg_monthly_revenue
-            FROM conversations
-        `);
+                (SELECT COUNT(DISTINCT ls.conversation_id)
+                 FROM lender_submissions ls
+                 JOIN conversations c ON c.id = ls.conversation_id
+                 WHERE ls.status = 'OFFER' AND ${access.clause}) as offers,
+                COUNT(*) FILTER (WHERE c.created_at >= CURRENT_DATE) as new_today,
+                COUNT(*) FILTER (WHERE c.created_at >= CURRENT_DATE - INTERVAL '7 days') as new_this_week,
+                COUNT(*) FILTER (WHERE c.ai_enabled = true) as ai_enabled,
+                COUNT(*) FILTER (WHERE c.ai_enabled = false) as ai_disabled,
+                COALESCE(SUM(c.monthly_revenue), 0) as total_monthly_revenue,
+                COALESCE(AVG(c.monthly_revenue), 0) as avg_monthly_revenue
+            FROM conversations c
+            WHERE ${access.clause}
+        `, access.params);
 
         // B. Submitted Count
-        const submittedResult = await db.query(`SELECT COUNT(DISTINCT conversation_id) as count FROM lender_submissions`);
+        const submittedResult = await db.query(`
+            SELECT COUNT(DISTINCT ls.conversation_id) as count
+            FROM lender_submissions ls
+            JOIN conversations c ON c.id = ls.conversation_id
+            WHERE ${access.clause}
+        `, access.params);
 
         // C. Goals & Funding
         const goalResult = await db.query(`SELECT value FROM app_settings WHERE key = 'monthly_goal'`);
 
         const fundedThisMonth = await db.query(`
-            SELECT COUNT(*) as deal_count, COALESCE(SUM(funded_amount), 0) as total_funded
-            FROM conversations
-            WHERE funded_at >= DATE_TRUNC('month', CURRENT_DATE)
-        `);
+            SELECT COUNT(*) as deal_count, COALESCE(SUM(c.funded_amount), 0) as total_funded
+            FROM conversations c
+            WHERE c.funded_at >= DATE_TRUNC('month', CURRENT_DATE)
+              AND ${access.clause}
+        `, access.params);
 
         const fundedLastMonth = await db.query(`
-            SELECT COALESCE(SUM(funded_amount), 0) as total_funded
-            FROM conversations
-            WHERE funded_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
-              AND funded_at < DATE_TRUNC('month', CURRENT_DATE)
-        `);
+            SELECT COALESCE(SUM(c.funded_amount), 0) as total_funded
+            FROM conversations c
+            WHERE c.funded_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+              AND c.funded_at < DATE_TRUNC('month', CURRENT_DATE)
+              AND ${access.clause}
+        `, access.params);
 
         // D. Rich Breakdowns
-        const stateBreakdown = await db.query(`SELECT state, COUNT(*) as count FROM conversations WHERE state IS NOT NULL GROUP BY state ORDER BY count DESC`);
-        const leadSourceBreakdown = await db.query(`SELECT COALESCE(lead_source, 'Unknown') as lead_source, COUNT(*) as count FROM conversations GROUP BY lead_source ORDER BY count DESC`);
-        const industryBreakdown = await db.query(`SELECT COALESCE(industry_type, 'Unknown') as industry, COUNT(*) as count FROM conversations GROUP BY industry_type ORDER BY count DESC LIMIT 10`);
-        const geoBreakdown = await db.query(`SELECT COALESCE(us_state, 'Unknown') as region, COUNT(*) as count FROM conversations GROUP BY region ORDER BY count DESC LIMIT 10`);
-        const creditBreakdown = await db.query(`SELECT COALESCE(credit_score, 'Unknown') as credit_tier, COUNT(*) as count FROM conversations GROUP BY credit_score ORDER BY count DESC`);
-        const fundingBreakdown = await db.query(`SELECT COALESCE(funding_status, 'Unknown') as status, COUNT(*) as count FROM conversations GROUP BY funding_status ORDER BY count DESC`);
+        const stateBreakdown = await db.query(`
+            SELECT c.state, COUNT(*) as count
+            FROM conversations c
+            WHERE c.state IS NOT NULL AND ${access.clause}
+            GROUP BY c.state ORDER BY count DESC
+        `, access.params);
+
+        const leadSourceBreakdown = await db.query(`
+            SELECT COALESCE(c.lead_source, 'Unknown') as lead_source, COUNT(*) as count
+            FROM conversations c
+            WHERE ${access.clause}
+            GROUP BY c.lead_source ORDER BY count DESC
+        `, access.params);
+
+        const industryBreakdown = await db.query(`
+            SELECT COALESCE(c.industry_type, 'Unknown') as industry, COUNT(*) as count
+            FROM conversations c
+            WHERE ${access.clause}
+            GROUP BY c.industry_type ORDER BY count DESC LIMIT 10
+        `, access.params);
+
+        const geoBreakdown = await db.query(`
+            SELECT COALESCE(c.us_state, 'Unknown') as region, COUNT(*) as count
+            FROM conversations c
+            WHERE ${access.clause}
+            GROUP BY region ORDER BY count DESC LIMIT 10
+        `, access.params);
+
+        const creditBreakdown = await db.query(`
+            SELECT COALESCE(c.credit_score::text, 'Unknown') as credit_tier, COUNT(*) as count
+            FROM conversations c
+            WHERE ${access.clause}
+            GROUP BY c.credit_score ORDER BY count DESC
+        `, access.params);
+
+        const fundingBreakdown = await db.query(`
+            SELECT COALESCE(c.funding_status, 'Unknown') as status, COUNT(*) as count
+            FROM conversations c
+            WHERE ${access.clause}
+            GROUP BY c.funding_status ORDER BY count DESC
+        `, access.params);
 
         // E. Activity Trend
         const activityTrend = await db.query(`
-            SELECT DATE(created_at) as date, COUNT(*) as count
-            FROM conversations
-            WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-            GROUP BY DATE(created_at)
+            SELECT DATE(c.created_at) as date, COUNT(*) as count
+            FROM conversations c
+            WHERE c.created_at >= CURRENT_DATE - INTERVAL '30 days'
+              AND ${access.clause}
+            GROUP BY DATE(c.created_at)
             ORDER BY date ASC
-        `);
+        `, access.params);
 
         const stats = mainStats.rows[0];
 
@@ -97,13 +146,15 @@ router.get('/', async (req, res) => {
 router.get('/offers', async (req, res) => {
     try {
         const db = getDatabase();
+        const access = getConversationAccessClause(req.user, 'c');
+
         const result = await db.query(`
             SELECT ls.conversation_id, c.business_name, ls.lender_name, ls.offer_amount, ls.factor_rate, ls.last_response_at
             FROM lender_submissions ls
             JOIN conversations c ON c.id = ls.conversation_id
-            WHERE ls.status = 'OFFER'
+            WHERE ls.status = 'OFFER' AND ${access.clause}
             ORDER BY ls.last_response_at DESC
-        `);
+        `, access.params);
         res.json({ success: true, offers: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -114,13 +165,16 @@ router.get('/offers', async (req, res) => {
 router.get('/submitted', async (req, res) => {
     try {
         const db = getDatabase();
+        const access = getConversationAccessClause(req.user, 'c');
+
         const result = await db.query(`
             SELECT ls.conversation_id, c.business_name, COUNT(ls.id) as lender_count, MAX(ls.submitted_at) as last_submitted
             FROM lender_submissions ls
             JOIN conversations c ON c.id = ls.conversation_id
+            WHERE ${access.clause}
             GROUP BY ls.conversation_id, c.business_name
             ORDER BY last_submitted DESC
-        `);
+        `, access.params);
         res.json({ success: true, submitted: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
