@@ -136,10 +136,6 @@ class ConversationCore {
         }
     }
 
-    isClientSideFilter(filter) {
-        return ['UNREAD', 'INTERESTED'].includes(filter);
-    }
-
     async loadConversations(reset = false) {
         if (this.isLoadingMore) return;
         this.isLoadingMore = true;
@@ -160,9 +156,9 @@ class ConversationCore {
                 return;
             }
 
-            // BUILD URL WITH SEARCH PARAM
+            // BUILD URL - All filters are now server-side
             let url = `/api/conversations?limit=${this.pageSize}&offset=${this.paginationOffset}`;
-            if (stateFilter && !this.isClientSideFilter(stateFilter)) {
+            if (stateFilter) {
                 url += `&filter=${encodeURIComponent(stateFilter)}`;
             }
             if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -336,27 +332,8 @@ class ConversationCore {
 
         let visible = Array.from(this.conversations.values());
 
-        // GET CURRENT FILTER STATES
-        const searchTerm = document.getElementById('searchInput')?.value.trim().toLowerCase();
-        const stateFilter = document.getElementById('stateFilter')?.value;
-
-        // APPLY CLIENT-SIDE FILTERS (UNREAD / INTERESTED)
-        if (stateFilter === 'INTERESTED') {
-            visible = visible.filter(c => c.has_response);
-        } else if (stateFilter === 'UNREAD') {
-            visible = visible.filter(c => c.unread_count > 0);
-        }
-
-        // APPLY LOCAL SEARCH FALLBACK
-        if (searchTerm && searchTerm.length >= 2) {
-            visible = visible.filter(c =>
-                (c.business_name || '').toLowerCase().includes(searchTerm) ||
-                (c.lead_phone || '').includes(searchTerm) ||
-                (c.first_name || '').toLowerCase().includes(searchTerm)
-            );
-        }
-
-        // --- Sort: Offers first, then unread, then by activity ---
+        // All filtering (UNREAD, INTERESTED, search) is now server-side
+        // Just sort locally: Offers first, then unread, then by activity
         visible.sort((a, b) => {
             if (a.has_offer && !b.has_offer) return -1;
             if (!a.has_offer && b.has_offer) return 1;
