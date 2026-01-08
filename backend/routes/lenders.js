@@ -250,8 +250,8 @@ router.post('/rules/manual', requireRole('admin'), async (req, res) => {
     }
 });
 
-// Dismiss a decline (don't show for review again)
-router.post('/decline/:id/dismiss', async (req, res) => {
+// Dismiss a decline (don't show for review again) - ADMIN ONLY
+router.post('/decline/:id/dismiss', requireRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
         const db = getDatabase();
@@ -265,8 +265,8 @@ router.post('/decline/:id/dismiss', async (req, res) => {
     }
 });
 
-// Create new lender
-router.post('/', async (req, res) => {
+// Create new lender - ADMIN ONLY
+router.post('/', requireRole('admin'), async (req, res) => {
     try {
         const {
             name, email, cc_email, phone, company,
@@ -319,8 +319,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update lender
-router.put('/:id', async (req, res) => {
+// Update lender - ADMIN ONLY
+router.put('/:id', requireRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
         const {
@@ -386,8 +386,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete lender
-router.delete('/:id', async (req, res) => {
+// Delete lender - ADMIN ONLY
+router.delete('/:id', requireRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
         const db = getDatabase();
