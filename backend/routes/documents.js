@@ -7,6 +7,7 @@ const multer = require('multer');
 const multerS3 = require('multer-s3');
 const AWS = require('aws-sdk');
 const { getDatabase } = require('../services/database');
+const { canAccessConversation, requireConversationAccess, requireModifyPermission } = require('../middleware/dataAccess');
 
 // Configure AWS S3
 const s3 = new AWS.S3({
@@ -54,7 +55,7 @@ const upload = multer({
 });
 
 // Upload document to S3
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', requireModifyPermission, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -66,6 +67,16 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const { conversation_id, document_type, notes } = req.body;
         const db = getDatabase();
 
+        // Verify user has access to this conversation
+        const hasAccess = await canAccessConversation(conversation_id, req.user);
+        if (!hasAccess) {
+            // Delete the uploaded file from S3 since access denied
+            if (req.file && req.file.key) {
+                await s3.deleteObject({ Bucket: bucket, Key: req.file.key }).promise();
+            }
+            return res.status(403).json({ success: false, error: 'Access denied to this conversation' });
+        }
+
         console.log('📤 S3 Upload Success:', {
             bucket: req.file.bucket,
             key: req.file.key,
@@ -73,7 +84,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             size: req.file.size
         });
 
-        // Save document metadata to database
+        // Save document metadata to database (with user tracking)
         const result = await db.query(`
             INSERT INTO documents (
                 conversation_id,
@@ -87,9 +98,10 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 s3_bucket,
                 s3_key,
                 s3_url,
+                uploaded_by_user_id,
                 created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
             RETURNING *
         `, [
             conversation_id,
@@ -102,7 +114,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             notes || null,
             req.file.bucket,
             req.file.key,
-            req.file.location // Full S3 URL
+            req.file.location, // Full S3 URL
+            req.user?.id || null
         ]);
 
         const document = result.rows[0];
@@ -149,7 +162,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 // Get documents for a conversation
-router.get('/:conversationId', async (req, res) => {
+router.get('/:conversationId', requireConversationAccess('conversationId'), async (req, res) => {
     try {
         const { conversationId } = req.params;
         const db = getDatabase();
@@ -336,7 +349,7 @@ router.get('/s3-url/:documentId', async (req, res) => {
 });
 
 // Update document metadata
-router.put('/:documentId', async (req, res) => {
+router.put('/:documentId', requireModifyPermission, async (req, res) => {
     try {
         const { documentId } = req.params;
         const { filename, originalFilename, documentType } = req.body;
@@ -352,14 +365,20 @@ router.put('/:documentId', async (req, res) => {
             });
         }
 
-        // Get current document to preserve extension
+        // Get current document to preserve extension and check access
         const currentDoc = await db.query(
-            'SELECT original_filename FROM documents WHERE id = $1',
+            'SELECT original_filename, conversation_id FROM documents WHERE id = $1',
             [documentId]
         );
 
         if (currentDoc.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Document not found' });
+        }
+
+        // Verify user has access to the conversation
+        const hasAccess = await canAccessConversation(currentDoc.rows[0].conversation_id, req.user);
+        if (!hasAccess) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
         // Preserve the original extension
@@ -394,7 +413,7 @@ router.put('/:documentId', async (req, res) => {
 });
 
 // Delete document from S3 and database
-router.delete('/:documentId', async (req, res) => {
+router.delete('/:documentId', requireModifyPermission, async (req, res) => {
     try {
         const { documentId} = req.params;
         const db = getDatabase();
@@ -413,6 +432,12 @@ router.delete('/:documentId', async (req, res) => {
         }
 
         const document = docResult.rows[0];
+
+        // Verify user has access to the conversation
+        const hasAccess = await canAccessConversation(document.conversation_id, req.user);
+        if (!hasAccess) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
 
         // Delete from S3
         try {

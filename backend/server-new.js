@@ -6,6 +6,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
 const emailRoutes = require('./routes/emailRoutes');
 require('dotenv').config();
@@ -70,39 +71,34 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// --- 4. SESSION AUTHENTICATION ---
+// --- 4. SESSION WITH POSTGRESQL STORE ---
 app.use(session({
+    store: new pgSession({
+        pool: getDatabase(),
+        tableName: 'session',
+        createTableIfMissing: false
+    }),
     secret: process.env.SESSION_SECRET || 'mca-secret-key-change-me',
-    resave: false, saveUninitialized: false,
-    cookie: { secure: false, httpOnly: true, sameSite: 'lax', maxAge: 24 * 60 * 60 * 1000 }
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
+    }
 }));
 
-// LOGIN/LOGOUT Routes
-app.post('/api/auth/login', (req, res) => {
-    const { username, password } = req.body;
-    if (username === (process.env.ADMIN_USERNAME || 'admin') && password === (process.env.ADMIN_PASSWORD || 'Ronpaul2025!')) {
-        req.session.isAuthenticated = true;
-        req.session.user = username;
-        req.session.save((err) => err ? res.status(500).json({ error: 'Session save failed' }) : res.json({ success: true }));
-    } else {
-        res.status(401).json({ error: 'Invalid credentials' });
-    }
-});
-app.post('/api/auth/logout', (req, res) => { req.session.destroy(); res.json({ success: true }); });
+// --- 4b. AUTH MIDDLEWARE ---
+const { attachUser, requireAuth } = require('./middleware/auth');
+app.use(attachUser);
+app.use(requireAuth);
 
-// Auth Middleware
-app.use((req, res, next) => {
-    const publicPaths = ['/api/auth/login', '/api/health', '/api/messages/webhook/receive', '/api/news', '/api/contact', '/api/agent/trigger'];
-    if (publicPaths.includes(req.path) || req.path.startsWith('/api/calling/')) return next();
-    if (req.headers['x-local-dev'] === 'true' || (req.session && req.session.isAuthenticated)) return next();
-    if (req.path.includes('/documents/view/') || req.path.includes('/download')) return next();
+// Auth routes
+app.use('/api/auth', require('./routes/auth'));
 
-    if (req.path.startsWith('/api')) {
-        console.warn(`⛔ BLOCKED: ${req.method} ${req.path}`);
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-    res.redirect('/');
-});
+// User management (admin only)
+app.use('/api/users', require('./routes/users'));
 
 // --- 5. ROUTES ---
 app.use('/api', require('./routes/health'));
@@ -141,7 +137,7 @@ app.post('/api/contact', (req, res) => {
 // --- 6. FRONTEND ROUTING ---
 app.get('*', (req, res) => {
     if (!req.path.startsWith('/api')) {
-        const file = (req.session && req.session.isAuthenticated) ? 'command-center.html' : 'index.html';
+        const file = req.user ? 'command-center.html' : 'index.html';
         res.sendFile(path.join(__dirname, `../frontend/${file}`));
     }
 });

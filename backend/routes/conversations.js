@@ -7,6 +7,8 @@ const { getDatabase } = require('../services/database');
 const documentService = require('../services/documentService');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
+const { getConversationAccessClause, requireConversationAccess, requireModifyPermission } = require('../middleware/dataAccess');
+const { requireRole } = require('../middleware/auth');
 
 const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -14,11 +16,14 @@ const s3 = new AWS.S3({
     region: process.env.AWS_REGION || 'us-east-1'
 });
 
-// Get all conversations (Now with SERVER-SIDE SEARCH)
+// Get all conversations (Now with SERVER-SIDE SEARCH + ACCESS FILTERING)
 router.get('/', async (req, res) => {
     try {
         const { state, priority, limit = 50, offset = 0, filter, search } = req.query;
         const db = getDatabase();
+
+        // Get access clause based on user role
+        const access = getConversationAccessClause(req.user, 'c');
 
         let query = `
             SELECT
@@ -41,11 +46,11 @@ router.get('/', async (req, res) => {
                  ORDER BY m.timestamp DESC LIMIT 1) as last_message
 
             FROM conversations c
-            WHERE 1=1
+            WHERE ${access.clause}
         `;
 
-        const values = [];
-        let paramIndex = 1;
+        const values = [...access.params];
+        let paramIndex = access.paramOffset + 1;
 
         // 1. STATE FILTER
         if (state) {
@@ -119,7 +124,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get single conversation by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireConversationAccess('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const db = getDatabase();
@@ -206,7 +211,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new conversation (FIXED ADDRESS MAPPING)
-router.post('/', async (req, res) => {
+router.post('/', requireModifyPermission, async (req, res) => {
     try {
         const data = req.body;
         const db = getDatabase();
@@ -261,7 +266,7 @@ router.post('/', async (req, res) => {
             `, [data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
 
         } else {
-            // --- 4. INSERT ALL FIELDS (With Correct Address Mapping) ---
+            // --- 4. INSERT ALL FIELDS (With Correct Address Mapping + User Tracking) ---
             const insertResult = await db.query(`
                 INSERT INTO conversations (
                     business_name, lead_phone, email, us_state,
@@ -275,13 +280,15 @@ router.post('/', async (req, res) => {
                     owner_ownership_percent, owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
                     owner2_first_name, owner2_last_name, owner2_email, owner2_phone,
                     owner2_ssn, owner2_dob, owner2_ownership_percent,
-                    owner2_address, owner2_city, owner2_state, owner2_zip
+                    owner2_address, owner2_city, owner2_state, owner2_zip,
+                    created_by_user_id, assigned_user_id
                 )
                 VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'initial_contact', $12,
                     $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
                     $26, $27, $28, $29, $30,
-                    $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41
+                    $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
+                    $42, $42
                 )
                 RETURNING id
             `, [
@@ -338,7 +345,9 @@ router.post('/', async (req, res) => {
                 data.owner2_address || data.owner2HomeAddress || null,
                 data.owner2_city || data.owner2HomeCity || null,
                 data.owner2_state || data.owner2HomeState || null,
-                data.owner2_zip || data.owner2HomeZip || null
+                data.owner2_zip || data.owner2HomeZip || null,
+                // 42: User tracking (both created_by and assigned_to)
+                req.user.id
             ]);
             newId = insertResult.rows[0].id;
         }
@@ -363,7 +372,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update conversation (SMART UPDATE - Updates both tables)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireConversationAccess('id'), requireModifyPermission, async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
@@ -519,7 +528,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Toggle AI on/off for a conversation
-router.post('/:id/toggle-ai', async (req, res) => {
+router.post('/:id/toggle-ai', requireConversationAccess('id'), requireModifyPermission, async (req, res) => {
     try {
         const { enabled } = req.body; // true or false
         const db = getDatabase();
@@ -532,8 +541,8 @@ router.post('/:id/toggle-ai', async (req, res) => {
     }
 });
 
-// Bulk delete conversations
-router.post('/bulk-delete', async (req, res) => {
+// Bulk delete conversations (Admin only)
+router.post('/bulk-delete', requireRole('admin'), async (req, res) => {
     try {
         const { conversationIds } = req.body;
 
@@ -685,7 +694,7 @@ router.post('/bulk-delete', async (req, res) => {
 // ==========================================
 
 // Reset a lead so the AI Dispatcher picks it up immediately
-router.post('/:id/reset-ai', async (req, res) => {
+router.post('/:id/reset-ai', requireConversationAccess('id'), requireModifyPermission, async (req, res) => {
     try {
         const { id } = req.params;
         const db = getDatabase();
@@ -722,7 +731,7 @@ router.post('/:id/reset-ai', async (req, res) => {
 });
 
 // Mark a deal as FUNDED
-router.post('/:id/mark-funded', async (req, res) => {
+router.post('/:id/mark-funded', requireConversationAccess('id'), requireModifyPermission, async (req, res) => {
     try {
         const { id } = req.params;
         const { amount } = req.body;
@@ -761,7 +770,7 @@ router.post('/:id/mark-funded', async (req, res) => {
 });
 
 // Mark conversation as read
-router.post('/:id/mark-read', async (req, res) => {
+router.post('/:id/mark-read', requireConversationAccess('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const db = getDatabase();
@@ -786,7 +795,7 @@ router.post('/:id/mark-read', async (req, res) => {
 });
 
 // Clear offer badge
-router.post('/:id/clear-offer', async (req, res) => {
+router.post('/:id/clear-offer', requireConversationAccess('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const db = getDatabase();
@@ -797,6 +806,39 @@ router.post('/:id/clear-offer', async (req, res) => {
     } catch (error) {
         console.error('Error clearing offer:', error);
         res.status(500).json({ error: 'Failed to clear offer' });
+    }
+});
+
+// Assign conversation to a user (Admin/Manager only)
+router.put('/:id/assign', requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const db = getDatabase();
+
+        // Verify user exists if userId provided
+        if (userId) {
+            const userCheck = await db.query('SELECT id FROM users WHERE id = $1 AND is_active = TRUE', [userId]);
+            if (userCheck.rows.length === 0) {
+                return res.status(400).json({ error: 'User not found or inactive' });
+            }
+        }
+
+        const result = await db.query(`
+            UPDATE conversations
+            SET assigned_user_id = $1, last_activity = NOW()
+            WHERE id = $2
+            RETURNING *
+        `, [userId || null, req.params.id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Conversation not found' });
+        }
+
+        console.log(`✅ Conversation ${req.params.id} assigned to user ${userId || 'nobody'}`);
+        res.json({ success: true, conversation: result.rows[0] });
+    } catch (error) {
+        console.error('Error assigning conversation:', error);
+        res.status(500).json({ error: 'Failed to assign conversation' });
     }
 });
 

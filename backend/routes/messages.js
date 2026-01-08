@@ -6,6 +6,7 @@ const { processLeadWithAI, trackResponseForTraining } = require('../services/aiA
 const multer = require('multer');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
+const { canAccessConversation, requireConversationAccess, requireModifyPermission } = require('../middleware/dataAccess');
 
 // 1. Configure AWS S3
 const s3 = new AWS.S3({
@@ -30,7 +31,7 @@ async function resolveConversationId(conversationId, db) {
 }
 
 // Get messages
-router.get('/:conversationId', async (req, res) => {
+router.get('/:conversationId', requireConversationAccess('conversationId'), async (req, res) => {
     try {
         const { conversationId } = req.params;
         const db = getDatabase();
@@ -52,7 +53,7 @@ router.get('/:conversationId', async (req, res) => {
 });
 
 // Send a new message
-router.post('/send', async (req, res) => {
+router.post('/send', requireModifyPermission, async (req, res) => {
     try {
         let { conversation_id, content, message_content, direction, message_type, sent_by, sender_type, media_url } = req.body;
 
@@ -73,6 +74,12 @@ router.post('/send', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Conversation not found' });
         }
 
+        // Verify user has access to this conversation
+        const hasAccess = await canAccessConversation(actualConversationId, req.user);
+        if (!hasAccess) {
+            return res.status(403).json({ success: false, error: 'Access denied to this conversation' });
+        }
+
         const convResult = await db.query(
             'SELECT lead_phone, business_name FROM conversations WHERE id = $1',
             [actualConversationId]
@@ -85,13 +92,13 @@ router.post('/send', async (req, res) => {
         const { lead_phone } = convResult.rows[0];
         const type = media_url ? 'mms' : (message_type || 'sms');
 
-        // Insert message into database FIRST
+        // Insert message into database FIRST (with user tracking)
         const result = await db.query(`
             INSERT INTO messages (
                 conversation_id, content, direction, message_type,
-                sent_by, timestamp, status, media_url
+                sent_by, timestamp, status, media_url, sent_by_user_id
             )
-            VALUES ($1, $2, $3, $4, $5, NOW(), 'pending', $6)
+            VALUES ($1, $2, $3, $4, $5, NOW(), 'pending', $6, $7)
             RETURNING *
         `, [
             actualConversationId,
@@ -99,7 +106,8 @@ router.post('/send', async (req, res) => {
             direction,
             type,
             sent_by || 'system',
-            media_url || null
+            media_url || null,
+            req.user?.id || null
         ]);
 
         const newMessage = result.rows[0];
@@ -203,8 +211,8 @@ router.post('/send', async (req, res) => {
     }
 });
 
-// S3 Upload Route
-router.post('/upload', upload.single('file'), async (req, res) => {
+// S3 Upload Route (for MMS attachments)
+router.post('/upload', requireModifyPermission, upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     try {
@@ -337,7 +345,7 @@ router.post('/webhook/receive', async (req, res) => {
     }
 });
 
-router.get('/:conversationId/count', async (req, res) => {
+router.get('/:conversationId/count', requireConversationAccess('conversationId'), async (req, res) => {
     try {
         const { conversationId } = req.params;
         const db = getDatabase();

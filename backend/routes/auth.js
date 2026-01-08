@@ -1,0 +1,95 @@
+// backend/routes/auth.js
+const express = require('express');
+const bcrypt = require('bcrypt');
+const router = express.Router();
+const { getDatabase } = require('../services/database');
+
+// POST /api/auth/login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password, username } = req.body;
+    const db = getDatabase();
+
+    // Support login by email OR username
+    const loginField = email || username;
+    if (!loginField || !password) {
+      return res.status(400).json({ error: 'Email/username and password required' });
+    }
+
+    const result = await db.query(
+      'SELECT id, email, username, name, role, password_hash, is_active FROM users WHERE email = $1 OR username = $1',
+      [loginField]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const user = result.rows[0];
+
+    if (!user.is_active) {
+      return res.status(401).json({ error: 'Account is disabled' });
+    }
+
+    if (!user.password_hash) {
+      return res.status(401).json({ error: 'Password not set - contact admin' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Update last_login
+    await db.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+
+    // Set session
+    req.session.userId = user.id;
+    req.session.isAuthenticated = true; // Keep for backward compatibility
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.clearCookie('connect.sid');
+    res.json({ success: true });
+  });
+});
+
+// GET /api/auth/me
+router.get('/me', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  res.json({
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      username: req.user.username,
+      name: req.user.name,
+      role: req.user.role
+    }
+  });
+});
+
+module.exports = router;

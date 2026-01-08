@@ -1,0 +1,215 @@
+// backend/routes/users.js
+const express = require('express');
+const bcrypt = require('bcrypt');
+const router = express.Router();
+const { getDatabase } = require('../services/database');
+const { requireRole } = require('../middleware/auth');
+
+// All routes require admin role
+router.use(requireRole('admin'));
+
+// GET /api/users - List all users
+router.get('/', async (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = await db.query(`
+      SELECT id, email, username, name, role, is_active, created_at, last_login
+      FROM users
+      ORDER BY created_at DESC
+    `);
+    res.json({ users: result.rows });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// GET /api/users/:id - Get single user
+router.get('/:id', async (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = await db.query(`
+      SELECT id, email, username, name, role, is_active, created_at, last_login
+      FROM users WHERE id = $1
+    `, [req.params.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+// POST /api/users - Create new user
+router.post('/', async (req, res) => {
+  try {
+    const { email, username, name, password, role } = req.body;
+
+    // Validation
+    if (!email || !username || !name || !password) {
+      return res.status(400).json({ error: 'Email, username, name, and password are required' });
+    }
+
+    // Password validation (Standard: min 8 chars, 1 uppercase, 1 number)
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one uppercase letter' });
+    }
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one number' });
+    }
+
+    const validRoles = ['admin', 'agent', 'viewer', 'manager'];
+    if (role && !validRoles.includes(role)) {
+      return res.status(400).json({ error: `Role must be one of: ${validRoles.join(', ')}` });
+    }
+
+    const db = getDatabase();
+
+    // Check for existing email/username
+    const existing = await db.query(
+      'SELECT id FROM users WHERE email = $1 OR username = $2',
+      [email, username]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'Email or username already exists' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const result = await db.query(`
+      INSERT INTO users (email, username, name, password_hash, role, is_active, created_by)
+      VALUES ($1, $2, $3, $4, $5, TRUE, $6)
+      RETURNING id, email, username, name, role, is_active, created_at
+    `, [email, username, name, passwordHash, role || 'agent', req.user.id]);
+
+    res.status(201).json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// PUT /api/users/:id - Update user
+router.put('/:id', async (req, res) => {
+  try {
+    const { email, username, name, role, is_active } = req.body;
+    const db = getDatabase();
+
+    // Check user exists
+    const existing = await db.query('SELECT id FROM users WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent admin from deactivating themselves
+    if (req.params.id === req.user.id && is_active === false) {
+      return res.status(400).json({ error: 'Cannot deactivate your own account' });
+    }
+
+    // Check for duplicate email/username
+    if (email || username) {
+      const duplicate = await db.query(
+        'SELECT id FROM users WHERE (email = $1 OR username = $2) AND id != $3',
+        [email, username, req.params.id]
+      );
+      if (duplicate.rows.length > 0) {
+        return res.status(409).json({ error: 'Email or username already in use' });
+      }
+    }
+
+    const result = await db.query(`
+      UPDATE users SET
+        email = COALESCE($1, email),
+        username = COALESCE($2, username),
+        name = COALESCE($3, name),
+        role = COALESCE($4, role),
+        is_active = COALESCE($5, is_active),
+        updated_at = NOW()
+      WHERE id = $6
+      RETURNING id, email, username, name, role, is_active, created_at, last_login
+    `, [email, username, name, role, is_active, req.params.id]);
+
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// PUT /api/users/:id/password - Reset password
+router.put('/:id/password', async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    // Password validation
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one uppercase letter' });
+    }
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one number' });
+    }
+
+    const db = getDatabase();
+
+    const existing = await db.query('SELECT id FROM users WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await db.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [passwordHash, req.params.id]
+    );
+
+    res.json({ success: true, message: 'Password updated' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// DELETE /api/users/:id - Deactivate user (soft delete)
+router.delete('/:id', async (req, res) => {
+  try {
+    const db = getDatabase();
+
+    // Prevent self-deletion
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ error: 'Cannot deactivate your own account' });
+    }
+
+    const existing = await db.query('SELECT id, role FROM users WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Soft delete - just deactivate
+    await db.query(
+      'UPDATE users SET is_active = FALSE, updated_at = NOW() WHERE id = $1',
+      [req.params.id]
+    );
+
+    res.json({ success: true, message: 'User deactivated' });
+  } catch (error) {
+    console.error('Error deactivating user:', error);
+    res.status(500).json({ error: 'Failed to deactivate user' });
+  }
+});
+
+module.exports = router;
