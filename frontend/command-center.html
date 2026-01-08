@@ -133,7 +133,7 @@
                                 <div class="action-icon"><i class="fas fa-table"></i></div>
                                 <div class="action-label">Formatter</div>
                             </div>
-                            <div class="action-card" data-action="open-lender-management">
+                            <div class="action-card" data-action="open-lender-management" id="lenderManagementCard">
                                 <div class="action-icon"><i class="fas fa-university"></i></div>
                                 <div class="action-label">Lenders</div>
                             </div>
@@ -512,6 +512,17 @@
     <script type="module" src="js/app-bootstrap.js"></script>
     <script src="js/background-verification.js"></script>
     <script src="js/user-menu.js"></script>
+
+    <script>
+    // Hide admin-only features based on user role
+    (function() {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.role !== 'admin') {
+            const lenderCard = document.getElementById('lenderManagementCard');
+            if (lenderCard) lenderCard.style.display = 'none';
+        }
+    })();
+    </script>
 
 </body>
 </html>

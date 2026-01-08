@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { v4: uuidv4 } = require('uuid');
+const { requireRole } = require('../middleware/auth');
 
 // Helper to convert empty strings to NULL for numeric fields
 const toNum = (val) => (val === '' || val === undefined || val === null) ? null : val;
@@ -78,8 +79,8 @@ router.get('/rule-suggestions', async (req, res) => {
     }
 });
 
-// Approve a rule suggestion
-router.post('/rule-suggestions/:ruleId/approve', async (req, res) => {
+// Approve a rule suggestion - ADMIN ONLY
+router.post('/rule-suggestions/:ruleId/approve', requireRole('admin'), async (req, res) => {
     try {
         const { ruleId } = req.params;
         const db = getDatabase();
@@ -131,8 +132,8 @@ router.post('/rule-suggestions/:ruleId/approve', async (req, res) => {
     }
 });
 
-// Reject a rule suggestion
-router.post('/rule-suggestions/:ruleId/reject', async (req, res) => {
+// Reject a rule suggestion - ADMIN ONLY
+router.post('/rule-suggestions/:ruleId/reject', requireRole('admin'), async (req, res) => {
     try {
         const { ruleId } = req.params;
         const db = getDatabase();
@@ -180,8 +181,8 @@ router.get('/needs-review', async (req, res) => {
     }
 });
 
-// Add a manual rule
-router.post('/rules/manual', async (req, res) => {
+// Add a manual rule - ADMIN ONLY
+router.post('/rules/manual', requireRole('admin'), async (req, res) => {
     try {
         const { lender_name, rule_type, industry, state, condition_field, condition_operator, condition_value, decline_message, submission_id } = req.body;
         const db = getDatabase();
@@ -940,8 +941,8 @@ router.post('/log-response', async (req, res) => {
 // CSV IMPORT ROUTE - One-time migration
 // ===========================================
 
-// Import CSV data and merge with existing lenders
-router.post('/import-csv', async (req, res) => {
+// Import CSV data and merge with existing lenders - ADMIN ONLY
+router.post('/import-csv', requireRole('admin'), async (req, res) => {
     try {
         const { lenders: csvLenders } = req.body;
 
