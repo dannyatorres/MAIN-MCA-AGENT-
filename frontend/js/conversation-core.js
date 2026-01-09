@@ -172,13 +172,14 @@ class ConversationCore {
             }
             if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
 
-            DEBUG.log('filters', '🔍 LOAD', { reset, filter: stateFilter, search: searchTerm, offset: this.paginationOffset });
+            if (window.DEBUG) DEBUG.log('filters', '🔍 LOAD', { reset, filter: stateFilter, search: searchTerm, offset: this.paginationOffset });
 
             const conversations = await this.parent.apiCall(url);
 
             // If this request was cancelled, ignore the results
             if (thisRequest.cancelled) {
                 console.log('🛑 Request cancelled, ignoring stale results');
+                this.isLoadingMore = false;
                 return;
             }
 
