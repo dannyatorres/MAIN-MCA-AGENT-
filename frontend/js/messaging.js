@@ -98,6 +98,8 @@ class MessagingModule {
         const content = textOverride !== null ? textOverride : (input?.value.trim() || '');
         const convId = this.parent.getCurrentConversationId();
 
+        DEBUG.log('messaging', '📤 SEND START', { content: content.substring(0, 50), type: mediaUrl ? 'mms' : 'sms', conversationId: convId });
+
         if ((!content && !mediaUrl) || !convId) {
             this.isSending = false;
             return;
@@ -229,6 +231,8 @@ class MessagingModule {
         const message = data.message || data;
         const rawId = data.conversation_id || message.conversation_id;
         if (!rawId) return;
+
+        DEBUG.log('messaging', '📥 INCOMING', { id: message.id, direction: message.direction, conversationId: rawId });
 
         const messageConversationId = String(rawId);
 

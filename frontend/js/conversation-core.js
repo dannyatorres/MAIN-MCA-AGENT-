@@ -137,7 +137,16 @@ class ConversationCore {
     }
 
     async loadConversations(reset = false) {
-        if (this.isLoadingMore) return;
+        // Allow filter changes to interrupt loading
+        if (this.isLoadingMore && !reset) return;
+
+        // Cancel any pending request
+        if (this.currentLoadRequest) {
+            this.currentLoadRequest.cancelled = true;
+        }
+
+        const thisRequest = { cancelled: false };
+        this.currentLoadRequest = thisRequest;
         this.isLoadingMore = true;
 
         try {
@@ -151,7 +160,7 @@ class ConversationCore {
                 this.clearDeleteSelection();
             }
 
-            if (!this.hasMoreConversations) {
+            if (!this.hasMoreConversations && !reset) {
                 this.isLoadingMore = false;
                 return;
             }
@@ -163,7 +172,15 @@ class ConversationCore {
             }
             if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
 
+            DEBUG.log('filters', '🔍 LOAD', { reset, filter: stateFilter, search: searchTerm, offset: this.paginationOffset });
+
             const conversations = await this.parent.apiCall(url);
+
+            // If this request was cancelled, ignore the results
+            if (thisRequest.cancelled) {
+                console.log('🛑 Request cancelled, ignoring stale results');
+                return;
+            }
 
             if (conversations.length < this.pageSize) this.hasMoreConversations = false;
             this.paginationOffset += conversations.length;
@@ -462,6 +479,7 @@ class ConversationCore {
     }
 
     filterConversations() {
+        DEBUG.log('filters', '🔄 FILTER CHANGE - triggering reload');
         this.loadConversations(true);  // Reset and reload with new filter
     }
 

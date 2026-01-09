@@ -57,6 +57,7 @@ class WebSocketManager {
         // --- Connection Events ---
         this.socket.on('connect', () => {
             console.log('✅ WebSocket connected:', this.socket.id);
+            DEBUG.log('websocket', '🟢 CONNECTED', { socketId: this.socket.id });
             this.isConnecting = false;
             this.reconnectAttempts = 0;
 
@@ -76,6 +77,7 @@ class WebSocketManager {
 
         this.socket.on('disconnect', (reason) => {
             console.log('🔌 WebSocket disconnected:', reason);
+            DEBUG.log('websocket', '🔴 DISCONNECTED', { reason });
             this.isConnecting = false;
 
             const statusDot = document.querySelector('.connection-status .status-dot');
@@ -92,7 +94,7 @@ class WebSocketManager {
         // 1. New Message - Hand off to Messaging Module completely
         this.socket.on('new_message', (data) => {
             console.log('⚡ WS EVENT: new_message', data.conversation_id);
-            console.log('📨 WebSocket: new_message received', data);
+            DEBUG.log('websocket', '📨 NEW_MESSAGE EVENT', { conversationId: data.conversation_id, direction: data.message?.direction });
             if (this.app.messaging) {
                 this.app.messaging.handleIncomingMessage(data);
             }
