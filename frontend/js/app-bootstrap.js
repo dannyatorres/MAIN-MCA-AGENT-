@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window.commandCenter.conversationUI) {
                     window.commandCenter.conversationUI.currentConversationId = null;
                     window.commandCenter.conversationUI.selectedConversation = null;
-                    document.querySelectorAll('.conversation-item.selected').forEach(el => el.classList.remove('selected'));
+                    document.querySelectorAll('.conversation-item.active').forEach(el => el.classList.remove('active'));
                 }
 
                 // Hide Side Panels
