@@ -677,6 +677,10 @@ class ConversationCore {
     // ============================================================
 
     setupEventListeners() {
+        // Prevent duplicate listeners
+        if (this._listenersAttached) return;
+        this._listenersAttached = true;
+
         const mainContainer = document.getElementById('main-content') || document.body;
 
         mainContainer.addEventListener('click', (e) => {
