@@ -76,6 +76,10 @@ class CommandCenter {
     }
 
     async apiCall(endpoint, options = {}) {
+        // Debug: trace conversation fetches
+        if (endpoint.includes('/api/conversations/') && !endpoint.includes('mark-read')) {
+            console.trace('📡 API call to:', endpoint);
+        }
         // 🚀 LOCAL DEV BYPASS: Skip auth for local development
         const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
