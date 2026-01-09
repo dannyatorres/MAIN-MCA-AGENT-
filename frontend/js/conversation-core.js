@@ -53,6 +53,7 @@ class ConversationCore {
 
     // Call this when user clicks a conversation
     async clearBadge(conversationId) {
+        console.trace('clearBadge called');
         const id = String(conversationId);
 
         // Update local cache
