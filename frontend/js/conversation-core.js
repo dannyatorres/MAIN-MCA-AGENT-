@@ -706,26 +706,6 @@ class ConversationCore {
             }
         });
 
-        // D. Preload on Hover (prefetch data before click)
-        this._lastHoveredItem = null;
-        mainContainer.addEventListener('mouseover', (e) => {
-            const item = e.target.closest('.conversation-item');
-            if (!item || item === this._lastHoveredItem) return;
-            this._lastHoveredItem = item;
-
-            const id = item.dataset.conversationId;
-            const cached = this.conversations.get(id);
-
-            // Prefetch if not fully loaded yet
-            if (!cached || !cached._fullLoaded) {
-                this.parent.apiCall(`/api/conversations/${id}`).then(data => {
-                    const conv = data.conversation || data;
-                    conv._fullLoaded = true;
-                    this.conversations.set(id, conv);
-                }).catch(() => {}); // Silently fail
-            }
-        });
-
         // Filters & Search
         const stateFilter = document.getElementById('stateFilter');
         if (stateFilter) stateFilter.addEventListener('change', () => this.loadConversations(true));
