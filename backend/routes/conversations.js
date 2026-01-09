@@ -129,7 +129,7 @@ router.get('/:id', requireConversationAccess('id'), async (req, res) => {
         const { id } = req.params;
         const db = getDatabase();
 
-        console.log('📄 Getting conversation details for ID:', id);
+        // Moved log to after we have the business name
 
         // Check if id is numeric (display_id) or UUID
         const isNumeric = /^\d+$/.test(id);
@@ -181,25 +181,13 @@ router.get('/:id', requireConversationAccess('id'), async (req, res) => {
         }
         // -----------------------------
 
-        // Debug: Log address fields
-        console.log('📍 Address fields from DB:', {
-            address: conversation.address,
-            city: conversation.city,
-            zip: conversation.zip,
-            us_state: conversation.us_state,
-            state: conversation.state,
-            tax_id: conversation.tax_id,
-            first_name: conversation.first_name,
-            last_name: conversation.last_name
-        });
-
         // Handle state naming conflict (conversation state vs address state)
         // Only modify if 'state' looks like a workflow state, not an address state
         if (conversation.state && !['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'].includes(conversation.state)) {
             conversation.workflow_state = conversation.state;
         }
 
-        console.log('✅ Conversation details retrieved');
+        console.log(`📄 Loaded: ${conversation.business_name || 'Unknown'}`);
 
         // Return just the conversation object (matching original format)
         res.json(conversation);
