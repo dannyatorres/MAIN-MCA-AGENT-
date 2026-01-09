@@ -218,6 +218,7 @@ class ConversationCore {
     // ============================================================
 
     async selectConversation(conversationId) {
+        console.log('🔍 selectConversation called from:', new Error().stack.split('\n')[2]);
         const convoId = String(conversationId);
         if (this.currentConversationId === convoId) return;
 

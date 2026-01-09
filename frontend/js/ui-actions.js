@@ -23,14 +23,13 @@ const globalActions = {
         const modal = document.getElementById('settingsModal');
         if (modal) modal.classList.add('hidden');
     },
-    'logout': async () => {
-        try {
-            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-            localStorage.removeItem('currentUser');
-            window.location.href = '/';
-        } catch (err) {
-            console.error('Logout failed:', err);
-            window.location.href = '/';
+    'logout': () => {
+        if (confirm('Log out?')) {
+            fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+                .finally(() => {
+                    localStorage.removeItem('currentUser');
+                    window.location.href = '/login.html';
+                });
         }
     },
     'open-rich-create': () => window.openRichCreateModal?.(),

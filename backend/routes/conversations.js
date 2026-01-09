@@ -187,7 +187,7 @@ router.get('/:id', requireConversationAccess('id'), async (req, res) => {
             conversation.workflow_state = conversation.state;
         }
 
-        console.log(`📄 Loaded: ${conversation.business_name || 'Unknown'}`);
+        console.log(`📄 Loaded: ${conversation.business_name || 'Unknown'}`, new Error().stack.split('\n')[2]);
 
         // Return just the conversation object (matching original format)
         res.json(conversation);
