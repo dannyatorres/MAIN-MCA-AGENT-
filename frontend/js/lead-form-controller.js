@@ -823,7 +823,7 @@ export class LeadFormController {
             ownerEmail: data.ownerEmail,
             ownerSSN: this.formatSSN(data.ownerSSN),
             ownerDOB: this.formatDateUS(data.ownerDOB),
-            ownershipPercentage: data.ownershipPercent,
+            ownershipPercent: data.ownershipPercent,
             creditScore: data.creditScore || 'N/A',
 
             // Owner 2 (Partner)
