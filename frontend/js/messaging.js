@@ -497,12 +497,18 @@ class MessagingModule {
         }
     }
 
-    async updateAIButtonState(conversationId) {
+    async updateAIButtonState(conversationId, conversationData = null) {
         const btn = document.getElementById('aiToggleBtn');
         if (!btn) return;
         try {
-            const res = await this.parent.apiCall(`/api/conversations/${conversationId}`);
-            const enabled = (res.conversation || res).ai_enabled !== false;
+            // Use passed data or get from cache - don't fetch
+            const conv = conversationData
+                || this.parent.conversationUI?.conversations.get(String(conversationId))
+                || this.parent.selectedConversation;
+
+            if (!conv) return; // No data available, skip update
+
+            const enabled = conv.ai_enabled !== false;
             btn.dataset.state = enabled ? 'on' : 'off';
         } catch (e) {}
     }
