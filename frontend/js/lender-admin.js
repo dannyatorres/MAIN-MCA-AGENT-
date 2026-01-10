@@ -52,6 +52,47 @@ class LenderAdmin {
                 margin: 0 auto 10px;
             }
 
+            .lender-menu-options {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .lender-menu-item {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                padding: 16px 20px;
+                cursor: pointer;
+                border-bottom: 1px solid #30363d;
+                transition: background 0.15s;
+            }
+
+            .lender-menu-item:last-child {
+                border-bottom: none;
+            }
+
+            .lender-menu-item:hover {
+                background: #21262d;
+            }
+
+            .lender-menu-item i:first-child {
+                font-size: 20px;
+                width: 24px;
+                text-align: center;
+            }
+
+            .menu-item-title {
+                font-size: 14px;
+                font-weight: 500;
+                color: #e6edf3;
+            }
+
+            .menu-item-desc {
+                font-size: 12px;
+                color: #8b949e;
+                margin-top: 2px;
+            }
+
             @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         `;
 
@@ -64,34 +105,50 @@ class LenderAdmin {
 
     // --- Entry Point ---
     openManagementModal() {
-        console.log('🏛️ Opening Lender Management Dashboard...');
+        console.log('🏛️ Opening Lender Menu...');
 
-        let modal = document.getElementById('lenderManagementModal');
-        if (!modal) {
-            const modalHTML = `
-                <div id="lenderManagementModal" class="modal" style="display:none; z-index: 2000;">
-                    <div class="modal-content lender-submission-modal">
-                        <div class="modal-header">
-                            <h3>Manage Lender Network</h3>
-                            <button class="modal-close" onclick="document.getElementById('lenderManagementModal').style.display='none'">×</button>
+        let modal = document.getElementById('lenderMenuModal');
+        if (modal) modal.remove();
+
+        const modalHTML = `
+            <div id="lenderMenuModal" class="modal" style="display:flex; z-index: 2000;">
+                <div class="modal-content" style="max-width: 400px; background: #161b22; border-radius: 12px;">
+                    <div class="modal-header" style="border-bottom: 1px solid #30363d;">
+                        <h3>Lender Management</h3>
+                        <button class="modal-close" onclick="document.getElementById('lenderMenuModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 0;">
+                        <div class="lender-menu-options">
+                            <div class="lender-menu-item" onclick="window.commandCenter.lenderAdmin.openNetworkDirectory()">
+                                <i class="fas fa-building" style="color: #3b82f6;"></i>
+                                <div>
+                                    <div class="menu-item-title">Network Directory</div>
+                                    <div class="menu-item-desc">Add, edit, or remove lenders</div>
+                                </div>
+                                <i class="fas fa-chevron-right" style="opacity: 0.5;"></i>
+                            </div>
+                            <div class="lender-menu-item" onclick="window.commandCenter.lenderAdmin.openRuleSuggestions()">
+                                <i class="fas fa-brain" style="color: #8b5cf6;"></i>
+                                <div>
+                                    <div class="menu-item-title">AI Rule Suggestions</div>
+                                    <div class="menu-item-desc">Review AI-detected patterns</div>
+                                </div>
+                                <i class="fas fa-chevron-right" style="opacity: 0.5;"></i>
+                            </div>
+                            <div class="lender-menu-item" onclick="window.commandCenter.lenderAdmin.openNeedsReview()">
+                                <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
+                                <div>
+                                    <div class="menu-item-title">Needs Review</div>
+                                    <div class="menu-item-desc">Declines requiring manual action</div>
+                                </div>
+                                <i class="fas fa-chevron-right" style="opacity: 0.5;"></i>
+                            </div>
                         </div>
-                        <div class="modal-body submission-body" id="lenderManagementContent" style="padding: 0;"></div>
                     </div>
                 </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            modal = document.getElementById('lenderManagementModal');
-        }
-
-        const contentArea = document.getElementById('lenderManagementContent');
-        if (contentArea) {
-            contentArea.innerHTML = this.createManagementTemplate();
-        }
-
-        modal.style.display = 'flex';
-        this.loadLendersList();
-        this.loadRuleSuggestions();
-        this.loadNeedsReview();
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
     }
 
     createManagementTemplate() {
@@ -138,6 +195,22 @@ class LenderAdmin {
                 </div>
             </div>
         `;
+    }
+
+    openNetworkDirectory() {
+        document.getElementById('lenderMenuModal')?.remove();
+        // Open dedicated Network Directory modal with just the lender list
+        // ... (I'll write this once you confirm the approach)
+    }
+
+    openRuleSuggestions() {
+        document.getElementById('lenderMenuModal')?.remove();
+        // Open dedicated AI Rules modal
+    }
+
+    openNeedsReview() {
+        document.getElementById('lenderMenuModal')?.remove();
+        // Open dedicated Needs Review modal
     }
 
     // --- CRUD Operations ---
