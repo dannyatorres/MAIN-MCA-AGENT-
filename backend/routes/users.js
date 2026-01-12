@@ -271,15 +271,39 @@ router.post('/test-drive/:userId', async (req, res) => {
     const { getDriveFolderId } = require('../middleware/serviceAccess');
 
     // Get the folder ID for this user
-    const folderId = await getDriveFolderId(userId);
+    let folderId = await getDriveFolderId(userId);
 
     if (!folderId) {
-      return res.json({ success: false, error: 'No folder ID configured' });
+      return res.json({ success: false, error: 'No folder ID configured for this user' });
+    }
+
+    // Extract folder ID if full URL was provided
+    const urlMatch = folderId.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+    if (urlMatch) {
+      folderId = urlMatch[1];
+    }
+
+    // Parse credentials (handle both raw JSON and base64)
+    let credentials;
+    const rawVar = process.env.GOOGLE_CREDENTIALS_JSON;
+
+    if (!rawVar) {
+      return res.json({ success: false, error: 'GOOGLE_CREDENTIALS_JSON not configured' });
+    }
+
+    try {
+      if (rawVar.trim().startsWith('{')) {
+        credentials = JSON.parse(rawVar);
+      } else {
+        credentials = JSON.parse(Buffer.from(rawVar, 'base64').toString('utf8'));
+      }
+    } catch (parseErr) {
+      return res.json({ success: false, error: 'Failed to parse Google credentials' });
     }
 
     // Try to list folders
     const auth = new google.auth.GoogleAuth({
-      credentials: JSON.parse(Buffer.from(process.env.GOOGLE_CREDENTIALS_JSON, 'base64').toString('utf8')),
+      credentials,
       scopes: ['https://www.googleapis.com/auth/drive.readonly']
     });
 
