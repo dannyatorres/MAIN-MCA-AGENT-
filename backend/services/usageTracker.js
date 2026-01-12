@@ -6,8 +6,8 @@ const MARKUP = 1.5;
 
 // Cost per unit (update with your actual costs)
 const COSTS = {
-    sms_outbound: 0.0079,
-    sms_inbound: 0.0075,
+    sms_outbound: 0.0113,    // $0.0083 + $0.003 carrier fee
+    sms_inbound: 0.0113,     // $0.0083 + $0.003 carrier fee
     mms_outbound: 0.02,
     skip_trace: 0.15,  // Adjust to your actual Tracers cost per lookup
     'gpt-4o': { input: 0.005 / 1000, output: 0.015 / 1000 },

@@ -289,6 +289,16 @@ router.post('/webhook/receive', async (req, res) => {
 
         const newMessage = msgResult.rows[0];
 
+        // Track inbound SMS usage
+        const segmentCount = Math.ceil((Body || '').length / 160);
+        await trackUsage({
+            userId: null,
+            conversationId: conversation.id,
+            type: 'sms_inbound',
+            service: 'twilio',
+            segments: segmentCount
+        });
+
         await db.query(`
             UPDATE conversations
             SET state = 'INTERESTED', current_step = 'INTERESTED', last_activity = NOW()
