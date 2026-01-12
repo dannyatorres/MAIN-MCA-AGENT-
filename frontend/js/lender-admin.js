@@ -151,6 +151,185 @@ class LenderAdmin {
         document.body.insertAdjacentHTML('beforeend', modalHTML);
     }
 
+    openNetworkDirectory() {
+        document.getElementById('lenderMenuModal')?.remove();
+
+        let modal = document.getElementById('networkDirectoryModal');
+        if (modal) modal.remove();
+
+        const modalHTML = `
+            <div id="networkDirectoryModal" class="modal" style="display:flex; z-index: 2000;">
+                <div class="modal-content lender-submission-modal">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-building" style="margin-right: 8px; color: #3b82f6;"></i>Network Directory</h3>
+                        <button class="modal-close" onclick="document.getElementById('networkDirectoryModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body submission-body" style="padding: 0;">
+                        <div class="submission-col-header" style="border-radius: 0; border: none;">
+                            <div class="submission-col-title">All Lenders</div>
+                            <div class="header-actions">
+                                <button onclick="window.commandCenter.lenderAdmin.showAddModal()" class="action-link" style="font-size: 11px;">+ Add New</button>
+                                <button onclick="window.commandCenter.lenderAdmin.loadNetworkDirectory()" class="action-link" style="font-size: 11px;">Refresh</button>
+                            </div>
+                        </div>
+                        <div id="networkDirectoryContainer" class="selection-list" style="flex: 1; border: none; background: #0d1117; max-height: 500px; overflow-y: auto;">
+                            <div class="loading-state"><div class="loading-spinner"></div> Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        this.loadNetworkDirectory();
+    }
+
+    async loadNetworkDirectory() {
+        const container = document.getElementById('networkDirectoryContainer');
+        if (!container) return;
+
+        container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Loading...</div>';
+
+        try {
+            const lenders = await this.system.apiCall('/api/lenders');
+            this.displayLendersListIn(lenders, container);
+        } catch (error) {
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">Failed to load</div>';
+        }
+    }
+
+    displayLendersListIn(lenders, container) {
+        if (!lenders || lenders.length === 0) {
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #8b949e;">No lenders found</div>';
+            return;
+        }
+
+        container.innerHTML = lenders.map(l => `
+            <div class="selection-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;">
+                <div>
+                    <div style="font-weight: 500; color: #e6edf3;">${l.name}</div>
+                    <div style="font-size: 11px; color: #8b949e;">${l.email || 'No email'} • Tier ${l.tier || '?'}</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="window.commandCenter.lenderAdmin.showEditModal('${l.id}')" class="action-link" style="font-size: 11px;">Edit</button>
+                    <button onclick="window.commandCenter.lenderAdmin.deleteLender('${l.id}', '${l.name}')" class="action-link" style="font-size: 11px; color: #ef4444;">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    openRuleSuggestions() {
+        document.getElementById('lenderMenuModal')?.remove();
+
+        let modal = document.getElementById('ruleSuggestionsModal');
+        if (modal) modal.remove();
+
+        const modalHTML = `
+            <div id="ruleSuggestionsModal" class="modal" style="display:flex; z-index: 2000;">
+                <div class="modal-content lender-submission-modal">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-brain" style="margin-right: 8px; color: #8b5cf6;"></i>AI Rule Suggestions</h3>
+                        <button class="modal-close" onclick="document.getElementById('ruleSuggestionsModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body submission-body" style="padding: 0;">
+                        <div id="ruleSuggestionsContainerNew" style="max-height: 500px; overflow-y: auto; background: #0d1117;">
+                            <div class="loading-state" style="padding: 15px;"><div class="loading-spinner"></div> Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        this.loadRuleSuggestionsNew();
+    }
+
+    async loadRuleSuggestionsNew() {
+        const container = document.getElementById('ruleSuggestionsContainerNew');
+        if (!container) return;
+
+        try {
+            const suggestions = await this.system.apiCall('/api/lenders/rule-suggestions');
+
+            if (!suggestions || suggestions.length === 0) {
+                container.innerHTML = '<div style="padding: 30px; text-align: center; color: #8b949e;">No pending suggestions</div>';
+                return;
+            }
+
+            container.innerHTML = suggestions.map(s => `
+                <div style="padding: 15px; border-bottom: 1px solid #30363d;">
+                    <div style="font-weight: 500; color: #e6edf3; margin-bottom: 5px;">${s.lender_name}</div>
+                    <div style="font-size: 12px; color: #8b949e; margin-bottom: 10px;">${s.decline_message}</div>
+                    <div style="font-size: 11px; color: #8b949e; margin-bottom: 10px;">
+                        Type: ${s.rule_type} ${s.industry ? '• Industry: ' + s.industry : ''} ${s.state ? '• State: ' + s.state : ''}
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="window.commandCenter.lenderAdmin.approveRule('${s.id}')" class="btn" style="background: #238636; color: white; padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px;">Approve</button>
+                        <button onclick="window.commandCenter.lenderAdmin.rejectRule('${s.id}')" class="btn" style="background: #da3633; color: white; padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px;">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">Failed to load</div>';
+        }
+    }
+
+    openNeedsReview() {
+        document.getElementById('lenderMenuModal')?.remove();
+
+        let modal = document.getElementById('needsReviewModal');
+        if (modal) modal.remove();
+
+        const modalHTML = `
+            <div id="needsReviewModal" class="modal" style="display:flex; z-index: 2000;">
+                <div class="modal-content lender-submission-modal">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #f59e0b;"></i>Needs Review</h3>
+                        <button class="modal-close" onclick="document.getElementById('needsReviewModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body submission-body" style="padding: 0;">
+                        <div id="needsReviewContainerNew" style="max-height: 500px; overflow-y: auto; background: #0d1117;">
+                            <div class="loading-state" style="padding: 15px;"><div class="loading-spinner"></div> Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        this.loadNeedsReviewNew();
+    }
+
+    async loadNeedsReviewNew() {
+        const container = document.getElementById('needsReviewContainerNew');
+        if (!container) return;
+
+        try {
+            const declines = await this.system.apiCall('/api/lenders/needs-review');
+
+            if (!declines || declines.length === 0) {
+                container.innerHTML = '<div style="padding: 30px; text-align: center; color: #8b949e;">Nothing needs review</div>';
+                return;
+            }
+
+            container.innerHTML = declines.map(d => `
+                <div style="padding: 15px; border-bottom: 1px solid #30363d;">
+                    <div style="font-weight: 500; color: #e6edf3; margin-bottom: 5px;">${d.lender_name} → ${d.business_name}</div>
+                    <div style="font-size: 12px; color: #8b949e; margin-bottom: 10px;">${d.decline_reason || 'No reason provided'}</div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="window.commandCenter.lenderAdmin.showManualRuleModal('${d.lender_name}', '${(d.decline_reason || '').replace(/'/g, "\\'")}', '${d.industry || ''}', '${d.state || ''}', '${d.id}')"
+                                class="btn" style="background: #3b82f6; color: white; padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px;">
+                            Create Rule
+                        </button>
+                        <button onclick="window.commandCenter.lenderAdmin.dismissDecline('${d.id}')"
+                                class="btn" style="background: #374151; color: white; padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px;">
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">Failed to load</div>';
+        }
+    }
+
     createManagementTemplate() {
         return `
             <div style="display: flex; flex-direction: column; height: 100%;">
@@ -197,21 +376,6 @@ class LenderAdmin {
         `;
     }
 
-    openNetworkDirectory() {
-        document.getElementById('lenderMenuModal')?.remove();
-        // Open dedicated Network Directory modal with just the lender list
-        // ... (I'll write this once you confirm the approach)
-    }
-
-    openRuleSuggestions() {
-        document.getElementById('lenderMenuModal')?.remove();
-        // Open dedicated AI Rules modal
-    }
-
-    openNeedsReview() {
-        document.getElementById('lenderMenuModal')?.remove();
-        // Open dedicated Needs Review modal
-    }
 
     // --- CRUD Operations ---
 
