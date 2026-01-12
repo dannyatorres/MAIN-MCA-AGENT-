@@ -86,6 +86,9 @@ async function loadUsageData() {
         });
 
         container.innerHTML = `
+            <style>
+                .chevron.rotated { transform: rotate(90deg); }
+            </style>
             <div style="margin-bottom: 25px;">
                 <div style="font-size: 12px; color: #8b949e; margin-bottom: 15px;">
                     Period: ${start} - ${end}
@@ -131,41 +134,60 @@ async function loadUsageData() {
                 <div style="max-height: 400px; overflow-y: auto;">
                     ${breakdown.length === 0 ?
                         '<div style="padding: 40px; text-align: center; color: #8b949e;">No usage data yet</div>' :
-                        `<table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background: #0d1117;">
-                                    <th style="padding: 12px 15px; text-align: left; font-size: 11px; color: #8b949e; font-weight: 500;">USER</th>
-                                    <th style="padding: 12px 15px; text-align: left; font-size: 11px; color: #8b949e; font-weight: 500;">SERVICE</th>
-                                    <th style="padding: 12px 15px; text-align: left; font-size: 11px; color: #8b949e; font-weight: 500;">MODEL/TYPE</th>
-                                    <th style="padding: 12px 15px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">CALLS</th>
-                                    <th style="padding: 12px 15px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">TOKENS</th>
-                                    <th style="padding: 12px 15px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">COST</th>
-                                    <th style="padding: 12px 15px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">BILLABLE</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${breakdown.map(row => `
-                                    <tr style="border-bottom: 1px solid #21262d;">
-                                        <td style="padding: 10px 15px; font-size: 13px; color: #e6edf3;">${row.user_name || 'System'}</td>
-                                        <td style="padding: 10px 15px;">
-                                            <span style="
-                                                display: inline-block;
-                                                padding: 3px 8px;
-                                                border-radius: 4px;
-                                                font-size: 11px;
-                                                font-weight: 500;
-                                                ${getServiceStyle(row.service)}
-                                            ">${row.service || '-'}</span>
-                                        </td>
-                                        <td style="padding: 10px 15px; font-size: 12px; color: #8b949e;">${row.model || row.usage_type || '-'}</td>
-                                        <td style="padding: 10px 15px; text-align: right; font-size: 13px; color: #e6edf3;">${row.calls}</td>
-                                        <td style="padding: 10px 15px; text-align: right; font-size: 13px; color: #e6edf3;">${row.total_tokens ? parseInt(row.total_tokens).toLocaleString() : (row.segments || '-')}</td>
-                                        <td style="padding: 10px 15px; text-align: right; font-size: 13px; color: #10b981;">$${parseFloat(row.cost_actual || 0).toFixed(4)}</td>
-                                        <td style="padding: 10px 15px; text-align: right; font-size: 13px; color: #f59e0b; font-weight: 500;">$${parseFloat(row.cost_billable || 0).toFixed(4)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>`
+                        Object.entries(userBreakdown).map(([userName, rows]) => {
+                            const userTotals = rows.reduce((acc, r) => ({
+                                calls: acc.calls + parseInt(r.calls || 0),
+                                tokens: acc.tokens + parseInt(r.total_tokens || 0),
+                                cost: acc.cost + parseFloat(r.cost_actual || 0),
+                                billable: acc.billable + parseFloat(r.cost_billable || 0)
+                            }), { calls: 0, tokens: 0, cost: 0, billable: 0 });
+
+                            return `
+                            <div style="border-bottom: 1px solid #30363d;">
+                                <div class="user-usage-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotated')"
+                                     style="padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #0d1117;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span class="chevron" style="transition: transform 0.2s;">></span>
+                                        <span style="font-weight: 500; color: #e6edf3;">${userName}</span>
+                                        <span style="font-size: 11px; color: #8b949e;">(${rows.length} services)</span>
+                                    </div>
+                                    <div style="display: flex; gap: 20px; font-size: 12px;">
+                                        <span style="color: #8b949e;">${userTotals.calls} calls</span>
+                                        <span style="color: #8b949e;">${userTotals.tokens.toLocaleString()} tokens</span>
+                                        <span style="color: #10b981;">$${userTotals.cost.toFixed(2)}</span>
+                                        <span style="color: #f59e0b; font-weight: 500;">$${userTotals.billable.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                <div class="hidden">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <thead>
+                                            <tr style="background: #161b22;">
+                                                <th style="padding: 10px 15px; text-align: left; font-size: 11px; color: #8b949e;">SERVICE</th>
+                                                <th style="padding: 10px 15px; text-align: left; font-size: 11px; color: #8b949e;">MODEL/TYPE</th>
+                                                <th style="padding: 10px 15px; text-align: right; font-size: 11px; color: #8b949e;">CALLS</th>
+                                                <th style="padding: 10px 15px; text-align: right; font-size: 11px; color: #8b949e;">TOKENS</th>
+                                                <th style="padding: 10px 15px; text-align: right; font-size: 11px; color: #8b949e;">COST</th>
+                                                <th style="padding: 10px 15px; text-align: right; font-size: 11px; color: #8b949e;">BILLABLE</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${rows.map(row => `
+                                                <tr style="border-bottom: 1px solid #21262d;">
+                                                    <td style="padding: 10px 15px;">
+                                                        <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; ${getServiceStyle(row.service)}">${row.service || '-'}</span>
+                                                    </td>
+                                                    <td style="padding: 10px 15px; font-size: 12px; color: #8b949e;">${row.model || row.usage_type || '-'}</td>
+                                                    <td style="padding: 10px 15px; text-align: right; font-size: 13px; color: #e6edf3;">${row.calls}</td>
+                                                    <td style="padding: 10px 15px; text-align: right; font-size: 13px; color: #e6edf3;">${row.total_tokens ? parseInt(row.total_tokens).toLocaleString() : (row.segments || '-')}</td>
+                                                    <td style="padding: 10px 15px; text-align: right; font-size: 13px; color: #10b981;">$${parseFloat(row.cost_actual || 0).toFixed(4)}</td>
+                                                    <td style="padding: 10px 15px; text-align: right; font-size: 13px; color: #f59e0b; font-weight: 500;">$${parseFloat(row.cost_billable || 0).toFixed(4)}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>`;
+                        }).join('')
                     }
                 </div>
             </div>
