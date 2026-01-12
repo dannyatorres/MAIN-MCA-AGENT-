@@ -23,30 +23,13 @@ const globalActions = {
         const modal = document.getElementById('settingsModal');
         if (modal) modal.classList.add('hidden');
     },
-    'settings-tab-menu': () => {
-        document.querySelectorAll('.settings-tab').forEach(t => {
-            t.classList.remove('active');
-            t.style.color = '#8b949e';
-            t.style.borderBottomColor = 'transparent';
-        });
-        document.querySelector('[data-settings-tab="menu"]').classList.add('active');
-        document.querySelector('[data-settings-tab="menu"]').style.color = '#e6edf3';
-        document.querySelector('[data-settings-tab="menu"]').style.borderBottomColor = '#3b82f6';
-        document.getElementById('settingsMenuTab').style.display = 'block';
-        document.getElementById('settingsUsageTab').style.display = 'none';
-    },
-    'settings-tab-usage': () => {
-        document.querySelectorAll('.settings-tab').forEach(t => {
-            t.classList.remove('active');
-            t.style.color = '#8b949e';
-            t.style.borderBottomColor = 'transparent';
-        });
-        document.querySelector('[data-settings-tab="usage"]').classList.add('active');
-        document.querySelector('[data-settings-tab="usage"]').style.color = '#e6edf3';
-        document.querySelector('[data-settings-tab="usage"]').style.borderBottomColor = '#3b82f6';
-        document.getElementById('settingsMenuTab').style.display = 'none';
-        document.getElementById('settingsUsageTab').style.display = 'block';
+    'open-usage': () => {
+        document.getElementById('settingsModal')?.classList.add('hidden');
+        document.getElementById('usageModal')?.classList.remove('hidden');
         loadUsageData();
+    },
+    'close-usage': () => {
+        document.getElementById('usageModal')?.classList.add('hidden');
     },
     'logout': () => {
         if (confirm('Log out?')) {
@@ -85,45 +68,87 @@ async function loadUsageData() {
 
         if (!res.success) throw new Error('Failed to load');
 
-        const { summary, totals } = res;
+        const { summary, totals, startDate, endDate } = res;
+
+        const start = new Date(startDate).toLocaleDateString();
+        const end = new Date(endDate).toLocaleDateString();
 
         container.innerHTML = `
-            <div style="margin-bottom: 20px;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px;">
-                    <div style="background: #161b22; padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 600; color: #3b82f6;">${totals.totalCalls}</div>
-                        <div style="font-size: 11px; color: #8b949e;">Total Calls</div>
+            <div style="margin-bottom: 25px;">
+                <div style="font-size: 12px; color: #8b949e; margin-bottom: 15px;">
+                    Period: ${start} - ${end}
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                        <div style="font-size: 28px; font-weight: 600; color: #3b82f6;">${totals.totalCalls}</div>
+                        <div style="font-size: 12px; color: #8b949e; margin-top: 5px;">Total API Calls</div>
                     </div>
-                    <div style="background: #161b22; padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 600; color: #10b981;">$${totals.totalCostActual.toFixed(2)}</div>
-                        <div style="font-size: 11px; color: #8b949e;">Your Cost</div>
+                    <div style="background: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                        <div style="font-size: 28px; font-weight: 600; color: #8b5cf6;">${(totals.totalTokens || 0).toLocaleString()}</div>
+                        <div style="font-size: 12px; color: #8b949e; margin-top: 5px;">LLM Tokens</div>
                     </div>
-                    <div style="background: #161b22; padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 600; color: #f59e0b;">$${totals.totalCostBillable.toFixed(2)}</div>
-                        <div style="font-size: 11px; color: #8b949e;">Billable</div>
+                    <div style="background: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                        <div style="font-size: 28px; font-weight: 600; color: #10b981;">$${totals.totalCostActual.toFixed(2)}</div>
+                        <div style="font-size: 12px; color: #8b949e; margin-top: 5px;">Your Cost</div>
+                    </div>
+                    <div style="background: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                        <div style="font-size: 28px; font-weight: 600; color: #f59e0b;">$${totals.totalCostBillable.toFixed(2)}</div>
+                        <div style="font-size: 12px; color: #8b949e; margin-top: 5px;">Billable Amount</div>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 15px 20px; border-radius: 10px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.8);">Estimated Profit</div>
+                        <div style="font-size: 24px; font-weight: 600; color: white;">$${(totals.totalCostBillable - totals.totalCostActual).toFixed(2)}</div>
+                    </div>
+                    <div style="font-size: 12px; color: rgba(255,255,255,0.8);">
+                        ${totals.totalCostActual > 0 ? Math.round(((totals.totalCostBillable - totals.totalCostActual) / totals.totalCostActual) * 100) : 0}% margin
                     </div>
                 </div>
             </div>
 
-            <div style="font-size: 12px; font-weight: 500; color: #e6edf3; margin-bottom: 10px;">Usage by User</div>
-            <div style="max-height: 250px; overflow-y: auto;">
-                ${summary.length === 0 ? '<div style="color: #8b949e; text-align: center; padding: 20px;">No usage data yet</div>' :
-                summary.map(u => `
-                    <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #30363d;">
-                        <div>
-                            <div style="font-weight: 500; color: #e6edf3;">${u.user_name || 'Unknown'}</div>
-                            <div style="font-size: 11px; color: #8b949e;">${u.email}</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-weight: 500; color: #f59e0b;">$${parseFloat(u.total_cost_billable || 0).toFixed(2)}</div>
-                            <div style="font-size: 11px; color: #8b949e;">${u.total_calls} calls</div>
-                        </div>
-                    </div>
-                `).join('')}
+            <div style="background: #161b22; border-radius: 10px; border: 1px solid #30363d; overflow: hidden;">
+                <div style="padding: 15px 20px; border-bottom: 1px solid #30363d; font-weight: 500; color: #e6edf3;">
+                    Usage by User
+                </div>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    ${summary.length === 0 ?
+                        '<div style="padding: 40px; text-align: center; color: #8b949e;">No usage data yet</div>' :
+                        `<table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #0d1117;">
+                                    <th style="padding: 12px 20px; text-align: left; font-size: 11px; color: #8b949e; font-weight: 500;">USER</th>
+                                    <th style="padding: 12px 20px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">CALLS</th>
+                                    <th style="padding: 12px 20px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">TOKENS</th>
+                                    <th style="padding: 12px 20px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">SMS</th>
+                                    <th style="padding: 12px 20px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">YOUR COST</th>
+                                    <th style="padding: 12px 20px; text-align: right; font-size: 11px; color: #8b949e; font-weight: 500;">BILLABLE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${summary.map(u => `
+                                    <tr style="border-bottom: 1px solid #30363d;">
+                                        <td style="padding: 12px 20px;">
+                                            <div style="font-weight: 500; color: #e6edf3;">${u.user_name || 'Unknown'}</div>
+                                            <div style="font-size: 11px; color: #8b949e;">${u.email || ''}</div>
+                                        </td>
+                                        <td style="padding: 12px 20px; text-align: right; color: #e6edf3;">${u.total_calls || 0}</td>
+                                        <td style="padding: 12px 20px; text-align: right; color: #e6edf3;">${(parseInt(u.total_tokens) || 0).toLocaleString()}</td>
+                                        <td style="padding: 12px 20px; text-align: right; color: #e6edf3;">${u.total_sms_segments || 0}</td>
+                                        <td style="padding: 12px 20px; text-align: right; color: #10b981;">$${parseFloat(u.total_cost_actual || 0).toFixed(2)}</td>
+                                        <td style="padding: 12px 20px; text-align: right; color: #f59e0b; font-weight: 500;">$${parseFloat(u.total_cost_billable || 0).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>`
+                    }
+                </div>
             </div>
         `;
     } catch (error) {
-        container.innerHTML = '<div style="color: #ef4444; text-align: center; padding: 20px;">Failed to load usage data</div>';
+        container.innerHTML = '<div style="color: #ef4444; text-align: center; padding: 40px;">Failed to load usage data</div>';
     }
 }
 
@@ -150,16 +175,6 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
     if (e.target.id === 'settingsModal') {
         e.target.classList.add('hidden');
-    }
-});
-
-// Settings tab switching
-document.addEventListener('click', (e) => {
-    const tab = e.target.closest('.settings-tab');
-    if (tab) {
-        const tabName = tab.dataset.settingsTab;
-        if (tabName === 'menu') globalActions['settings-tab-menu']();
-        if (tabName === 'usage') globalActions['settings-tab-usage']();
     }
 });
 
