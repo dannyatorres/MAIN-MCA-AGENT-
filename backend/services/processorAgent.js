@@ -3,6 +3,7 @@
 
 const GmailInboxService = require('./gmailInboxService');
 const { getDatabase } = require('./database');
+const { trackUsage } = require('./usageTracker');
 const { OpenAI } = require('openai');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -216,6 +217,20 @@ async function processEmail(email, db) {
         }],
         response_format: { type: "json_object" }
     });
+
+    // Track usage (system process - no specific user)
+    if (extraction.usage) {
+        await trackUsage({
+            userId: null,
+            conversationId: null,
+            type: 'llm_call',
+            service: 'openai',
+            model: 'gpt-4o-mini',
+            inputTokens: extraction.usage.prompt_tokens,
+            outputTokens: extraction.usage.completion_tokens,
+            metadata: { function: 'processorAgent' }
+        });
+    }
 
     const usage = extraction.usage;
     console.log(`      🎟️ [Tokens] Input: ${usage.prompt_tokens} | Output: ${usage.completion_tokens} | Total: ${usage.total_tokens}`);

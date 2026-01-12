@@ -2,6 +2,7 @@ const { google } = require('googleapis');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const AWS = require('aws-sdk');
 const { getDatabase } = require('./database');
+const { trackUsage } = require('./usageTracker');
 const path = require('path');
 const stream = require('stream');
 require('dotenv').config();
@@ -120,6 +121,21 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const matchedName = response.text().trim().replace(/['"]/g, "");
+
+        // Track Gemini usage
+        if (result.response.usageMetadata) {
+            const usage = result.response.usageMetadata;
+            await trackUsage({
+                userId: userId,
+                conversationId,
+                type: 'llm_call',
+                service: 'google',
+                model: 'gemini-2.5-pro',
+                inputTokens: usage.promptTokenCount,
+                outputTokens: usage.candidatesTokenCount,
+                metadata: { function: 'driveSync' }
+            });
+        }
 
         console.log(`🧠 [DEBUG] Gemini Raw Response: "${matchedName}"`);
 

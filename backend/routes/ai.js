@@ -154,7 +154,7 @@ router.post('/chat', async (req, res) => {
             }
         }
 
-        const result = await aiService.generateResponse(query, conversationContext);
+        const result = await aiService.generateResponse(query, conversationContext, req.user?.id || null);
 
         // Save the User/AI interaction to DB so memory builds up
         if (result.success) {

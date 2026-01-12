@@ -2,6 +2,7 @@
 const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
+const { trackUsage } = require('./usageTracker');
 require('dotenv').config();
 
 // Initialize OpenAI
@@ -36,7 +37,7 @@ function getSystemPrompt() {
 /**
  * Generates a response from OpenAI based on the user query and conversation context.
  */
-const generateResponse = async (query, context) => {
+const generateResponse = async (query, context, userId = null) => {
     if (!isConfigured()) return { success: false, error: 'AI Key Missing' };
 
     try {
@@ -224,6 +225,20 @@ const generateResponse = async (query, context) => {
             temperature: 0.3,
             max_tokens: 500
         });
+
+        // Track usage
+        if (completion.usage) {
+            await trackUsage({
+                userId: userId,
+                conversationId: context?.conversation_id || null,
+                type: 'llm_call',
+                service: 'openai',
+                model: 'gpt-4o-mini',
+                inputTokens: completion.usage.prompt_tokens,
+                outputTokens: completion.usage.completion_tokens,
+                metadata: { function: 'aiService' }
+            });
+        }
 
         // 🟢 NEW: Token Logging
         const usage = completion.usage;

@@ -4,6 +4,7 @@
 const { getDatabase } = require('./database');
 const Anthropic = require('@anthropic-ai/sdk');
 const { v4: uuidv4 } = require('uuid');
+const { trackUsage } = require('./usageTracker');
 
 const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
@@ -122,6 +123,20 @@ If the decline seems like a one-off or you can't determine a clear pattern, set 
             max_tokens: 500,
             messages: [{ role: 'user', content: prompt }]
         });
+
+        // Track usage (background system process)
+        if (response.usage) {
+            await trackUsage({
+                userId: null,
+                conversationId: decline.conversation_id,
+                type: 'llm_call',
+                service: 'anthropic',
+                model: 'claude-haiku',
+                inputTokens: response.usage.input_tokens,
+                outputTokens: response.usage.output_tokens,
+                metadata: { function: 'ruleLearner' }
+            });
+        }
 
         const responseText = response.content[0].text.trim();
         console.log(`[RuleLearner] 📝 AI Response: ${responseText.substring(0, 200)}...`);

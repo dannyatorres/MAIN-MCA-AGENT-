@@ -9,6 +9,7 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
 const emailRoutes = require('./routes/emailRoutes');
+const usageRoutes = require('./routes/usage');
 require('dotenv').config();
 
 // Migration imports
@@ -127,6 +128,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/commander', require('./routes/commander'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/usage', usageRoutes);
 app.use('/api/submissions', require('./routes/submissions'));
 
 // Contact Form

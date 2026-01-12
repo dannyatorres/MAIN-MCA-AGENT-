@@ -1,13 +1,14 @@
 // backend/services/tracersService.js
 const axios = require('axios');
 const aiMatcher = require('./aiMatcher');
+const { trackUsage } = require('./usageTracker');
 require('dotenv').config();
 
 const TRACERS_URL = 'https://api.galaxysearchapi.com/PersonSearch';
 const AP_NAME = process.env.TRACERS_AP_NAME;
 const AP_PASSWORD = process.env.TRACERS_AP_PASSWORD;
 
-async function searchBySsn(ssn, firstName, lastName, address = null, city = null, state = null, zip = null) {
+async function searchBySsn(ssn, firstName, lastName, address = null, city = null, state = null, zip = null, userId = null) {
     try {
         let candidates = [];
         let searchMethod = '';
@@ -23,7 +24,18 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
             });
 
             candidates = await callTracers(payload);
-            if (candidates.length > 0) searchMethod = 'SSN';
+            if (candidates.length > 0) {
+                searchMethod = 'SSN';
+                // Track usage
+                await trackUsage({
+                    userId: userId,
+                    conversationId: null,
+                    type: 'skip_trace',
+                    service: 'tracers',
+                    segments: 1,
+                    metadata: { method: 'SSN' }
+                });
+            }
         }
 
         // ATTEMPT 2: FALLBACK (Name + Address)
@@ -38,7 +50,18 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
             });
 
             candidates = await callTracers(payload);
-            if (candidates.length > 0) searchMethod = 'ADDRESS';
+            if (candidates.length > 0) {
+                searchMethod = 'ADDRESS';
+                // Track usage
+                await trackUsage({
+                    userId: userId,
+                    conversationId: null,
+                    type: 'skip_trace',
+                    service: 'tracers',
+                    segments: 1,
+                    metadata: { method: 'ADDRESS' }
+                });
+            }
         }
 
         // AI VERIFICATION

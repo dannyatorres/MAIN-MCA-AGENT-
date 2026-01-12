@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { processLeadWithAI, trackResponseForTraining } = require('../services/aiAgent');
+const { trackUsage } = require('../services/usageTracker');
 const multer = require('multer');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
@@ -143,6 +144,14 @@ router.post('/send', requireModifyPermission, async (req, res) => {
                 newMessage.status = 'sent';
                 newMessage.twilio_sid = twilioMessage.sid;
 
+                const segmentCount = Math.max(1, Math.ceil((content || '').length / 160));
+                await trackUsage({
+                    userId: req.user?.id,
+                    conversationId: actualConversationId,
+                    type: media_url ? 'mms_outbound' : 'sms_outbound',
+                    service: 'twilio',
+                    segments: segmentCount
+                });
             } catch (twilioError) {
                 console.error('❌ Twilio error:', twilioError.message);
                 await db.query('UPDATE messages SET status = $1 WHERE id = $2', ['failed', newMessage.id]);

@@ -2,6 +2,7 @@
 const { OpenAI } = require('openai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getDatabase } = require('./database');
+const { trackUsage } = require('./usageTracker');
 const { syncDriveFiles } = require('./driveService');
 const commanderService = require('./commanderService');
 const fs = require('fs');
@@ -142,7 +143,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // =================================================================
         // 🚨 LAYER 0: THE MANUAL MASTER SWITCH
         // =================================================================
-        const settingsRes = await db.query('SELECT ai_enabled, state FROM conversations WHERE id = $1', [conversationId]);
+        const settingsRes = await db.query(
+            'SELECT ai_enabled, state, created_by_user_id, assigned_user_id FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+        const usageUserId = settingsRes.rows[0]?.assigned_user_id || settingsRes.rows[0]?.created_by_user_id || null;
 
         // If the switch is explicitly OFF, stop everything.
         if (settingsRes.rows.length > 0 && settingsRes.rows[0].ai_enabled === false) {
@@ -389,6 +394,19 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             tool_choice: "auto"
         });
 
+        if (completion.usage) {
+            await trackUsage({
+                userId: usageUserId,
+                conversationId,
+                type: 'llm_call',
+                service: 'openai',
+                model: completion.model || 'gpt-4o',
+                inputTokens: completion.usage.prompt_tokens,
+                outputTokens: completion.usage.completion_tokens,
+                metadata: { pass: 'first' }
+            });
+        }
+
         const aiMsg = completion.choices[0].message;
         let responseContent = aiMsg.content;
 
@@ -468,6 +486,19 @@ Send this message to the lead: "${offer.pitch_message}"`;
                 model: "gpt-4o",
                 messages: messages
             });
+
+            if (secondPass.usage) {
+                await trackUsage({
+                    userId: usageUserId,
+                    conversationId,
+                    type: 'llm_call',
+                    service: 'openai',
+                    model: secondPass.model || 'gpt-4o',
+                    inputTokens: secondPass.usage.prompt_tokens,
+                    outputTokens: secondPass.usage.completion_tokens,
+                    metadata: { pass: 'second' }
+                });
+            }
 
             responseContent = secondPass.choices[0].message.content;
         }

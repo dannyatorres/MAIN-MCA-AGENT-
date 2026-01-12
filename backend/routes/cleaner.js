@@ -41,7 +41,7 @@ router.post('/process-file', upload.single('csvFile'), async (req, res) => {
     res.json({ success: true, jobId });
 
     // Process in background
-    processFileAsync(jobId, req.file.path, req.file.originalname);
+    processFileAsync(jobId, req.file.path, req.file.originalname, req.user?.id || null);
 });
 
 // ============================================
@@ -88,7 +88,7 @@ router.get('/download/:jobId', (req, res) => {
 // ============================================
 // Background processor
 // ============================================
-async function processFileAsync(jobId, filePath, originalName) {
+async function processFileAsync(jobId, filePath, originalName, userId = null) {
     const job = jobs[jobId];
     const results = [];
     const rows = [];
@@ -124,7 +124,10 @@ async function processFileAsync(jobId, filePath, originalName) {
                         (row[nameKey] || '').split(' ')[0],
                         (row[nameKey] || '').split(' ').slice(1).join(' '),
                         row[addrKey],
-                        row[stateKey]
+                        null,
+                        row[stateKey],
+                        null,
+                        userId
                     );
 
                     if (result.success && result.match) {

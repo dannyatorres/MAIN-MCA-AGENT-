@@ -1,6 +1,7 @@
 // backend/services/commanderService.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getDatabase } = require('./database');
+const { trackUsage } = require('./usageTracker');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
@@ -254,6 +255,27 @@ async function analyzeAndStrategize(conversationId) {
         // 3. Run AI
         console.log('COMMANDER: Calling Gemini API...');
         const result = await commander.generateContent(prompt);
+
+        // Track usage
+        const convRes = await db.query(
+            'SELECT assigned_user_id, created_by_user_id FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+        const usageUserId = convRes.rows[0]?.assigned_user_id || convRes.rows[0]?.created_by_user_id || null;
+
+        if (result.response.usageMetadata) {
+            const usage = result.response.usageMetadata;
+            await trackUsage({
+                userId: usageUserId,
+                conversationId,
+                type: 'llm_call',
+                service: 'google',
+                model: 'gemini-2.5-pro',
+                inputTokens: usage.promptTokenCount,
+                outputTokens: usage.candidatesTokenCount
+            });
+        }
+
         let responseText = result.response.text()
             .replace(/```json/g, '')
             .replace(/```/g, '')
@@ -510,6 +532,23 @@ async function generateOffer(conversationId) {
         });
 
         const result = await commander.generateContent(prompt);
+
+        // Track usage
+        const usageUserId = lead.assigned_user_id || lead.created_by_user_id || null;
+        if (result.response.usageMetadata) {
+            const usage = result.response.usageMetadata;
+            await trackUsage({
+                userId: usageUserId,
+                conversationId,
+                type: 'llm_call',
+                service: 'google',
+                model: 'gemini-2.5-pro',
+                inputTokens: usage.promptTokenCount,
+                outputTokens: usage.candidatesTokenCount,
+                metadata: { function: 'generateOffer' }
+            });
+        }
+
         const responseText = result.response.text()
             .replace(/```json/g, '')
             .replace(/```/g, '')
@@ -566,6 +605,27 @@ async function reStrategize(conversationId, newContext) {
         });
 
         const result = await commander.generateContent(prompt);
+
+        // Track usage
+        const convRes = await db.query(
+            'SELECT assigned_user_id, created_by_user_id FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+        const usageUserId = convRes.rows[0]?.assigned_user_id || convRes.rows[0]?.created_by_user_id || null;
+        if (result.response.usageMetadata) {
+            const usage = result.response.usageMetadata;
+            await trackUsage({
+                userId: usageUserId,
+                conversationId,
+                type: 'llm_call',
+                service: 'google',
+                model: 'gemini-2.5-pro',
+                inputTokens: usage.promptTokenCount,
+                outputTokens: usage.candidatesTokenCount,
+                metadata: { function: 'reStrategize' }
+            });
+        }
+
         const responseText = result.response.text()
             .replace(/```json/g, '')
             .replace(/```/g, '')
