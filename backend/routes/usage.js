@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { getDatabase } = require('../services/database');
 const { getUserUsageSummary, getAllUsageSummary, getDetailedUsage, COSTS, MARKUP } = require('../services/usageTracker');
 
 // Admin: See all users' usage
@@ -55,6 +56,43 @@ router.get('/my-usage', requireAuth, async (req, res) => {
         res.json({ success: true, summary });
     } catch (error) {
         console.error('Error fetching user usage:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Breakdown by service/model
+router.get('/breakdown', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        const startDate = start || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+        const endDate = end || new Date().toISOString();
+
+        const db = getDatabase();
+        const result = await db.query(`
+            SELECT 
+                u.name as user_name,
+                u.email,
+                ul.user_id,
+                ul.service,
+                ul.model,
+                ul.usage_type,
+                COUNT(*) as calls,
+                SUM(ul.input_tokens) as input_tokens,
+                SUM(ul.output_tokens) as output_tokens,
+                SUM(ul.total_tokens) as total_tokens,
+                SUM(ul.segments) as segments,
+                SUM(ul.cost_actual) as cost_actual,
+                SUM(ul.cost_billable) as cost_billable
+            FROM usage_logs ul
+            LEFT JOIN users u ON ul.user_id = u.id
+            WHERE ul.created_at >= $1 AND ul.created_at < $2
+            GROUP BY u.name, u.email, ul.user_id, ul.service, ul.model, ul.usage_type
+            ORDER BY cost_billable DESC
+        `, [startDate, endDate]);
+
+        res.json({ success: true, breakdown: result.rows });
+    } catch (error) {
+        console.error('Error fetching usage breakdown:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
