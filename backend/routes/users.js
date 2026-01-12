@@ -5,6 +5,7 @@ const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { requireRole } = require('../middleware/auth');
 const { clearSettingsCache, getDefaultSettings } = require('../middleware/serviceAccess');
+const { google } = require('googleapis');
 
 // All routes require admin role
 router.use(requireRole('admin'));
@@ -260,6 +261,48 @@ router.put('/:id/settings', async (req, res) => {
     res.json({ success: true, settings });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Test Drive connection for a user
+router.post('/test-drive/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { getDriveFolderId } = require('../middleware/serviceAccess');
+
+    // Get the folder ID for this user
+    const folderId = await getDriveFolderId(userId);
+
+    if (!folderId) {
+      return res.json({ success: false, error: 'No folder ID configured' });
+    }
+
+    // Try to list folders
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(Buffer.from(process.env.GOOGLE_CREDENTIALS_JSON, 'base64').toString('utf8')),
+      scopes: ['https://www.googleapis.com/auth/drive.readonly']
+    });
+
+    const drive = google.drive({ version: 'v3', auth });
+
+    const result = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name)',
+      pageSize: 5
+    });
+
+    const folderCount = result.data.files?.length || 0;
+
+    res.json({
+      success: true,
+      folderId,
+      message: `Connected! Found ${folderCount} sub-folders.`,
+      sampleFolders: result.data.files?.slice(0, 3).map(f => f.name) || []
+    });
+
+  } catch (error) {
+    console.error('Drive test error:', error);
+    res.json({ success: false, error: error.message });
   }
 });
 
