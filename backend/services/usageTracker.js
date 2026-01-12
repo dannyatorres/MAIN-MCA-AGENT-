@@ -9,7 +9,7 @@ const COSTS = {
     sms_outbound: 0.0113,    // $0.0083 + $0.003 carrier fee
     sms_inbound: 0.0113,     // $0.0083 + $0.003 carrier fee
     mms_outbound: 0.02,
-    skip_trace: 0.15,  // Adjust to your actual Tracers cost per lookup
+    skip_trace: { cost: 0.25, billable: 0.30 },
     'gpt-4o': { input: 0.005 / 1000, output: 0.015 / 1000 },
     'gpt-4o-mini': { input: 0.00015 / 1000, output: 0.0006 / 1000 },
     'gpt-4-turbo': { input: 0.01 / 1000, output: 0.03 / 1000 },
@@ -22,21 +22,30 @@ async function trackUsage({ userId, conversationId, type, service, model, inputT
     const db = getDatabase();
 
     let costActual = 0;
+    let costBillable = null;
     let totalTokens = null;
 
     // Calculate cost
     if (type.includes('sms') || type.includes('mms')) {
         const rate = COSTS[type] || 0.01;
         costActual = (segments || 1) * rate;
-    } else if (type && typeof COSTS[type] === 'number') {
-        costActual = (segments || 1) * COSTS[type];
+    } else if (type && COSTS[type]) {
+        if (typeof COSTS[type] === 'number') {
+            costActual = (segments || 1) * COSTS[type];
+        } else if (COSTS[type].cost !== undefined) {
+            // Custom pricing (like skip_trace)
+            costActual = (segments || 1) * COSTS[type].cost;
+            costBillable = (segments || 1) * COSTS[type].billable;
+        }
     } else if (model && COSTS[model]) {
         const rates = COSTS[model];
         costActual = (inputTokens || 0) * rates.input + (outputTokens || 0) * rates.output;
         totalTokens = (inputTokens || 0) + (outputTokens || 0);
     }
 
-    const costBillable = costActual * MARKUP;
+    if (costBillable === null) {
+        costBillable = costActual * MARKUP;
+    }
 
     try {
         await db.query(`
