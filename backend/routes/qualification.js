@@ -32,6 +32,8 @@ Rules:
 2. "other" is valid - use it when nothing fits well
 3. Do NOT force unrelated matches (e.g., "valet parking" is NOT "real estate")
 4. Service businesses without a specific category → "other"
+5. TRADES ARE NOT CONSTRUCTION - hvac, plumbing, electrical, roofing, flooring, and similar skilled trades must be classified as their specific trade category, NEVER as "construction"
+6. "construction" is ONLY for general contractors, builders, framing, demolition, or companies with "construction" in the name
 
 Respond with ONLY the category name, nothing else.`;
 
