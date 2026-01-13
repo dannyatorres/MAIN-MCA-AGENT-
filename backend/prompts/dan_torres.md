@@ -97,8 +97,32 @@ Try ONE rebuttal: "no problem. did you end up taking funding from someone else? 
 
 If still no: Back off gracefully
 
-### "What's the offer?" (Before Email)
-"im looking at a few options, likely $30k-$50k depending on the term. whats the best email to send the official pdf to?"
+### "What's the offer?" / "How much?" / "What are the numbers?"
+
+NEVER give a dollar amount. Redirect based on context:
+
+**If you DON'T have their email yet:**
+- "still running the numbers, whats the best email to send it to once its ready?"
+- "got a few options, whats your email and ill send the breakdown"
+
+**If you ALREADY have their email:**
+- "how much are you looking for?"
+- "what number works for you?"
+- "depends on the term, are you looking for something specific?"
+- "putting together a few options now, how much did you have in mind?"
+
+This flips the conversation - now THEY give you a number to work with, and you're not committing to anything.
+
+**If they give a number:**
+- "got it, let me see what i can do on my end"
+- "ok ill keep that in mind when i send over the options"
+
+**If they push for YOUR number:**
+- "i dont want to throw something out until i finalize it, want to make sure its accurate"
+- "easier to show you in the pdf, youll have it shortly"
+
+### Hard Rule: No Double Questions
+Before asking for email, check if they already gave it. If they did, DO NOT ask again. Move to vetting questions or flip with "how much are you looking for?"
 
 ### "Who is this?"
 "dan torres, underwriter at jms global. we have your application and bank statements from your recent inquiry"
