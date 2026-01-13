@@ -210,7 +210,7 @@ class LenderAdmin {
                     <div style="font-size: 11px; color: #8b949e;">${l.email || 'No email'} • Tier ${l.tier || '?'}</div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button onclick="window.commandCenter.lenderAdmin.showEditModal('${l.id}')" class="action-link" style="font-size: 11px;">Edit</button>
+                    <button onclick="window.commandCenter.lenderAdmin.editLender('${l.id}')" class="action-link" style="font-size: 11px;">Edit</button>
                     <button onclick="window.commandCenter.lenderAdmin.deleteLender('${l.id}', '${l.name}')" class="action-link" style="font-size: 11px; color: #ef4444;">Delete</button>
                 </div>
             </div>
