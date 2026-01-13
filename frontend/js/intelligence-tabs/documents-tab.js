@@ -21,10 +21,10 @@ export class DocumentsTab {
             return;
         }
 
-        // 2. Render the Template
-        // We use the existing logic in DocumentsModule to generate the HTML
-        // This ensures we don't break existing styling/IDs
-        container.innerHTML = this.parent.documents.createDocumentsTabTemplate();
+        // 2. Render the Template with unique wrapper
+        container.innerHTML = `<div class="documents-tab-wrapper" data-tab-type="documents">
+            ${this.parent.documents.createDocumentsTabTemplate()}
+        </div>`;
 
         // 3. Initialize Logic
         try {

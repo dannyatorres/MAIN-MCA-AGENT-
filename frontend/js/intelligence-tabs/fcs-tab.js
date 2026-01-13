@@ -22,10 +22,9 @@ export class FCSTab {
             return;
         }
 
-        // 2. Build the UI (NO TOP BUTTON)
-        // We keep #syncLoading hidden so we can toggle it from the module
+        // 2. Build the UI with unique wrapper
         container.innerHTML = `
-            <div class="intelligence-section">
+            <div class="intelligence-section fcs-tab-wrapper" data-tab-type="fcs">
 
                 <div id="syncLoading" class="sync-loading-state" style="display: none;">
                     <div class="spinner-sync"></div>

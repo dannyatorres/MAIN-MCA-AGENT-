@@ -1104,12 +1104,18 @@ class DocumentsModule {
             if (fcsTab) fcsTab.click();
         }
 
-        // Small delay to let tab render
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait for tab switch to complete and verify we're on FCS tab
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        const fcsTabWrapper = document.querySelector('.fcs-tab-wrapper');
+        if (!fcsTabWrapper) {
+            console.error('FCS tab not rendered yet');
+            return;
+        }
 
         // Clear existing FCS and show loading
-        const fcsResults = document.getElementById('fcsResults');
-        const syncLoading = document.getElementById('syncLoading');
+        const fcsResults = fcsTabWrapper.querySelector('#fcsResults');
+        const syncLoading = fcsTabWrapper.querySelector('#syncLoading');
 
         if (fcsResults) fcsResults.style.display = 'none';
 

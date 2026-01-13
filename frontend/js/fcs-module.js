@@ -176,18 +176,11 @@ class FCSModule {
         const conversationId = this.parent.getCurrentConversationId();
         if (!conversationId) return;
 
-        let fcsResults = document.getElementById('fcsResults');
-
-        // Ensure container exists if Tab just loaded
+        // Only proceed if FCS tab is active
+        const fcsResults = document.getElementById('fcsResults');
         if (!fcsResults) {
-            const container = document.getElementById('intelligenceContent'); // Fallback
-            if (container) {
-                fcsResults = document.createElement('div');
-                fcsResults.id = 'fcsResults';
-                container.appendChild(fcsResults);
-            } else {
-                return; // Tab likely not active
-            }
+            console.log('⏭️ FCS tab not active, skipping load');
+            return;
         }
 
         fcsResults.style.display = 'block';
