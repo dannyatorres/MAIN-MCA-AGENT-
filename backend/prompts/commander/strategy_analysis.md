@@ -35,6 +35,8 @@ Return ONLY valid JSON (no markdown, no code blocks):
   "red_flags": ["Any concerns about this deal"],
   "lender_notes": "Which lenders to target or avoid",
   "risk_considerations": ["Risk factors to consider"],
+  "avg_monthly_revenue": number,
+  "avg_bank_balance": number,
   "revenue_trend": {
     "direction": "upward|stable|downward|volatile",
     "floor_month": {
@@ -78,8 +80,60 @@ Return ONLY valid JSON (no markdown, no code blocks):
       "moderate": {"min": number, "max": number},
       "aggressive": {"min": number, "max": number}
     }
-  }
+  },
+  "scenarios": [
+    {
+      "tier": "conservative",
+      "funding_amount": number,
+      "term": number,
+      "term_unit": "weeks|days",
+      "payment_amount": number,
+      "payment_frequency": "daily|weekly",
+      "factor_rate": number,
+      "withhold_addition": number,
+      "total_withhold": number,
+      "reasoning": "Why this scenario works - 1 sentence"
+    },
+    {
+      "tier": "moderate",
+      "funding_amount": number,
+      "term": number,
+      "term_unit": "weeks|days",
+      "payment_amount": number,
+      "payment_frequency": "daily|weekly",
+      "factor_rate": number,
+      "withhold_addition": number,
+      "total_withhold": number,
+      "reasoning": "Why this scenario works - 1 sentence"
+    },
+    {
+      "tier": "aggressive",
+      "funding_amount": number,
+      "term": number,
+      "term_unit": "weeks|days",
+      "payment_amount": number,
+      "payment_frequency": "daily|weekly",
+      "factor_rate": number,
+      "withhold_addition": number,
+      "total_withhold": number,
+      "reasoning": "Why this scenario works - 1 sentence"
+    }
+  ]
 }
+
+---
+
+# CRITICAL: REVENUE FIELDS
+
+**avg_monthly_revenue** = The TRUE AVERAGE of all months in the FCS report (add all months, divide by number of months)
+**floor_month.amount** = The LOWEST single month (used for conservative calculations)
+
+These are DIFFERENT numbers. Do not confuse them.
+
+Example:
+- If months are: $40k, $35k, $30k, $25k
+- avg_monthly_revenue = ($40k + $35k + $30k + $25k) / 4 = $32,500
+- floor_month.amount = $25,000 (the lowest)
 
 ---
 
@@ -97,22 +151,87 @@ Return ONLY valid JSON (no markdown, no code blocks):
 
 ---
 
-# OFFER CALCULATION RULES
+# SCENARIO GENERATION RULES
 
-**Base offer on floor month revenue (lowest month):**
-- 1st Position: Floor x 1.5 to 2.0
-- 2nd Position: Floor x 1.0 to 1.5
-- 3rd Position: Floor x 0.75 to 1.0
-- 4th+ Position: Floor x 0.5 to 0.75
+You MUST generate exactly 3 scenarios. Use FLOOR MONTH as a REFERENCE, not a hard limit.
 
-**recommended_funding** = middle of your offer_range (min + max) / 2
-**recommended_term** = moderate term in weeks
-**recommended_payment** = recommended_funding × 1.49 / recommended_term
+**The floor month tells you the WORST they've done recently.** But consider the full picture:
+- If other months are strong, you can go above floor
+- If trend is upward, lean aggressive
+- If trend is downward, stay closer to floor
+- If they've been paying existing MCAs on time, they can handle more
 
-Adjust DOWN for:
-- Downward revenue trend
-- High negative days (>10)
-- Heavy existing withholding (>30%)
+**Think like a real underwriter:** A merchant doing $35k average with a $23k floor month and 2 active positions paying well could realistically handle $25-35k, not just $23k x 0.75.
+
+**Conservative Scenario:**
+- Safest option - stays close to floor calculations
+- Longer term, lower payment
+- "This will definitely work"
+
+**Moderate Scenario:**
+- Balanced approach - uses average of floor and typical revenue
+- Medium term, reasonable payment
+- "This is our sweet spot recommendation"
+
+**Aggressive Scenario:**
+- Pushes toward their capacity
+- Shorter term, higher payment
+- "If they want max funding and can handle it"
+
+**Use judgment based on:**
+- Revenue trend (upward = more aggressive, downward = conservative)
+- Payment history on existing positions
+- Bank balance cushion
+- Negative days pattern
+- Industry stability
+
+**Payment Calculation:**
+- Weekly: (funding x factor_rate) / term_weeks
+- Daily: (funding x factor_rate) / term_days
+
+**Withhold Addition Calculation (use TRUE AVERAGE revenue, not floor):**
+- Weekly: (payment x 4.33) / avg_monthly_revenue x 100
+- Daily: (payment x 21) / avg_monthly_revenue x 100
+
+**General Position Guidelines (flexible, not rigid):**
+- 1st Position: 1.2x to 2.0x floor, or 0.8x to 1.2x average
+- 2nd Position: 0.8x to 1.5x floor, or 0.6x to 1.0x average
+- 3rd Position: 0.5x to 1.0x floor, or 0.4x to 0.8x average
+- 4th+ Position: 0.3x to 0.75x floor, or 0.25x to 0.5x average
+
+**Real Example:**
+Merchant: $35k avg revenue, $23k floor month, 2 active positions, upward trend, paying on time
+
+- Conservative: $20k @ 32 weeks = $932/wk (+11% withhold) - stays near floor
+- Moderate: $27k @ 26 weeks = $1,548/wk (+19% withhold) - balanced
+- Aggressive: $35k @ 20 weeks = $2,607/wk (+32% withhold) - pushes limits
+
+NOT this (too rigid):
+- Conservative: $13,800 (floor x 0.6) - way too low
+- Moderate: $18,400 (floor x 0.8) - undervalues the merchant
+- Aggressive: $23,000 (floor x 1.0) - still leaving money on table
+
+---
+
+# WITHHOLDING LIMITS (soft caps, not hard rules)
+
+**Comfortable Zone:**
+- 1st Position: Up to 12-15%
+- 2nd Position: Total up to 25%
+- 3rd Position: Total up to 35%
+- 4th Position: Total up to 45%
+
+**Can push higher if:**
+- Strong average balance (cushion for payments)
+- Upward revenue trend
+- Clean payment history on existing positions
+- Low negative days
+
+**Stay conservative if:**
+- Downward trend
+- Thin margins (low balance)
+- History of NSFs or late payments
+- High negative days
 
 ---
 
@@ -120,20 +239,6 @@ Adjust DOWN for:
 - Short: 12, 14, 16
 - Medium: 20, 24, 28
 - Long: 32, 36, 40, 44, 48, 52
-
----
-
-# WITHHOLDING RULES
-
-**Recommended Addition by Position:**
-- 1st Position: 10-12%
-- 2nd Position: 10%
-- 3rd Position: 8-10%
-- 4th Position: 6-8%
-
-**Calculate from existing positions:**
-- Daily: (payment × 21) / monthly_revenue × 100
-- Weekly: (payment × 4.33) / monthly_revenue × 100
 
 ---
 

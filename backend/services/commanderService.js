@@ -3,6 +3,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -367,6 +368,7 @@ async function analyzeAndStrategize(conversationId) {
         const recommendedTerm = data.recommended_term || nextPositionScenarios?.moderate?.[0]?.term || 24;
         const recommendedTermUnit = data.recommended_term_unit || nextPositionScenarios?.moderate?.[0]?.termUnit || 'weeks';
         const recommendedPayment = data.recommended_payment || nextPositionScenarios?.moderate?.[0]?.payment || 0;
+        const avgRevenue = data.avg_monthly_revenue || data.revenue_trend?.floor_month?.amount || data.avgRevenue || 0;
 
         console.log(`COMMANDER VERDICT:`);
         console.log(`   Grade: ${gamePlan.lead_grade}`);
@@ -381,7 +383,7 @@ async function analyzeAndStrategize(conversationId) {
                           nextPositionScenarios?.conservative?.[0] ||
                           nextPositionScenarios?.aggressive?.[0];
 
-        await db.query(`
+        const strategyResult = await db.query(`
             INSERT INTO lead_strategy (
                 id, conversation_id, fcs_analysis_id, lead_grade, strategy_type, game_plan,
                 raw_ai_response, avg_revenue, avg_balance, current_positions, total_withholding,
@@ -415,8 +417,8 @@ async function analyzeAndStrategize(conversationId) {
             gamePlan.strategy_type,
             JSON.stringify(gamePlan),
             JSON.stringify(data),
-            data.revenue_trend?.floor_month?.amount || data.avgRevenue || 0,
-            data.avgBankBalance || 0,
+            avgRevenue,
+            data.avg_bank_balance || 0,
             data.stacking_assessment?.current_positions || data.currentPositionCount || 0,
             data.withholding_analysis?.current_withholding_pct || withholdingData.totalWithhold,
             gamePlan.offer_range.min,
@@ -427,41 +429,40 @@ async function analyzeAndStrategize(conversationId) {
             'v1'
         ]);
 
-        // 9. Save Individual Scenarios
-        // First delete old scenarios for this conversation
-        await db.query(`DELETE FROM strategy_scenarios WHERE conversation_id = $1`, [conversationId]);
+        const savedStrategyId = strategyResult.rows[0]?.id || strategyId;
 
-        const allScenarios = [
-            ...(nextPositionScenarios?.conservative || []).map(s => ({...s, tier: 'conservative'})),
-            ...(nextPositionScenarios?.moderate || []).map(s => ({...s, tier: 'moderate'})),
-            ...(nextPositionScenarios?.aggressive || []).map(s => ({...s, tier: 'aggressive'})),
-            ...(nextPositionScenarios?.bestCase || []).map(s => ({...s, tier: 'best_case'}))
-        ];
+        // 9. Save scenarios to strategy_scenarios table
+        if (data.scenarios && Array.isArray(data.scenarios)) {
+            await db.query(
+                'DELETE FROM strategy_scenarios WHERE conversation_id = $1',
+                [conversationId]
+            );
 
-        for (const scenario of allScenarios.slice(0, 12)) {
-            await db.query(`
-                INSERT INTO strategy_scenarios (
-                    strategy_id, conversation_id, tier, funding_amount, term, term_unit,
-                    payment_amount, payment_frequency, factor_rate, withhold_addition,
-                    total_withhold, reasoning
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            `, [
-                strategyId,
-                conversationId,
-                scenario.tier,
-                scenario.funding,
-                scenario.term,
-                scenario.termUnit,
-                scenario.payment,
-                scenario.frequency,
-                parseFloat(scenario.factor),
-                scenario.withholdAddition,
-                scenario.newTotalWithhold,
-                scenario.reasoning
-            ]);
+            for (const scenario of data.scenarios) {
+                await db.query(`
+                    INSERT INTO strategy_scenarios (
+                        id, strategy_id, conversation_id, tier, funding_amount, 
+                        term, term_unit, payment_amount, payment_frequency,
+                        factor_rate, withhold_addition, total_withhold, reasoning
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                `, [
+                    crypto.randomUUID(),
+                    savedStrategyId,
+                    conversationId,
+                    scenario.tier,
+                    scenario.funding_amount,
+                    scenario.term,
+                    scenario.term_unit || 'weeks',
+                    scenario.payment_amount,
+                    scenario.payment_frequency || 'weekly',
+                    scenario.factor_rate || 1.49,
+                    scenario.withhold_addition,
+                    scenario.total_withhold,
+                    scenario.reasoning
+                ]);
+            }
+            console.log(`✅ Saved ${data.scenarios.length} scenarios`);
         }
-
-        console.log(`✅ Strategy saved with ${allScenarios.length} scenarios`);
 
         // 10. Update Conversation State
         let newState = 'STRATEGIZED';
