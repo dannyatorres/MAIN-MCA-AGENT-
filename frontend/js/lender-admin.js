@@ -516,6 +516,7 @@ class LenderAdmin {
     async editLender(lenderId) {
         try {
             const result = await this.system.apiCall(`/api/lenders/${lenderId}`);
+            console.log('📋 Edit Lender API Response:', result);
             if (result && result.id) {
                 this.showEditModal(result);
             } else {
