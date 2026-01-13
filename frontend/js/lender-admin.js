@@ -516,8 +516,8 @@ class LenderAdmin {
     async editLender(lenderId) {
         try {
             const result = await this.system.apiCall(`/api/lenders/${lenderId}`);
-            if (result.success && result.lender) {
-                this.showEditModal(result.lender);
+            if (result && result.id) {
+                this.showEditModal(result);
             } else {
                 throw new Error('Lender data not found');
             }
