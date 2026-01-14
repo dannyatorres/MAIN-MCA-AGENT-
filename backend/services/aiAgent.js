@@ -373,6 +373,25 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             ORDER BY timestamp ASC LIMIT 20
         `, [conversationId]);
 
+        // 4b. CHECK FOR HANDOFF ACKNOWLEDGMENT - Stay silent
+        const recentMsgs = history.rows.slice(-4);
+        const lastOutbounds = recentMsgs.filter(m => m.direction === 'outbound');
+        const lastInbounds = recentMsgs.filter(m => m.direction === 'inbound');
+
+        const lastOutbound = lastOutbounds.slice(-1)[0]?.content?.toLowerCase() || '';
+        const lastInbound = lastInbounds.slice(-1)[0]?.content?.toLowerCase().trim() || '';
+
+        const handoffPhrases = ['give me a few minutes', 'text you back shortly', 'get back to you', 'finalize the numbers', 'run the numbers'];
+        const acknowledgments = ['thanks', 'thank you', 'ty', 'ok', 'okay', 'k', 'got it', 'sounds good', 'cool', 'great', 'perfect', 'awesome', 'sent', 'done', '👍', '👌'];
+
+        const weHandedOff = handoffPhrases.some(phrase => lastOutbound.includes(phrase));
+        const theyAcknowledged = acknowledgments.some(ack => lastInbound === ack || lastInbound === ack + '!' || lastInbound === ack + '.');
+
+        if (weHandedOff && theyAcknowledged) {
+            console.log('🤝 Handoff acknowledged, staying silent for human takeover');
+            return { shouldReply: false };
+        }
+
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = getGlobalPrompt();
 
