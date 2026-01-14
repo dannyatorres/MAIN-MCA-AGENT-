@@ -6,8 +6,8 @@ const MARKUP = 1.5;
 
 // Cost per unit (update with your actual costs)
 const COSTS = {
-    sms_outbound: 0.0113,    // $0.0083 + $0.003 carrier fee
-    sms_inbound: 0.0113,     // $0.0083 + $0.003 carrier fee
+    sms_outbound: { cost: 0.0083, billable: 0.0113 },
+    sms_inbound: { cost: 0.0083, billable: 0.0113 },
     mms_outbound: 0.02,
     skip_trace: { cost: 0.25, billable: 0.30 },
     'gpt-4o': { input: 0.005 / 1000, output: 0.015 / 1000 },
