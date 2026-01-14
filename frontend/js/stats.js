@@ -301,7 +301,11 @@ class StatsModule {
                             ${group.business_name || 'Unknown'}
                         </td>
                         <td style="padding: 12px; color: #10b981; font-weight: 600;">${bestAmount}</td>
-                        <td style="padding: 12px; color: #8b949e;">${group.offer_count} offer${group.offer_count > 1 ? 's' : ''}</td>
+                    <td style="padding: 12px; color: #8b949e;">
+                        ${hasMultiple 
+                            ? `${group.offer_count} offers` 
+                            : group.offers[0]?.lender_name || '1 offer'}
+                    </td>
                         <td style="padding: 12px;">
                             <button class="btn-mark-funded" onclick="window.markAsFunded('${group.conversation_id}', ${group.best_offer || 0})">
                                 Mark Funded
