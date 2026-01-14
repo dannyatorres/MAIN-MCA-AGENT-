@@ -80,7 +80,9 @@ async function runMorningFollowUp() {
                 last_msg.direction as last_direction,
                 last_msg.timestamp as last_msg_time
             FROM conversations c
-            JOIN lender_submissions ls ON ls.conversation_id = c.id AND ls.status = 'OFFER'
+            JOIN lender_submissions ls ON ls.conversation_id = c.id 
+                AND ls.status = 'OFFER'
+                AND ls.last_response_at > NOW() - INTERVAL '48 hours'
             LEFT JOIN LATERAL (
                 SELECT direction, timestamp
                 FROM messages m 
@@ -91,8 +93,6 @@ async function runMorningFollowUp() {
             WHERE 
                 c.state NOT IN ('DEAD', 'ARCHIVED', 'FUNDED', 'STALE')
                 AND c.lead_phone IS NOT NULL
-                AND (last_msg.direction = 'outbound' OR last_msg.direction IS NULL)
-                AND last_msg.timestamp < NOW() - INTERVAL '12 hours'
                 AND NOT EXISTS (
                     SELECT 1 FROM messages m2 
                     WHERE m2.conversation_id = c.id 

@@ -92,10 +92,28 @@ app.use(session({
 
 // --- 4b. AUTH MIDDLEWARE ---
 const { attachUser, requireAuth } = require('./middleware/auth');
+const { runMorningFollowUp } = require('./services/morningFollowUp');
 app.use(attachUser);
 
 // Auth routes (BEFORE requireAuth - these are public)
 app.use('/api/auth', require('./routes/auth'));
+
+// Internal API endpoints (no user auth, uses secret key)
+app.post('/api/agent/morning-followup', async (req, res) => {
+    const secret = req.headers['x-internal-secret'];
+    if (secret !== process.env.INTERNAL_API_SECRET) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('🌅 Morning follow-up triggered');
+    try {
+        const result = await runMorningFollowUp();
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        console.error('Morning follow-up error:', err);
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 // Apply auth check to all other routes
 app.use(requireAuth);
