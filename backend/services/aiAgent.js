@@ -367,6 +367,16 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         const fcsData = fcsRes.rows[0] || null;
 
+        // Get active offers for this conversation
+        const offersRes = await db.query(`
+            SELECT lender_name, offer_amount, factor_rate, term_length, term_unit, payment_frequency
+            FROM lender_submissions
+            WHERE conversation_id = $1 AND status = 'OFFER'
+            ORDER BY offer_amount DESC
+        `, [conversationId]);
+
+        const offers = offersRes.rows;
+
         // 4. BUILD CONVERSATION HISTORY
         const history = await db.query(`
             SELECT direction, content FROM messages
@@ -376,6 +386,26 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = getGlobalPrompt();
+
+        // Check if this conversation has active offers - use negotiation mode
+        const hasActiveOffer = await db.query(`
+            SELECT 1 FROM lender_submissions
+            WHERE conversation_id = $1 AND status = 'OFFER'
+            LIMIT 1
+        `, [conversationId]);
+
+        if (hasActiveOffer.rows.length > 0) {
+            try {
+                const negotiationPath = path.join(__dirname, '../prompts/offer_negotiation.md');
+                if (fs.existsSync(negotiationPath)) {
+                    const negotiationPrompt = fs.readFileSync(negotiationPath, 'utf8');
+                    systemPrompt += `\n\n---\n\n${negotiationPrompt}`;
+                    console.log('Loaded negotiation mode for active offer');
+                }
+            } catch (err) {
+                console.error('Failed to load negotiation prompt:', err.message);
+            }
+        }
 
         // NEW: Inject learned corrections
         const corrections = await getLearnedCorrections(gamePlan?.lead_grade || null, null);
@@ -443,6 +473,18 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
 
             systemPrompt += `\n**Summary:** ${fcsData.analysis_summary || 'No summary'}\n`;
+        }
+
+        if (offers && offers.length > 0) {
+            systemPrompt += `\n\n---\n\n## 💰 ACTIVE OFFERS (Use for negotiation)\n`;
+            offers.forEach(o => {
+                systemPrompt += `- **${o.lender_name}**: $${Number(o.offer_amount).toLocaleString()}`;
+                if (o.factor_rate) systemPrompt += ` @ ${o.factor_rate} factor`;
+                if (o.term_length) systemPrompt += `, ${o.term_length} ${o.term_unit || 'days'}`;
+                if (o.payment_frequency) systemPrompt += ` (${o.payment_frequency})`;
+                systemPrompt += `\n`;
+            });
+            systemPrompt += `\n**Negotiation:** You can adjust terms within reason. If they push back, offer longer term or lower amount. Goal is to close the deal.\n`;
         }
 
         // Build the Message Chain

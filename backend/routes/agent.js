@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { processLeadWithAI } = require('../services/aiAgent'); // ✅ Correct
 const { getDatabase } = require('../services/database');
+const { runMorningFollowUp } = require('../services/morningFollowUp');
 const twilio = require('twilio');
 
 // POST /api/agent/trigger
@@ -78,6 +79,18 @@ router.post('/trigger', async (req, res) => {
         action: result.shouldReply ? "sent_message" : "status_update_only",
         ai_reply: result.content || "No reply generated (Status update or silence)"
     });
+});
+
+// POST /api/agent/morning-followup
+router.post('/morning-followup', async (req, res) => {
+    console.log('🌅 Morning follow-up triggered via API');
+    try {
+        const result = await runMorningFollowUp();
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        console.error('Morning follow-up error:', err);
+        return res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 module.exports = router;
