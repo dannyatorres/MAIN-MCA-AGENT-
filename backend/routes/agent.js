@@ -83,6 +83,12 @@ router.post('/trigger', async (req, res) => {
 
 // POST /api/agent/morning-followup
 router.post('/morning-followup', async (req, res) => {
+    // Allow internal calls with secret
+    const secret = req.headers['x-internal-secret'];
+    if (secret !== process.env.INTERNAL_API_SECRET) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     console.log('🌅 Morning follow-up triggered via API');
     try {
         const result = await runMorningFollowUp();
