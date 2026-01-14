@@ -391,8 +391,16 @@
     }
 
     function formatDate(dateStr) {
+      if (!dateStr) return 'Never';
       const d = new Date(dateStr);
-      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      return d.toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     }
 
     async function testDriveConnection() {
