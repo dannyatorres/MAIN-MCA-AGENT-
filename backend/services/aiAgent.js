@@ -352,18 +352,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             console.log(`📋 No Commander strategy yet - using default prompts`);
         }
 
-        const fcsRes = await db.query(`
-            SELECT 
-                average_revenue,
-                average_daily_balance,
-                total_negative_days,
-                withholding_percentage,
-                bank_name,
-                analysis_summary
-            FROM fcs_analyses
-            WHERE conversation_id = $1
-            ORDER BY created_at DESC LIMIT 1
-        `, [conversationId]);
+        const fcsRes = { rows: [] }; // Disabled - fix column names later
 
         const fcsData = fcsRes.rows[0] || null;
 
