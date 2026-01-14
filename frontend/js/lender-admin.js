@@ -514,11 +514,15 @@ class LenderAdmin {
     }
 
     async editLender(lenderId) {
+        console.log('🔍 EDIT LENDER CALLED:', lenderId);
         try {
+            console.log('📡 Making API call to:', `/api/lenders/${lenderId}`);
             const result = await this.system.apiCall(`/api/lenders/${lenderId}`);
-            console.log('📋 Edit Lender API Response:', result);
-            if (result && result.id) {
-                this.showEditModal(result);
+            console.log('📋 Raw result:', result);
+            console.log('📋 Result type:', typeof result);
+            console.log('📋 Result stringified:', JSON.stringify(result));
+            if (result && result.lender) {
+                this.showEditModal(result.lender);
             } else {
                 throw new Error('Lender data not found');
             }
