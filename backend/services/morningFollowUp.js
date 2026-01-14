@@ -54,7 +54,12 @@ async function generateMorningMessage(conversationHistory, businessName, db, con
         });
     }
 
-    const reply = response.choices[0]?.message?.content?.trim();
+    let reply = response.choices[0]?.message?.content?.trim();
+
+    // Strip quotes if AI wrapped the message
+    if (reply) {
+        reply = reply.replace(/^["']|["']$/g, '');
+    }
     
     // If AI says don't send, return null
     if (!reply || reply === 'NO_SEND' || reply.toUpperCase().includes('NO_SEND')) {

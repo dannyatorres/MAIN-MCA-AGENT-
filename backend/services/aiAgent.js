@@ -357,7 +357,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 average_daily_balance,
                 total_negative_days,
                 withholding_percentage,
-                positions,
                 bank_name,
                 analysis_summary
             FROM fcs_analyses
