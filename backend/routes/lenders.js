@@ -913,7 +913,7 @@ router.post('/log-response', async (req, res) => {
         }
 
         // Update conversation based on status
-        if (['OFFER', 'APPROVED'].includes(status)) {
+        if (status === 'OFFER') {
             await db.query(`
                 UPDATE conversations SET has_offer = TRUE, last_activity = NOW()
                 WHERE id = $1

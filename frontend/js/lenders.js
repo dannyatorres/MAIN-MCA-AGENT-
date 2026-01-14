@@ -1833,9 +1833,8 @@ Best regards`;
                         <select id="responseStatus" class="form-input">
                             <option value="">Select...</option>
                             <option value="OFFER">Offer Received</option>
-                            <option value="APPROVED">Approved</option>
                             <option value="FUNDED">Funded</option>
-                            <option value="DECLINED">Declined</option>
+                            <option value="DECLINE">Declined</option>
                         </select>
                     </div>
 
@@ -1981,9 +1980,9 @@ Best regards`;
         statusSelect.onchange = () => {
             const status = statusSelect.value;
             document.getElementById('offerFields').style.display =
-                ['OFFER', 'APPROVED', 'FUNDED'].includes(status) ? 'block' : 'none';
+                ['OFFER', 'FUNDED'].includes(status) ? 'block' : 'none';
             document.getElementById('declineFields').style.display =
-                status === 'DECLINED' ? 'block' : 'none';
+                status === 'DECLINE' ? 'block' : 'none';
         };
 
         // Position change - show prev position fields if > 1
@@ -2038,7 +2037,7 @@ Best regards`;
         if (position) data.position = parseInt(position);
 
         // New offer fields
-        if (['OFFER', 'APPROVED', 'FUNDED'].includes(status)) {
+        if (['OFFER', 'FUNDED'].includes(status)) {
             const amount = document.getElementById('responseOfferAmount')?.value;
             const factor = document.getElementById('responseFactorRate')?.value;
             const term = document.getElementById('responseTermLength')?.value;
@@ -2073,7 +2072,7 @@ Best regards`;
         }
 
         // Decline reason
-        if (status === 'DECLINED') {
+        if (status === 'DECLINE') {
             const reason = document.getElementById('responseDeclineReason')?.value;
             if (reason) data.decline_reason = reason;
         }
@@ -2106,7 +2105,7 @@ Best regards`;
                 // Add status indicator based on status value
                 const statusLower = status.toLowerCase();
                 const statusIcon = ['offer', 'approved', 'funded'].includes(statusLower) ? '✅' :
-                                   statusLower === 'declined' ? '❌' :
+                                   ['decline', 'declined'].includes(statusLower) ? '❌' :
                                    statusLower === 'pending' ? '⏳' : '📋';
 
                 // Remove any existing response classes
@@ -2115,7 +2114,7 @@ Best regards`;
                 // Add appropriate class
                 if (['offer', 'approved', 'funded'].includes(statusLower)) {
                     tag.classList.add('response-approved');
-                } else if (statusLower === 'declined') {
+                } else if (['decline', 'declined'].includes(statusLower)) {
                     tag.classList.add('response-declined');
                 } else {
                     tag.classList.add('response-pending');
