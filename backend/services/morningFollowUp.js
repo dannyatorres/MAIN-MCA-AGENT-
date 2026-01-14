@@ -91,7 +91,7 @@ async function runMorningFollowUp() {
                 LIMIT 1
             ) last_msg ON true
             WHERE 
-                c.state NOT IN ('DEAD', 'ARCHIVED', 'FUNDED', 'STALE')
+                c.state NOT IN ('DEAD', 'ARCHIVED', 'FUNDED')
                 AND c.lead_phone IS NOT NULL
                 AND NOT EXISTS (
                     SELECT 1 FROM messages m2 
