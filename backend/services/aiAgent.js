@@ -158,6 +158,7 @@ async function getLearnedCorrections(leadGrade, revenueRange) {
 }
 
 async function processLeadWithAI(conversationId, systemInstruction) {
+    systemInstruction = systemInstruction || '';
     const db = getDatabase();
     console.log(`🧠 AI Agent Processing Lead: ${conversationId}`);
 
