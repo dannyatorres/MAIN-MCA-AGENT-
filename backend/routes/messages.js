@@ -344,6 +344,16 @@ router.post('/webhook/receive', async (req, res) => {
 
                         await db.query('UPDATE messages SET status = \'sent\', twilio_sid = $1 WHERE id = $2', [sentMsg.sid, aiMessage.id]);
 
+                        const aiSegmentCount = Math.max(1, Math.ceil((aiResult.content || '').length / 160));
+                        await trackUsage({
+                            userId: null,
+                            conversationId: conversation.id,
+                            type: 'sms_outbound',
+                            service: 'twilio',
+                            segments: aiSegmentCount,
+                            metadata: { source: 'ai_auto_reply' }
+                        });
+
                         console.log('🔴 BACKEND EMIT: new_message (ai)', { conversation_id: conversation.id, message_id: aiMessage.id });
                         if (global.io) {
                             global.io.emit('new_message', {
