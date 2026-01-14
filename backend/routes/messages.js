@@ -292,7 +292,7 @@ router.post('/webhook/receive', async (req, res) => {
         // Track inbound SMS usage
         const segmentCount = Math.ceil((Body || '').length / 160);
         await trackUsage({
-            userId: null,
+            userId: conversation.assigned_user_id,
             conversationId: conversation.id,
             type: 'sms_inbound',
             service: 'twilio',
