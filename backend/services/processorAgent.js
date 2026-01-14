@@ -237,6 +237,11 @@ async function processEmail(email, db) {
 
     const data = JSON.parse(extraction.choices[0].message.content);
 
+    // Normalize status - treat APPROVED same as OFFER
+    if (data.category === 'APPROVED') {
+        data.category = 'OFFER';
+    }
+
     // Clean the extracted business name - strip out company patterns
     let businessName = data.business_name || "";
     businessName = businessName

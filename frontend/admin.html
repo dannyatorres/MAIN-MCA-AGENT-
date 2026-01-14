@@ -187,9 +187,14 @@
       <div>
         <span id="userCount">0 users</span>
       </div>
-      <button class="btn btn-primary" id="addUserBtn">
-        <i class="fas fa-plus"></i> Add User
-      </button>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="openTrainingModal()" data-action="open-training">
+          🧠 AI Learning
+        </button>
+        <button class="btn btn-primary" id="addUserBtn">
+          <i class="fas fa-plus"></i> Add User
+        </button>
+      </div>
     </div>
 
     <table class="users-table">
@@ -325,6 +330,29 @@
     </div>
   </div>
 
+  <!-- Training Modal -->
+  <div id="trainingModal" class="modal-overlay">
+    <div class="modal" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2 style="margin: 0;">🧠 AI Learning</h2>
+        <button class="modal-close" onclick="closeTrainingModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #58a6ff;">Suggested Patterns</h3>
+          <p style="color: #8b949e; font-size: 12px;">These patterns appeared 2+ times. Approve to add to AI persona.</p>
+          <div id="pendingPatterns"></div>
+        </div>
+
+        <div>
+          <h3 style="color: #3fb950;">Active Patterns</h3>
+          <p style="color: #8b949e; font-size: 12px;">Currently in dan_torres.md</p>
+          <div id="currentPatterns" style="background: #161b22; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/user-menu.js"></script>
   <script>
     // Admin Panel Logic
@@ -401,6 +429,86 @@
         hour: '2-digit',
         minute: '2-digit'
       });
+    }
+
+    async function openTrainingModal() {
+      document.getElementById('trainingModal').classList.add('show');
+      await loadPendingPatterns();
+      await loadCurrentPatterns();
+    }
+
+    function closeTrainingModal() {
+      document.getElementById('trainingModal').classList.remove('show');
+    }
+
+    async function loadPendingPatterns() {
+      const container = document.getElementById('pendingPatterns');
+      container.innerHTML = '<div style="color: #8b949e;">Loading...</div>';
+
+      try {
+        const res = await fetch('/api/usage/learned-patterns', { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.patterns || data.patterns.length === 0) {
+          container.innerHTML = '<div style="color: #8b949e;">No patterns yet. Keep training!</div>';
+          return;
+        }
+
+        container.innerHTML = data.patterns.map(p => `
+          <div style="background: #161b22; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #30363d;">
+            <div style="color: #8b949e; font-size: 11px; margin-bottom: 8px;">Lead said (${p.times}x):</div>
+            <div style="color: #e6edf3; margin-bottom: 10px;">"${p.lead_message?.substring(0, 100) || 'N/A'}"</div>
+            <div style="color: #8b949e; font-size: 11px; margin-bottom: 8px;">You responded:</div>
+            <div style="color: #3fb950; margin-bottom: 15px;">"${p.human_response?.substring(0, 100) || 'N/A'}"</div>
+            <button onclick="approvePattern('${encodeURIComponent(p.lead_message)}', '${encodeURIComponent(p.human_response)}')"
+              style="background: #238636; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px;">
+              ✓ Approve
+            </button>
+            <button onclick="ignorePattern(this)"
+              style="background: #30363d; color: #8b949e; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">
+              Ignore
+            </button>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<div style="color: #f85149;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function loadCurrentPatterns() {
+      const container = document.getElementById('currentPatterns');
+      try {
+        const res = await fetch('/api/usage/current-patterns', { credentials: 'include' });
+        const data = await res.json();
+        container.textContent = data.content || 'No learned patterns yet';
+      } catch (err) {
+        container.textContent = 'Failed to load';
+      }
+    }
+
+    async function approvePattern(leadMessage, humanResponse) {
+      try {
+        const res = await fetch('/api/usage/approve-pattern', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            leadMessage: decodeURIComponent(leadMessage),
+            humanResponse: decodeURIComponent(humanResponse)
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadPendingPatterns();
+          await loadCurrentPatterns();
+        }
+      } catch (err) {
+        alert('Failed to approve: ' + err.message);
+      }
+    }
+
+    function ignorePattern(btn) {
+      btn.closest('div[style*="background: #161b22"]').remove();
     }
 
     async function testDriveConnection() {
@@ -623,6 +731,7 @@
 
     userModal.addEventListener('click', (e) => { if (e.target === userModal) userModal.classList.remove('show'); });
     passwordModal.addEventListener('click', (e) => { if (e.target === passwordModal) passwordModal.classList.remove('show'); });
+    document.getElementById('trainingModal').addEventListener('click', (e) => { if (e.target.id === 'trainingModal') closeTrainingModal(); });
   </script>
 </body>
 </html>

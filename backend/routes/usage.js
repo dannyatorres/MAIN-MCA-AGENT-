@@ -155,4 +155,92 @@ router.get('/by-service', requireAuth, requireRole('admin'), async (req, res) =>
     }
 });
 
+// GET learned patterns awaiting review
+router.get('/learned-patterns', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const db = getDatabase();
+
+        const result = await db.query(`
+            SELECT 
+                lead_message,
+                human_response,
+                COUNT(*) as times,
+                MAX(lead_grade) as lead_grade,
+                AVG(monthly_revenue) as avg_revenue
+            FROM response_training
+            WHERE response_source = 'HUMAN_MANUAL'
+              AND human_response IS NOT NULL
+              AND LENGTH(human_response) > 10
+            GROUP BY lead_message, human_response
+            HAVING COUNT(*) >= 2
+            ORDER BY COUNT(*) DESC
+            LIMIT 20
+        `);
+
+        res.json({ success: true, patterns: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST approve a pattern (adds to MD)
+router.post('/approve-pattern', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { leadMessage, humanResponse } = req.body;
+        const fs = require('fs');
+        const path = require('path');
+
+        const mdPath = path.join(__dirname, '../prompts/dan_torres.md');
+        const currentContent = fs.readFileSync(mdPath, 'utf8');
+
+        if (!currentContent.includes('## LEARNED PATTERNS')) {
+            fs.appendFileSync(mdPath, '\n\n## LEARNED PATTERNS (auto-approved)\n');
+        }
+
+        const newPattern = `\n- When lead says "${leadMessage.substring(0, 50)}..." → "${humanResponse.substring(0, 80)}..."`;
+        fs.appendFileSync(mdPath, newPattern);
+
+        res.json({ success: true, message: 'Pattern added to persona' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET current learned patterns from MD
+router.get('/current-patterns', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+
+        const mdPath = path.join(__dirname, '../prompts/dan_torres.md');
+        const content = fs.readFileSync(mdPath, 'utf8');
+
+        const match = content.match(/## LEARNED PATTERNS[\s\S]*$/);
+        const learned = match ? match[0] : 'No learned patterns yet';
+
+        res.json({ success: true, content: learned });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// DELETE a pattern from MD
+router.post('/remove-pattern', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { pattern } = req.body;
+        const fs = require('fs');
+        const path = require('path');
+
+        const mdPath = path.join(__dirname, '../prompts/dan_torres.md');
+        let content = fs.readFileSync(mdPath, 'utf8');
+
+        content = content.split('\n').filter(line => !line.includes(pattern)).join('\n');
+        fs.writeFileSync(mdPath, content);
+
+        res.json({ success: true, message: 'Pattern removed' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;
