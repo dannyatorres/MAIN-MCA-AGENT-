@@ -241,16 +241,15 @@ class StatsModule {
     }
 
     async showOffersModal() {
-        // Show modal immediately with loading state
         let html = `
-            <div style="max-height: 400px; overflow-y: auto;">
+            <div style="max-height: 500px; overflow-y: auto;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="border-bottom: 1px solid #30363d; text-align: left;">
+                            <th style="padding: 10px; color: #8b949e; width: 30px;"></th>
                             <th style="padding: 10px; color: #8b949e;">Business</th>
-                            <th style="padding: 10px; color: #8b949e;">Lender</th>
-                            <th style="padding: 10px; color: #8b949e;">Amount</th>
-                            <th style="padding: 10px; color: #8b949e;">Date</th>
+                            <th style="padding: 10px; color: #8b949e;">Best Offer</th>
+                            <th style="padding: 10px; color: #8b949e;">Lenders</th>
                             <th style="padding: 10px; color: #8b949e;">Action</th>
                         </tr>
                     </thead>
@@ -286,35 +285,66 @@ class StatsModule {
             }
 
             let rows = '';
-            result.offers.forEach(offer => {
-                const amount = offer.offer_amount ? Number(offer.offer_amount) : 0;
-                const displayAmount = amount ? `$${amount.toLocaleString()}` : 'N/A';
-                const date = offer.last_response_at
-                    ? new Date(offer.last_response_at).toLocaleDateString()
-                    : '-';
+            result.offers.forEach((group, idx) => {
+                const bestAmount = group.best_offer ? `$${group.best_offer.toLocaleString()}` : 'N/A';
+                const hasMultiple = group.offer_count > 1;
+                const rowId = `offer-group-${idx}`;
 
+                // Main row
                 rows += `
-                    <tr style="border-bottom: 1px solid #21262d;">
-                        <td style="padding: 12px; color: #e6edf3; cursor: pointer;"
-                            onclick="window.commandCenter.conversationUI.selectConversation('${offer.conversation_id}'); document.getElementById('statsModal').remove();">
-                            ${offer.business_name || 'Unknown'}
+                    <tr style="border-bottom: 1px solid #21262d; background: #0d1117;" class="offer-main-row">
+                        <td style="padding: 12px; text-align: center;">
+                            ${hasMultiple ? `<button class="expand-btn" onclick="toggleOfferGroup('${rowId}')" style="background: none; border: none; color: #8b949e; cursor: pointer; font-size: 12px;">▶</button>` : ''}
                         </td>
-                        <td style="padding: 12px; color: #8b949e;">${offer.lender_name || '-'}</td>
-                        <td style="padding: 12px; color: #10b981; font-weight: 600;">${displayAmount}</td>
-                        <td style="padding: 12px; color: #8b949e;">${date}</td>
+                        <td style="padding: 12px; color: #e6edf3; cursor: pointer; font-weight: 600;"
+                            onclick="window.commandCenter.conversationUI.selectConversation('${group.conversation_id}'); document.getElementById('statsModal').remove();">
+                            ${group.business_name || 'Unknown'}
+                        </td>
+                        <td style="padding: 12px; color: #10b981; font-weight: 600;">${bestAmount}</td>
+                        <td style="padding: 12px; color: #8b949e;">${group.offer_count} offer${group.offer_count > 1 ? 's' : ''}</td>
                         <td style="padding: 12px;">
-                            <div class="offer-action-cell">
-                                <span class="status-badge status-offer">OFFER</span>
-                                <button class="btn-mark-funded" onclick="window.markAsFunded('${offer.conversation_id}', ${amount})">
-                                    Mark Funded
-                                </button>
-                            </div>
+                            <button class="btn-mark-funded" onclick="window.markAsFunded('${group.conversation_id}', ${group.best_offer || 0})">
+                                Mark Funded
+                            </button>
                         </td>
                     </tr>
                 `;
+
+                // Sub-rows (hidden by default)
+                if (hasMultiple) {
+                    group.offers.forEach(offer => {
+                        const amount = offer.offer_amount ? `$${Number(offer.offer_amount).toLocaleString()}` : 'N/A';
+                        const terms = offer.term_length ? `${offer.term_length} ${offer.term_unit || 'days'}` : '-';
+                        const date = offer.last_response_at ? new Date(offer.last_response_at).toLocaleDateString() : '-';
+
+                        rows += `
+                            <tr class="offer-sub-row ${rowId}" style="display: none; background: #161b22; border-bottom: 1px solid #21262d;">
+                                <td style="padding: 8px 12px;"></td>
+                                <td style="padding: 8px 12px; color: #8b949e; padding-left: 30px;">
+                                    └ ${offer.lender_name || 'Unknown'}
+                                </td>
+                                <td style="padding: 8px 12px; color: #3fb950;">${amount}</td>
+                                <td style="padding: 8px 12px; color: #8b949e;">${terms}</td>
+                                <td style="padding: 8px 12px; color: #8b949e; font-size: 12px;">${date}</td>
+                            </tr>
+                        `;
+                    });
+                }
             });
 
             tbody.innerHTML = rows;
+
+            // Add toggle function
+            window.toggleOfferGroup = (rowId) => {
+                const subRows = document.querySelectorAll(`.${rowId}`);
+                const btn = event.target;
+                const isExpanded = btn.textContent === '▼';
+
+                subRows.forEach(row => {
+                    row.style.display = isExpanded ? 'none' : 'table-row';
+                });
+                btn.textContent = isExpanded ? '▶' : '▼';
+            };
 
         } catch (error) {
             console.error('Error loading offers:', error);

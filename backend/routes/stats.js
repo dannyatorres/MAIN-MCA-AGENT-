@@ -147,20 +147,61 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 2. OFFERS LIST
+// 2. OFFERS LIST - Grouped by conversation
 router.get('/offers', async (req, res) => {
     try {
         const db = getDatabase();
         const access = getConversationAccessClause(req.user, 'c');
 
         const result = await db.query(`
-            SELECT ls.conversation_id, c.business_name, ls.lender_name, ls.offer_amount, ls.factor_rate, ls.last_response_at
+            SELECT 
+                ls.conversation_id, 
+                c.business_name, 
+                ls.lender_name, 
+                ls.offer_amount, 
+                ls.factor_rate,
+                ls.term_length,
+                ls.term_unit,
+                ls.payment_frequency,
+                ls.last_response_at
             FROM lender_submissions ls
             JOIN conversations c ON c.id = ls.conversation_id
             WHERE ls.status = 'OFFER' AND ${access.clause}
-            ORDER BY ls.last_response_at DESC
+            ORDER BY c.business_name, ls.offer_amount DESC
         `, access.params);
-        res.json({ success: true, offers: result.rows });
+
+        // Group by conversation
+        const grouped = {};
+        result.rows.forEach(offer => {
+            const convId = offer.conversation_id;
+            if (!grouped[convId]) {
+                grouped[convId] = {
+                    conversation_id: convId,
+                    business_name: offer.business_name,
+                    offers: []
+                };
+            }
+            grouped[convId].offers.push({
+                lender_name: offer.lender_name,
+                offer_amount: offer.offer_amount,
+                factor_rate: offer.factor_rate,
+                term_length: offer.term_length,
+                term_unit: offer.term_unit,
+                payment_frequency: offer.payment_frequency,
+                last_response_at: offer.last_response_at
+            });
+        });
+
+        const groupedOffers = Object.values(grouped).map(g => ({
+            ...g,
+            best_offer: Math.max(...g.offers.map(o => o.offer_amount || 0)),
+            offer_count: g.offers.length
+        }));
+
+        // Sort by best offer descending
+        groupedOffers.sort((a, b) => b.best_offer - a.best_offer);
+
+        res.json({ success: true, offers: groupedOffers });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
