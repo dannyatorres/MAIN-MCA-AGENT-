@@ -165,6 +165,9 @@ class LenderAdmin {
                         <button class="modal-close" onclick="document.getElementById('networkDirectoryModal').remove()">×</button>
                     </div>
                     <div class="modal-body submission-body" style="padding: 0;">
+                        <div style="padding: 12px; border-bottom: 1px solid #30363d;">
+                            <input type="text" id="lenderSearchInput" class="form-input" placeholder="Search lenders..." style="width: 100%;" oninput="window.commandCenter.lenderAdmin.filterLenders(this.value)">
+                        </div>
                         <div class="submission-col-header" style="border-radius: 0; border: none;">
                             <div class="submission-col-title">All Lenders</div>
                             <div class="header-actions">
@@ -203,6 +206,18 @@ class LenderAdmin {
             return;
         }
 
+        // Store for filtering and sort alphabetically
+        this.allLenders = [...lenders].sort((a, b) => a.name.localeCompare(b.name));
+        this.renderLendersList(this.allLenders, container);
+    }
+
+    renderLendersList(lenders, container) {
+        if (!container) container = document.getElementById('networkDirectoryContainer');
+        if (!lenders || lenders.length === 0) {
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #8b949e;">No lenders found</div>';
+            return;
+        }
+
         container.innerHTML = lenders.map(l => `
             <div class="selection-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;">
                 <div>
@@ -215,6 +230,15 @@ class LenderAdmin {
                 </div>
             </div>
         `).join('');
+    }
+
+    filterLenders(query) {
+        if (!this.allLenders) return;
+        const filtered = this.allLenders.filter(l =>
+            l.name.toLowerCase().includes(query.toLowerCase()) ||
+            (l.email && l.email.toLowerCase().includes(query.toLowerCase()))
+        );
+        this.renderLendersList(filtered);
     }
 
     openRuleSuggestions() {
