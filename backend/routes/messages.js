@@ -261,7 +261,7 @@ router.post('/webhook/receive', async (req, res) => {
             : cleanPhone;
 
         const convResult = await db.query(
-            `SELECT id, business_name FROM conversations
+            `SELECT id, business_name, assigned_user_id FROM conversations
              WHERE regexp_replace(lead_phone, '\\D', '', 'g') LIKE '%' || $1
              ORDER BY last_activity DESC LIMIT 1`,
             [searchPhone]
@@ -346,7 +346,7 @@ router.post('/webhook/receive', async (req, res) => {
 
                         const aiSegmentCount = Math.max(1, Math.ceil((aiResult.content || '').length / 160));
                         await trackUsage({
-                            userId: null,
+                            userId: conversation.assigned_user_id,
                             conversationId: conversation.id,
                             type: 'sms_outbound',
                             service: 'twilio',
