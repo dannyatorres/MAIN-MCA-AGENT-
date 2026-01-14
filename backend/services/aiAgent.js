@@ -201,7 +201,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // =================================================================
         if (!isManualCommand) {
             const lastOutbound = await db.query(`
-                SELECT timestamp, sender_type
+                SELECT timestamp, sent_by
                 FROM messages
                 WHERE conversation_id = $1 AND direction = 'outbound'
                 ORDER BY timestamp DESC LIMIT 1
@@ -212,7 +212,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 const timeDiff = (new Date() - new Date(lastMsg.timestamp)) / 1000 / 60; // Minutes
 
                 // If HUMAN sent the last message less than 15 mins ago -> SLEEP
-                if (lastMsg.sender_type === 'user' && timeDiff < 15) {
+                if (lastMsg.sent_by === 'user' && timeDiff < 15) {
                     console.log(`⏱️ AI PAUSED: Human replied ${Math.round(timeDiff)} mins ago. Backing off.`);
                     return { shouldReply: false };
                 }
