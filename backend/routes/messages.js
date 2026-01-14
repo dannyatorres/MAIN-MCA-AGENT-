@@ -9,6 +9,60 @@ const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
 const { canAccessConversation, requireConversationAccess, requireModifyPermission } = require('../middleware/dataAccess');
 
+async function getAIHypothetical(conversationId, leadMessage) {
+    try {
+        const db = getDatabase();
+
+        // Get FCS + Strategy context
+        const fcsRes = await db.query(`
+            SELECT average_revenue, withholding_percentage, positions
+            FROM fcs_analyses WHERE conversation_id = $1
+            ORDER BY created_at DESC LIMIT 1
+        `, [conversationId]);
+
+        const stratRes = await db.query(`
+            SELECT game_plan, lead_grade FROM lead_strategy 
+            WHERE conversation_id = $1
+        `, [conversationId]);
+
+        const fcs = fcsRes.rows[0];
+        const strategy = stratRes.rows[0];
+        let gamePlan = strategy?.game_plan || null;
+        if (typeof gamePlan === 'string') {
+            try { gamePlan = JSON.parse(gamePlan); } catch (e) { gamePlan = null; }
+        }
+
+        let context = 'You are a sales rep. Write a short SMS reply (1-2 sentences max).';
+
+        if (fcs || strategy) {
+            context += '\n\nCONTEXT:';
+            if (fcs?.average_revenue) context += `\nRevenue: $${Math.round(fcs.average_revenue).toLocaleString()}`;
+            if (fcs?.withholding_percentage) context += `\nWithholding: ${fcs.withholding_percentage}%`;
+            if (strategy?.lead_grade) context += `\nLead Grade: ${strategy.lead_grade}`;
+            if (gamePlan?.offer_range) {
+                context += `\nOffer Range: $${gamePlan.offer_range.min.toLocaleString()} - $${gamePlan.offer_range.max.toLocaleString()}`;
+            }
+        }
+
+        const openai = require('openai');
+        const client = new openai.OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        const response = await client.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: 'system', content: 'You are a sales rep. Write a short SMS reply (1-2 sentences max).' },
+                { role: 'user', content: leadMessage }
+            ],
+            max_tokens: 100
+        });
+
+        return response.choices[0]?.message?.content || null;
+    } catch (err) {
+        console.error('AI hypothetical failed:', err.message);
+        return null;
+    }
+}
+
 // 1. Configure AWS S3
 const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -192,7 +246,6 @@ router.post('/send', requireModifyPermission, async (req, res) => {
                             'HUMAN_MANUAL'
                         );
 
-                        // FIXED SQL: Use Subquery instead of ORDER BY in UPDATE
                         await db.query(`
                             UPDATE response_training
                             SET message_id = $1
@@ -206,6 +259,52 @@ router.post('/send', requireModifyPermission, async (req, res) => {
                             )
                         `, [newMessage.id, actualConversationId, content]);
                     }
+
+                    // NEW: Capture what AI would have said (using cheap model)
+                    const aiHypothetical = await getAIHypothetical(actualConversationId, leadMessage);
+                    if (aiHypothetical) {
+                        const fcsRes = await db.query(`
+                            SELECT average_revenue FROM fcs_analyses 
+                            WHERE conversation_id = $1 
+                            ORDER BY created_at DESC LIMIT 1
+                        `, [actualConversationId]);
+
+                        const stratRes = await db.query(`
+                            SELECT lead_grade, game_plan FROM lead_strategy 
+                            WHERE conversation_id = $1
+                        `, [actualConversationId]);
+
+                        let offerRange = null;
+                        const rawGamePlan = stratRes.rows[0]?.game_plan;
+                        if (rawGamePlan && typeof rawGamePlan === 'string') {
+                            try {
+                                offerRange = JSON.parse(rawGamePlan)?.offer_range || null;
+                            } catch (e) {
+                                offerRange = null;
+                            }
+                        } else {
+                            offerRange = rawGamePlan?.offer_range || null;
+                        }
+
+                        await db.query(`
+                            UPDATE response_training
+                            SET ai_would_have_said = $1,
+                                lead_grade = $2,
+                                monthly_revenue = $3,
+                                offer_range = $4
+                            WHERE conversation_id = $5
+                              AND human_response = $6
+                              AND ai_would_have_said IS NULL
+                        `, [
+                            aiHypothetical,
+                            stratRes.rows[0]?.lead_grade,
+                            fcsRes.rows[0]?.average_revenue,
+                            JSON.stringify(offerRange || null),
+                            actualConversationId,
+                            content
+                        ]);
+                    }
+
                 } catch (err) {
                     console.error('Training track failed:', err.message);
                 }

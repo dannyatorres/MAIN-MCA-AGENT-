@@ -135,6 +135,28 @@ function getGlobalPrompt() {
     }
 }
 
+async function getLearnedCorrections(leadGrade, revenueRange) {
+    const db = getDatabase();
+    try {
+        const result = await db.query(`
+            SELECT lead_message, ai_would_have_said, human_response
+            FROM response_training
+            WHERE ai_would_have_said IS NOT NULL
+              AND human_response IS NOT NULL
+              AND response_source = 'HUMAN_MANUAL'
+              AND (lead_grade = $1 OR lead_grade IS NULL)
+            ORDER BY 
+                CASE WHEN lead_grade = $1 THEN 0 ELSE 1 END,
+                created_at DESC
+            LIMIT 10
+        `, [leadGrade]);
+        return result.rows;
+    } catch (err) {
+        console.error('Failed to load corrections:', err.message);
+        return [];
+    }
+}
+
 async function processLeadWithAI(conversationId, systemInstruction) {
     const db = getDatabase();
     console.log(`🧠 AI Agent Processing Lead: ${conversationId}`);
@@ -329,6 +351,22 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             console.log(`📋 No Commander strategy yet - using default prompts`);
         }
 
+        const fcsRes = await db.query(`
+            SELECT 
+                average_revenue,
+                average_daily_balance,
+                total_negative_days,
+                withholding_percentage,
+                positions,
+                bank_name,
+                analysis_summary
+            FROM fcs_analyses
+            WHERE conversation_id = $1
+            ORDER BY created_at DESC LIMIT 1
+        `, [conversationId]);
+
+        const fcsData = fcsRes.rows[0] || null;
+
         // 4. BUILD CONVERSATION HISTORY
         const history = await db.query(`
             SELECT direction, content FROM messages
@@ -338,6 +376,17 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = getGlobalPrompt();
+
+        // NEW: Inject learned corrections
+        const corrections = await getLearnedCorrections(gamePlan?.lead_grade || null, null);
+        if (corrections.length > 0) {
+            systemPrompt += `\n\n---\n\n## 🎓 LEARNED CORRECTIONS (Follow these patterns)\n`;
+            corrections.forEach(c => {
+                systemPrompt += `\nWhen lead says: "${c.lead_message.substring(0, 50)}..."\n`;
+                systemPrompt += `❌ Don't say: "${c.ai_would_have_said.substring(0, 50)}..."\n`;
+                systemPrompt += `✅ Instead say: "${c.human_response.substring(0, 50)}..."\n`;
+            });
+        }
 
         // Inject Commander's orders if available
         if (gamePlan) {
@@ -356,6 +405,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
             if (gamePlan.offer_range) {
                 systemPrompt += `**Offer Range:** ${gamePlan.offer_range.min.toLocaleString()} - ${gamePlan.offer_range.max.toLocaleString()}\n\n`;
+                systemPrompt += `**Target Offer:** Start around the middle. Fish first: "What amount would actually help?"\n`;
+                systemPrompt += `**If they want more:** Go up to max, but ask what they need it for.\n`;
+                systemPrompt += `**If they want less:** Great, shorter term = faster close.\n\n`;
             }
 
             if (gamePlan.objection_strategy) {
@@ -377,6 +429,20 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             if (gamePlan.lender_notes) {
                 systemPrompt += `**Lender Strategy:** ${gamePlan.lender_notes}\n`;
             }
+        }
+
+        if (fcsData) {
+            systemPrompt += `\n\n---\n\n## 📊 FINANCIAL CONTEXT (Use this to negotiate)\n`;
+            systemPrompt += `**Monthly Revenue:** $${Math.round(fcsData.average_revenue || 0).toLocaleString()}\n`;
+            systemPrompt += `**Daily Balance:** $${Math.round(fcsData.average_daily_balance || 0).toLocaleString()}\n`;
+            systemPrompt += `**Current Withholding:** ${fcsData.withholding_percentage || 'Unknown'}%\n`;
+            systemPrompt += `**Negative Days:** ${fcsData.total_negative_days || 0}\n`;
+
+            if (fcsData.positions && fcsData.positions.length > 0) {
+                systemPrompt += `**Existing Positions:** ${fcsData.positions.length} active\n`;
+            }
+
+            systemPrompt += `\n**Summary:** ${fcsData.analysis_summary || 'No summary'}\n`;
         }
 
         // Build the Message Chain
