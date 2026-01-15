@@ -62,18 +62,167 @@
             </div>
         </div>
 
-        <!-- Panel 3: Details (placeholder for now) -->
+        <!-- Panel 3: Intelligence Hub -->
         <div class="panel" id="panelDetails">
             <header class="mobile-header">
                 <button class="back-btn" id="backToChat"><i class="fas fa-chevron-left"></i></button>
-                <h2>Lead Details</h2>
+                <h2 id="detailsTitle">Intelligence</h2>
                 <div style="width: 40px;"></div>
             </header>
-            <div class="details-content" id="detailsContent">
-                <div class="empty-state">
-                    <div class="empty-icon"><i class="fas fa-user-circle"></i></div>
-                    <h3>Details Coming Soon</h3>
-                    <p>Lead info, FCS reports, and more</p>
+
+            <!-- Card Selection View -->
+            <div class="details-content" id="intelligenceCards">
+                <div class="intel-card" data-intel="ai">
+                    <div class="intel-card-icon"><i class="fas fa-robot"></i></div>
+                    <div class="intel-card-info">
+                        <h3>AI Assistant</h3>
+                        <p>Chat with AI about this deal</p>
+                    </div>
+                    <i class="fas fa-chevron-right intel-card-arrow"></i>
+                </div>
+
+        <div class="intel-card" data-intel="edit">
+            <div class="intel-card-icon"><i class="fas fa-edit"></i></div>
+            <div class="intel-card-info">
+                <h3>Edit Lead</h3>
+                <p>Update lead information</p>
+            </div>
+            <i class="fas fa-chevron-right intel-card-arrow"></i>
+        </div>
+
+        <div class="intel-card" data-intel="documents">
+            <div class="intel-card-icon" style="background: linear-gradient(145deg, #ef4444, #dc2626);"><i class="fas fa-file-pdf"></i></div>
+            <div class="intel-card-info">
+                <h3>Documents</h3>
+                <p>View and upload files</p>
+            </div>
+            <i class="fas fa-chevron-right intel-card-arrow"></i>
+        </div>
+
+                <div class="intel-card" data-intel="lenders">
+                    <div class="intel-card-icon"><i class="fas fa-university"></i></div>
+                    <div class="intel-card-info">
+                        <h3>Lenders</h3>
+                        <p>View matching lenders</p>
+                    </div>
+                    <i class="fas fa-chevron-right intel-card-arrow"></i>
+                </div>
+
+                <div class="intel-card" data-intel="fcs">
+                    <div class="intel-card-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="intel-card-info">
+                        <h3>FCS Report</h3>
+                        <p>Financial analysis</p>
+                    </div>
+                    <i class="fas fa-chevron-right intel-card-arrow"></i>
+                </div>
+
+                <div class="intel-card" data-intel="strategy">
+                    <div class="intel-card-icon"><i class="fas fa-chess"></i></div>
+                    <div class="intel-card-info">
+                        <h3>Strategy</h3>
+                        <p>Deal intelligence & game plan</p>
+                    </div>
+                    <i class="fas fa-chevron-right intel-card-arrow"></i>
+                </div>
+            </div>
+
+            <!-- AI Assistant View (hidden by default) -->
+            <div class="intel-view hidden" id="aiAssistantView">
+                <div class="ai-chat-messages" id="mobileAiMessages">
+                    <div class="ai-loading-container" id="aiLoader">
+                        <div class="ai-thinking">
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                        </div>
+                        <p>Connecting to AI...</p>
+                    </div>
+                </div>
+                <div class="ai-input-area">
+                    <textarea id="mobileAiInput" placeholder="Ask AI about this deal..." rows="1"></textarea>
+                    <button class="icon-btn-small primary-send" id="mobileAiSend"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <!-- Edit Lead View -->
+            <div class="intel-view hidden" id="editView">
+                <div class="edit-form-scroll" id="editFormContainer">
+                    <div class="ai-loading-container" id="editLoader">
+                        <div class="ai-thinking">
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                        </div>
+                        <p>Loading lead data...</p>
+                    </div>
+                </div>
+                <div class="edit-form-actions" id="editFormActions" style="display:none;">
+                    <button class="btn-mobile-secondary" id="editCancelBtn">Cancel</button>
+                    <button class="btn-mobile-primary" id="editSaveBtn">Save Changes</button>
+                </div>
+            </div>
+
+            <!-- Lenders View -->
+            <div class="intel-view hidden" id="lendersView">
+                <div class="lenders-scroll" id="lendersContainer">
+                    <div class="ai-loading-container" id="lendersLoader">
+                        <div class="ai-thinking">
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                        </div>
+                        <p>Loading lender data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placeholder for other views -->
+            <!-- Documents View -->
+            <div class="intel-view hidden" id="documentsView">
+                <div class="documents-scroll" id="documentsContainer">
+                    <div class="ai-loading-container" id="docsLoader">
+                        <div class="ai-thinking">
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                        </div>
+                        <p>Loading documents...</p>
+                    </div>
+                </div>
+
+                <!-- Upload Button (Fixed) -->
+                <div class="docs-upload-bar" id="docsUploadBar">
+                    <label class="upload-btn-mobile" id="uploadBtnMobile">
+                        <i class="fas fa-plus"></i> Upload Document
+                        <input type="file" id="mobileFileInput" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.csv" multiple hidden>
+                    </label>
+                </div>
+            </div>
+            <!-- FCS View -->
+            <div class="intel-view hidden" id="fcsView">
+                <div class="fcs-scroll" id="fcsContainer">
+                    <div class="ai-loading-container" id="fcsLoader">
+                        <div class="ai-thinking">
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                        </div>
+                        <p>Loading FCS report...</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Strategy View -->
+            <div class="intel-view hidden" id="strategyView">
+                <div class="strategy-scroll" id="strategyContainer">
+                    <div class="ai-loading-container" id="strategyLoader">
+                        <div class="ai-thinking">
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                            <div class="ai-dot"></div>
+                        </div>
+                        <p>Loading strategy...</p>
+                    </div>
                 </div>
             </div>
         </div>
