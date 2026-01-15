@@ -159,6 +159,7 @@ app.post('/api/contact', (req, res) => {
 
 // --- MOBILE PWA ROUTE ---
 app.get('/mobile', requireAuth, (req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(__dirname, '../frontend/mobile.html'));
 });
 
