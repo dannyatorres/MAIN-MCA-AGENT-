@@ -178,7 +178,8 @@
 
             try {
                 const data = await this.apiCall(`/api/messages/${conversationId}`);
-                this.messages = data.messages || [];
+                // API returns array directly, not { messages: [...] }
+                this.messages = Array.isArray(data) ? data : [];
                 this.renderMessages();
                 this.scrollToBottom();
             } catch (err) {
@@ -249,7 +250,7 @@
                 await this.apiCall('/api/messages/send', {
                     method: 'POST',
                     body: JSON.stringify({
-                        conversationId: this.currentConversationId,
+                        conversation_id: this.currentConversationId,
                         content: content
                     })
                 });
