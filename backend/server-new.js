@@ -157,6 +157,11 @@ app.post('/api/contact', (req, res) => {
     res.json({ success: true, message: 'Received' });
 });
 
+// --- MOBILE PWA ROUTE ---
+app.get('/mobile', requireAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/mobile.html'));
+});
+
 // --- 6. FRONTEND ROUTING ---
 app.get('*', (req, res) => {
     if (!req.path.startsWith('/api')) {

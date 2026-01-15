@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f1115">
+    <title>MCA Mobile</title>
+    <link rel="apple-touch-icon" href="/logo.png">
+
+    <!-- Reuse existing theme -->
+    <link rel="stylesheet" href="/css/modules/01-theme.css">
+    <link rel="stylesheet" href="/css/mobile.css">
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Panel Container - slides horizontally -->
+    <div class="panel-container" id="panelContainer" data-panel="0">
+
+        <!-- Panel 1: Conversations List -->
+        <div class="panel" id="panelConversations">
+            <header class="mobile-header">
+                <h1>Leads</h1>
+                <div class="connection-status">
+                    <span class="status-dot" id="connectionDot"></span>
+                </div>
+            </header>
+            <div class="search-bar">
+                <input type="text" id="searchInput" class="search-field-clean" placeholder="Search leads...">
+            </div>
+            <div class="conversations-list" id="conversationList">
+                <div class="loading-state"><div class="loading-spinner"></div><p>Loading...</p></div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Chat -->
+        <div class="panel" id="panelChat">
+            <header class="mobile-header chat-header">
+                <button class="back-btn" id="backToList"><i class="fas fa-chevron-left"></i></button>
+                <div class="chat-details-stack">
+                    <h2 class="chat-business-title" id="chatName">Select a conversation</h2>
+                    <span class="chat-row-secondary" id="chatBusiness"></span>
+                </div>
+                <button class="details-btn" id="goToDetails"><i class="fas fa-info-circle"></i></button>
+            </header>
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-comments"></i></div>
+                    <h3>No Conversation Selected</h3>
+                    <p>Select a lead from the list to start chatting</p>
+                </div>
+            </div>
+            <div class="message-input-container" id="messageInputContainer">
+                <div class="input-deck-main">
+                    <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+                    <button class="icon-btn-small primary-send" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Details (placeholder for now) -->
+        <div class="panel" id="panelDetails">
+            <header class="mobile-header">
+                <button class="back-btn" id="backToChat"><i class="fas fa-chevron-left"></i></button>
+                <h2>Lead Details</h2>
+                <div style="width: 40px;"></div>
+            </header>
+            <div class="details-content" id="detailsContent">
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-user-circle"></i></div>
+                    <h3>Details Coming Soon</h3>
+                    <p>Lead info, FCS reports, and more</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- Reuse existing modules -->
+    <script src="/js/api.js"></script>
+    <script src="/js/formatters.js"></script>
+    <script src="/js/templates-utilities.js"></script>
+
+    <!-- Mobile-specific controller -->
+    <script src="/js/mobile.js"></script>
+</body>
+</html>
