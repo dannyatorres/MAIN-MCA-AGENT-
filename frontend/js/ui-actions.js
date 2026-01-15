@@ -289,7 +289,7 @@ function setUsageDateRange(range) {
 }
 
 function renderStatCard(label, value, prevValue, color, isCurrency = false, formatNumber = false) {
-    const displayValue = isCurrency ? `$${value.toFixed(2)}` : (formatNumber ? value.toLocaleString() : value);
+    const displayValue = isCurrency ? `$${(value || 0).toFixed(2)}` : (formatNumber ? (value || 0).toLocaleString() : value);
     const change = prevValue > 0 ? ((value - prevValue) / prevValue * 100).toFixed(0) : 0;
     const changeClass = change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral';
     const changeIcon = change > 0 ? '↑' : change < 0 ? '↓' : '→';
