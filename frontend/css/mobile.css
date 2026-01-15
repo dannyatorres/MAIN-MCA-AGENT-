@@ -1,5 +1,4 @@
 /* TEST - DELETE AFTER */
-body { background: red !important; }
 
 /* ==========================================================================
    CRITICAL FIXES - Must be at top
@@ -67,6 +66,11 @@ body { background: red !important; }
     gap: 12px !important;
     overflow-y: auto !important;
     flex: 1 !important;
+}
+
+/* Global hidden utility */
+.hidden {
+    display: none !important;
 }
 
 /* ==========================================================================
