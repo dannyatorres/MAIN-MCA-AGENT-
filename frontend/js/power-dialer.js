@@ -19,6 +19,7 @@ class PowerDialer {
             noAnswer: 0,
             voicemail: 0,
             wrongNumber: 0,
+            notInterested: 0,
             skipped: 0
         };
 
@@ -36,6 +37,11 @@ class PowerDialer {
     }
 
     bindEvents() {
+        // Back button
+        document.getElementById('dialerBackBtn')?.addEventListener('click', () => {
+            this.hide();
+        });
+
         // Start button
         document.getElementById('dialerStartBtn')?.addEventListener('click', () => {
             this.start();
@@ -271,12 +277,13 @@ class PowerDialer {
         this.isActive = true;
         this.currentIndex = 0;
         this.currentAttempt = 1;
-        this.stats = { answered: 0, noAnswer: 0, voicemail: 0, wrongNumber: 0, skipped: 0 };
+        this.stats = { answered: 0, noAnswer: 0, voicemail: 0, wrongNumber: 0, notInterested: 0, skipped: 0 };
 
         // Switch UI states
         document.getElementById('dialerIdleState')?.classList.add('hidden');
         document.getElementById('dialerActiveState')?.classList.remove('hidden');
         document.getElementById('dialerDisposition')?.classList.remove('hidden');
+        document.getElementById('dialerFooter')?.classList.remove('hidden');
         document.getElementById('dialerStopBtn')?.classList.remove('hidden');
         document.getElementById('dialerNextUp')?.classList.remove('hidden');
 
@@ -367,7 +374,7 @@ class PowerDialer {
         else if (disposition === 'no_answer') this.stats.noAnswer++;
         else if (disposition === 'voicemail') this.stats.voicemail++;
         else if (disposition === 'wrong_number') this.stats.wrongNumber++;
-        else if (disposition === 'not_interested') this.stats.wrongNumber++;
+        else if (disposition === 'not_interested') this.stats.notInterested++;
         else if (disposition === 'skip') this.stats.skipped++;
 
         console.log('📞 Stats updated:', this.stats);
@@ -486,6 +493,7 @@ class PowerDialer {
         // Hide active state, show complete state
         document.getElementById('dialerActiveState')?.classList.add('hidden');
         document.getElementById('dialerDisposition')?.classList.add('hidden');
+        document.getElementById('dialerFooter')?.classList.add('hidden');
         document.getElementById('dialerStopBtn')?.classList.add('hidden');
         document.getElementById('dialerNextUp')?.classList.add('hidden');
 
@@ -595,6 +603,7 @@ class PowerDialer {
         document.getElementById('dialerActiveState')?.classList.add('hidden');
         document.getElementById('dialerCompleteState')?.classList.add('hidden');
         document.getElementById('dialerDisposition')?.classList.add('hidden');
+        document.getElementById('dialerFooter')?.classList.add('hidden');
         document.getElementById('dialerStopBtn')?.classList.add('hidden');
         document.getElementById('dialerNextUp')?.classList.add('hidden');
 

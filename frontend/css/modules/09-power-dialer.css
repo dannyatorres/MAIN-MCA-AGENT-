@@ -12,19 +12,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding: 0;
+    justify-content: flex-start;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px;
     background: transparent;
 }
 
 .dialer-container {
     width: 100%;
-    max-width: 500px;
-    padding: 24px;
+    max-width: 520px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     animation: fadeIn 0.4s ease;
 }
 
@@ -33,10 +33,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: 10px 14px;
     background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
+    flex-shrink: 0;
 }
 
 .dialer-header-left {
@@ -47,12 +48,31 @@
     font-weight: 600;
 }
 
-.dialer-header-left i {
-    font-size: 18px;
+.dialer-header-left > i {
+    font-size: 16px;
+}
+
+.dialer-back-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #8b949e;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.dialer-back-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e6edf3;
 }
 
 .dialer-title {
-    font-size: 16px;
+    font-size: 15px;
     color: #e6edf3;
 }
 
@@ -69,71 +89,57 @@
 .dialer-calling-card {
     background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    padding: 40px 24px;
-    text-align: center;
-    min-height: 280px;
+    border-radius: 14px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
-/* Idle State */
-.dialer-idle-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 20px;
-    background: rgba(59, 130, 246, 0.1);
-    border-radius: 50%;
+/* States */
+.dialer-state {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    color: #3b82f6;
+    flex-direction: column;
 }
 
-.dialer-idle h2 {
-    font-size: 24px;
-    font-weight: 700;
-    color: #e6edf3;
-    margin: 0 0 8px 0;
+.dialer-state.hidden {
+    display: none !important;
 }
 
-.dialer-subtitle {
-    font-size: 14px;
-    color: #8b949e;
-    margin: 0 0 24px 0;
-}
-
-/* Queue Preview */
+/* Queue Preview Header */
 .queue-preview-header {
     text-align: center;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .queue-preview-header h2 {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: #e6edf3;
     margin: 0 0 4px 0;
 }
 
+.dialer-subtitle {
+    font-size: 13px;
+    color: #8b949e;
+    margin: 0 0 12px 0;
+}
+
 .queue-select-actions {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    margin-top: 12px;
+    gap: 10px;
 }
 
 .queue-action-btn {
-    padding: 6px 14px;
+    padding: 5px 12px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
     color: #8b949e;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -143,11 +149,13 @@
     color: #e6edf3;
 }
 
+/* Queue Preview List */
 .queue-preview-list {
-    max-height: 300px;
+    max-height: 280px;
+    min-height: 150px;
     overflow-y: auto;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
+    border-radius: 8px;
     background: rgba(0, 0, 0, 0.2);
 }
 
@@ -167,8 +175,8 @@
 .queue-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
+    gap: 10px;
+    padding: 8px 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     transition: background 0.15s;
 }
@@ -185,17 +193,51 @@
     opacity: 0.4;
 }
 
+.queue-item.removing {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
 .queue-item input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     accent-color: #3b82f6;
     cursor: pointer;
     flex-shrink: 0;
 }
 
+.queue-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.queue-item-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #e6edf3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-item-business {
+    font-size: 11px;
+    color: #8b949e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-item-phone {
+    font-size: 11px;
+    color: #6e7681;
+    font-family: 'SF Mono', Consolas, monospace;
+    flex-shrink: 0;
+}
+
 .queue-item-dead-btn {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border: none;
     border-radius: 6px;
     background: transparent;
@@ -218,51 +260,18 @@
     color: #ef4444;
 }
 
-.queue-item-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.queue-item-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: #e6edf3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.queue-item-business {
-    font-size: 12px;
-    color: #8b949e;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.queue-item-phone {
-    font-size: 12px;
-    color: #6e7681;
-    font-family: 'SF Mono', monospace;
-    flex-shrink: 0;
-}
-
-.queue-item.removing {
-    opacity: 0.5;
-    pointer-events: none;
-}
-
+/* Queue Preview Footer */
 .queue-preview-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 16px;
-    padding-top: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .queue-selected-count {
-    font-size: 13px;
+    font-size: 12px;
     color: #8b949e;
 }
 
@@ -280,7 +289,6 @@
     font-size: 13px;
 }
 
-/* Empty queue state */
 .queue-empty {
     text-align: center;
     padding: 40px 20px;
@@ -288,26 +296,28 @@
 }
 
 .queue-empty i {
-    font-size: 32px;
-    margin-bottom: 12px;
+    font-size: 28px;
+    margin-bottom: 10px;
     opacity: 0.5;
+    display: block;
 }
 
 .queue-empty p {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
 }
 
+/* Start Button */
 .dialer-start-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 14px 32px;
+    padding: 10px 24px;
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     color: white;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -315,29 +325,30 @@
 }
 
 .dialer-start-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
 }
 
 /* Active Call State */
-.dialer-active {
-    animation: fadeIn 0.3s ease;
+#dialerActiveState {
+    text-align: center;
+    padding: 20px 0;
 }
 
 .dialer-status-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 16px;
+    padding: 5px 14px;
     background: rgba(245, 158, 11, 0.15);
     border: 1px solid rgba(245, 158, 11, 0.3);
     border-radius: 20px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #f59e0b;
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 .status-dot {
@@ -353,15 +364,10 @@
     50% { opacity: 0.5; transform: scale(1.2); }
 }
 
-/* Status variants */
 .dialer-status-badge.ringing {
     background: rgba(245, 158, 11, 0.15);
     border-color: rgba(245, 158, 11, 0.3);
     color: #f59e0b;
-}
-
-.dialer-status-badge.ringing .status-dot {
-    background: #f59e0b;
 }
 
 .dialer-status-badge.connected {
@@ -376,37 +382,37 @@
 }
 
 .dialer-lead-info h2 {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
     color: #e6edf3;
     margin: 0 0 4px 0;
 }
 
 .dialer-business {
-    font-size: 16px;
+    font-size: 14px;
     color: #8b949e;
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
 }
 
 .dialer-phone {
-    font-size: 20px;
+    font-size: 18px;
     color: #3b82f6;
     font-weight: 600;
     margin: 0;
-    font-family: 'SF Mono', monospace;
+    font-family: 'SF Mono', Consolas, monospace;
 }
 
 .dialer-timer {
-    font-size: 48px;
+    font-size: 42px;
     font-weight: 700;
     color: #e6edf3;
-    font-family: 'SF Mono', monospace;
-    margin: 24px 0 16px;
+    font-family: 'SF Mono', Consolas, monospace;
+    margin: 16px 0 12px;
     letter-spacing: 2px;
 }
 
 .dialer-attempt-info {
-    font-size: 13px;
+    font-size: 12px;
     color: #6e7681;
 }
 
@@ -415,13 +421,13 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    margin-top: 20px;
-    padding: 12px 32px;
+    margin-top: 16px;
+    padding: 10px 28px;
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     color: white;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -429,8 +435,8 @@
 }
 
 .dialer-end-call-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
 /* 4. Disposition Buttons */
@@ -438,41 +444,46 @@
     background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    padding: 16px;
+    padding: 14px;
+    flex-shrink: 0;
+}
+
+.dialer-disposition.hidden {
+    display: none !important;
 }
 
 .disposition-label {
-    font-size: 12px;
+    font-size: 11px;
     color: #8b949e;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     text-align: center;
 }
 
 .disposition-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 8px;
 }
 
 .disposition-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 14px 8px;
+    gap: 4px;
+    padding: 10px 6px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
+    border-radius: 8px;
     color: #e6edf3;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .disposition-btn i {
-    font-size: 18px;
+    font-size: 16px;
     color: #8b949e;
 }
 
@@ -485,7 +496,6 @@
     color: #3b82f6;
 }
 
-/* Specific disposition colors on hover */
 .disposition-btn[data-disposition="answered"]:hover {
     background: rgba(16, 185, 129, 0.15);
     border-color: rgba(16, 185, 129, 0.3);
@@ -504,17 +514,17 @@
 }
 .disposition-btn[data-disposition="voicemail"]:hover i { color: #a855f7; }
 
-.disposition-btn[data-disposition="wrong_number"]:hover {
-    background: rgba(245, 158, 11, 0.15);
-    border-color: rgba(245, 158, 11, 0.3);
-}
-.disposition-btn[data-disposition="wrong_number"]:hover i { color: #f59e0b; }
-
 .disposition-btn[data-disposition="not_interested"]:hover {
     background: rgba(107, 114, 128, 0.15);
     border-color: rgba(107, 114, 128, 0.3);
 }
 .disposition-btn[data-disposition="not_interested"]:hover i { color: #6b7280; }
+
+.disposition-btn[data-disposition="wrong_number"]:hover {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+.disposition-btn[data-disposition="wrong_number"]:hover i { color: #f59e0b; }
 
 .disposition-btn.disposition-skip {
     background: transparent;
@@ -532,22 +542,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: 10px 14px;
     background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.dialer-footer.hidden {
+    display: none !important;
 }
 
 .dialer-stop-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 20px;
+    padding: 8px 16px;
     background: rgba(239, 68, 68, 0.15);
     border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 8px;
     color: #ef4444;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -559,13 +574,13 @@
 
 .dialer-footer-right {
     text-align: right;
-    font-size: 12px;
+    font-size: 11px;
     color: #6e7681;
 }
 
 .next-up-label {
     display: block;
-    font-size: 10px;
+    font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 2px;
@@ -582,39 +597,41 @@
 }
 
 /* 6. Completed State */
-.dialer-complete {
+#dialerCompleteState {
     text-align: center;
-    padding: 40px;
+    padding: 20px;
 }
 
 .dialer-complete-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 20px;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
     background: rgba(16, 185, 129, 0.1);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36px;
+    font-size: 28px;
     color: #10b981;
 }
 
-.dialer-complete h2 {
+#dialerCompleteState h2 {
+    font-size: 20px;
     color: #e6edf3;
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
 }
 
-.dialer-complete p {
+#dialerCompleteState p {
+    font-size: 13px;
     color: #8b949e;
-    margin: 0 0 24px 0;
+    margin: 0 0 20px 0;
 }
 
 .dialer-stats-row {
     display: flex;
     justify-content: center;
-    gap: 32px;
-    margin-bottom: 24px;
+    gap: 28px;
+    margin-bottom: 20px;
 }
 
 .dialer-stat {
@@ -622,23 +639,35 @@
 }
 
 .dialer-stat-value {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
     color: #3b82f6;
 }
 
 .dialer-stat-label {
-    font-size: 11px;
+    font-size: 10px;
     color: #8b949e;
     text-transform: uppercase;
 }
 
 .dialer-done-btn {
-    padding: 12px 24px;
+    padding: 10px 20px;
     background: #3b82f6;
     border: none;
     border-radius: 8px;
     color: white;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dialer-done-btn:hover {
+    background: #2563eb;
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

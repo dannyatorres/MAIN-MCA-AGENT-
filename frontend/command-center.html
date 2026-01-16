@@ -198,6 +198,9 @@
                         <!-- Header Bar -->
                         <div class="dialer-header">
                             <div class="dialer-header-left">
+                                <button class="dialer-back-btn" id="dialerBackBtn" title="Back to Dashboard">
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
                                 <i class="fas fa-phone-volume"></i>
                                 <span class="dialer-title">Power Dialer</span>
                             </div>
@@ -209,8 +212,8 @@
                         <!-- Main Calling Card -->
                         <div class="dialer-calling-card" id="dialerCallingCard">
 
-                            <!-- Idle State (Queue Preview) -->
-                            <div class="dialer-state dialer-idle" id="dialerIdleState">
+                            <!-- Queue Preview State (Default) -->
+                            <div class="dialer-state" id="dialerIdleState">
                                 <div class="queue-preview-header">
                                     <h2>Ready to Dial</h2>
                                     <p class="dialer-subtitle">Review and uncheck any leads you want to skip</p>
@@ -221,7 +224,6 @@
                                 </div>
 
                                 <div class="queue-preview-list" id="queuePreviewList">
-                                    <!-- Leads populated by JS -->
                                     <div class="queue-loading">
                                         <div class="loading-spinner small"></div>
                                         <span>Loading queue...</span>
@@ -237,7 +239,7 @@
                             </div>
 
                             <!-- Active Call State -->
-                            <div class="dialer-state dialer-active hidden" id="dialerActiveState">
+                            <div class="dialer-state hidden" id="dialerActiveState">
                                 <div class="dialer-status-badge" id="dialerStatusBadge">
                                     <span class="status-dot"></span>
                                     <span id="dialerStatusText">CONNECTING...</span>
@@ -251,14 +253,15 @@
 
                                 <div class="dialer-timer" id="dialerTimer">00:00</div>
 
-                            <div class="dialer-attempt-info">
-                                Attempt <span id="dialerAttemptNum">1</span> of 2
+                                <div class="dialer-attempt-info">
+                                    Attempt <span id="dialerAttemptNum">1</span> of 2
+                                </div>
+
+                                <button class="dialer-end-call-btn" id="dialerEndCallBtn">
+                                    <i class="fas fa-phone-slash"></i> End Call
+                                </button>
                             </div>
 
-                            <button class="dialer-end-call-btn" id="dialerEndCallBtn">
-                                <i class="fas fa-phone-slash"></i> End Call
-                            </button>
-                        </div>
                         </div>
 
                         <!-- Disposition Buttons -->
@@ -277,17 +280,13 @@
                                     <i class="fas fa-voicemail"></i>
                                     <span>Voicemail</span>
                                 </button>
-                                <button class="disposition-btn" data-disposition="wrong_number">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span>Wrong #</span>
-                                </button>
                                 <button class="disposition-btn" data-disposition="not_interested">
                                     <i class="fas fa-ban"></i>
                                     <span>Not Interested</span>
                                 </button>
-                                <button class="disposition-btn" data-disposition="callback">
-                                    <i class="fas fa-clock"></i>
-                                    <span>Callback</span>
+                                <button class="disposition-btn" data-disposition="wrong_number">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Wrong #</span>
                                 </button>
                                 <button class="disposition-btn disposition-skip" data-disposition="skip">
                                     <i class="fas fa-forward"></i>
@@ -296,14 +295,14 @@
                             </div>
                         </div>
 
-                        <!-- Footer / Next Up -->
-                        <div class="dialer-footer" id="dialerFooter">
+                        <!-- Footer -->
+                        <div class="dialer-footer hidden" id="dialerFooter">
                             <div class="dialer-footer-left">
-                                <button class="dialer-stop-btn hidden" id="dialerStopBtn">
+                                <button class="dialer-stop-btn" id="dialerStopBtn">
                                     <i class="fas fa-stop"></i> Stop Dialer
                                 </button>
                             </div>
-                            <div class="dialer-footer-right hidden" id="dialerNextUp">
+                            <div class="dialer-footer-right" id="dialerNextUp">
                                 <span class="next-up-label">Up next:</span>
                                 <span class="next-up-name" id="dialerNextName">Jane Doe</span>
                                 <span class="next-up-business" id="dialerNextBusiness">XYZ Trucking</span>
