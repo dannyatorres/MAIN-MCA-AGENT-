@@ -1543,6 +1543,20 @@
         formatFcsContent(content) {
             if (!content) return '<p>No content</p>';
 
+            // DEBUG - remove after testing
+            console.log('=== FCS DEBUG ===');
+            const lines = content.split('\n');
+            lines.forEach((line, i) => {
+                if (line.includes('|') || line.includes('Month')) {
+                    console.log(`Line ${i}: "${line}"`);
+                    console.log(`  startsWith |: ${line.trim().startsWith('|')}`);
+                    console.log(`  endsWith |: ${line.trim().endsWith('|')}`);
+                    console.log(`  charCode first: ${line.trim().charCodeAt(0)}`);
+                    console.log(`  charCode last: ${line.trim().charCodeAt(line.trim().length-1)}`);
+                }
+            });
+            // END DEBUG
+
             let html = '<div class="fcs-styled-report">';
             const lines = content.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim().split('\n');
 
