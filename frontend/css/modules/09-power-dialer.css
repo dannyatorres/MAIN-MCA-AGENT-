@@ -2,66 +2,41 @@
    [MODULE: POWER DIALER]
    ========================================================================== */
 
-/* ==========================================================================
-   [MODULE: POWER DIALER - COMMAND CENTER UPGRADE]
-   ========================================================================== */
-
-/* 1. Main Container - Unlocked & Widened */
+/* 1. Main Container */
 #dialerView {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    /* Changed: Allow scrolling if window is short */
-    overflow-y: auto;
-    /* Changed: Remove strict centering to use full height comfortably */
     display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    padding-top: 4vh; /* Breathing room at top */
-    padding-bottom: 4vh;
-    background: rgba(15, 17, 21, 0.95); /* Dim the background */
-    backdrop-filter: blur(5px);
-    z-index: 9999;
+    overflow: hidden;
+    padding: 0;
+    background: transparent;
 }
 
 .dialer-container {
-    width: 90%;
-    /* Changed: Doubled width for dashboard feel */
-    max-width: 1100px;
-    /* Changed: Switch to Grid for 2-column layout */
-    display: grid;
-    grid-template-columns: 1fr 340px; /* Main Card vs Control Sidebar */
-    grid-template-rows: auto 1fr auto;
-    grid-template-areas:
-        "header header"
-        "card controls"
-        "card footer";
-    gap: 24px;
+    width: 100%;
+    max-width: 500px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     animation: fadeIn 0.4s ease;
-    margin-bottom: 40px;
 }
 
-/* Responsive: Stack vertically on smaller screens */
-@media (max-width: 900px) {
-    .dialer-container {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "header"
-            "card"
-            "controls"
-            "footer";
-        max-width: 500px;
-    }
-}
-
-/* 2. Header Bar - Spans Full Width */
+/* 2. Header Bar */
 .dialer-header {
-    grid-area: header;
-    background: var(--white, #161b22);
-    border: 1px solid var(--border-color, #30363d);
-    /* Add shadow to pop it out */
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
 }
 
 .dialer-header-left {
@@ -90,22 +65,19 @@
     color: #3b82f6;
 }
 
-/* 3. Main Calling Card - The "Stage" */
+/* 3. Main Calling Card */
 .dialer-calling-card {
-    grid-area: card;
-    /* Make it tall enough to show lead history/notes later */
-    min-height: 500px;
-    height: 100%;
-    background: var(--white, #161b22);
-    border: 1px solid var(--border-color, #30363d);
-    /* Center content nicely */
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 40px 24px;
+    text-align: center;
+    min-height: 280px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    text-align: center;
-    border-radius: 16px;
-    padding: 40px 24px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
 }
 
 /* Idle State */
@@ -373,7 +345,12 @@
     animation: none;
 }
 
-.dialer-lead-info h2 { font-size: 36px; }
+.dialer-lead-info h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #e6edf3;
+    margin: 0 0 4px 0;
+}
 
 .dialer-business {
     font-size: 16px;
@@ -381,9 +358,22 @@
     margin: 0 0 8px 0;
 }
 
-.dialer-phone { font-size: 24px; margin-top: 8px; }
+.dialer-phone {
+    font-size: 20px;
+    color: #3b82f6;
+    font-weight: 600;
+    margin: 0;
+    font-family: 'SF Mono', monospace;
+}
 
-.dialer-timer { font-size: 64px; margin: 40px 0; }
+.dialer-timer {
+    font-size: 48px;
+    font-weight: 700;
+    color: #e6edf3;
+    font-family: 'SF Mono', monospace;
+    margin: 24px 0 16px;
+    letter-spacing: 2px;
+}
 
 .dialer-attempt-info {
     font-size: 13px;
@@ -413,13 +403,12 @@
     box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 
-/* 4. Disposition Buttons - The "Control Panel" */
+/* 4. Disposition Buttons */
 .dialer-disposition {
-    grid-area: controls;
-    background: var(--white, #161b22);
-    border: 1px solid var(--border-color, #30363d);
-    height: fit-content; /* Don't stretch */
-    padding: 24px;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
 }
 
 .disposition-label {
@@ -432,9 +421,9 @@
 }
 
 .disposition-grid {
-    /* Changed: 2 columns looks cleaner in the sidebar than 3 */
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
 }
 
 .disposition-btn {
@@ -442,7 +431,7 @@
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 20px 10px;
+    padding: 14px 8px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
@@ -508,21 +497,15 @@
     border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* 5. Footer - Tuck it under the controls */
+/* 5. Footer */
 .dialer-footer {
-    grid-area: footer;
-    align-self: start;
-    background: transparent;
-    border: none;
-    padding: 0;
-}
-
-/* If you want the footer to sit inside the control column visually: */
-.dialer-footer {
-    border: 1px solid var(--border-color, #30363d);
-    background: var(--white, #161b22);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    padding: 16px;
 }
 
 .dialer-stop-btn {
