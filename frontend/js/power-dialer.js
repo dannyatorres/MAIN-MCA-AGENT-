@@ -74,6 +74,46 @@ class PowerDialer {
             }
         });
 
+        // Mark as Dead button in queue preview
+        document.getElementById('queuePreviewList')?.addEventListener('click', async (e) => {
+            const deadBtn = e.target.closest('.queue-item-dead-btn');
+            if (deadBtn) {
+                const leadId = deadBtn.dataset.leadId;
+                const item = deadBtn.closest('.queue-item');
+
+                // Visual feedback
+                item?.classList.add('removing');
+                deadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    // Call API to mark as not interested
+                    await fetch('/api/dialer/disposition', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            conversationId: leadId,
+                            disposition: 'not_interested',
+                            attempt: 0,
+                            duration: 0
+                        })
+                    });
+
+                    // Remove from local queue
+                    this.queue = this.queue.filter(l => l.id !== leadId);
+                    this.selectedLeadIds.delete(leadId);
+
+                    // Re-render
+                    this.renderQueuePreview();
+                    console.log(`📞 Marked ${leadId} as not interested`);
+
+                } catch (err) {
+                    console.error('📞 Failed to mark as not interested:', err);
+                    deadBtn.innerHTML = '<i class="fas fa-ban"></i>';
+                    item?.classList.remove('removing');
+                }
+            }
+        });
+
         // End Call button
         document.getElementById('dialerEndCallBtn')?.addEventListener('click', () => {
             console.log('📞 End Call clicked');
@@ -186,6 +226,9 @@ class PowerDialer {
                         <div class="queue-item-business">${this.escapeHtml(lead.business_name || '')}</div>
                     </div>
                     <div class="queue-item-phone">${this.formatPhone(lead.phone)}</div>
+                    <button class="queue-item-dead-btn" data-lead-id="${lead.id}" title="Mark as Not Interested">
+                        <i class="fas fa-ban"></i>
+                    </button>
                 </div>
             `;
         }).join('');
