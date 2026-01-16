@@ -74,6 +74,16 @@ class PowerDialer {
             }
         });
 
+        // End Call button
+        document.getElementById('dialerEndCallBtn')?.addEventListener('click', () => {
+            console.log('📞 End Call clicked');
+            if (window.callManager?.activeCall) {
+                window.callManager.endCall();
+            }
+            this.stopTimer();
+            this.setStatus('ringing', 'CALL ENDED');
+        });
+
         // Disposition buttons - USE EVENT DELEGATION on parent container
         document.getElementById('dialerDisposition')?.addEventListener('click', (e) => {
             const btn = e.target.closest('.disposition-btn');
