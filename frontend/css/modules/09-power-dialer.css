@@ -22,8 +22,8 @@
 .dialer-container {
     width: 100%;
     max-width: 520px;
-    height: 85vh;
-    max-height: 800px;
+    height: calc(100% - 40px);
+    max-height: 100%;
     display: flex;
     flex-direction: column;
     gap: 12px;
