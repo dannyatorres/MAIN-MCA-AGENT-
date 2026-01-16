@@ -37,7 +37,7 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 `;
             }
-        }
+        },
 
         addAiMessage(role, content) {
             const container = document.getElementById('mobileAiMessages');
@@ -52,14 +52,14 @@ Object.assign(window.MobileApp.prototype, {
 
             row.appendChild(bubble);
             container.appendChild(row);
-        }
+        },
 
         formatAiContent(content) {
             if (!content) return '';
             return content
                 .replace(/\n/g, '<br>')
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        }
+        },
 
         showAiTyping() {
             const container = document.getElementById('mobileAiMessages');
@@ -80,12 +80,12 @@ Object.assign(window.MobileApp.prototype, {
             `;
             container.appendChild(row);
             this.scrollAiToBottom();
-        }
+        },
 
         hideAiTyping() {
             const typing = document.getElementById('aiTyping');
             if (typing) typing.remove();
-        }
+        },
 
         async sendAiMessage() {
             const input = document.getElementById('mobileAiInput');
@@ -124,7 +124,7 @@ Object.assign(window.MobileApp.prototype, {
             }
 
             this.scrollAiToBottom();
-        }
+        },
 
         scrollAiToBottom() {
             const container = document.getElementById('mobileAiMessages');

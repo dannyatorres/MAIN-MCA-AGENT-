@@ -33,7 +33,7 @@ Object.assign(window.MobileApp.prototype, {
             } catch (err) {
                 this.showStrategyEmptyState();
             }
-        }
+        },
 
         showStrategyEmptyState() {
             const container = document.getElementById('strategyContainer');
@@ -54,7 +54,7 @@ Object.assign(window.MobileApp.prototype, {
             document.getElementById('runStrategyBtn')?.addEventListener('click', () => {
                 this.runStrategyAnalysis();
             });
-        }
+        },
 
         async runStrategyAnalysis() {
             const btn = document.getElementById('runStrategyBtn') || document.getElementById('rerunStrategyBtn');
@@ -85,7 +85,7 @@ Object.assign(window.MobileApp.prototype, {
             }
 
             this.isAnalyzingStrategy = false;
-        }
+        },
 
         renderStrategy(strategy, scenarios) {
             const container = document.getElementById('strategyContainer');
@@ -278,7 +278,7 @@ Object.assign(window.MobileApp.prototype, {
             document.getElementById('rerunStrategyBtn')?.addEventListener('click', () => {
                 this.runStrategyAnalysis();
             });
-        }
+        },
 
         renderScenarioCard(scenarios, tier, title) {
             const filtered = scenarios.filter(s => s.tier === tier);
@@ -297,7 +297,7 @@ Object.assign(window.MobileApp.prototype, {
                     `).join('')}
                 </div>
             `;
-        }
+        },
 
         ordinal(n) {
             if (!n) return '';

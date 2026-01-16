@@ -17,7 +17,7 @@ Object.assign(window.MobileApp.prototype, {
             } catch (err) {
                 this.dom.conversationList.innerHTML = '<div class="loading-state">Failed to load</div>';
             }
-        }
+        },
 
         renderConversationList() {
             const convArray = Array.from(this.conversations.values());
@@ -55,7 +55,7 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 `;
             }).join('');
-        }
+        },
 
         async selectConversation(id) {
             this.currentConversationId = id;

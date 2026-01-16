@@ -26,7 +26,7 @@ Object.assign(window.MobileApp.prototype, {
                     aiInput.style.height = Math.min(aiInput.scrollHeight, 100) + 'px';
                 });
             }
-        }
+        },
 
         openIntelView(type) {
             this.currentIntelView = type;
@@ -61,7 +61,7 @@ Object.assign(window.MobileApp.prototype, {
                 document.getElementById('strategyView').classList.remove('hidden');
                 this.loadStrategyView();
             }
-        }
+        },
 
         closeIntelView() {
             this.currentIntelView = null;
@@ -70,7 +70,7 @@ Object.assign(window.MobileApp.prototype, {
 
             document.getElementById('intelligenceCards').classList.remove('hidden');
             document.getElementById('detailsTitle').textContent = 'Intelligence';
-        }
+        },
 
 
         // ============ EDIT LEAD ============
@@ -107,7 +107,7 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 `;
             }
-        }
+        },
 
         renderEditForm(lead) {
             const val = (key) => lead[key] || '';
@@ -254,7 +254,7 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 </form>
             `;
-        }
+        },
 
         setupEditFormListeners() {
             document.querySelectorAll('.mobile-section-header').forEach(header => {
@@ -290,7 +290,7 @@ Object.assign(window.MobileApp.prototype, {
             document.getElementById('editSaveBtn').addEventListener('click', () => {
                 this.saveEditForm();
             });
-        }
+        },
 
         async saveEditForm() {
             const form = document.getElementById('mobileEditForm');

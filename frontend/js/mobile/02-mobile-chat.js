@@ -13,7 +13,7 @@ Object.assign(window.MobileApp.prototype, {
             } catch (err) {
                 this.dom.messagesContainer.innerHTML = '<div class="empty-state"><h3>Failed to load</h3></div>';
             }
-        }
+        },
 
         renderMessages() {
             if (!this.messages.length) {
@@ -50,7 +50,7 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 `;
             }).join('');
-        }
+        },
 
         async sendMessage() {
             const content = this.dom.messageInput.value.trim();
@@ -104,7 +104,7 @@ Object.assign(window.MobileApp.prototype, {
                 this.dom.sendBtn.disabled = false;
                 this.dom.messageInput.focus();
             }
-        }
+        },
 
         async clearUnreadBadge(conversationId) {
             try {
@@ -115,7 +115,7 @@ Object.assign(window.MobileApp.prototype, {
                     this.conversations.set(conversationId, conv);
                 }
             } catch (err) { /* ignore */ }
-        }
+        },
 
 
         // ============ WEBSOCKET ============
@@ -151,7 +151,7 @@ Object.assign(window.MobileApp.prototype, {
                     this.loadMessages(this.currentConversationId);
                 }
             });
-        }
+        },
 
         handleIncomingMessage(data) {
             const msg = data.message || data;

@@ -49,7 +49,7 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 `;
             }
-        }
+        },
 
         renderLendersForm(fcsData, cachedData) {
             const conv = this.selectedConversation || {};
@@ -150,7 +150,7 @@ Object.assign(window.MobileApp.prototype, {
 
                 <div id="lenderResultsContainer" class="lender-results"></div>
             `;
-        }
+        },
 
         setupLendersListeners() {
             const form = document.getElementById('mobileLenderForm');
@@ -160,7 +160,7 @@ Object.assign(window.MobileApp.prototype, {
                 e.preventDefault();
                 await this.runLenderQualification();
             });
-        }
+        },
 
         async runLenderQualification() {
             const form = document.getElementById('mobileLenderForm');
@@ -228,7 +228,7 @@ Object.assign(window.MobileApp.prototype, {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-search"></i> Run Qualification';
             }
-        }
+        },
 
         displayLenderResults(data, criteria) {
             const container = document.getElementById('lenderResultsContainer');

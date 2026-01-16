@@ -35,7 +35,7 @@ Object.assign(window.MobileApp.prototype, {
             }
 
             this.setupDocumentsListeners();
-        }
+        },
 
         renderDocumentsList(documents) {
             const container = document.getElementById('documentsContainer');
@@ -82,7 +82,7 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 `;
             }).join('');
-        }
+        },
 
         getDocIconType(mimeType, docType) {
             if (mimeType?.includes('pdf')) return 'pdf';
@@ -91,7 +91,7 @@ Object.assign(window.MobileApp.prototype, {
             if (mimeType?.includes('word') || mimeType?.includes('doc')) return 'doc';
             if (docType === 'Bank Statement' || docType === '4 Months Bank Statement') return 'xls';
             return 'doc';
-        }
+        },
 
         getDocIconClass(mimeType, docType) {
             if (docType === 'Bank Statement' || docType === '4 Months Bank Statement') return 'fas fa-university';
@@ -102,7 +102,7 @@ Object.assign(window.MobileApp.prototype, {
             if (mimeType?.includes('image')) return 'fas fa-file-image';
             if (mimeType?.includes('sheet') || mimeType?.includes('csv')) return 'fas fa-file-excel';
             return 'fas fa-file-alt';
-        }
+        },
 
         formatFileSize(bytes) {
             if (!bytes || bytes === 0) return '0 B';
@@ -110,7 +110,7 @@ Object.assign(window.MobileApp.prototype, {
             const sizes = ['B', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
+        },
 
         setupDocumentsListeners() {
             const fileInput = document.getElementById('mobileFileInput');
@@ -144,7 +144,7 @@ Object.assign(window.MobileApp.prototype, {
                     }
                 });
             }
-        }
+        },
 
         showUploadModal(files) {
             const docTypes = [
@@ -186,7 +186,7 @@ Object.assign(window.MobileApp.prototype, {
             document.getElementById('closeUploadModal').onclick = () => this.closeUploadModal();
             document.getElementById('cancelUploadMobile').onclick = () => this.closeUploadModal();
             document.getElementById('confirmUploadMobile').onclick = () => this.processUpload();
-        }
+        },
 
         guessDocType(filename) {
             const lower = filename.toLowerCase();
@@ -196,13 +196,13 @@ Object.assign(window.MobileApp.prototype, {
             if (lower.includes('license') || lower.includes('dl') || lower.includes('id')) return "Driver's License";
             if (lower.includes('void') || lower.includes('check')) return 'Voided Check';
             return 'Other';
-        }
+        },
 
         closeUploadModal() {
             const modal = document.getElementById('uploadModalMobile');
             if (modal) modal.remove();
             this.pendingUploadFiles = null;
-        }
+        },
 
         async processUpload() {
             if (!this.pendingUploadFiles || !this.currentConversationId) return;
@@ -248,7 +248,7 @@ Object.assign(window.MobileApp.prototype, {
             } else {
                 this.showToast('Upload failed', 'error');
             }
-        }
+        },
 
         async confirmDeleteDocument(docId) {
             if (!confirm('Delete this document?')) return;
