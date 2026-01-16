@@ -12,9 +12,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    overflow-y: auto;
-    overflow-x: hidden;
+    justify-content: center;
+    overflow: hidden;
     padding: 20px;
     background: transparent;
 }
@@ -22,10 +21,12 @@
 .dialer-container {
     width: 100%;
     max-width: 520px;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
     gap: 12px;
     animation: fadeIn 0.4s ease;
+    overflow: hidden;
 }
 
 /* 2. Header Bar */
@@ -95,7 +96,8 @@
     flex-direction: column;
     position: relative;
     overflow: hidden;
-    flex-shrink: 0;
+    flex: 1;
+    min-height: 0;
 }
 
 /* States */
@@ -151,8 +153,9 @@
 
 /* Queue Preview List */
 .queue-preview-list {
-    max-height: 280px;
-    min-height: 150px;
+    flex: 1;
+    min-height: 120px;
+    max-height: 45vh;
     overflow-y: auto;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
