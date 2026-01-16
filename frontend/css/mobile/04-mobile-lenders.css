@@ -1,0 +1,289 @@
+/* ==========================================================================
+   04-MOBILE-LENDERS.CSS
+   Lenders view - qualification results and lender tags
+   ========================================================================== */
+
+/* --- 1. LENDERS SCROLL CONTAINER --- */
+.lenders-scroll {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    padding-bottom: 80px;
+    -webkit-overflow-scrolling: touch;
+}
+
+#lendersContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* --- 2. SUMMARY STATS --- */
+.lender-summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.lender-stat-card {
+    flex: 1;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+}
+
+.lender-stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    display: block;
+    line-height: 1.2;
+}
+
+.lender-stat-number.qualified {
+    color: #2dd4bf;
+}
+
+.lender-stat-number.non-qualified {
+    color: #ef4444;
+}
+
+.lender-stat-label {
+    font-size: 11px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+/* --- 3. SECTION HEADERS --- */
+.qualified-section-header {
+    padding: 10px 14px;
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    border-radius: 8px;
+    color: #2dd4bf;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.lender-tier-header {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e6edf3;
+    padding: 8px 12px;
+    background: #21262d;
+    border-radius: 6px;
+    margin: 12px 0 8px 0;
+    border-left: 3px solid #3b82f6;
+}
+
+/* --- 4. LENDER TAGS (Full Width on Mobile) --- */
+.lender-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lender-tag-mobile {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: #e6edf3;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.lender-tag-mobile:active {
+    background: #161b22;
+    border-color: #2dd4bf;
+}
+
+.lender-tag-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+/* --- 5. SUCCESS RATE BADGES --- */
+.success-rate {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+.success-rate.high {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.success-rate.medium {
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+}
+
+.success-rate.low {
+    background: rgba(156, 163, 175, 0.15);
+    color: #9ca3af;
+}
+
+/* --- 6. RESPONSE STATUS BADGES --- */
+.response-badge {
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.lender-tag-mobile.response-approved {
+    border-color: #238636;
+    background: rgba(35, 134, 54, 0.1);
+}
+
+.lender-tag-mobile.response-declined {
+    border-color: #f85149;
+    background: rgba(248, 81, 73, 0.1);
+}
+
+.lender-tag-mobile.response-pending {
+    border-color: #d29922;
+    background: rgba(210, 153, 34, 0.1);
+}
+
+/* --- 7. NON-QUALIFIED TOGGLE --- */
+.non-qual-toggle {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    color: #ef4444;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+}
+
+.non-qual-toggle:active {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.non-qual-toggle i {
+    transition: transform 0.2s;
+}
+
+.non-qual-toggle.expanded i {
+    transform: rotate(180deg);
+}
+
+/* --- 8. NON-QUALIFIED LIST --- */
+.non-qual-list {
+    display: none;
+    flex-direction: column;
+    gap: 1px;
+    background: #30363d;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    margin-top: -1px;
+}
+
+.non-qual-list.expanded {
+    display: flex;
+}
+
+.non-qual-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: #0d1117;
+    font-size: 13px;
+}
+
+.non-qual-name {
+    color: #e6edf3;
+    font-weight: 500;
+}
+
+.non-qual-reason {
+    color: #ff7b72;
+    font-size: 12px;
+    text-align: right;
+    max-width: 50%;
+}
+
+/* --- 9. LOG RESPONSE BUTTON --- */
+.log-response-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.log-response-btn:active {
+    opacity: 1;
+}
+
+/* --- 10. EMPTY STATE --- */
+.lenders-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.lenders-empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.lenders-empty-state h3 {
+    font-size: 18px;
+    color: #e6edf3;
+    margin: 0 0 8px 0;
+}
+
+.lenders-empty-state p {
+    font-size: 14px;
+    color: #8b949e;
+    margin: 0 0 24px 0;
+    max-width: 280px;
+}
+
+/* --- 11. RUN QUALIFICATION BUTTON --- */
+.run-qualification-btn {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    padding: 14px 24px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.run-qualification-btn:active {
+    transform: scale(0.98);
+}
+
+/* --- 12. TIER GROUPS --- */
+.tier-group {
+    margin-bottom: 8px;
+}

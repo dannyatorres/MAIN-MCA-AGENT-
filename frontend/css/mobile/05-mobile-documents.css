@@ -1,0 +1,286 @@
+/* ==========================================================================
+   05-MOBILE-DOCUMENTS.CSS
+   Documents view - file list and upload
+   ========================================================================== */
+
+/* --- 1. DOCUMENTS SCROLL CONTAINER --- */
+.documents-scroll {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    padding-bottom: 100px;
+    -webkit-overflow-scrolling: touch;
+}
+
+#documentsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* --- 2. DOCUMENT CARD --- */
+.doc-card-mobile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.doc-card-mobile:active {
+    background: linear-gradient(180deg, #2d3748 0%, #1c2128 100%);
+}
+
+/* --- 3. DOCUMENT ICON --- */
+.doc-icon-mobile {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    background: #0d1117;
+    border: 1px solid #21262d;
+}
+
+.doc-icon-mobile.pdf {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.doc-icon-mobile.img {
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.1);
+    border-color: rgba(168, 85, 247, 0.2);
+}
+
+.doc-icon-mobile.xls {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.doc-icon-mobile.doc {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* --- 4. DOCUMENT INFO --- */
+.doc-info-mobile {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.doc-name-mobile {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e6edf3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.doc-meta-mobile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #8b949e;
+}
+
+.doc-tag-mobile {
+    background: #21262d;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #30363d;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+/* --- 5. DOCUMENT ACTIONS --- */
+.doc-actions-mobile {
+    display: flex;
+    gap: 8px;
+}
+
+.doc-action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: #21262d;
+    color: #8b949e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.doc-action-btn:active {
+    background: #30363d;
+    color: #e6edf3;
+}
+
+.doc-action-btn.delete:active {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* --- 6. UPLOAD BAR (Floating) --- */
+.docs-upload-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: rgba(22, 27, 34, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.upload-btn-mobile {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.upload-btn-mobile:active {
+    transform: scale(0.98);
+}
+
+.upload-btn-mobile input[type="file"] {
+    display: none;
+}
+
+/* --- 7. EMPTY STATE --- */
+.docs-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.docs-empty-icon {
+    font-size: 48px;
+    color: #30363d;
+    margin-bottom: 16px;
+}
+
+.docs-empty-state h3 {
+    font-size: 18px;
+    color: #e6edf3;
+    margin: 0 0 8px 0;
+}
+
+.docs-empty-state p {
+    font-size: 14px;
+    color: #8b949e;
+    margin: 0;
+    max-width: 260px;
+}
+
+/* --- 8. UPLOAD PROGRESS --- */
+.upload-progress-mobile {
+    margin-top: 12px;
+    display: none;
+}
+
+.upload-progress-mobile.active {
+    display: block;
+}
+
+.upload-progress-track {
+    height: 4px;
+    background: #21262d;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.upload-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #2dd4bf);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.upload-progress-text {
+    font-size: 12px;
+    color: #8b949e;
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* --- 9. FCS SECTION --- */
+.fcs-section-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.fcs-info-mobile h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    color: #e6edf3;
+    font-weight: 600;
+}
+
+.fcs-info-mobile p {
+    margin: 0;
+    font-size: 12px;
+    color: #8b949e;
+}
+
+.fcs-run-btn {
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.fcs-run-btn:active {
+    transform: scale(0.98);
+}
+
+/* --- 10. SECTION HEADER --- */
+.docs-section-header {
+    font-size: 12px;
+    font-weight: 700;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 16px 0 8px 0;
+    padding-left: 4px;
+}
