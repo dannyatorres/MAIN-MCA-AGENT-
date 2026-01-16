@@ -3,6 +3,8 @@
 class PowerDialer {
     constructor() {
         this.queue = [];
+        this.dialQueue = [];
+        this.selectedLeadIds = new Set();
         this.currentIndex = 0;
         this.currentLead = null;
         this.isActive = false;
@@ -24,7 +26,12 @@ class PowerDialer {
     }
 
     init() {
-        this.bindEvents();
+        // Wait for DOM to be ready before binding events
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.bindEvents());
+        } else {
+            this.bindEvents();
+        }
         console.log('📞 PowerDialer initialized');
     }
 
@@ -39,12 +46,42 @@ class PowerDialer {
             this.stop();
         });
 
-        // Disposition buttons
-        document.querySelectorAll('.disposition-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const disposition = e.currentTarget.dataset.disposition;
+        // Select All / Deselect All
+        document.getElementById('queueSelectAll')?.addEventListener('click', () => {
+            this.selectedLeadIds = new Set(this.queue.map(l => l.id));
+            this.renderQueuePreview();
+        });
+
+        document.getElementById('queueDeselectAll')?.addEventListener('click', () => {
+            this.selectedLeadIds = new Set();
+            this.renderQueuePreview();
+        });
+
+        // Queue item checkbox clicks (event delegation)
+        document.getElementById('queuePreviewList')?.addEventListener('change', (e) => {
+            if (e.target.type === 'checkbox') {
+                const leadId = e.target.dataset.leadId;
+                const item = e.target.closest('.queue-item');
+
+                if (e.target.checked) {
+                    this.selectedLeadIds.add(leadId);
+                    item?.classList.remove('unchecked');
+                } else {
+                    this.selectedLeadIds.delete(leadId);
+                    item?.classList.add('unchecked');
+                }
+                this.updateSelectedCount();
+            }
+        });
+
+        // Disposition buttons - USE EVENT DELEGATION on parent container
+        document.getElementById('dialerDisposition')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.disposition-btn');
+            if (btn) {
+                const disposition = btn.dataset.disposition;
+                console.log('📞 Disposition button clicked:', disposition);
                 this.logDisposition(disposition);
-            });
+            }
         });
     }
 
@@ -69,29 +106,98 @@ class PowerDialer {
         dialer?.classList.add('hidden');
         dashboard?.classList.remove('hidden');
 
+        // End any active call
+        if (window.callManager?.activeCall) {
+            window.callManager.endCall();
+        }
+
         this.reset();
     }
 
     // Load leads who haven't responded to SMS
     async loadQueue() {
+        const listEl = document.getElementById('queuePreviewList');
+
         try {
-            // Fetch leads that are in "ghosted" states
             const response = await fetch('/api/dialer/queue');
             const data = await response.json();
 
             if (data.success && data.leads) {
                 this.queue = data.leads;
-                this.updateQueueCount();
+                // Mark all as selected by default
+                this.selectedLeadIds = new Set(this.queue.map(l => l.id));
+                this.renderQueuePreview();
                 console.log(`📞 Loaded ${this.queue.length} leads for dialing`);
             } else {
                 this.queue = [];
-                this.updateQueueCount();
+                this.selectedLeadIds = new Set();
+                this.renderQueuePreview();
             }
         } catch (err) {
             console.error('📞 Failed to load dialer queue:', err);
             this.queue = [];
-            this.updateQueueCount();
+            this.selectedLeadIds = new Set();
+            if (listEl) {
+                listEl.innerHTML = `
+                    <div class="queue-empty">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Failed to load queue</p>
+                    </div>
+                `;
+            }
         }
+    }
+
+    renderQueuePreview() {
+        const listEl = document.getElementById('queuePreviewList');
+        if (!listEl) return;
+
+        if (this.queue.length === 0) {
+            listEl.innerHTML = `
+                <div class="queue-empty">
+                    <i class="fas fa-check-circle"></i>
+                    <p>No leads in queue.<br>Everyone has been contacted!</p>
+                </div>
+            `;
+            this.updateSelectedCount();
+            return;
+        }
+
+        listEl.innerHTML = this.queue.map(lead => {
+            const name = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown';
+            const checked = this.selectedLeadIds.has(lead.id) ? 'checked' : '';
+            const uncheckedClass = checked ? '' : 'unchecked';
+
+            return `
+                <div class="queue-item ${uncheckedClass}" data-lead-id="${lead.id}">
+                    <input type="checkbox" ${checked} data-lead-id="${lead.id}">
+                    <div class="queue-item-info">
+                        <div class="queue-item-name">${this.escapeHtml(name)}</div>
+                        <div class="queue-item-business">${this.escapeHtml(lead.business_name || '')}</div>
+                    </div>
+                    <div class="queue-item-phone">${this.formatPhone(lead.phone)}</div>
+                </div>
+            `;
+        }).join('');
+
+        this.updateSelectedCount();
+    }
+
+    updateSelectedCount() {
+        const countEl = document.getElementById('selectedQueueCount');
+        const totalEl = document.getElementById('dialerQueueCount');
+
+        if (countEl) countEl.textContent = this.selectedLeadIds.size;
+        if (totalEl) totalEl.textContent = this.queue.length;
+    }
+
+    escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
     updateQueueCount() {
@@ -101,8 +207,11 @@ class PowerDialer {
 
     // Start the dialing session
     async start() {
-        if (this.queue.length === 0) {
-            alert('No leads in queue. Try refreshing or check your filters.');
+        // Filter queue to only selected leads
+        this.dialQueue = this.queue.filter(lead => this.selectedLeadIds.has(lead.id));
+
+        if (this.dialQueue.length === 0) {
+            alert('No leads selected. Check at least one lead to start dialing.');
             return;
         }
 
@@ -139,13 +248,13 @@ class PowerDialer {
     async dialNext() {
         if (!this.isActive) return;
 
-        if (this.currentIndex >= this.queue.length) {
+        if (this.currentIndex >= this.dialQueue.length) {
             // Done with all leads
             this.showComplete();
             return;
         }
 
-        this.currentLead = this.queue[this.currentIndex];
+        this.currentLead = this.dialQueue[this.currentIndex];
         this.updateLeadDisplay();
         this.updateNextUpDisplay();
         this.setStatus('ringing', 'CALLING...');
@@ -190,6 +299,14 @@ class PowerDialer {
 
     // Log disposition and move to next
     async logDisposition(disposition) {
+        console.log('📞 logDisposition called:', disposition);
+        console.log('📞 currentLead:', this.currentLead);
+
+        if (!this.currentLead) {
+            console.log('🚫 No currentLead - returning early!');
+            return;
+        }
+
         if (!this.currentLead) return;
 
         // Update stats
@@ -197,7 +314,10 @@ class PowerDialer {
         else if (disposition === 'no_answer') this.stats.noAnswer++;
         else if (disposition === 'voicemail') this.stats.voicemail++;
         else if (disposition === 'wrong_number') this.stats.wrongNumber++;
+        else if (disposition === 'not_interested') this.stats.wrongNumber++;
         else if (disposition === 'skip') this.stats.skipped++;
+
+        console.log('📞 Stats updated:', this.stats);
 
         // End active call if still going
         if (window.callManager?.activeCall) {
@@ -280,7 +400,7 @@ class PowerDialer {
     }
 
     updateNextUpDisplay() {
-        const nextLead = this.queue[this.currentIndex + 1];
+        const nextLead = this.dialQueue[this.currentIndex + 1];
         const container = document.getElementById('dialerNextUp');
 
         if (nextLead && container) {
@@ -310,39 +430,55 @@ class PowerDialer {
     showComplete() {
         this.isActive = false;
 
-        const card = document.getElementById('dialerCallingCard');
-        if (card) {
-            card.innerHTML = `
-                <div class="dialer-complete">
-                    <div class="dialer-complete-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <h2>Session Complete</h2>
-                    <p>You've finished this round of calls</p>
-                    <div class="dialer-stats-row">
-                        <div class="dialer-stat">
-                            <div class="dialer-stat-value">${this.stats.answered}</div>
-                            <div class="dialer-stat-label">Answered</div>
-                        </div>
-                        <div class="dialer-stat">
-                            <div class="dialer-stat-value">${this.stats.noAnswer + this.stats.voicemail}</div>
-                            <div class="dialer-stat-label">No Answer</div>
-                        </div>
-                        <div class="dialer-stat">
-                            <div class="dialer-stat-value">${this.stats.skipped}</div>
-                            <div class="dialer-stat-label">Skipped</div>
-                        </div>
-                    </div>
-                    <button class="dialer-done-btn" onclick="window.powerDialer.hide()">
-                        Done
-                    </button>
-                </div>
-            `;
-        }
-
+        // Hide active state, show complete state
+        document.getElementById('dialerActiveState')?.classList.add('hidden');
         document.getElementById('dialerDisposition')?.classList.add('hidden');
         document.getElementById('dialerStopBtn')?.classList.add('hidden');
         document.getElementById('dialerNextUp')?.classList.add('hidden');
+
+        // Create or show complete state
+        let completeEl = document.getElementById('dialerCompleteState');
+        if (!completeEl) {
+            completeEl = document.createElement('div');
+            completeEl.id = 'dialerCompleteState';
+            completeEl.className = 'dialer-state';
+            document.getElementById('dialerCallingCard')?.appendChild(completeEl);
+        }
+
+        completeEl.innerHTML = `
+            <div class="dialer-complete">
+                <div class="dialer-complete-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2>Session Complete</h2>
+                <p>You've finished this round of calls</p>
+                <div class="dialer-stats-row">
+                    <div class="dialer-stat">
+                        <div class="dialer-stat-value">${this.stats.answered}</div>
+                        <div class="dialer-stat-label">Answered</div>
+                    </div>
+                    <div class="dialer-stat">
+                        <div class="dialer-stat-value">${this.stats.noAnswer + this.stats.voicemail}</div>
+                        <div class="dialer-stat-label">No Answer</div>
+                    </div>
+                    <div class="dialer-stat">
+                        <div class="dialer-stat-value">${this.stats.skipped}</div>
+                        <div class="dialer-stat-label">Skipped</div>
+                    </div>
+                </div>
+                <button class="dialer-done-btn" id="dialerDoneBtn">
+                    Done
+                </button>
+            </div>
+        `;
+
+        completeEl.classList.remove('hidden');
+
+        // Bind done button
+        document.getElementById('dialerDoneBtn')?.addEventListener('click', () => {
+            this.reset();
+            this.loadQueue(); // Reload fresh queue
+        });
     }
 
     // Timer
@@ -393,18 +529,24 @@ class PowerDialer {
 
     reset() {
         this.queue = [];
+        this.dialQueue = [];
+        this.selectedLeadIds = new Set();
         this.currentIndex = 0;
         this.currentLead = null;
         this.isActive = false;
         this.currentAttempt = 1;
         this.stopTimer();
 
-        // Reset UI to idle state
-        document.getElementById('dialerIdleState')?.classList.remove('hidden');
+        // Hide all states first
+        document.getElementById('dialerIdleState')?.classList.add('hidden');
         document.getElementById('dialerActiveState')?.classList.add('hidden');
+        document.getElementById('dialerCompleteState')?.classList.add('hidden');
         document.getElementById('dialerDisposition')?.classList.add('hidden');
         document.getElementById('dialerStopBtn')?.classList.add('hidden');
         document.getElementById('dialerNextUp')?.classList.add('hidden');
+
+        // Show idle state
+        document.getElementById('dialerIdleState')?.classList.remove('hidden');
     }
 }
 

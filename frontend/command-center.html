@@ -209,16 +209,31 @@
                         <!-- Main Calling Card -->
                         <div class="dialer-calling-card" id="dialerCallingCard">
 
-                            <!-- Idle State (Before Starting) -->
+                            <!-- Idle State (Queue Preview) -->
                             <div class="dialer-state dialer-idle" id="dialerIdleState">
-                                <div class="dialer-idle-icon">
-                                    <i class="fas fa-phone-alt"></i>
+                                <div class="queue-preview-header">
+                                    <h2>Ready to Dial</h2>
+                                    <p class="dialer-subtitle">Review and uncheck any leads you want to skip</p>
+                                    <div class="queue-select-actions">
+                                        <button class="queue-action-btn" id="queueSelectAll">Select All</button>
+                                        <button class="queue-action-btn" id="queueDeselectAll">Deselect All</button>
+                                    </div>
                                 </div>
-                                <h2>Ready to Dial</h2>
-                                <p class="dialer-subtitle">Call leads who haven't responded to SMS</p>
-                                <button class="dialer-start-btn" id="dialerStartBtn">
-                                    <i class="fas fa-play"></i> Start Dialing
-                                </button>
+
+                                <div class="queue-preview-list" id="queuePreviewList">
+                                    <!-- Leads populated by JS -->
+                                    <div class="queue-loading">
+                                        <div class="loading-spinner small"></div>
+                                        <span>Loading queue...</span>
+                                    </div>
+                                </div>
+
+                                <div class="queue-preview-footer">
+                                    <span class="queue-selected-count"><strong id="selectedQueueCount">0</strong> leads selected</span>
+                                    <button class="dialer-start-btn" id="dialerStartBtn">
+                                        <i class="fas fa-play"></i> Start Dialing
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Active Call State -->
@@ -261,6 +276,10 @@
                                 <button class="disposition-btn" data-disposition="wrong_number">
                                     <i class="fas fa-exclamation-triangle"></i>
                                     <span>Wrong #</span>
+                                </button>
+                                <button class="disposition-btn" data-disposition="not_interested">
+                                    <i class="fas fa-ban"></i>
+                                    <span>Not Interested</span>
                                 </button>
                                 <button class="disposition-btn" data-disposition="callback">
                                     <i class="fas fa-clock"></i>

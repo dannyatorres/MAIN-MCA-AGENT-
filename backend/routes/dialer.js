@@ -100,6 +100,7 @@ router.post('/disposition', requireModifyPermission, async (req, res) => {
             'voicemail': '📬 Left voicemail',
             'wrong_number': '⚠️ Wrong number',
             'callback': '🔄 Callback requested',
+            'not_interested': '🚫 Not interested',
             'skip': '⏭️ Skipped'
         };
 
@@ -119,6 +120,8 @@ router.post('/disposition', requireModifyPermission, async (req, res) => {
             newState = 'INTERESTED'; // They picked up, probably interested
         } else if (disposition === 'wrong_number') {
             newState = 'DEAD'; // Bad number, mark dead
+        } else if (disposition === 'not_interested') {
+            newState = 'DEAD';
         }
 
         if (newState) {
