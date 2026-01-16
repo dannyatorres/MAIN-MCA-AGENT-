@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="css/modules/08-components-buttons.css">
     <link rel="stylesheet" href="css/modules/07-utilities.css">
     <link rel="stylesheet" href="css/modules/deal-intelligence.css">
+    <link rel="stylesheet" href="css/modules/09-power-dialer.css">
     <link rel="stylesheet" href="css/user-menu.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -129,6 +130,10 @@
 
                         <!-- Quick Actions Row -->
                         <div class="quick-actions-grid">
+                            <div class="action-card" data-action="open-dialer">
+                                <div class="action-icon"><i class="fas fa-phone-volume"></i></div>
+                                <div class="action-label">Dialer</div>
+                            </div>
                             <div class="action-card" data-action="open-formatter">
                                 <div class="action-icon"><i class="fas fa-table"></i></div>
                                 <div class="action-label">Formatter</div>
@@ -183,6 +188,105 @@
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- POWER DIALER VIEW -->
+                <div id="dialerView" class="view-layer hidden">
+                    <div class="dialer-container">
+
+                        <!-- Header Bar -->
+                        <div class="dialer-header">
+                            <div class="dialer-header-left">
+                                <i class="fas fa-phone-volume"></i>
+                                <span class="dialer-title">Power Dialer</span>
+                            </div>
+                            <div class="dialer-header-right">
+                                <span class="dialer-queue-count">Queue: <strong id="dialerQueueCount">0</strong> leads</span>
+                            </div>
+                        </div>
+
+                        <!-- Main Calling Card -->
+                        <div class="dialer-calling-card" id="dialerCallingCard">
+
+                            <!-- Idle State (Before Starting) -->
+                            <div class="dialer-state dialer-idle" id="dialerIdleState">
+                                <div class="dialer-idle-icon">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <h2>Ready to Dial</h2>
+                                <p class="dialer-subtitle">Call leads who haven't responded to SMS</p>
+                                <button class="dialer-start-btn" id="dialerStartBtn">
+                                    <i class="fas fa-play"></i> Start Dialing
+                                </button>
+                            </div>
+
+                            <!-- Active Call State -->
+                            <div class="dialer-state dialer-active hidden" id="dialerActiveState">
+                                <div class="dialer-status-badge" id="dialerStatusBadge">
+                                    <span class="status-dot"></span>
+                                    <span id="dialerStatusText">CONNECTING...</span>
+                                </div>
+
+                                <div class="dialer-lead-info">
+                                    <h2 id="dialerLeadName">John Smith</h2>
+                                    <p class="dialer-business" id="dialerBusinessName">ABC Transport LLC</p>
+                                    <p class="dialer-phone" id="dialerPhone">(813) 431-1601</p>
+                                </div>
+
+                                <div class="dialer-timer" id="dialerTimer">00:00</div>
+
+                                <div class="dialer-attempt-info">
+                                    Attempt <span id="dialerAttemptNum">1</span> of 2
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Disposition Buttons -->
+                        <div class="dialer-disposition hidden" id="dialerDisposition">
+                            <div class="disposition-label">Log this call:</div>
+                            <div class="disposition-grid">
+                                <button class="disposition-btn" data-disposition="answered">
+                                    <i class="fas fa-phone"></i>
+                                    <span>Answered</span>
+                                </button>
+                                <button class="disposition-btn" data-disposition="no_answer">
+                                    <i class="fas fa-phone-slash"></i>
+                                    <span>No Answer</span>
+                                </button>
+                                <button class="disposition-btn" data-disposition="voicemail">
+                                    <i class="fas fa-voicemail"></i>
+                                    <span>Voicemail</span>
+                                </button>
+                                <button class="disposition-btn" data-disposition="wrong_number">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Wrong #</span>
+                                </button>
+                                <button class="disposition-btn" data-disposition="callback">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Callback</span>
+                                </button>
+                                <button class="disposition-btn disposition-skip" data-disposition="skip">
+                                    <i class="fas fa-forward"></i>
+                                    <span>Skip</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Footer / Next Up -->
+                        <div class="dialer-footer" id="dialerFooter">
+                            <div class="dialer-footer-left">
+                                <button class="dialer-stop-btn hidden" id="dialerStopBtn">
+                                    <i class="fas fa-stop"></i> Stop Dialer
+                                </button>
+                            </div>
+                            <div class="dialer-footer-right hidden" id="dialerNextUp">
+                                <span class="next-up-label">Up next:</span>
+                                <span class="next-up-name" id="dialerNextName">Jane Doe</span>
+                                <span class="next-up-business" id="dialerNextBusiness">XYZ Trucking</span>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

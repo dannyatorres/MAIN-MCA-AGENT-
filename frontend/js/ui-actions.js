@@ -19,6 +19,13 @@ const globalActions = {
         const modal = document.getElementById('settingsModal');
         if (modal) modal.classList.remove('hidden');
     },
+    'open-dialer': () => {
+        if (window.powerDialer) {
+            window.powerDialer.show();
+        } else {
+            console.warn('Power Dialer module not loaded');
+        }
+    },
     'close-settings': () => {
         const modal = document.getElementById('settingsModal');
         if (modal) modal.classList.add('hidden');
