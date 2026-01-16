@@ -421,6 +421,7 @@ class Templates {
     }
 
     messageItem(message) {
+        const isSystem = message.message_type === 'system' || message.direction === 'internal';
         const isInbound = message.direction === 'inbound';
         let timestamp = '';
 
@@ -429,6 +430,20 @@ class Templates {
             if (!isNaN(messageDate.getTime())) {
                 timestamp = this.utils.formatDate(messageDate, 'smart');
             }
+        }
+
+        if (isSystem) {
+            const textFields = ['content', 'message_content', 'text', 'body'];
+            const rawContent = textFields.map((key) => message[key]).find((val) => val && String(val).trim()) || '';
+            const safeContent = message._escaped ? rawContent : this.utils.escapeHtml(rawContent);
+            const timeHtml = timestamp ? `<span class="system-time">${timestamp}</span>` : '';
+
+            return `
+                <div class="message system" data-message-id="${message.id}">
+                    <div class="system-note">${safeContent}</div>
+                    ${timeHtml}
+                </div>
+            `;
         }
 
         // 1. Handle MMS images (single or multiple)

@@ -111,7 +111,7 @@ router.post('/disposition', requireModifyPermission, async (req, res) => {
                 conversation_id, content, direction, message_type,
                 sent_by, timestamp, status
             )
-            VALUES ($1, $2, 'outbound', 'system', 'system', NOW(), 'delivered')
+            VALUES ($1, $2, 'internal', 'system', 'system', NOW(), 'delivered')
         `, [conversationId, noteContent]);
 
         // Update state based on disposition

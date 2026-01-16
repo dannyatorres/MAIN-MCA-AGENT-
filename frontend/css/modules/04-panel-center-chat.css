@@ -700,6 +700,27 @@
    [CHAT BUBBLES]
    ========================================================================== */
 
+.message.system {
+    align-items: center;
+    margin: 16px 0;
+}
+
+.system-note {
+    background: rgba(33, 38, 45, 0.9);
+    border: 1px solid #30363d;
+    color: #8b949e;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    text-align: center;
+}
+
+.system-time {
+    margin-top: 6px;
+    font-size: 10px;
+    color: #6b7280;
+}
+
 .message {
     display: flex;
     flex-direction: column;
