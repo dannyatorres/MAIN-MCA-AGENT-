@@ -203,10 +203,20 @@
             }
 
             this.dom.messagesContainer.innerHTML = this.messages.map(msg => {
-                const direction = msg.direction === 'outbound' ? 'outbound' : 'inbound';
+                const isSystem = msg.message_type === 'system' || msg.direction === 'internal';
                 const time = this.utils.formatDate(msg.timestamp || msg.created_at, 'smart');
                 const isPending = msg.id?.toString().startsWith('temp-');
 
+                if (isSystem) {
+                    return `
+                        <div class="message system" data-id="${msg.id}">
+                            <div class="system-note">${this.utils.escapeHtml(msg.content)}</div>
+                            ${time ? `<span class="system-time">${time}</span>` : ''}
+                        </div>
+                    `;
+                }
+
+                const direction = msg.direction === 'outbound' ? 'outbound' : 'inbound';
                 return `
                     <div class="message ${direction} ${isPending ? 'pending' : ''}" data-id="${msg.id}">
                         <div class="message-wrapper">
