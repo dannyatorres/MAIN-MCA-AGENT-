@@ -138,6 +138,7 @@ app.use('/api/email', emailRoutes);
 app.use('/api/agent', require('./routes/agent'));
 app.use('/api/cleaner', require('./routes/cleaner'));
 app.use('/api/rules', require('./routes/rule-suggestions'));
+app.use('/api/dialer', require('./routes/dialer'));
 
 // CLEANED UP MODULES
 app.use('/api/integrations', require('./routes/integrationRoutes'));

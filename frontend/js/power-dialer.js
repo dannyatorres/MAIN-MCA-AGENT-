@@ -243,7 +243,7 @@ class PowerDialer {
     // Channel locking
     async lockChannel(conversationId, channel) {
         try {
-            await fetch(`/api/conversations/${conversationId}/channel-lock`, {
+            await fetch(`/api/dialer/${conversationId}/channel-lock`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ channel })
@@ -255,7 +255,7 @@ class PowerDialer {
 
     async unlockChannel(conversationId) {
         try {
-            await fetch(`/api/conversations/${conversationId}/channel-lock`, {
+            await fetch(`/api/dialer/${conversationId}/channel-lock`, {
                 method: 'DELETE'
             });
         } catch (err) {
