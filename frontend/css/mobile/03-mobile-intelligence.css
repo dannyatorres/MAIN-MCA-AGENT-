@@ -1,343 +1,173 @@
 /* ==========================================================================
    03-MOBILE-INTELLIGENCE.CSS
-   Intelligence Hub - Card menu and view containers
+   Intelligence Hub & Card Navigation (Dark Pro Theme)
    ========================================================================== */
 
-/* --- 1. INTELLIGENCE CARDS CONTAINER --- */
-#intelligenceCards {
-    flex: 1;
+/* --- 1. MAIN CONTAINER --- */
+.details-content {
     padding: 16px;
+    background-color: #0f1115; /* Match global dark background */
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+/* --- 2. THE CARD GRID (Fixes "Left Over Space") --- */
+#intelligenceCards {
+    display: grid;
+    /* This makes cards at least 150px wide, but stretches them to fill space */
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 16px;
+    padding-bottom: 40px;
+}
+
+/* --- 3. INTELLIGENCE CARDS (Bigger & Sleeker) --- */
+.intel-card {
+    background: linear-gradient(145deg, #161b22 0%, #0d1117 100%);
+    border: 1px solid #30363d;
+    border-radius: 12px; /* Softer corners */
+    padding: 20px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-#intelligenceCards.hidden {
-    display: none !important;
-}
-
-/* --- 2. INTEL CARD (Menu Items) --- */
-.intel-card {
-    display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 16px;
-    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    text-align: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    min-height: 140px; /* Force them to be taller */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .intel-card:active {
-    transform: scale(0.98);
-    background: linear-gradient(180deg, #2d3748 0%, #1c2128 100%);
+    transform: scale(0.96);
+    border-color: #3b82f6;
+    background: #1c2128;
 }
 
-/* --- 3. INTEL CARD ICON --- */
+/* Subtle glowing accent line at the top */
+.intel-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    transition: background 0.3s;
+}
+
+.intel-card:hover::before {
+    background: #3b82f6;
+}
+
+/* --- 4. ICONS (Pop with Color) --- */
 .intel-card-icon {
-    width: 46px;
-    height: 46px;
+    width: 48px;
+    height: 48px;
     border-radius: 12px;
-    background: linear-gradient(145deg, #3b82f6, #2563eb);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
-    color: white;
-    flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    font-size: 22px;
+    margin-bottom: 12px;
+    background: rgba(59, 130, 246, 0.1); /* Default Blue Tint */
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    transition: transform 0.2s;
 }
 
-/* Icon color variants */
-.intel-card-icon.teal {
-    background: linear-gradient(145deg, #2dd4bf, #14b8a6);
-    box-shadow: 0 4px 12px rgba(45, 212, 191, 0.3);
+.intel-card:active .intel-card-icon {
+    transform: scale(1.1) rotate(-5deg);
 }
 
-.intel-card-icon.red {
-    background: linear-gradient(145deg, #ef4444, #dc2626);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+/* Specific Colors per Card Type (using data-intel attribute) */
+.intel-card[data-intel="ai"] .intel-card-icon {
+    background: rgba(139, 92, 246, 0.15); color: #a78bfa; border-color: rgba(139, 92, 246, 0.3);
+}
+.intel-card[data-intel="edit"] .intel-card-icon {
+    background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3);
+}
+.intel-card[data-intel="documents"] .intel-card-icon {
+    background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3);
+}
+.intel-card[data-intel="lenders"] .intel-card-icon {
+    background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);
+}
+.intel-card[data-intel="fcs"] .intel-card-icon {
+    background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3);
+}
+.intel-card[data-intel="strategy"] .intel-card-icon {
+    background: rgba(236, 72, 153, 0.15); color: #f472b6; border-color: rgba(236, 72, 153, 0.3);
 }
 
-.intel-card-icon.purple {
-    background: linear-gradient(145deg, #8b5cf6, #7c3aed);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
-.intel-card-icon.amber {
-    background: linear-gradient(145deg, #f59e0b, #d97706);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-.intel-card-icon.green {
-    background: linear-gradient(145deg, #10b981, #059669);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-/* --- 4. INTEL CARD INFO --- */
-.intel-card-info {
-    flex: 1;
-    min-width: 0;
-}
-
+/* --- 5. TEXT STYLING --- */
 .intel-card-info h3 {
-    margin: 0 0 2px 0;
+    margin: 0 0 6px 0;
     font-size: 15px;
     font-weight: 600;
     color: #e6edf3;
+    letter-spacing: 0.3px;
 }
 
 .intel-card-info p {
     margin: 0;
-    font-size: 13px;
+    font-size: 12px;
     color: #8b949e;
+    line-height: 1.4;
 }
 
-/* --- 5. INTEL CARD ARROW --- */
+/* Hide the old side arrow, we center everything now */
 .intel-card-arrow {
-    color: #6e7681;
-    font-size: 14px;
-    margin-left: auto;
-    transition: transform 0.2s;
+    display: none;
 }
 
-.intel-card:active .intel-card-arrow {
-    transform: translateX(2px);
-}
-
-/* --- 6. INTEL VIEW CONTAINERS --- */
+/* --- 6. VIEW CONTAINER (Where content loads) --- */
 .intel-view {
-    flex: 1;
-    height: 100%;
+    position: absolute;
+    top: 60px; /* Below Header */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #0f1115;
+    z-index: 20;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    background: var(--app-bg, #0f1115);
+    animation: fadeIn 0.2s ease-out;
 }
 
 .intel-view.hidden {
-    display: none !important;
+    display: none;
 }
 
-/* --- 7. SHARED VIEW HEADER (Back to menu) --- */
-.intel-view-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- 7. UPLOAD BAR (For Documents View) --- */
+.docs-upload-bar {
     padding: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    position: sticky;
+    bottom: 0;
 }
 
-.intel-view-header h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #e6edf3;
-}
-
-/* --- 8. SHARED SCROLL CONTAINER --- */
-.intel-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    padding-bottom: 100px;
-    -webkit-overflow-scrolling: touch;
-}
-
-/* --- 9. LOADING STATE FOR VIEWS --- */
-.ai-loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    color: #8b949e;
-}
-
-.ai-thinking {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 16px;
-}
-
-.ai-dot {
-    width: 10px;
-    height: 10px;
-    background: #3b82f6;
-    border-radius: 50%;
-    animation: aiBounce 1.4s ease-in-out infinite;
-}
-
-.ai-dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.ai-dot:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-@keyframes aiBounce {
-    0%, 80%, 100% {
-        transform: scale(0.6);
-        opacity: 0.4;
-    }
-    40% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-/* --- 10. SECTION HEADERS (Reusable in views) --- */
-.intel-section-header {
-    font-size: 12px;
-    font-weight: 700;
-    color: #e6edf3;
-    padding: 8px 12px;
-    background: #21262d;
-    border-radius: 6px;
-    margin: 16px 0 10px 0;
-    border-left: 3px solid #3b82f6;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.intel-section-header.teal {
-    border-left-color: #2dd4bf;
-}
-
-.intel-section-header.red {
-    border-left-color: #ef4444;
-}
-
-/* --- 11. INFO CARDS (Reusable) --- */
-.intel-info-card {
-    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-}
-
-.intel-info-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.intel-info-card-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #e6edf3;
-}
-
-.intel-info-card-badge {
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-weight: 600;
-}
-
-.intel-info-card-badge.success {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-}
-
-.intel-info-card-badge.warning {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
-}
-
-.intel-info-card-badge.error {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-}
-
-/* --- 12. STAT GRID (Reusable) --- */
-.intel-stat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
-}
-
-.intel-stat-card {
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    padding: 12px;
-    text-align: center;
-}
-
-.intel-stat-value {
-    display: block;
-    font-size: 20px;
-    font-weight: 700;
-    color: #e6edf3;
-    margin-bottom: 4px;
-}
-
-.intel-stat-value.teal { color: #2dd4bf; }
-.intel-stat-value.blue { color: #3b82f6; }
-.intel-stat-value.green { color: #10b981; }
-.intel-stat-value.red { color: #ef4444; }
-
-.intel-stat-label {
-    font-size: 11px;
-    color: #8b949e;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* --- 13. ACTION BUTTONS (Reusable) --- */
-.intel-action-btn {
+.upload-btn-mobile {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
     width: 100%;
     padding: 14px;
     border-radius: 12px;
-    font-size: 15px;
     font-weight: 600;
-    border: none;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: all 0.2s;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-.intel-action-btn.primary {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.intel-action-btn.primary:active {
+.upload-btn-mobile:active {
     transform: scale(0.98);
-}
-
-.intel-action-btn.secondary {
-    background: #21262d;
-    color: #e6edf3;
-    border: 1px solid #30363d;
-}
-
-.intel-action-btn.secondary:active {
-    background: #30363d;
-}
-
-/* --- 14. FLOATING ACTION BAR --- */
-.intel-action-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 16px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    background: rgba(22, 27, 34, 0.95);
-    backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
