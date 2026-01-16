@@ -429,3 +429,397 @@ html, body {
 }
 .loading-spinner, .ai-dot { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   06-MOBILE-STRATEGY.CSS
+   Strategy/Deal Intelligence view
+   ========================================================================== */
+
+/* --- 1. STRATEGY SCROLL CONTAINER --- */
+.strategy-scroll {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    padding-bottom: 80px;
+    -webkit-overflow-scrolling: touch;
+}
+
+#strategyContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* --- 2. SUMMARY HEADER --- */
+.di-summary-header-mobile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.di-badges-mobile {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* --- 3. GRADE BADGE --- */
+.di-grade-mobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.di-grade-mobile.grade-A {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.di-grade-mobile.grade-B {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.di-grade-mobile.grade-C {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.di-grade-mobile.grade-D {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+/* --- 4. STRATEGY BADGE --- */
+.di-strategy-badge-mobile {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.di-strategy-badge-mobile.pursue_hard {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.di-strategy-badge-mobile.pursue {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.di-strategy-badge-mobile.nurture {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.di-strategy-badge-mobile.dead {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+/* --- 5. OFFER CARD --- */
+.di-offer-card-mobile {
+    background: linear-gradient(135deg, #1a3a2a 0%, #0d1f17 100%);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 16px;
+    padding: 24px 20px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.di-offer-label-mobile {
+    font-size: 11px;
+    color: #6ee7b7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.di-offer-amount-mobile {
+    font-size: 36px;
+    font-weight: 800;
+    color: #10b981;
+    margin: 8px 0;
+}
+
+.di-offer-details-mobile {
+    font-size: 13px;
+    color: #a7f3d0;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+/* --- 6. STATS GRID (2x2 on mobile) --- */
+.di-stats-grid-mobile {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.di-stat-mobile {
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+}
+
+.di-stat-value-mobile {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #e6edf3;
+    margin-bottom: 4px;
+}
+
+.di-stat-value-mobile.green { color: #10b981; }
+.di-stat-value-mobile.blue { color: #3b82f6; }
+.di-stat-value-mobile.amber { color: #f59e0b; }
+.di-stat-value-mobile.red { color: #ef4444; }
+
+.di-stat-label-mobile {
+    display: block;
+    font-size: 10px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- 7. QUICK FLAGS / ALERTS --- */
+.di-quick-flags-mobile {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: #f59e0b;
+}
+
+.di-quick-flags-mobile i {
+    font-size: 16px;
+    margin-top: 2px;
+}
+
+.di-quick-flags-mobile.success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.di-quick-flags-mobile.danger {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+/* --- 8. SECTION CARDS --- */
+.di-section-card-mobile {
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.di-section-header-mobile {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e6edf3;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.di-section-header-mobile i {
+    color: #3b82f6;
+}
+
+/* --- 9. SCENARIOS (Stacked on mobile) --- */
+.di-scenarios-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.di-scenario-card-mobile {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 14px;
+    border-left: 3px solid #30363d;
+}
+
+.di-scenario-card-mobile.conservative {
+    border-left-color: #10b981;
+}
+
+.di-scenario-card-mobile.moderate {
+    border-left-color: #3b82f6;
+}
+
+.di-scenario-card-mobile.aggressive {
+    border-left-color: #f59e0b;
+}
+
+.di-scenario-title-mobile {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e6edf3;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.di-scenario-row-mobile {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid #21262d;
+}
+
+.di-scenario-row-mobile:last-child {
+    border-bottom: none;
+}
+
+.di-scenario-row-mobile .label {
+    color: #8b949e;
+}
+
+.di-scenario-row-mobile .value {
+    font-weight: 600;
+    color: #e6edf3;
+}
+
+.di-scenario-row-mobile .value.green { color: #10b981; }
+.di-scenario-row-mobile .value.amber { color: #f59e0b; }
+
+/* --- 10. ACTION BUTTONS --- */
+.di-actions-mobile {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.di-btn-mobile {
+    flex: 1;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    transition: all 0.2s;
+}
+
+.di-btn-mobile.primary {
+    background: linear-gradient(135deg, #238636, #2ea043);
+    color: white;
+    box-shadow: 0 4px 12px rgba(35, 134, 54, 0.3);
+}
+
+.di-btn-mobile.primary:active {
+    transform: scale(0.98);
+}
+
+.di-btn-mobile.secondary {
+    background: #21262d;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+}
+
+.di-btn-mobile.secondary:active {
+    background: #30363d;
+}
+
+/* --- 11. EMPTY STATE --- */
+.di-empty-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.di-empty-icon-mobile {
+    font-size: 48px;
+    color: #30363d;
+    margin-bottom: 16px;
+}
+
+.di-empty-mobile h3 {
+    font-size: 18px;
+    color: #e6edf3;
+    margin: 0 0 8px 0;
+}
+
+.di-empty-mobile p {
+    font-size: 14px;
+    color: #8b949e;
+    margin: 0 0 24px 0;
+    max-width: 280px;
+}
+
+/* --- 12. ANALYZE BUTTON --- */
+.di-analyze-btn-mobile {
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.di-analyze-btn-mobile:active {
+    transform: scale(0.98);
+}
+
+/* --- 13. POSITION BADGE --- */
+.di-position-badge-mobile {
+    font-size: 12px;
+    color: #8b949e;
+    background: #21262d;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+}
+
+/* --- 14. NOTES --- */
+.di-note-mobile {
+    background: #0d1117;
+    border-left: 3px solid #30363d;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #8b949e;
+    border-radius: 0 8px 8px 0;
+    line-height: 1.5;
+}
+
+.di-note-mobile.highlight {
+    border-left-color: #3b82f6;
+}
