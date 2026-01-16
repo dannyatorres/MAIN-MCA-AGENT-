@@ -387,14 +387,14 @@
 .quick-actions-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
+    gap: 8px;
 }
 
 .action-card {
     background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    padding: 16px 12px;
+    padding: 12px 8px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -408,8 +408,8 @@
 }
 
 .action-icon {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     margin: 0 auto 10px auto;
     background: rgba(59, 130, 246, 0.1);
     border-radius: 10px;
