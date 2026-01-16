@@ -1,134 +1,111 @@
 /* ==========================================================================
    03-MOBILE-INTELLIGENCE.CSS
-   Intelligence Hub & Card Navigation (Dark Pro Theme)
+   Intelligence Hub - Final Polish (Dark Pro Theme)
    ========================================================================== */
 
 /* --- 1. MAIN CONTAINER --- */
 .details-content {
-    padding: 16px;
+    /* Reduced padding slightly so cards can be wider */
+    padding: 12px;
     background-color: #0f1115;
     min-height: 100%;
     box-sizing: border-box;
 }
 
-/* --- 2. THE CARD GRID (Strict 2-Column Layout) --- */
+/* --- 2. THE GRID --- */
 #intelligenceCards {
-    display: grid;
-    /* Force exactly 2 columns of equal width */
-    grid-template-columns: 1fr 1fr;
-    gap: 12px; /* Slightly tighter gap to maximize card width */
+    display: grid !important;
+    /* Strict 2-column grid */
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
     padding-bottom: 40px;
 }
 
-/* --- 3. INTELLIGENCE CARDS (Taller & Bolder) --- */
+/* --- 3. THE CARDS --- */
 .intel-card {
-    background: linear-gradient(180deg, #1f242c 0%, #13171f 100%); /* Slightly lighter top for depth */
+    /* Visuals */
+    background: linear-gradient(180deg, #1f242c 0%, #13171f 100%);
     border: 1px solid #30363d;
-    border-radius: 16px; /* More rounded like iOS widgets */
-    padding: 24px 16px; /* More vertical padding */
+    border-radius: 16px; /* Smooth Apple-like corners */
+
+    /* Layout */
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center; /* Center content vertically */
+    justify-content: center;
     text-align: center;
-    cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+
+    /* Sizing */
+    min-height: 165px !important; /* Fixed height for uniformity */
+    padding: 24px 12px;
+
+    /* Interaction */
     position: relative;
+    cursor: pointer;
     overflow: hidden;
-    min-height: 160px; /* INCREASED HEIGHT */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease, border-color 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* OPTIONAL: Make the last card span full width if you have an odd number */
-/* Remove this block if you prefer a gap at the end */
-#intelligenceCards .intel-card:last-child:nth-child(odd) {
-    grid-column: span 2;
-    flex-direction: row; /* Horizontal layout for wide card */
-    gap: 16px;
-    padding: 20px;
-    min-height: 100px; /* Shorter since it's wide */
-    text-align: left;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-/* Adjust icon/text for the wide card layout */
-#intelligenceCards .intel-card:last-child:nth-child(odd) .intel-card-icon {
-    margin-bottom: 0;
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-}
-#intelligenceCards .intel-card:last-child:nth-child(odd) .intel-card-info {
-    text-align: left;
-}
-
-/* Active State */
 .intel-card:active {
-    transform: scale(0.97);
-    border-color: #3b82f6;
+    transform: scale(0.96);
     background: #252b36;
+    border-color: #3b82f6;
 }
 
-/* Top Accent Line */
+/* Subtle Top Glow Line */
 .intel-card::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: 4px; /* Thicker accent line */
+    height: 3px;
     background: transparent;
     transition: background 0.3s;
 }
-.intel-card:hover::before {
-    background: #3b82f6;
-}
+.intel-card:hover::before { background: #3b82f6; }
 
-/* --- 4. ICONS (Vibrant) --- */
+/* --- 4. THE ICONS --- */
 .intel-card-icon {
-    width: 52px; /* Bigger Icon */
-    height: 52px;
-    border-radius: 14px;
+    width: 54px;
+    height: 54px;
+    border-radius: 14px; /* Squircle shape */
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
-    margin-bottom: 14px;
-    background: rgba(33, 38, 45, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: transform 0.2s;
-    /* Soft shadow behind icon for pop */
+    margin-bottom: 16px; /* Space between icon and text */
+
+    /* Glassy look */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-.intel-card:active .intel-card-icon {
-    transform: scale(1.1);
-}
-
-/* Specific Colors per Card Type */
+/* Specific Colors (Matches your logic) */
 .intel-card[data-intel="ai"] .intel-card-icon {
-    background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border-color: rgba(139, 92, 246, 0.4);
+    color: #c4b5fd; background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3);
 }
 .intel-card[data-intel="edit"] .intel-card-icon {
-    background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4);
+    color: #93c5fd; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3);
 }
 .intel-card[data-intel="documents"] .intel-card-icon {
-    background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3);
 }
 .intel-card[data-intel="lenders"] .intel-card-icon {
-    background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4);
+    color: #6ee7b7; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3);
 }
 .intel-card[data-intel="fcs"] .intel-card-icon {
-    background: rgba(245, 158, 11, 0.15); color: #fcd34d; border-color: rgba(245, 158, 11, 0.4);
+    color: #fcd34d; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3);
 }
 .intel-card[data-intel="strategy"] .intel-card-icon {
-    background: rgba(236, 72, 153, 0.15); color: #f9a8d4; border-color: rgba(236, 72, 153, 0.4);
+    color: #f9a8d4; background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3);
 }
 
 /* --- 5. TEXT STYLING --- */
 .intel-card-info h3 {
-    margin: 0 0 4px 0;
-    font-size: 16px; /* Larger Title */
-    font-weight: 700; /* Bolder Title */
+    margin: 0 0 6px 0;
+    font-size: 15px; /* Clean, readable size */
+    font-weight: 600;
     color: #e6edf3;
     letter-spacing: 0.3px;
 }
@@ -136,17 +113,18 @@
 .intel-card-info p {
     margin: 0;
     font-size: 12px;
-    color: #94a3b8; /* Lighter grey for better contrast */
-    line-height: 1.3;
+    color: #94a3b8; /* Muted text */
+    line-height: 1.35;
+    max-width: 95%;
 }
 
-.intel-card-arrow { display: none; }
+/* Hide legacy arrows */
+.intel-card-arrow { display: none !important; }
 
-/* --- 6. VIEW CONTAINER --- */
+/* --- 6. VIEW CONTAINERS (Standard Layout) --- */
 .intel-view {
     position: absolute;
-    top: 60px;
-    left: 0; right: 0; bottom: 0;
+    top: 60px; left: 0; right: 0; bottom: 0;
     background: #0f1115;
     z-index: 20;
     display: flex;
@@ -154,13 +132,9 @@
     animation: fadeIn 0.2s ease-out;
 }
 .intel-view.hidden { display: none; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- 7. UPLOAD BAR --- */
+/* --- 7. UPLOAD BUTTON --- */
 .docs-upload-bar {
     padding: 16px;
     background: #161b22;
@@ -168,7 +142,6 @@
     position: sticky;
     bottom: 0;
 }
-
 .upload-btn-mobile {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
