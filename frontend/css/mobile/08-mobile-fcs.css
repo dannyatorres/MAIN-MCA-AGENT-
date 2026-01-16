@@ -521,3 +521,259 @@
     color: #8b949e;
     margin-top: 8px;
 }
+
+/* --- FCS STYLED REPORT WRAPPER --- */
+.fcs-styled-report {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #e6edf3;
+    line-height: 1.5;
+}
+
+/* --- FCS TABLE (Mobile optimized) --- */
+.fcs-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 12px 0;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.fcs-table {
+    width: 100%;
+    min-width: 480px;
+    border-collapse: collapse;
+    font-size: 11px;
+    background: #0d1117;
+}
+
+.fcs-table thead {
+    background: #161b22;
+}
+
+.fcs-table th {
+    color: #8b949e;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #30363d;
+    text-transform: uppercase;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.fcs-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #21262d;
+    white-space: nowrap;
+}
+
+.fcs-table tr:last-child td {
+    border-bottom: none;
+}
+
+.fcs-table .fcs-cell-month {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.fcs-table .fcs-cell-number {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    color: #e6edf3;
+}
+
+.fcs-table .fcs-cell-revenue {
+    color: #4ade80;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.fcs-table .fcs-cell-warning {
+    color: #f87171 !important;
+    font-weight: 600;
+}
+
+/* --- FCS SUMMARY CARD --- */
+.fcs-summary-card {
+    margin: 16px 0;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    overflow: hidden;
+    background: #0d1117;
+}
+
+.fcs-summary-header {
+    background: linear-gradient(90deg, #2dd4bf 0%, #0f1115 100%);
+    padding: 10px 14px;
+}
+
+.fcs-summary-header h4 {
+    margin: 0;
+    color: #0f1115;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fcs-summary-body {
+    padding: 0;
+}
+
+.fcs-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 14px;
+    border-bottom: 1px solid #21262d;
+    gap: 12px;
+}
+
+.fcs-summary-row:last-child {
+    border-bottom: none;
+}
+
+.fcs-summary-label {
+    font-size: 12px;
+    color: #8b949e;
+    font-weight: 500;
+}
+
+.fcs-summary-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e6edf3;
+    text-align: right;
+}
+
+/* --- FCS MONTH HEADER --- */
+.fcs-month-header {
+    display: flex;
+    align-items: center;
+    margin: 20px 0 10px 0;
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fcs-month-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #30363d;
+    margin-left: 10px;
+}
+
+/* --- FCS SECTION HEADER --- */
+.fcs-section-header h4 {
+    color: #e6edf3;
+    margin: 20px 0 8px 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* --- FCS TAG (Observations, Recent MCA, etc) --- */
+.fcs-tag {
+    display: inline-block;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 16px 0 8px 0;
+}
+
+/* --- FCS KEY-VALUE ROW --- */
+.fcs-kv-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+    gap: 12px;
+}
+
+.fcs-kv-key {
+    color: #8b949e;
+}
+
+.fcs-kv-value {
+    color: #e6edf3;
+    text-align: right;
+    font-weight: 500;
+}
+
+/* --- FCS BULLET --- */
+.fcs-bullet {
+    position: relative;
+    padding-left: 14px;
+    margin-bottom: 6px;
+    color: #c9d1d9;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.fcs-bullet::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 4px;
+    height: 4px;
+    background: #3b82f6;
+    border-radius: 50%;
+}
+
+/* --- FCS POSITION CARD --- */
+.fcs-position-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    margin: 8px 0;
+    background: #161b22;
+    border-radius: 6px;
+    border-left: 3px solid #f59e0b;
+}
+
+.fcs-position-badge {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.fcs-position-text {
+    color: #e6edf3;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* --- FCS REASON/NOTE --- */
+.fcs-reason {
+    margin: 4px 0 14px 18px;
+    font-size: 11px;
+    color: #8b949e;
+    border-left: 2px solid #30363d;
+    padding-left: 10px;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+/* --- FCS TEXT --- */
+.fcs-text {
+    margin: 5px 0;
+    color: #8b949e;
+    font-size: 12px;
+    line-height: 1.4;
+}

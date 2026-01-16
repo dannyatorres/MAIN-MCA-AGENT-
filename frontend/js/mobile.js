@@ -1543,22 +1543,28 @@
         formatFcsContent(content) {
             if (!content) return '<p>No content</p>';
 
-            let html = '';
-            const lines = content.split('\n');
-            let inSummary = false;
+            let html = '<div class="fcs-styled-report">';
+            const lines = content.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim().split('\n');
 
-            for (const line of lines) {
-                const trimmed = line.trim();
+            let inTable = false;
+            let inSummary = false;
+            let tableHeaders = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const trimmed = lines[i].trim();
+
                 if (!trimmed || trimmed.match(/^[-=_*]{3,}$/)) continue;
                 if (trimmed.match(/^\|[-\s|:]+\|$/)) continue;
 
-                if (trimmed.match(/^\d+-Month Summary/i) || trimmed === 'Summary') {
-                    if (inSummary) html += '</div>';
-                    html += `<div class="fcs-summary-card"><div class="fcs-summary-header"><h4>${trimmed}</h4></div>`;
+                // === SUMMARY SECTION ===
+                if (trimmed.match(/^\d+-Month Summary/i) || trimmed.match(/^Summary$/i)) {
+                    if (inTable) { html += '</tbody></table></div>'; inTable = false; }
+                    html += `<div class="fcs-summary-card"><div class="fcs-summary-header"><h4>${trimmed}</h4></div><div class="fcs-summary-body">`;
                     inSummary = true;
                     continue;
                 }
 
+                // === SUMMARY KEY:VALUE PAIRS ===
                 if (inSummary && trimmed.startsWith('- ') && trimmed.includes(':')) {
                     const content = trimmed.substring(2);
                     const colonIdx = content.indexOf(':');
@@ -1568,39 +1574,93 @@
                     continue;
                 }
 
-                if (inSummary && (trimmed.endsWith(':') || trimmed.startsWith('##'))) {
-                    html += '</div>';
+                // === END SUMMARY ===
+                if (inSummary && (trimmed.endsWith(':') || trimmed.startsWith('##') || trimmed.startsWith('==='))) {
+                    html += '</div></div>';
                     inSummary = false;
                 }
 
-                if (trimmed.match(/^(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\\s+\\d{4}$/i)) {
-                    html += `<div class="fcs-section-header"><h4>${trimmed}</h4></div>`;
+                // === MARKDOWN TABLE HEADER (look for Month | Deposits pattern) ===
+                if (trimmed.startsWith('|') && trimmed.includes('Month') && trimmed.includes('Deposits')) {
+                    if (inTable) { html += '</tbody></table></div>'; }
+                    tableHeaders = trimmed.split('|').map(h => h.trim()).filter(h => h);
+                    html += `<div class="fcs-table-wrapper"><table class="fcs-table"><thead><tr>`;
+                    tableHeaders.forEach(h => { html += `<th>${h}</th>`; });
+                    html += `</tr></thead><tbody>`;
+                    inTable = true;
                     continue;
                 }
 
-                if (trimmed.match(/^(Observations|Recent MCA|Debt-Consolidation|Items for Review)/i)) {
+                // === MARKDOWN TABLE ROW ===
+                if (inTable && trimmed.startsWith('|') && trimmed.endsWith('|')) {
+                    const cells = trimmed.split('|').map(c => c.trim()).filter(c => c);
+                    if (cells.length >= 5) {
+                        const [month, deposits, revenue, negDays, endBal, numDep] = cells;
+                        const negDaysNum = parseInt(negDays) || 0;
+                        const negClass = negDaysNum > 3 ? 'fcs-cell-warning' : '';
+                        html += `<tr>
+                            <td class="fcs-cell-month">${month}</td>
+                            <td class="fcs-cell-number">${deposits}</td>
+                            <td class="fcs-cell-revenue">${revenue}</td>
+                            <td class="fcs-cell-number ${negClass}">${negDays}</td>
+                            <td class="fcs-cell-number">${endBal}</td>
+                            <td class="fcs-cell-number">${numDep || '-'}</td>
+                        </tr>`;
+                        continue;
+                    }
+                }
+
+                // === CLOSE TABLE ===
+                if (inTable && !trimmed.startsWith('|')) {
+                    html += '</tbody></table></div>';
+                    inTable = false;
+                }
+
+                // === MONTH HEADERS ===
+                if (trimmed.match(/^(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{4}$/i)) {
+                    html += `<div class="fcs-month-header">${trimmed}</div>`;
+                    continue;
+                }
+
+                // === SECTION TAGS (Observations, Recent MCA, etc) ===
+                const isSpecialHeader = trimmed.match(/^(Observations|Recent MCA|Debt-Consolidation|Items for Review)/i);
+                if (isSpecialHeader) {
                     html += `<div class="fcs-tag">${trimmed.replace(/:$/, '')}</div>`;
                     continue;
                 }
 
-                if ((trimmed.endsWith(':') && trimmed.length < 50) || trimmed.startsWith('##')) {
-                    const headerText = trimmed.replace(/^[#=\\s]+/, '').replace(/[=:]+$/, '').trim();
+                // === REGULAR SECTION HEADERS ===
+                const isHeader = (trimmed.endsWith(':') && trimmed.length < 60 && !trimmed.startsWith('-')) ||
+                                 trimmed.startsWith('##') || trimmed.startsWith('===');
+                if (isHeader) {
+                    const headerText = trimmed.replace(/^[#=\s]+/, '').replace(/[=:]+$/, '').trim();
                     html += `<div class="fcs-section-header"><h4>${headerText}</h4></div>`;
                     continue;
                 }
 
-                if (trimmed.match(/^Position\\s+\\d+:/i)) {
-                    const posNum = trimmed.match(/^Position\\s+(\\d+)/i)[1];
-                    const posContent = trimmed.replace(/^Position\\s+\\d+:\\s*/i, '');
+                // === BULLET POINTS ===
+                if (trimmed.startsWith('- ')) {
+                    const bulletContent = trimmed.substring(2);
+                    html += `<div class="fcs-bullet">${bulletContent}</div>`;
+                    continue;
+                }
+
+                // === POSITIONS ===
+                if (trimmed.match(/^Position\s+\d+:/i)) {
+                    const posNum = trimmed.match(/^Position\s+(\d+)/i)[1];
+                    const posContent = trimmed.replace(/^Position\s+\d+:\s*/i, '');
                     html += `<div class="fcs-position-card"><span class="fcs-position-badge">P${posNum}</span><span class="fcs-position-text">${posContent}</span></div>`;
                     continue;
                 }
 
-                if (trimmed.startsWith('- ')) {
-                    html += `<div class="fcs-bullet">${trimmed.substring(2)}</div>`;
+                // === REASON/NOTES ===
+                if (trimmed.startsWith('Reason:') || trimmed.startsWith('NOTE:')) {
+                    const noteContent = trimmed.replace(/^(Reason:|NOTE:)\s*/i, '');
+                    html += `<div class="fcs-reason">${noteContent}</div>`;
                     continue;
                 }
 
+                // === KEY:VALUE PAIRS ===
                 if (trimmed.includes(':') && !trimmed.startsWith('|')) {
                     const colonIdx = trimmed.indexOf(':');
                     const key = trimmed.substring(0, colonIdx).trim();
@@ -1611,10 +1671,13 @@
                     }
                 }
 
-                html += `<p style="margin: 6px 0; color: #8b949e; font-size: 13px;">${trimmed}</p>`;
+                // === PLAIN TEXT ===
+                html += `<p class="fcs-text">${trimmed}</p>`;
             }
 
-            if (inSummary) html += '</div>';
+            if (inTable) html += '</tbody></table></div>';
+            if (inSummary) html += '</div></div>';
+            html += '</div>';
 
             return html;
         }
