@@ -156,6 +156,7 @@ html, body {
     border: 1px solid rgba(45, 212, 191, 0.2);
     padding: 2px 6px;
     border-radius: 4px;
+    font-weight: 600;
 }
 .message-preview {
     font-size: 13px;
