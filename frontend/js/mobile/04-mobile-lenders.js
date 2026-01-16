@@ -86,12 +86,18 @@ Object.assign(window.MobileApp.prototype, {
 
                 <div class="lender-form-grid">
                     <div class="mobile-form-group">
-                        <label>Position</label>
-                        <select name="position" class="mobile-form-select">
+                        <label>Position *</label>
+                        <select name="position" class="mobile-form-select" required>
                             <option value="1">1st Position</option>
                             <option value="2">2nd Position</option>
                             <option value="3">3rd Position</option>
                             <option value="4">4th Position</option>
+                            <option value="5">5th Position</option>
+                            <option value="6">6th Position</option>
+                            <option value="7">7th Position</option>
+                            <option value="8">8th Position</option>
+                            <option value="9">9th Position</option>
+                            <option value="10">10th Position</option>
                         </select>
                     </div>
                     <div class="mobile-form-group">
