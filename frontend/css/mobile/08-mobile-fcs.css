@@ -298,3 +298,226 @@
     color: #e6edf3;
     overflow-x: auto;
 }
+
+/* --- FCS REPORT MOBILE (from JS displayFcsReport) --- */
+.fcs-report-mobile {
+    padding: 0;
+}
+
+.fcs-report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fcs-report-date {
+    font-size: 12px;
+    color: #8b949e;
+}
+
+.fcs-resync-btn {
+    padding: 8px 14px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: #e6edf3;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fcs-resync-btn:active {
+    background: #30363d;
+}
+
+.fcs-report-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* --- FCS SUMMARY CARD (JS uses fcs-summary-card, not -mobile) --- */
+.fcs-summary-card {
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.fcs-summary-card .fcs-summary-header h4 {
+    color: #3b82f6;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fcs-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fcs-summary-row:last-child {
+    border-bottom: none;
+}
+
+.fcs-summary-label {
+    font-size: 13px;
+    color: #8b949e;
+}
+
+.fcs-summary-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e6edf3;
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- FCS SECTION HEADER (JS uses fcs-section-header, not -mobile) --- */
+.fcs-section-header h4 {
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 20px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- FCS KEY-VALUE ROWS --- */
+.fcs-kv-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fcs-kv-key {
+    font-size: 13px;
+    color: #8b949e;
+    flex: 1;
+    padding-right: 12px;
+}
+
+.fcs-kv-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e6edf3;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- FCS BULLETS --- */
+.fcs-bullet {
+    padding: 8px 0 8px 16px;
+    font-size: 13px;
+    color: #e6edf3;
+    position: relative;
+}
+
+.fcs-bullet::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #3b82f6;
+}
+
+/* --- FCS TAGS --- */
+.fcs-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 12px 0 8px 0;
+}
+
+/* --- FCS POSITION CARDS --- */
+.fcs-position-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.fcs-position-badge {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #000;
+    flex-shrink: 0;
+}
+
+.fcs-position-text {
+    font-size: 13px;
+    color: #e6edf3;
+    line-height: 1.4;
+}
+
+/* --- FCS SYNC/PROCESSING STATES --- */
+.fcs-sync-btn {
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(45, 212, 191, 0.3);
+}
+
+.fcs-processing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.fcs-processing-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e6edf3;
+    margin-top: 16px;
+}
+
+.fcs-processing-status {
+    font-size: 13px;
+    color: #8b949e;
+    margin-top: 8px;
+}
