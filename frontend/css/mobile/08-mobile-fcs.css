@@ -1,0 +1,300 @@
+/* ==========================================================================
+   08-MOBILE-FCS.CSS
+   FCS (Financial Analysis) report view
+   ========================================================================== */
+
+/* --- 1. FCS SCROLL CONTAINER --- */
+.fcs-scroll {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    padding-bottom: 80px;
+    -webkit-overflow-scrolling: touch;
+}
+
+#fcsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* --- 2. FCS RESULTS CONTAINER --- */
+#fcsResults {
+    height: auto;
+    overflow: visible;
+}
+
+/* --- 3. FCS REPORT CONTAINER --- */
+.fcs-report-container {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* --- 4. FCS SECTION HEADERS --- */
+.fcs-styled-report h4,
+.fcs-section-header-mobile {
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 20px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- 5. FCS TABLES --- */
+.fcs-styled-report table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 16px;
+    font-size: 13px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.fcs-styled-report th {
+    background: #161b22;
+    color: #8b949e;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #30363d;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+.fcs-styled-report td {
+    padding: 12px;
+    border-bottom: 1px solid #21262d;
+    color: #e6edf3;
+    font-variant-numeric: tabular-nums;
+}
+
+.fcs-styled-report tr:last-child td {
+    border-bottom: none;
+}
+
+/* --- 6. FCS SUMMARY CARD --- */
+.fcs-summary-card-mobile {
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.fcs-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.fcs-summary-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e6edf3;
+}
+
+.fcs-summary-date {
+    font-size: 11px;
+    color: #8b949e;
+}
+
+/* --- 7. FCS STAT GRID --- */
+.fcs-stats-grid-mobile {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.fcs-stat-mobile {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+}
+
+.fcs-stat-value-mobile {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #e6edf3;
+    margin-bottom: 4px;
+}
+
+.fcs-stat-value-mobile.green { color: #10b981; }
+.fcs-stat-value-mobile.blue { color: #3b82f6; }
+.fcs-stat-value-mobile.amber { color: #f59e0b; }
+.fcs-stat-value-mobile.red { color: #ef4444; }
+
+.fcs-stat-label-mobile {
+    display: block;
+    font-size: 10px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- 8. FCS HIGHLIGHT ROW --- */
+.fcs-highlight-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.fcs-highlight-label {
+    font-size: 12px;
+    color: #6ee7b7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fcs-highlight-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #10b981;
+}
+
+/* --- 9. FCS NOTES/WARNINGS --- */
+.fcs-note-mobile {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: #f59e0b;
+    margin-bottom: 16px;
+}
+
+.fcs-note-mobile i {
+    font-size: 16px;
+    margin-top: 2px;
+}
+
+.fcs-note-mobile.info {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+}
+
+/* --- 10. FCS EMPTY STATE --- */
+.fcs-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.fcs-empty-icon {
+    font-size: 48px;
+    color: #30363d;
+    margin-bottom: 16px;
+}
+
+.fcs-empty-state h3 {
+    font-size: 18px;
+    color: #e6edf3;
+    margin: 0 0 8px 0;
+}
+
+.fcs-empty-state p {
+    font-size: 14px;
+    color: #8b949e;
+    margin: 0 0 24px 0;
+    max-width: 280px;
+}
+
+/* --- 11. RUN FCS BUTTON --- */
+.fcs-run-btn-mobile {
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(45, 212, 191, 0.3);
+}
+
+.fcs-run-btn-mobile:active {
+    transform: scale(0.98);
+}
+
+/* --- 12. SYNC LOADING STATE --- */
+.sync-loading-state {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: rgba(45, 212, 191, 0.05);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.spinner-sync {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #30363d;
+    border-top-color: #2dd4bf;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    flex-shrink: 0;
+}
+
+.sync-loading-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sync-loading-text strong {
+    color: #e6edf3;
+    font-size: 14px;
+}
+
+.sync-loading-text span {
+    color: #8b949e;
+    font-size: 13px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- 13. FCS PRE-FORMATTED TEXT --- */
+.fcs-report-container pre {
+    white-space: pre-wrap;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    background: #0d1117;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    font-size: 12px;
+    color: #e6edf3;
+    overflow-x: auto;
+}
