@@ -1580,37 +1580,41 @@
                     inSummary = false;
                 }
 
-                // === MARKDOWN TABLE HEADER (look for Month | Deposits pattern) ===
-                if (trimmed.startsWith('|') && trimmed.includes('Month') && trimmed.includes('Deposits')) {
-                    if (inTable) { html += '</tbody></table></div>'; }
-                    tableHeaders = trimmed.split('|').map(h => h.trim()).filter(h => h);
-                    html += `<div class="fcs-table-wrapper"><table class="fcs-table"><thead><tr>`;
-                    tableHeaders.forEach(h => { html += `<th>${h}</th>`; });
-                    html += `</tr></thead><tbody>`;
-                    inTable = true;
-                    continue;
-                }
-
-                // === MARKDOWN TABLE ROW ===
-                if (inTable && trimmed.startsWith('|') && trimmed.endsWith('|')) {
+                // === MARKDOWN TABLE DETECTION ===
+                if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
                     const cells = trimmed.split('|').map(c => c.trim()).filter(c => c);
-                    if (cells.length >= 5) {
-                        const [month, deposits, revenue, negDays, endBal, numDep] = cells;
-                        const negDaysNum = parseInt(negDays) || 0;
-                        const negClass = negDaysNum > 3 ? 'fcs-cell-warning' : '';
-                        html += `<tr>
-                            <td class="fcs-cell-month">${month}</td>
-                            <td class="fcs-cell-number">${deposits}</td>
-                            <td class="fcs-cell-revenue">${revenue}</td>
-                            <td class="fcs-cell-number ${negClass}">${negDays}</td>
-                            <td class="fcs-cell-number">${endBal}</td>
-                            <td class="fcs-cell-number">${numDep || '-'}</td>
-                        </tr>`;
+
+                    // Skip separator rows like |---|---|
+                    if (trimmed.match(/^\|[\s\-:|]+\|$/)) {
+                        continue;
+                    }
+
+                    // Detect header row (contains Month or is first pipe row we see)
+                    if (!inTable && cells.length >= 4) {
+                        tableHeaders = cells;
+                        html += `<div class="fcs-table-wrapper"><table class="fcs-table"><thead><tr>`;
+                        cells.forEach(h => { html += `<th>${h}</th>`; });
+                        html += `</tr></thead><tbody>`;
+                        inTable = true;
+                        continue;
+                    }
+
+                    // Data rows
+                    if (inTable && cells.length >= 4) {
+                        html += `<tr>`;
+                        cells.forEach((cell, idx) => {
+                            let cellClass = 'fcs-cell-number';
+                            if (idx === 0) cellClass = 'fcs-cell-month';
+                            if (idx === 2) cellClass = 'fcs-cell-revenue'; // Revenue column
+                            if (idx === 3 && parseInt(cell) > 3) cellClass = 'fcs-cell-warning'; // Neg days
+                            html += `<td class="${cellClass}">${cell}</td>`;
+                        });
+                        html += `</tr>`;
                         continue;
                     }
                 }
 
-                // === CLOSE TABLE ===
+                // === CLOSE TABLE (when we hit non-pipe line) ===
                 if (inTable && !trimmed.startsWith('|')) {
                     html += '</tbody></table></div>';
                     inTable = false;
