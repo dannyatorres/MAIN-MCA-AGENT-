@@ -522,34 +522,46 @@ Best regards`;
     }
 
     toggleAllLenders() {
-        const checkboxes = document.querySelectorAll('#lenderSelectionList input[type="checkbox"]');
+        // Only target non-disabled checkboxes
+        const checkboxes = document.querySelectorAll('#lenderSelectionList input[type="checkbox"]:not(:disabled)');
         const toggleBtn = document.getElementById(DOM.SUBMISSION.TOGGLE_LENDERS);
-        if (!checkboxes.length || !toggleBtn) return;
+        if (!toggleBtn) return;
+
+        if (!checkboxes.length) {
+            toggleBtn.textContent = 'Select All';
+            return;
+        }
 
         const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        const allChecked = checkedCount === checkboxes.length;
+        const anyChecked = checkedCount > 0;
 
+        // If any are checked, deselect all. If none, select all.
         checkboxes.forEach(checkbox => {
-            checkbox.checked = !allChecked;
+            checkbox.checked = !anyChecked;
         });
 
-        toggleBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
+        toggleBtn.textContent = anyChecked ? 'Select All' : 'Deselect All';
         this.updateLenderSelectionCount();
     }
 
     toggleAllDocuments() {
-        const checkboxes = document.querySelectorAll('#submissionDocumentList input[type="checkbox"]');
+        const checkboxes = document.querySelectorAll('#submissionDocumentList input[type="checkbox"]:not(:disabled)');
         const toggleBtn = document.getElementById(DOM.SUBMISSION.TOGGLE_DOCS);
-        if (!checkboxes.length || !toggleBtn) return;
+        if (!toggleBtn) return;
+
+        if (!checkboxes.length) {
+            toggleBtn.textContent = 'Select All';
+            return;
+        }
 
         const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        const allChecked = checkedCount === checkboxes.length;
+        const anyChecked = checkedCount > 0;
 
         checkboxes.forEach(checkbox => {
-            checkbox.checked = !allChecked;
+            checkbox.checked = !anyChecked;
         });
 
-        toggleBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
+        toggleBtn.textContent = anyChecked ? 'Select All' : 'Deselect All';
         this.updateDocumentSelectionCount();
     }
 
