@@ -63,26 +63,69 @@
 }
 
 /* ==========================================================================
-   2. INTERNAL LAYOUT (The Grid)
+   2. INTERNAL LAYOUT (Redesigned for "L" Shape)
    ========================================================================== */
 
+/* We turn the body into the main grid parent.
+   We use 'display: contents' on the intermediate wrapper so the columns
+   and the message area act as direct siblings in this grid.
+*/
 .submission-body {
-    padding: 16px 20px 0 20px; /* Top padding acts as the new header space */
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    gap: 12px;
-}
-
-.submission-grid {
+    padding: 16px 20px 20px 20px;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    grid-template-rows: 1fr auto;   /* Top row flexible, bottom row sizing to content */
     gap: 20px;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
 }
 
+/* Make the old grid wrapper invisible to the layout engine */
+.submission-grid {
+    display: contents;
+}
+
+/* LEFT COLUMN (Lenders): Span 2 rows to go all the way down */
+.submission-grid > .submission-col:first-child {
+    grid-column: 1;
+    grid-row: 1 / -1; /* Spans from top to absolute bottom */
+    height: 100%;
+}
+
+/* RIGHT COLUMN (Documents): Stays in top right */
+.submission-grid > .submission-col:nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+    height: 100%; /* Fills the available top space */
+}
+
+/* EMAIL AREA: Moves to bottom right, under Documents */
+.submission-message-area {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Style the Email container to look like a "Card" */
+.submission-message-area .submission-textarea {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px; /* Match other cards */
+    padding: 12px;
+    height: 100%;
+    min-height: 120px; /* Give it a decent default height */
+    resize: none; /* Disable manual resize since it fits the grid */
+}
+.submission-message-area .submission-textarea:focus {
+    border-color: #3b82f6;
+    height: 100%; /* Prevent popping */
+}
+
+/* Keep shared column styling */
 .submission-col {
     display: flex;
     flex-direction: column;
@@ -95,18 +138,17 @@
 }
 
 /* ==========================================================================
-   3. PROFESSIONAL HEADER & TOOLBAR
+   3. PROFESSIONAL HEADER & BUTTONS (Card Style)
    ========================================================================== */
 
-/* The Header Bar inside the columns */
 .submission-col-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #21262d;
-    padding: 8px 16px; /* More horizontal padding */
+    padding: 8px 12px;
     border-bottom: 1px solid #30363d;
-    height: 44px; /* Fixed height for perfect alignment */
+    height: 50px; /* Slightly taller to accommodate card buttons */
     flex-shrink: 0;
 }
 
@@ -121,93 +163,56 @@
     gap: 8px;
 }
 
-/* Group the actions (Override + Select All) */
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 16px; /* More breathing room between actions */
-}
+/* --- NEW CARD BUTTON STYLES --- */
 
-/* 1. SLEEK TOGGLE SWITCH (Replaces the Checkbox) */
-.toggle-override-label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    gap: 8px;
+/* Base style for the "Select/Deselect" buttons */
+.action-link {
+    background: #0d1117; /* Darker bg to look inset or distinct */
+    border: 1px solid #30363d;
+    color: #c9d1d9; /* White-ish text */
     font-size: 10px;
     font-weight: 600;
-    color: #8b949e;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: color 0.2s;
-}
-
-.toggle-override-label:hover {
-    color: #e6edf3;
-}
-
-/* Hide default checkbox */
-.toggle-override-label input {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 24px;
-    height: 14px;
-    background: #30363d;
-    border-radius: 10px;
-    position: relative;
+    padding: 6px 10px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin: 0;
-    border: 1px solid transparent;
-}
-
-/* The Toggle Knob */
-.toggle-override-label input::after {
-    content: '';
-    position: absolute;
-    top: 1px;
-    left: 1px;
-    width: 10px;
-    height: 10px;
-    background: #8b949e;
-    border-radius: 50%;
-    transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1), background 0.2s;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-/* Active State (Orange for Warning/Override) */
-.toggle-override-label input:checked {
-    background: rgba(245, 158, 11, 0.15); /* Soft Orange BG */
-    border-color: rgba(245, 158, 11, 0.3);
-}
-
-.toggle-override-label input:checked::after {
-    transform: translateX(10px);
-    background: #f59e0b; /* Bright Orange Knob */
-}
-
-/* 2. MINIMALIST SELECT ALL BUTTON */
-.action-link {
-    background: transparent; /* Remove boxy background */
-    border: 1px solid transparent;
-    color: #3b82f6;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
     letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .action-link:hover {
-    background: rgba(59, 130, 246, 0.1); /* Subtle hover highlight */
-    color: #58a6ff;
+    background: #30363d; /* Lighter on hover */
+    border-color: #8b949e;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
 }
 
 .action-link:active {
-    transform: translateY(1px);
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Fix alignment of the toggle next to the new card button */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Adjust toggle visual to balance with the new buttons */
+.toggle-override-label {
+    background: rgba(255,255,255,0.03);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+}
+.toggle-override-label:hover {
+    border-color: #30363d;
 }
 
 /* ==========================================================================
