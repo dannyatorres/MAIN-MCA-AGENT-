@@ -1,29 +1,152 @@
-/* css/submission-modal.css */
+/* css/modules/06a-submission-modal.css */
 
-/* General Utils */
-.submission-empty-msg {
-    color: #6b7280;
+/* ==========================================================================
+   1. MAIN MODAL STRUCTURE (The Grid Engine)
+   ========================================================================== */
+
+/* Force the modal to flex vertically so the footer sticks to bottom */
+.lender-submission-modal {
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh; /* Prevent it from being taller than screen */
+    overflow: hidden;
+}
+
+/* The Body Wrapper */
+.submission-body {
+    padding: 12px 16px;
+    overflow: hidden; /* Prevent body scroll, we scroll internal lists instead */
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Take up all available height */
+    gap: 10px;
+}
+
+/* The 50/50 Split Grid */
+.submission-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Equal split */
+    gap: 16px;
+    flex: 1; /* Grow to fill space */
+    min-height: 0; /* Critical for nested scrolling */
+}
+
+/* Individual Columns (Lenders Left, Docs Right) */
+.submission-col {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+/* ==========================================================================
+   2. COLUMN COMPONENTS
+   ========================================================================== */
+
+/* Header (Select Lenders / Select Documents) */
+.submission-col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #161b22;
+    padding: 8px 12px;
+    border: 1px solid #30363d;
+    border-bottom: 1px solid #21262d;
+    border-radius: 8px 8px 0 0;
+    min-height: 36px;
+    flex-shrink: 0;
+}
+
+.submission-col-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #e6edf3;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Search Bar Container */
+.submission-search-container {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-top: none;
+    border-bottom: none;
+    padding: 6px 12px;
+    flex-shrink: 0;
+}
+
+.submission-search-input {
+    width: 100%;
+    height: 30px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 5px;
+    padding: 0 10px;
+    color: #e6edf3;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+
+/* The Scrolling List (Where the magic happens) */
+.selection-list {
+    flex: 1; /* Fill remaining vertical space */
+    overflow-y: auto; /* Scroll ONLY this area */
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 0 0 8px 8px;
+    padding: 6px;
+}
+
+/* List Items */
+.selection-list label {
+    margin-bottom: 4px !important;
+    padding: 6px 10px !important;
+    display: flex;
+    align-items: center;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.selection-list label:hover {
+    background: #21262d;
+    border-color: #3b82f6;
+}
+
+/* Message Area (Bottom Pinned) */
+.submission-message-area {
+    margin-top: auto;
+    padding-top: 8px;
+    flex-shrink: 0;
+}
+
+.submission-textarea {
+    width: 100%;
+    min-height: 60px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
     padding: 10px;
+    color: #e6edf3;
+    resize: none;
+    font-size: 12px;
 }
 
-.submission-section {
-    margin-bottom: 20px;
-}
-
-.submission-text-flex {
-    flex: 1;
-}
+/* ==========================================================================
+   3. VISUAL STYLES (Badges, Colors, Icons)
+   ========================================================================== */
 
 /* Headers */
 .submission-header {
     font-size: 11px;
     font-weight: 700;
-    margin-bottom: 10px;
+    margin: 10px 0 6px 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     padding-left: 2px;
 }
-
 .submission-header.submitted { color: #f59e0b; }
 .submission-header.available { color: #10b981; }
 
@@ -32,48 +155,24 @@
     font-weight: 600;
     margin: 12px 0 6px 4px;
 }
-
 .submission-tier-header.restricted { color: #ef4444; }
 .submission-tier-header.standard { color: #64748b; }
 
-/* Items & Badges */
-.submission-item.is-submitted {
-    opacity: 0.7;
-}
-
+/* Status Badges */
 .submission-status-badge {
     font-size: 11px;
     font-weight: 600;
     margin-left: 8px;
 }
-
 .submission-status-badge.offer { color: #10b981; }
 .submission-status-badge.declined { color: #ef4444; }
 .submission-status-badge.pending { color: #6b7280; }
 
-.submission-date {
-    color: #6b7280;
-    font-size: 10px;
-    margin-left: 6px;
-}
-
-.submission-star {
-    color: #3b82f6;
-    margin-left: 6px;
-}
-
-.submission-reason {
-    color: #ef4444;
-    font-size: 11px;
-    margin-left: 6px;
-}
-
-/* Documents */
+/* Document Icons */
 .submission-doc-icon {
     margin-right: 10px;
     font-size: 16px;
 }
-
 .submission-doc-icon.pdf { color: #ef4444; }
 .submission-doc-icon.image { color: #3b82f6; }
 .submission-doc-icon.excel { color: #10b981; }
@@ -83,4 +182,15 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 13px;
+    color: #e6edf3;
 }
+
+/* Utility Helpers */
+.submission-empty-msg { color: #6b7280; padding: 10px; }
+.submission-text-flex { flex: 1; font-size: 13px; color: #e6edf3; font-weight: 500; }
+.submission-date { color: #6b7280; font-size: 10px; margin-left: 6px; }
+.submission-star { color: #3b82f6; margin-left: 6px; }
+.submission-reason { color: #ef4444; font-size: 11px; margin-left: 6px; }
+.toggle-override-label { font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.action-link { background: none; border: none; color: #3b82f6; font-size: 10px; font-weight: 600; cursor: pointer; text-transform: uppercase; padding: 0; }
