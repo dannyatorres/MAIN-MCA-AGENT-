@@ -19,11 +19,6 @@ router.get('/queue', async (req, res) => {
         const db = getDatabase();
         const access = getConversationAccessClause(req.user, 'c');
 
-        // Build the state filter
-        const stateParams = DIALER_ELIGIBLE_STATES.map((_, i) => `$${access.paramOffset + 1 + i}`).join(', ');
-        const values = [...access.params, ...DIALER_ELIGIBLE_STATES];
-        let paramIndex = access.paramOffset + 1 + DIALER_ELIGIBLE_STATES.length;
-
         const query = `
             SELECT 
                 c.id,
@@ -39,22 +34,22 @@ router.get('/queue', async (req, res) => {
                 c.channel_lock
             FROM conversations c
             WHERE ${access.clause}
-              AND c.state IN (${stateParams})
               AND c.lead_phone IS NOT NULL
               AND c.lead_phone != ''
+              AND c.state NOT IN ('DEAD', 'ARCHIVED', 'FUNDED')
               AND (c.channel_lock IS NULL OR c.channel_lock != 'sms')
               AND (
-                  -- Last message was outbound (we sent, they didn't reply)
-                  SELECT direction FROM messages m 
-                  WHERE m.conversation_id = c.id 
-                  ORDER BY m.timestamp DESC 
-                  LIMIT 1
-              ) = 'outbound'
+                  (SELECT direction FROM messages m 
+                   WHERE m.conversation_id = c.id 
+                   ORDER BY m.timestamp DESC 
+                   LIMIT 1) = 'outbound'
+                  OR NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
+              )
             ORDER BY c.last_activity DESC
             LIMIT 100
         `;
 
-        const result = await db.query(query, values);
+        const result = await db.query(query, access.params);
 
         console.log(`📞 Dialer queue loaded: ${result.rows.length} leads`);
 

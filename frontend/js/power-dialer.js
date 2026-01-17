@@ -139,6 +139,48 @@ class PowerDialer {
                 this.logDisposition(disposition);
             }
         });
+
+        // Add to Dialer button (from chat header)
+        document.getElementById('addToDialerBtn')?.addEventListener('click', () => {
+            const conv = window.app?.conversationCore?.selectedConversation;
+            if (!conv) {
+                alert('Select a conversation first');
+                return;
+            }
+
+            this.addSingleLead({
+                id: conv.id,
+                display_id: conv.display_id,
+                first_name: conv.first_name,
+                last_name: conv.last_name,
+                business_name: conv.business_name,
+                phone: conv.lead_phone,
+                state: conv.state
+            });
+
+            this.show();
+        });
+    }
+
+    // Add a single lead manually to queue
+    addSingleLead(lead) {
+        if (!lead || !lead.phone) {
+            console.warn('📞 Cannot add lead - no phone number');
+            alert('This lead has no phone number');
+            return;
+        }
+
+        // Check if already in queue
+        const exists = this.queue.find(l => l.id === lead.id);
+        if (!exists) {
+            this.queue.unshift(lead);
+            this.selectedLeadIds.add(lead.id);
+            console.log(`📞 Added ${lead.business_name || lead.first_name} to dialer`);
+        } else {
+            console.log(`📞 ${lead.business_name || lead.first_name} already in queue`);
+        }
+
+        this.renderQueuePreview();
     }
 
     // Show the dialer view
