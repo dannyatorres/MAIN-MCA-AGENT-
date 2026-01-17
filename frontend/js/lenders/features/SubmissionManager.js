@@ -203,7 +203,7 @@ export class SubmissionManager {
         const toggleBtn = document.getElementById(DOM.SUBMISSION.TOGGLE_LENDERS);
         if (toggleBtn) {
             toggleBtn.textContent = 'DESELECT ALL';
-            toggleBtn.className = 'action-link';
+            toggleBtn.className = 'toolbar-card-btn';
         }
     }
 
@@ -248,6 +248,7 @@ export class SubmissionManager {
             const checkboxes = docList.querySelectorAll('input[type="checkbox"]');
             const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
             toggleBtn.textContent = checkedCount === checkboxes.length ? 'DESELECT ALL' : 'SELECT ALL';
+            toggleBtn.className = 'toolbar-card-btn';
         }
     }
 

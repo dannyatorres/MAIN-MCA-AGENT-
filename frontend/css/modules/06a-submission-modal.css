@@ -66,41 +66,33 @@
    2. INTERNAL LAYOUT (Redesigned for "L" Shape)
    ========================================================================== */
 
-/* We turn the body into the main grid parent.
-   We use 'display: contents' on the intermediate wrapper so the columns
-   and the message area act as direct siblings in this grid.
-*/
 .submission-body {
     padding: 16px 20px 20px 20px;
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Two equal columns */
-    grid-template-rows: 1fr auto;   /* Top row flexible, bottom row sizing to content */
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr auto;
     gap: 20px;
     flex: 1;
     min-height: 0;
     overflow: hidden;
 }
 
-/* Make the old grid wrapper invisible to the layout engine */
 .submission-grid {
     display: contents;
 }
 
-/* LEFT COLUMN (Lenders): Span 2 rows to go all the way down */
 .submission-grid > .submission-col:first-child {
     grid-column: 1;
-    grid-row: 1 / -1; /* Spans from top to absolute bottom */
+    grid-row: 1 / -1;
     height: 100%;
 }
 
-/* RIGHT COLUMN (Documents): Stays in top right */
 .submission-grid > .submission-col:nth-child(2) {
     grid-column: 2;
     grid-row: 1;
-    height: 100%; /* Fills the available top space */
+    height: 100%;
 }
 
-/* EMAIL AREA: Moves to bottom right, under Documents */
 .submission-message-area {
     grid-column: 2;
     grid-row: 2;
@@ -110,13 +102,12 @@
     flex-direction: column;
 }
 
-/* Style the Email container to look like a "Card" */
 .submission-message-area .submission-textarea {
     background: #161b22;
     border: 1px solid #30363d;
-    border-radius: 8px; /* Match other cards */
+    border-radius: 8px;
     padding: 12px;
-    min-height: 180px; /* Increased for better usability in L-shape */
+    min-height: 180px;
     resize: none;
     color: #e6edf3;
     font-size: 13px;
@@ -128,13 +119,12 @@
     outline: none;
 }
 
-/* Keep shared column styling */
 .submission-col {
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    background: #161b22; /* Inner card background */
+    background: #161b22;
     border: 1px solid #30363d;
     border-radius: 8px;
     overflow: hidden;
@@ -151,7 +141,7 @@
     background: #21262d;
     padding: 8px 12px;
     border-bottom: 1px solid #30363d;
-    height: 50px; /* Slightly taller to accommodate card buttons */
+    height: 50px;
     flex-shrink: 0;
 }
 
@@ -166,78 +156,113 @@
     gap: 8px;
 }
 
-/* --- NEW CARD BUTTON STYLES --- */
-
-/* Base style for the "Select/Deselect" buttons */
-.action-link {
-    background: #0d1117; /* Darker bg to look inset or distinct */
-    border: 1px solid #30363d;
-    color: #c9d1d9; /* White-ish text */
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    padding: 6px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    letter-spacing: 0.5px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-}
-
-.action-link:hover {
-    background: #30363d; /* Lighter on hover */
-    border-color: #8b949e;
-    color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-}
-
-.action-link:active {
-    transform: translateY(0);
-    box-shadow: none;
-}
-
-/* Fix alignment of the toggle next to the new card button */
 .header-actions {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-/* Adjust toggle visual to balance with the new buttons */
-.toggle-override-label {
-    background: rgba(255,255,255,0.03);
-    padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid transparent;
+/* --- TOOLBAR BUTTONS (The "Card" Look) --- */
+/* We use a specific class to override global .btn styles */
+.toolbar-card-btn {
+    /* 1. Reset Global Button Styles */
+    background: #0d1117 !important;   /* Dark card bg */
+    border: 1px solid #30363d !important; /* Visible border */
+    border-radius: 6px !important;    /* Boxy corners (Overrides 30px pill) */
+    padding: 6px 12px !important;     /* Compact padding */
+
+    /* 2. Text Styles */
+    color: #c9d1d9;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+
+    /* 3. Behavior */
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+
+    /* Remove default button junk */
+    appearance: none;
+    outline: none;
+    text-decoration: none; /* Just in case */
 }
+
+.toolbar-card-btn:hover {
+    background: #21262d !important; /* Lighter on hover */
+    border-color: #8b949e !important;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+}
+
+.toolbar-card-btn:active {
+    transform: translateY(0);
+    background: #161b22 !important;
+}
+
+/* --- TOGGLE SWITCH CONTAINER --- */
+.toggle-override-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #0d1117; /* Match the buttons */
+    padding: 5px 10px;   /* Match button padding visually */
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #c9d1d9;
+    transition: all 0.2s;
+    height: 26px; /* Explicit height to align with buttons */
+    box-sizing: content-box;
+}
+
 .toggle-override-label:hover {
-    border-color: #30363d;
+    background: #21262d;
+    border-color: #8b949e;
+    color: white;
+}
+
+/* Consistent checkbox accent across the modal */
+input[type="checkbox"] {
+    accent-color: #3b82f6;
+    cursor: pointer;
 }
 
 /* ==========================================================================
    4. CONTENT & SCROLLBARS
    ========================================================================== */
 
-/* Search Bar - Sleek */
+/* Search Bar - Cleaner fit and proportions */
 .submission-search-container {
     background: #161b22;
-    padding: 8px 12px;
+    padding: 12px; /* Symmetric */
     border-bottom: 1px solid #30363d;
 }
 
 .submission-search-input {
     width: 100%;
-    height: 32px;
+    height: 36px; /* Taller for better usability */
     background: #0d1117;
     border: 1px solid #30363d;
     border-radius: 6px;
-    padding: 0 10px;
+    padding: 0 12px;
     color: #e6edf3;
-    font-size: 12px;
+    font-size: 13px;
+    box-sizing: border-box; /* Fixes any bleed/overflow */
+}
+
+.submission-search-input::placeholder {
+    color: #8b949e;
 }
 
 .submission-search-input:focus {
@@ -245,7 +270,6 @@
     outline: none;
 }
 
-/* The List Area */
 .selection-list {
     flex: 1;
     overflow-y: auto;
@@ -276,7 +300,6 @@
    5. LIST ITEMS & VISUALS
    ========================================================================== */
 
-/* List Items */
 .selection-list label {
     margin-bottom: 6px !important;
     padding: 8px 12px !important;
@@ -295,16 +318,12 @@
     transform: translateX(2px);
 }
 
-/* Checkboxes */
 .selection-list input[type="checkbox"] {
-    accent-color: #3b82f6;
     width: 14px;
     height: 14px;
     margin-right: 12px;
-    cursor: pointer;
 }
 
-/* Tiers & Headers */
 .submission-tier-header {
     font-size: 10px;
     font-weight: 700;
@@ -315,13 +334,12 @@
 .submission-tier-header.standard { color: #64748b; }
 .submission-tier-header.restricted { color: #ef4444; }
 
-/* Status Badges */
 .submission-status-badge {
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 10px;
     font-weight: 700;
-    margin-left: auto; /* Push to right */
+    margin-left: auto;
     text-transform: uppercase;
 }
 .submission-status-badge.offer { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
