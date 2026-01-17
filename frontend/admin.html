@@ -251,6 +251,11 @@
               <option value="admin">Admin</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>Agent Name (AI Persona)</label>
+            <input type="text" id="userAgentName" placeholder="e.g. Dan Torres">
+            <small style="color: var(--text-secondary)">Name the AI uses when texting leads</small>
+          </div>
 
           <!-- Service Settings Section (only shown when editing) -->
           <div class="form-section" id="serviceSettingsSection" style="display:none;">
@@ -568,6 +573,7 @@
       document.getElementById('userEmail').value = user.email;
       document.getElementById('userUsername').value = user.username || '';
       document.getElementById('userRole').value = user.role;
+      document.getElementById('userAgentName').value = user.agent_name || '';
       document.getElementById('passwordGroup').style.display = 'none';
       document.getElementById('userPassword').required = false;
       document.getElementById('formError').style.display = 'none';
@@ -608,7 +614,8 @@
       errorDiv.style.display = 'none';
 
       try {
-        const body = { name, email, username, role };
+        const agent_name = document.getElementById('userAgentName').value.trim();
+        const body = { name, email, username, role, agent_name };
         if (!id) body.password = password; // Only for new users
 
         const res = await fetch(id ? `${API_BASE}/${id}` : API_BASE, {
