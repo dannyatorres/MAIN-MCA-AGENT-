@@ -461,6 +461,15 @@ class LendersModule {
     async skipToSendModal() {
         console.log('⏩ Skipping qualification, loading all lenders...');
 
+        const btn = document.getElementById('skipToSendBtn');
+        const originalText = btn?.innerHTML;
+
+        // Show loading state
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+        }
+
         try {
             const result = await this.parent.apiCall('/api/qualification/all-lenders');
 
@@ -477,6 +486,12 @@ class LendersModule {
         } catch (error) {
             console.error('❌ Error skipping to send modal:', error);
             this.utils.showNotification('Failed to load lenders', 'error');
+        } finally {
+            // Reset button state
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
     }
 
@@ -1011,19 +1026,22 @@ class LendersModule {
 
         console.log('✅ Modal found, loading documents...');
 
-        // Load documents
+        // Load documents and submission history in parallel
         try {
-            await this.ensureDocumentsLoaded();
+            const [_, submissionHistory] = await Promise.all([
+                this.ensureDocumentsLoaded(),
+                this.getSubmissionHistory()
+            ]);
+            this.submissionHistory = submissionHistory;
             console.log('✅ Documents loaded');
+            console.log(`📋 Found ${this.submissionHistory.length} previous submissions`);
         } catch (error) {
-            console.error('❌ Error loading documents:', error);
+            console.error('❌ Error loading data:', error);
+            this.submissionHistory = [];
         }
 
         // Populate the modal content
         try {
-            // 🔔 Fetch submission history first
-            this.submissionHistory = await this.getSubmissionHistory();
-            console.log(`📋 Found ${this.submissionHistory.length} previous submissions`);
 
             this.populateSubmissionLenders();
             this.populateSubmissionDocuments();
@@ -1035,6 +1053,9 @@ class LendersModule {
 
         // ALWAYS re-attach listeners when modal opens
         this.attachModalEventListeners();
+
+        // Update selection count
+        this.updateLenderSelectionCount();
 
         // Show modal (use classList)
         modal.classList.remove('hidden');
@@ -1140,6 +1161,16 @@ class LendersModule {
 
             // Auto-focus the search bar when modal opens
             setTimeout(() => newSearch.focus(), 100);
+        }
+
+        // Lender checkbox change listener
+        const lenderList = document.getElementById('lenderSelectionList');
+        if (lenderList) {
+            lenderList.addEventListener('change', (e) => {
+                if (e.target.type === 'checkbox') {
+                    this.updateLenderSelectionCount();
+                }
+            });
         }
 
         console.log('All modal event listeners attached successfully');
@@ -1731,6 +1762,14 @@ Best regards`;
         `;
     }
 
+    updateLenderSelectionCount() {
+        const checkboxes = document.querySelectorAll('#lenderSelectionList input[type="checkbox"]:checked');
+        const countEl = document.getElementById('lenderSelectionCount');
+        if (countEl) {
+            countEl.textContent = `(${checkboxes.length} selected)`;
+        }
+    }
+
     toggleAllLenders() {
         const checkboxes = document.querySelectorAll('#lenderSelectionList input[type="checkbox"]');
         const toggleBtn = document.getElementById('toggleAllLendersBtn');
@@ -1747,6 +1786,8 @@ Best regards`;
 
         // Update button text
         toggleBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
+
+        this.updateLenderSelectionCount();
     }
 
     toggleAllDocuments() {
