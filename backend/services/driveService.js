@@ -54,8 +54,9 @@ async function syncDriveFiles(conversationId, businessName, userId = null) {
     }
 
     // Get user-specific folder ID (or fall back to env var)
+    console.log(`📂 [DEBUG] syncDriveFiles called with userId: ${userId}`);
     const FOLDER_ID = await getDriveFolderId(userId);
-
+    console.log(`📂 [DEBUG] getDriveFolderId returned: ${FOLDER_ID}`);
     console.log(`📂 Starting Drive Sync for: "${businessName}" (Folder: ${FOLDER_ID})...`);
 
     function extractFolderId(input) {
