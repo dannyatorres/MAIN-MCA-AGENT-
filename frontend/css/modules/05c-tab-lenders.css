@@ -652,132 +652,219 @@ select.form-input {
 }
 
 /* ==========================================================================
-   [MODAL] Lender Qualification - COMPACT CARD STYLE
+   [MODAL] Lender Qualification - SLEEK & TIGHT LAYOUT
    ========================================================================== */
 
-/* 1. Scroll Area - Matches Submission Modal */
+/* 1. LAYOUT ENGINE (Fixes Double Scroll) */
+/* Override generic modal padding to allow full-bleed layout */
+#lenderModal .modal-body,
+#lendersInlineModal .modal-body {
+    padding: 0 !important;
+    overflow: hidden !important; /* Kill generic scroll */
+    display: flex;
+    flex-direction: column;
+    background: #0d1117;
+    height: 100%;
+}
+
+.lender-qualification-system {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* 2. SCROLLABLE CONTENT AREA */
 .lender-form-scroll-area {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
-    background: #161b22;
+    padding: 24px; /* Breathing room inside */
+    background: #0d1117;
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* Consistent gap between cards */
 }
 
-/* 2. THE MAIN GRID CARD (Matches "Select Lenders" box) */
+/* Dark Custom Scrollbar */
+.lender-form-scroll-area::-webkit-scrollbar {
+    width: 6px;
+}
+.lender-form-scroll-area::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+.lender-form-scroll-area::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+.lender-form-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: #58a6ff;
+}
+
+/* 3. MAIN INPUT GRID CARD */
 .lender-input-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px 16px; /* Tight: 12px row gap, 16px col gap */
+    grid-template-columns: repeat(3, 1fr); /* Strict 3 columns */
+    gap: 16px 20px; /* Tight: 16px row, 20px col */
 
-    /* Card Styling */
-    background: #0d1117;
+    background: #161b22; /* Lighter card bg */
     border: 1px solid #30363d;
     border-radius: 8px;
-    padding: 16px;
-
-    /* Spacing from next element */
-    margin-bottom: 12px;
+    padding: 20px;
 }
 
-/* Remove default margins from form groups inside the grid */
+/* Remove margins from form groups so the grid gap handles spacing */
 .lender-input-grid .form-group {
-    margin-bottom: 0;
+    margin-bottom: 0 !important;
 }
 
-/* 3. SLIM INPUTS (Professional Look) */
-#lenderForm .form-input,
-#lenderForm .form-select {
-    height: 32px; /* Slimmer than the old 38px */
-    padding: 0 10px;
-    font-size: 13px;
-    background: #161b22; /* Contrast against the card background */
+/* 4. SLEEK CHECKBOX ROW */
+.checkbox-row-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 24px; /* Space between items */
+
+    background: #161b22;
     border: 1px solid #30363d;
-    border-radius: 4px;
-    color: #e6edf3;
-    transition: border-color 0.2s;
+    border-radius: 8px;
+    padding: 16px 20px !important;
+    margin: 0 !important;
 }
 
-#lenderForm .form-input:focus,
-#lenderForm .form-select:focus {
+/* Checkbox Labels */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #e6edf3;
+    user-select: none;
+    transition: color 0.2s;
+}
+
+.checkbox-label:hover {
+    color: #3b82f6;
+}
+
+.checkbox-label input[type="checkbox"] {
+    accent-color: #3b82f6;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* 5. NOTES & EXTRA FIELDS */
+#lenderAdditionalNotes {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    color: #e6edf3;
+    min-height: 80px;
+    resize: vertical;
+}
+
+#lenderAdditionalNotes:focus {
     border-color: #3b82f6;
     outline: none;
 }
 
-/* 4. PRO LABELS (Slate Blue & Uppercase) */
-#lenderForm label {
-    font-size: 11px;
-    color: #94a3b8; /* The Pro Slate Color */
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-    display: block;
-}
-
-/* 5. CHECKBOX CARD (Matching Style) */
-.checkbox-row-card {
-    /* Force override of inline styles */
-    margin: 0 0 12px 0 !important;
-    padding: 10px 16px !important;
-
-    /* Match the Grid Card style */
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-/* Fix checkbox label vertical alignment */
-.checkbox-label {
-    font-size: 12px;
-    color: #e6edf3; /* Keep these white for readability */
-    text-transform: none; /* Sentence case for checkboxes */
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-/* 6. TEXT AREAS & EXTRAS */
-#lenderAdditionalNotes {
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 13px;
-    color: #e6edf3;
-    min-height: 60px; /* Compact default */
-}
-
-/* Grid Spans */
-.grid-span-2 { grid-column: span 2; }
-.grid-span-full { grid-column: 1 / -1; }
-
-/* TIB Display (Years/Months) Tweaks */
-.tib-display {
-    right: 10px;
-    bottom: 8px; /* Adjust for new input height */
-    left: auto;
-    font-size: 10px;
-    background: rgba(13, 17, 23, 0.9);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-/* 7. Fixed Footer */
+/* 6. FIXED FOOTER */
 .lender-form-footer {
-    padding: 16px 20px;
-    background: #0d1117;
+    flex-shrink: 0; /* Never shrink */
+    padding: 16px 24px;
+    background: #161b22;
     border-top: 1px solid #30363d;
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 12px;
 }
 
-/* ==========================================================================
+/* 7. TYPOGRAPHY & BUTTONS */
+/* Labels */
+#lenderForm label {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* Clear Button (Ghost Text) */
+.lender-btn-link {
+    margin-right: auto; /* Push to left */
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+.lender-btn-link:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Skip Button (Secondary) */
+.btn-secondary {
+    background: transparent;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-secondary:hover {
+    border-color: #8b949e;
+    background: rgba(255,255,255,0.05);
+}
+
+/* Process Button (Primary) */
+.btn-primary {
+    background: #2dd4bf; /* Teal Accent */
+    border: 1px solid #2dd4bf;
+    color: #0f1115;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.2);
+    transition: all 0.2s;
+}
+.btn-primary:hover {
+    background: #5eead4;
+    border-color: #5eead4;
+    transform: translateY(-1px);
+    box-shadow: 0 0 15px rgba(45, 212, 191, 0.4);
+}
+
+/* Helper Classes */
+.grid-span-2 { grid-column: span 2; }
+.tib-display {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: 10px;
+    color: #2dd4bf;
+    font-weight: 600;
+    background: rgba(45, 212, 191, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
    [POLISH] Typography & Modal Sizing Alignment
    ========================================================================== */
 
