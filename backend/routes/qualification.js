@@ -562,10 +562,10 @@ router.post('/qualify', async (req, res) => {
                 const lenderNameLower = lenderName.toLowerCase();
                 const lenderRules = [];
 
-                // Find matching rules (fuzzy match on first word)
+                // Find matching rules (full name match, not just first word)
                 for (const [ruleLenderName, rules] of Object.entries(rulesByLender)) {
-                    if (lenderNameLower.includes(ruleLenderName.split(' ')[0]) ||
-                        ruleLenderName.includes(lenderNameLower.split(' ')[0])) {
+                    if (lenderNameLower.includes(ruleLenderName) ||
+                        ruleLenderName.includes(lenderNameLower)) {
                         lenderRules.push(...rules);
                     }
                 }
