@@ -712,6 +712,9 @@ class PowerDialer {
                 <button class="fcb-btn fcb-mute" id="fcbMuteBtn" title="Mute">
                     <i class="fas fa-microphone"></i>
                 </button>
+                <button class="fcb-btn fcb-skip" id="fcbSkipBtn" title="Skip">
+                    <i class="fas fa-forward"></i>
+                </button>
                 <button class="fcb-btn fcb-end" id="fcbEndBtn" title="End Call">
                     <i class="fas fa-phone-slash"></i>
                 </button>
@@ -740,6 +743,11 @@ class PowerDialer {
                 core?.selectConversation(this.currentLead.id);
                 this._skipAllowSwitch = false;
             }
+        });
+
+        document.getElementById('fcbSkipBtn')?.addEventListener('click', () => {
+            this.logDisposition('skip');
+            this.hideFloatingCallBar();
         });
 
         document.getElementById('fcbEndBtn')?.addEventListener('click', () => {
