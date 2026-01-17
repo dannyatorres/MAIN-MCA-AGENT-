@@ -43,6 +43,7 @@ export class SubmissionManager {
 
         this.attachModalEventListeners();
         this.updateLenderSelectionCount();
+        this.updateDocumentSelectionCount();
 
         modal.classList.remove('hidden');
         modal.style.display = '';
@@ -214,6 +215,7 @@ export class SubmissionManager {
         if (!docList) return;
         if (!documents || documents.length === 0) {
             docList.innerHTML = '<p class="submission-empty-msg">No documents available.</p>';
+            this.updateDocumentSelectionCount();
             return;
         }
 
@@ -250,6 +252,7 @@ export class SubmissionManager {
             toggleBtn.textContent = checkedCount === checkboxes.length ? 'Deselect All' : 'Select All';
             toggleBtn.className = 'toolbar-card-btn';
         }
+        this.updateDocumentSelectionCount();
     }
 
     prefillSubmissionMessage() {
@@ -487,6 +490,15 @@ Best regards`;
                 }
             });
         }
+
+        const docList = document.getElementById(DOM.SUBMISSION.DOC_LIST);
+        if (docList) {
+            docList.addEventListener('change', (e) => {
+                if (e.target.type === 'checkbox') {
+                    this.updateDocumentSelectionCount();
+                }
+            });
+        }
     }
 
     toggleAllLenders() {
@@ -518,6 +530,7 @@ Best regards`;
         });
 
         toggleBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
+        this.updateDocumentSelectionCount();
     }
 
     updateLenderSelectionCount() {
@@ -525,6 +538,14 @@ Best regards`;
         const countEl = document.getElementById(DOM.SUBMISSION.COUNT);
         if (countEl) {
             countEl.textContent = `${checkboxes.length} Selected`;
+        }
+    }
+
+    updateDocumentSelectionCount() {
+        const checkboxes = document.querySelectorAll('#submissionDocumentList input[type="checkbox"]:checked');
+        const countEl = document.getElementById('docCountCard');
+        if (countEl) {
+            countEl.textContent = `${checkboxes.length} SELECTED`;
         }
     }
 }

@@ -317,6 +317,18 @@ input[type="checkbox"] {
     margin-right: 12px;
 }
 
+/* Document Icons */
+.submission-doc-icon {
+    width: 20px;
+    margin-right: 10px;
+    text-align: center;
+    font-size: 14px;
+}
+.submission-doc-icon.pdf { color: #ef4444; }
+.submission-doc-icon.image { color: #a855f7; }
+.submission-doc-icon.excel { color: #10b981; }
+.submission-doc-icon.default { color: #8b949e; }
+
 .submission-tier-header {
     font-size: 10px;
     font-weight: 700;
