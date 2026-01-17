@@ -1,3 +1,31 @@
+:root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --border-default: #30363d;
+    --text-primary: #e6edf3;
+    --text-muted: #8b949e;
+    --text-label: #94a3b8;
+    --accent-blue: #3b82f6;
+    --accent-blue-light: #60a5fa;
+    --accent-teal: #2dd4bf;
+    --accent-red: #ef4444;
+    --accent-red-light: #f85149;
+    --accent-green: #238636;
+    --accent-yellow: #d29922;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 32px;
+    --space-3xl: 48px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+}
+
 /* ==========================================================================
    [TAB] Lenders - Qualification & Management
    ========================================================================== */
@@ -8,39 +36,39 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 30px;
+    padding: var(--space-3xl) var(--space-2xl);
     text-align: center;
 }
 
 .lender-landing-icon {
     font-size: 64px;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-md);
 }
 
 .lender-landing-title {
     font-size: 20px;
     font-weight: 600;
-    color: #e6edf3;
-    margin-bottom: 16px;
+    color: var(--text-primary);
+    margin-bottom: var(--space-md);
 }
 
 .lender-landing-text {
-    color: #8b949e;
-    margin-bottom: 24px;
+    color: var(--text-muted);
+    margin-bottom: var(--space-xl);
     max-width: 400px;
     line-height: 1.5;
 }
 
-/* 2. Results Dashboard (Summary Stats) */
+/* 2. Results Dashboard */
 .lender-summary-container {
     display: flex;
     justify-content: center;
-    gap: 24px;
-    margin: 12px 0;
-    padding: 14px;
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 12px;
+    gap: var(--space-xl);
+    margin: var(--space-md) 0;
+    padding: var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
 }
 
 .lender-stat-box {
@@ -55,54 +83,53 @@
 
 .lender-stat-label {
     font-size: 0.75rem;
-    color: #8b949e;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-top: 4px;
+    margin-top: var(--space-xs);
 }
 
-/* Color Variants */
-.lender-stat-number.qualified { color: #2dd4bf; }
-.lender-stat-number.non-qualified { color: #ef4444; }
+.lender-stat-number.qualified { color: var(--accent-teal); }
+.lender-stat-number.non-qualified { color: var(--accent-red); }
 
 /* 3. Qualified Lenders Grid */
 .qualified-section-header {
-    padding: 12px;
+    padding: var(--space-md);
     background: rgba(45, 212, 191, 0.1);
     border: 1px solid rgba(45, 212, 191, 0.3);
-    border-radius: 6px;
-    margin-bottom: 10px;
-    color: #2dd4bf;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-sm);
+    color: var(--accent-teal);
     font-weight: 600;
 }
 
 .tier-group {
-    margin-bottom: 10px;
+    margin-bottom: var(--space-sm);
 }
 
 .tier-header {
     font-weight: 600;
-    padding: 8px 12px;
-    background: #21262d;
-    border-radius: 6px;
-    color: #e6edf3;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
     font-size: 13px;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .lender-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 8px;
-    padding: 0 8px;
+    gap: var(--space-sm);
+    padding: 0 var(--space-sm);
 }
 
 .lender-tag {
-    padding: 8px 12px;
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 6px;
-    color: #e6edf3;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
     font-size: 13px;
     display: flex;
     align-items: center;
@@ -111,60 +138,44 @@
 }
 
 .lender-tag:hover {
-    border-color: #2dd4bf;
+    border-color: var(--accent-teal);
     transform: translateY(-1px);
 }
 
-/* 3b. Log Response Button */
 .log-response-btn {
     background: transparent;
     border: none;
     cursor: pointer;
     font-size: 14px;
     padding: 2px 6px;
-    margin-left: 8px;
+    margin-left: var(--space-sm);
     opacity: 0.5;
-    transition: opacity 0.2s, transform 0.2s;
+    transition: all 0.2s;
 }
 
-.log-response-btn:hover {
-    opacity: 1;
-    transform: scale(1.1);
-}
+.log-response-btn:hover { opacity: 1; transform: scale(1.1); }
 
 .lender-tag .response-badge {
-    margin-left: 6px;
+    margin-left: var(--space-sm);
     font-size: 12px;
 }
 
-.lender-tag.response-approved {
-    border-color: #238636;
-    background: rgba(35, 134, 54, 0.1);
-}
+.lender-tag.response-approved { border-color: var(--accent-green); background: rgba(35, 134, 54, 0.1); }
+.lender-tag.response-declined { border-color: var(--accent-red-light); background: rgba(248, 81, 73, 0.1); }
+.lender-tag.response-pending { border-color: var(--accent-yellow); background: rgba(210, 153, 34, 0.1); }
 
-.lender-tag.response-declined {
-    border-color: #f85149;
-    background: rgba(248, 81, 73, 0.1);
-}
-
-.lender-tag.response-pending {
-    border-color: #d29922;
-    background: rgba(210, 153, 34, 0.1);
-}
-
-/* 3c. Form Section Styling for Response Modal */
 .form-section-header {
     font-size: 13px;
     font-weight: 600;
     color: #22d3ee;
-    margin: 20px 0 10px 0;
-    padding-bottom: 5px;
+    margin: var(--space-xl) 0 var(--space-sm) 0;
+    padding-bottom: var(--space-xs);
     border-bottom: 1px solid #333;
 }
 
 .form-row {
     display: flex;
-    gap: 10px;
+    gap: var(--space-md);
 }
 
 .form-group.half {
@@ -174,13 +185,13 @@
 /* 4. Non-Qualified List */
 .non-qual-toggle {
     width: 100%;
-    padding: 12px;
+    padding: var(--space-md);
     background: rgba(239, 68, 68, 0.05);
     border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     text-align: left;
-    color: #ef4444;
+    color: var(--accent-red);
     font-weight: 600;
     transition: background 0.2s;
 }
@@ -192,9 +203,9 @@
 .non-qual-item {
     display: flex;
     justify-content: space-between;
-    padding: 10px 12px;
-    background: #0d1117;
-    border-bottom: 1px solid #30363d;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-default);
     font-size: 13px;
 }
 
@@ -204,44 +215,44 @@
 .lender-list-row {
     display: grid;
     grid-template-columns: 1fr auto;
-    padding: 12px 20px;
-    border-bottom: 1px solid #21262d;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--bg-tertiary);
     transition: all 0.2s ease;
-    background: #0d1117;
+    background: var(--bg-primary);
     align-items: center;
 }
 
 .lender-list-row:last-child { border-bottom: none; }
 
 .lender-list-row:hover {
-    background: #161b22;
-    padding-left: 24px;
+    background: var(--bg-secondary);
+    padding-left: calc(var(--space-lg) + var(--space-xs));
 }
 
 .lender-avatar {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     background: rgba(59, 130, 246, 0.15);
-    color: #3b82f6;
+    color: var(--accent-blue);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
     font-size: 14px;
-    margin-right: 12px;
+    margin-right: var(--space-md);
 }
 
 .lender-name-wrapper {
     display: flex;
     align-items: center;
-    color: #e6edf3;
+    color: var(--text-primary);
     font-weight: 500;
 }
 
 .lender-actions {
     display: flex;
-    gap: 6px;
+    gap: var(--space-sm);
     opacity: 0.6;
     transition: opacity 0.2s;
 }
@@ -250,170 +261,191 @@
     opacity: 1;
 }
 
-/* 6. Utility / Form Tweaks */
-
-/* Ensure parent container is the reference point for absolute positioning */
-.form-group {
-    position: relative;
-    margin-bottom: 12px;
+/* 6. Forms & Inputs */
+.lender-qualification-system {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 }
 
-/* Position TIB text so it floats below the input without shifting layout */
-.tib-display {
-    position: absolute;
-    bottom: -18px;
-    left: 2px;
-    font-size: 11px;
-    color: #2dd4bf;
-    font-weight: 500;
-    white-space: nowrap;
-    pointer-events: none;
-}
-
-.btn-icon-action {
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    background: #21262d;
-    color: #8b949e;
-    border: 1px solid #30363d;
-    border-radius: 6px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.btn-icon-action:hover {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
-}
-
-.btn-icon-action.delete:hover {
-    background: #ef4444;
-    border-color: #ef4444;
-}
-
-/* 7. Main Layout */
 .lender-form-content {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
-    padding-bottom: 80px;
+    padding: var(--space-lg);
+    padding-bottom: var(--space-2xl);
 }
 
-.field-label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-    color: #8b949e;
-    font-size: 13px;
+.lender-input-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md) var(--space-lg);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
 }
 
-.field-label .required {
-    color: #ef4444;
+.lender-input-grid .form-group {
+    margin-bottom: 0;
+    position: relative;
 }
 
-/* 11. Results Area */
-#lenderResults {
-    display: none;
+.form-group {
+    position: relative;
+    margin-bottom: var(--space-md);
 }
 
-#lenderResults.active {
-    display: block;
-}
-
-#lenderLoading,
-#lenderErrorMsg {
-    display: none;
-}
-
-#lenderLoading.active,
-#lenderErrorMsg.active {
-    display: block;
-}
-
-#lenderErrorMsg {
-    color: #ef4444;
-    padding: 12px;
-    background: rgba(239, 68, 68, 0.1);
-    border-radius: 8px;
-    margin-top: 10px;
-}
-
-/* 12. Empty State Card */
-.empty-state-card {
+.checkbox-row-card {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 12px;
-    text-align: center;
+    gap: var(--space-lg);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-lg);
 }
 
-.empty-state-text h4 {
-    color: #e6edf3;
-    margin-bottom: 8px;
+.field-label,
+#lenderForm label,
+.submission-col-title {
+    display: block;
+    margin-bottom: var(--space-sm);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.empty-state-text p {
-    color: #8b949e;
-    font-size: 14px;
+.field-label .required { color: var(--accent-red); }
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    user-select: none;
+    transition: color 0.2s;
 }
 
-/* ==========================================================================
-   [FIX] Dark Theme Cards (Replaces White Inline Styles)
-   ========================================================================== */
+.checkbox-label:hover { color: var(--accent-blue); }
 
-/* 1. Quick Import Card */
+.checkbox-label input[type="checkbox"] {
+    accent-color: var(--accent-blue);
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+#lenderAdditionalNotes,
+textarea.form-control {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    font-size: 13px;
+    color: var(--text-primary);
+    min-height: 80px;
+    resize: vertical;
+}
+
+#lenderAdditionalNotes:focus {
+    border-color: var(--accent-blue);
+    outline: none;
+}
+
 .quick-import-card {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-xl);
     background: rgba(59, 130, 246, 0.08);
-    border: 1px dashed #3b82f6;
-    border-radius: 8px;
-    padding: 16px;
+    border: 1px dashed var(--accent-blue);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
 }
 
-/* Fix text inside Quick Import */
 .quick-import-card h4 {
-    color: #60a5fa !important;
+    color: var(--accent-blue-light);
     margin: 0;
     font-size: 16px;
 }
 
 .quick-import-card p {
-    color: #94a3b8 !important;
-    margin: 0 0 12px 0;
+    color: var(--text-label);
+    margin: 0 0 var(--space-md) 0;
     font-size: 14px;
 }
 
-.quick-import-card textarea {
-    background: #0d1117;
-    border: 1px solid #30363d;
-    color: #e6edf3;
+.lender-notes-area {
+    height: 80px;
+    width: 100%;
+    resize: vertical;
 }
 
-.checkbox-label input[type="checkbox"] {
-    accent-color: #3b82f6;
-    width: 16px;
-    height: 16px;
+/* 7. Modals */
+#lenderModal .modal-content,
+#lendersInlineModal .modal-content {
+    max-width: 900px;
+    width: 90vw;
+    height: 85vh;
+    max-height: 800px;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-default);
 }
 
-/* ==========================================================================
-   [FIX] Selection Lists & Header Buttons
-   ========================================================================== */
+#lenderModal .modal-body,
+#lendersInlineModal .modal-body {
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: var(--bg-primary);
+}
 
-/* 1. Sleek "Select All" Buttons */
+.lender-form-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-lg);
+    background: var(--bg-primary);
+    position: relative;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-default) transparent;
+}
+
+.lender-form-footer {
+    flex-shrink: 0;
+    padding: var(--space-md) var(--space-xl);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-md);
+}
+
+.lender-form-scroll-area::-webkit-scrollbar { width: 6px; }
+.lender-form-scroll-area::-webkit-scrollbar-track { background: var(--bg-primary); }
+.lender-form-scroll-area::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+.lender-form-scroll-area::-webkit-scrollbar-thumb:hover { background: var(--accent-blue-light); }
+
+/* Submission & Selection Lists */
 .submission-col-header button,
 .btn-link {
-    background: transparent !important;
-    border: none !important;
-    color: #3b82f6;
+    background: transparent;
+    border: none;
+    color: var(--accent-blue);
     cursor: pointer;
     font-size: 12px;
     font-weight: 600;
@@ -423,42 +455,39 @@
 
 .submission-col-header button:hover,
 .btn-link:hover {
-    color: #60a5fa;
+    color: var(--accent-blue-light);
     text-decoration: none;
 }
 
-/* 2. List Items as "Mini Cards" */
 .selection-list label {
     display: flex;
     align-items: center;
-    padding: 10px 12px;
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 6px;
-    margin-bottom: 6px;
+    padding: var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-sm);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .selection-list label:hover {
-    background: #21262d;
-    border-color: #3b82f6;
+    background: var(--bg-tertiary);
+    border-color: var(--accent-blue);
     transform: translateX(2px);
 }
 
-/* Custom Checkbox Spacing */
 .selection-list input[type="checkbox"] {
-    accent-color: #3b82f6;
+    accent-color: var(--accent-blue);
     width: 16px;
     height: 16px;
-    margin-right: 12px;
+    margin-right: var(--space-md);
     cursor: pointer;
 }
 
-/* 4. Text Styling */
 .list-text {
     font-size: 13px;
-    color: #e6edf3;
+    color: var(--text-primary);
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -466,208 +495,74 @@
     flex: 1;
 }
 
-/* ==========================================================================
-   [MODAL] Lender Qualification - SLEEK & TIGHT LAYOUT
-   ========================================================================== */
-
-/* 1. LAYOUT ENGINE (Fixes Double Scroll) */
-/* Override generic modal padding to allow full-bleed layout */
-#lenderModal .modal-body,
-#lendersInlineModal .modal-body {
-    padding: 0 !important;
-    overflow: hidden !important; /* Kill generic scroll */
-    display: flex;
-    flex-direction: column;
-    background: #0d1117;
-    height: 100%;
-}
-
-.lender-qualification-system {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-}
-
-/* Dark Custom Scrollbar */
-.lender-form-scroll-area::-webkit-scrollbar {
-    width: 6px;
-}
-.lender-form-scroll-area::-webkit-scrollbar-track {
-    background: #0d1117;
-}
-.lender-form-scroll-area::-webkit-scrollbar-thumb {
-    background: #30363d;
-    border-radius: 3px;
-}
-.lender-form-scroll-area::-webkit-scrollbar-thumb:hover {
-    background: #58a6ff;
-}
-
-/* 3. MAIN INPUT GRID CARD */
-.lender-input-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Strict 3 columns */
-    gap: 12px 16px; /* Tight: 16px row, 20px col */
-
-    background: #161b22; /* Lighter card bg */
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    padding: 16px;
-}
-
-/* Remove margins from form groups so the grid gap handles spacing */
-.lender-input-grid .form-group {
-    margin-bottom: 0 !important;
-}
-
-/* 4. SLEEK CHECKBOX ROW */
-.checkbox-row-card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px; /* Space between items */
-
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    padding: 12px 16px !important;
-    margin: 0 !important;
-}
-
-/* Checkbox Labels */
-.checkbox-label {
+.submission-list-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    color: #e6edf3;
-    user-select: none;
-    transition: color 0.2s;
-}
-
-.checkbox-label:hover {
-    color: #3b82f6;
-}
-
-.checkbox-label input[type="checkbox"] {
-    accent-color: #3b82f6;
-    width: 16px;
-    height: 16px;
-    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     cursor: pointer;
 }
 
-/* 5. NOTES & EXTRA FIELDS */
-#lenderAdditionalNotes {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    padding: 12px;
-    font-size: 13px;
-    color: #e6edf3;
-    min-height: 80px;
-    resize: vertical;
-}
+.submission-list-item:hover { background: rgba(255, 255, 255, 0.03); }
 
-#lenderAdditionalNotes:focus {
-    border-color: #3b82f6;
-    outline: none;
-}
-
-/* 6. FIXED FOOTER */
-.lender-form-footer {
-    flex-shrink: 0; /* Never shrink */
-    padding: 12px 20px;
-    background: #161b22;
-    border-top: 1px solid #30363d;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
-/* 7. TYPOGRAPHY & BUTTONS */
-/* Labels */
-#lenderForm label {
-    font-size: 11px;
-    color: #94a3b8;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-    display: block;
-}
-
-/* Clear Button (Ghost Text) */
-.lender-btn-link {
-    margin-right: auto; /* Push to left */
-    background: transparent;
-    border: none;
-    color: #8b949e;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-.lender-btn-link:hover {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-}
-
-/* Helper Classes */
-.grid-span-2 { grid-column: span 2; }
-
-/* 1. Make Headers Look "Professional" (Muted Slate vs Stark White) */
-.submission-col-title,
-.field-label {
-    color: #94a3b8 !important; /* Muted Slate Blue instead of White */
-    font-size: 11px !important;
-    font-weight: 600 !important; /* Slightly less chunky than 700 */
-    letter-spacing: 0.8px !important; /* Wider spacing looks more "pro" */
-    text-transform: uppercase;
-}
-
-/* 2. Style the "Send Emails" button text to be crisp */
 #sendSubmissionsText {
     font-weight: 600;
     letter-spacing: 0.3px;
 }
 
-/* 3. Make "Lender Qualification" Modal an EXACT TWIN of "Send to Lenders" */
-#lenderModal .modal-content,
-#lendersInlineModal .modal-content {
-    /* Exact dimensions from the Submission Modal */
-    max-width: 900px !important;
-    width: 90vw !important;
-    height: 85vh !important;
-    max-height: 800px !important;
-    min-height: 600px !important;
-
-    /* Ensure layout flow is identical */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+/* 8. Utility Classes */
+.lender-btn-link {
+    margin-right: auto;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
 }
 
-/* 4. Fix the scroll area inside the Qualification modal to match */
-.lender-form-scroll-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    background: #161b22;
-    /* Custom Scrollbar to match */
-    scrollbar-width: thin;
-    scrollbar-color: #30363d transparent;
+.lender-btn-link:hover {
+    color: var(--accent-red);
+    background: rgba(239, 68, 68, 0.1);
 }
 
-/* ==========================================================================
-   [LENDER TEMPLATE HELPERS]
-   ========================================================================== */
+.btn-icon-action {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-icon-action:hover {
+    background: var(--accent-blue);
+    color: #ffffff;
+    border-color: var(--accent-blue);
+}
+
+.btn-icon-action.delete:hover {
+    background: var(--accent-red);
+    border-color: var(--accent-red);
+}
+
+.btn-loading {
+    opacity: 0.7;
+    transform: scale(0.98);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.grid-span-2 { grid-column: span 2; }
 
 .lender-scroll-container {
     height: calc(100vh - 200px);
@@ -687,62 +582,56 @@
 }
 
 .lender-section-spacer {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .lender-label-small {
     font-size: 11px;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-xs);
     display: block;
-    color: #8b949e;
+    color: var(--text-muted);
 }
 
 .lender-checkbox-card {
-    margin: 0 0 20px 0;
-    padding: 12px;
+    margin: 0 0 var(--space-xl) 0;
+    padding: var(--space-md);
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 6px;
-}
-
-.lender-notes-area {
-    height: 80px;
-    width: 100%;
-    resize: vertical;
+    border-radius: var(--radius-md);
 }
 
 .lender-skip-btn {
-    margin-right: 10px;
+    margin-right: var(--space-md);
 }
 
 .lender-results {
-    margin-top: 14px;
+    margin-top: var(--space-lg);
 }
 
 .lender-results-wrapper {
-    padding: 8px;
+    padding: var(--space-sm);
 }
 
 .lender-results-actions {
-    margin: 14px 0;
+    margin: var(--space-lg) 0;
     text-align: center;
 }
 
 .lender-results-section {
-    margin-top: 14px;
+    margin-top: var(--space-lg);
 }
 
 .lender-results-section-spaced {
-    margin-top: 20px;
+    margin-top: var(--space-2xl);
 }
 
 .lender-nonqual-list {
     display: none;
-    margin-top: 10px;
+    margin-top: var(--space-sm);
 }
 
 .lender-nonqual-name {
     font-weight: 500;
-    color: #e6edf3;
+    color: var(--text-primary);
 }
 
 .lender-response-modal {
@@ -754,71 +643,65 @@
 }
 
 .lender-optional-note {
-    font-weight: normal;
-    color: #888;
+    font-weight: 400;
+    color: var(--text-muted);
 }
 
-.lender-status-loading {
-    display: none;
-    text-align: center;
-    margin-top: 15px;
-    color: #8b949e;
-}
-.lender-status-loading.active { display: block; }
+/* 9. States (Loading, Error, Empty) */
+#lenderResults { display: none; }
+#lenderResults.active { display: block; }
+#lenderLoading, #lenderErrorMsg { display: none; }
+#lenderLoading.active, #lenderErrorMsg.active { display: block; }
 
-.lender-status-error {
-    display: none;
-    margin-top: 15px;
-    padding: 10px;
+#lenderErrorMsg, .lender-status-error {
+    color: var(--accent-red);
+    padding: var(--space-md);
     background: rgba(239, 68, 68, 0.1);
-    border-radius: 6px;
-    color: #ef4444;
-}
-.lender-status-error.active { display: block; }
-
-.input-error { border-color: #ef4444 !important; }
-
-.btn-loading {
-    opacity: 0.7;
-    transform: scale(0.98);
-    cursor: not-allowed;
-    pointer-events: none;
+    border-radius: var(--radius-lg);
+    margin-top: var(--space-sm);
 }
 
-.submission-list-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    cursor: pointer;
+.empty-state-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
 }
-.submission-list-item:hover { background: rgba(255,255,255,0.03); }
 
-/* ==========================================================================
-   [SUCCESS PREDICTOR] Lender Success Rate Badges
-   ========================================================================== */
+.empty-state-text h4 {
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+}
 
+.empty-state-text p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.input-error { border-color: var(--accent-red); }
+
+/* 10. Success Predictor */
 .success-rate {
     display: inline-block;
-    margin: 0 6px;
+    margin: 0 var(--space-sm);
     padding: 1px 5px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     font-size: 10px;
     font-weight: 600;
     cursor: help;
 }
 
-.success-rate.high {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-}
+.success-rate.high { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.success-rate.medium { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+.success-rate.low { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
 
-.success-rate.medium {
-    background: rgba(234, 179, 8, 0.2);
-    color: #eab308;
-}
-
-.success-rate.low {
-    background: rgba(156, 163, 175, 0.2);
-    color: #9ca3af;
+/* TIB Display Float (for numeric inputs) */
+.tib-display {
+    position: absolute;
+    bottom: -18px;
+    left: 2px;
+    font-size: 11px;
+    color: var(--accent-teal);
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
 }
