@@ -185,6 +185,15 @@
     background: rgba(16, 185, 129, 0.25);
 }
 
+.fcb-btn.fcb-skip {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+.fcb-btn.fcb-skip:hover {
+    background: rgba(251, 191, 36, 0.3);
+}
+
 .fcb-end {
     background: rgba(239, 68, 68, 0.15);
     border-color: rgba(239, 68, 68, 0.3);
