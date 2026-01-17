@@ -173,8 +173,10 @@ class PowerDialer {
         document.getElementById('dialerConvoBtn')?.addEventListener('click', () => {
             if (this.currentLead?.id) {
                 this.minimizeToFloatingBar();
+                this._skipAllowSwitch = true;
                 const core = window.app?.conversationCore || window.conversationUI?.core;
                 core?.selectConversation(this.currentLead.id);
+                this._skipAllowSwitch = false;
             }
         });
     }
@@ -785,6 +787,8 @@ class PowerDialer {
 
     // Called externally when user wants to switch to a conversation
     allowConversationSwitch() {
+        if (this._skipAllowSwitch) return true;
+
         if (this.hasActiveCall()) {
             // Call is active - minimize to floating bar instead of blocking
             this.minimizeToFloatingBar();
