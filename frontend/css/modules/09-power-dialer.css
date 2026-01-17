@@ -390,15 +390,6 @@
     border-color: #2dd4bf;
 }
 
-.queue-item:has(input:checked)::after {
-    content: '✓';
-    position: absolute;
-    right: 12px;
-    color: #2dd4bf;
-    font-weight: 700;
-    font-size: 14px;
-}
-
 /* Unchecked/deselected state */
 .queue-item.unchecked,
 .queue-item:has(input:not(:checked)) {

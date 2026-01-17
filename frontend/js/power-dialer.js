@@ -126,6 +126,14 @@ class PowerDialer {
                     deadBtn.innerHTML = '<i class="fas fa-ban"></i>';
                     item?.classList.remove('removing');
                 }
+                return;
+            }
+
+            const queueItem = e.target.closest('.queue-item');
+            const checkbox = queueItem?.querySelector('input[type="checkbox"]');
+            if (queueItem && checkbox && !e.target.matches('input[type="checkbox"]')) {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });
 
