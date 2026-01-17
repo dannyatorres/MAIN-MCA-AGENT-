@@ -293,9 +293,18 @@ input[type="checkbox"] {
    5. LIST ITEMS & VISUALS
    ========================================================================== */
 
-.selection-list label {
-    margin-bottom: 6px !important;
-    padding: 8px 12px !important;
+/* Hide the actual checkbox */
+.selection-list input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Base card style */
+.selection-item {
+    position: relative;
+    margin-bottom: 6px;
+    padding: 10px 14px;
     display: flex;
     align-items: center;
     background: #161b22;
@@ -305,15 +314,29 @@ input[type="checkbox"] {
     transition: all 0.15s ease;
 }
 
-.selection-list label:hover {
+.selection-item:hover {
     background: #21262d;
     border-color: #3b82f6;
-    transform: translateX(2px);
 }
 
-/* Already Submitted - Disabled State */
+/* Selected state - green */
+.selection-item:has(input:checked) {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: #22c55e;
+}
+
+.selection-item:has(input:checked)::before {
+    content: '✓';
+    position: absolute;
+    right: 12px;
+    color: #22c55e;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+/* Disabled/Already Submitted - can't click */
 .selection-item.is-submitted {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
     background: rgba(239, 68, 68, 0.05);
     border-color: rgba(239, 68, 68, 0.2);
@@ -321,18 +344,17 @@ input[type="checkbox"] {
 
 .selection-item.is-submitted:hover {
     transform: none;
-    border-color: rgba(239, 68, 68, 0.2);
     background: rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
-.selection-item.is-submitted input[type="checkbox"] {
-    cursor: not-allowed;
+.selection-item.is-submitted:has(input:checked) {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
-.selection-list input[type="checkbox"] {
-    width: 14px;
-    height: 14px;
-    margin-right: 12px;
+.selection-item.is-submitted:has(input:checked)::before {
+    display: none;
 }
 
 /* Document Icons */
@@ -369,6 +391,22 @@ input[type="checkbox"] {
 .submission-status-badge.declined { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
 .submission-status-badge.pending { background: rgba(107, 114, 128, 0.15); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.2); }
 .submission-status-badge.not-qualified { background: rgba(107, 114, 128, 0.15); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.2); }
+
+/* Already Submitted Section Header */
+.submission-header.submitted {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #f87171;
+}
+
+.submission-section {
+    margin-bottom: 16px;
+}
 
 /* ==========================================================================
    6. FOOTER AREA
