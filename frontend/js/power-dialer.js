@@ -692,6 +692,9 @@ class PowerDialer {
                 <span class="fcb-timer" id="fcbTimer">00:00</span>
             </div>
             <div class="fcb-actions">
+                <button class="fcb-btn fcb-convo" id="fcbConvoBtn" title="Go to Conversation">
+                    <i class="fas fa-comment-dots"></i>
+                </button>
                 <button class="fcb-btn fcb-mute" id="fcbMuteBtn" title="Mute">
                     <i class="fas fa-microphone"></i>
                 </button>
@@ -716,6 +719,12 @@ class PowerDialer {
     }
 
     bindFloatingBarEvents() {
+        document.getElementById('fcbConvoBtn')?.addEventListener('click', () => {
+            if (this.currentLead?.id) {
+                window.app?.conversationCore?.selectConversation(this.currentLead.id);
+            }
+        });
+
         document.getElementById('fcbEndBtn')?.addEventListener('click', () => {
             if (window.callManager?.activeCall) {
                 window.callManager.endCall();

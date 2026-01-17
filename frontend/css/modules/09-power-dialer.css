@@ -175,6 +175,16 @@
     color: #f59e0b;
 }
 
+.fcb-convo {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.fcb-convo:hover {
+    background: rgba(16, 185, 129, 0.25);
+}
+
 .fcb-end {
     background: rgba(239, 68, 68, 0.15);
     border-color: rgba(239, 68, 68, 0.3);
