@@ -13,6 +13,10 @@
     --accent-red-light: #f85149;
     --accent-green: #238636;
     --accent-yellow: #d29922;
+    --accent-cyan: #22d3ee;
+    --accent-red-muted: #ff7b72;
+    --white: #fff;
+    --bg-accent: #1a1a2e;
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 12px;
@@ -167,10 +171,10 @@
 .form-section-header {
     font-size: 13px;
     font-weight: 600;
-    color: #22d3ee;
+    color: var(--accent-cyan);
     margin: var(--space-xl) 0 var(--space-sm) 0;
     padding-bottom: var(--space-xs);
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--border-default);
 }
 
 .form-row {
@@ -209,7 +213,7 @@
     font-size: 13px;
 }
 
-.non-qual-reason { color: #ff7b72; }
+.non-qual-reason { color: var(--accent-red-muted); }
 
 /* 5. Lender Management List */
 .lender-list-row {
@@ -279,7 +283,7 @@
 .lender-input-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-md) var(--space-lg);
+    gap: var(--space-xl) var(--space-lg);
     background: var(--bg-secondary);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
@@ -290,6 +294,7 @@
 .lender-input-grid .form-group {
     margin-bottom: 0;
     position: relative;
+    padding-bottom: var(--space-lg);
 }
 
 .form-group {
@@ -305,7 +310,8 @@
     background: var(--bg-secondary);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-lg);
+    margin-top: var(--space-sm);
     margin-bottom: var(--space-lg);
 }
 
@@ -417,7 +423,7 @@ textarea.form-control {
 .lender-form-scroll-area {
     flex: 1;
     overflow-y: auto;
-    padding: var(--space-lg);
+    padding: var(--space-lg) var(--space-xl) var(--space-xl) var(--space-xl);
     background: var(--bg-primary);
     position: relative;
     scrollbar-width: thin;
@@ -429,6 +435,8 @@ textarea.form-control {
     padding: var(--space-md) var(--space-xl);
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-default);
+    margin-top: auto;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -441,6 +449,10 @@ textarea.form-control {
 .lender-form-scroll-area::-webkit-scrollbar-thumb:hover { background: var(--accent-blue-light); }
 
 /* Submission & Selection Lists */
+.submission-col-header {
+    min-height: 44px;
+}
+
 .submission-col-header button,
 .btn-link {
     background: transparent;
@@ -546,7 +558,7 @@ textarea.form-control {
 
 .btn-icon-action:hover {
     background: var(--accent-blue);
-    color: #ffffff;
+    color: var(--white);
     border-color: var(--accent-blue);
 }
 
@@ -639,7 +651,7 @@ textarea.form-control {
 }
 
 .lender-response-display {
-    background: #1a1a2e;
+    background: var(--bg-accent);
 }
 
 .lender-optional-note {
@@ -696,9 +708,8 @@ textarea.form-control {
 
 /* TIB Display Float (for numeric inputs) */
 .tib-display {
-    position: absolute;
-    bottom: -18px;
-    left: 2px;
+    position: static;
+    margin-top: var(--space-xs);
     font-size: 11px;
     color: var(--accent-teal);
     font-weight: 500;
