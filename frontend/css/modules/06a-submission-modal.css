@@ -319,17 +319,17 @@ input[type="checkbox"] {
     border-color: #3b82f6;
 }
 
-/* Selected state - green */
+/* Selected state - teal (matches app theme) */
 .selection-item:has(input:checked) {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: #22c55e;
+    background: rgba(45, 212, 191, 0.1);
+    border-color: #2dd4bf;
 }
 
 .selection-item:has(input:checked)::before {
     content: '✓';
     position: absolute;
     right: 12px;
-    color: #22c55e;
+    color: #2dd4bf;
     font-weight: 700;
     font-size: 14px;
 }
