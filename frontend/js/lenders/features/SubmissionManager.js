@@ -76,7 +76,7 @@ export class SubmissionManager {
 
     populateSubmissionLenders() {
         const lenderList = document.getElementById(DOM.SUBMISSION.LENDER_LIST);
-        const showAll = document.getElementById(DOM.SUBMISSION.SHOW_ALL_TOGGLE)?.checked || false;
+        const showAll = document.getElementById(DOM.SUBMISSION.SHOW_ALL_TOGGLE)?.classList.contains('active') || false;
 
         if (!lenderList) return;
 
@@ -202,7 +202,7 @@ export class SubmissionManager {
 
         const toggleBtn = document.getElementById(DOM.SUBMISSION.TOGGLE_LENDERS);
         if (toggleBtn) {
-            toggleBtn.textContent = 'DESELECT ALL';
+            toggleBtn.textContent = 'Deselect All';
             toggleBtn.className = 'toolbar-card-btn';
         }
     }
@@ -247,7 +247,7 @@ export class SubmissionManager {
         if (toggleBtn) {
             const checkboxes = docList.querySelectorAll('input[type="checkbox"]');
             const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-            toggleBtn.textContent = checkedCount === checkboxes.length ? 'DESELECT ALL' : 'SELECT ALL';
+            toggleBtn.textContent = checkedCount === checkboxes.length ? 'Deselect All' : 'Select All';
             toggleBtn.className = 'toolbar-card-btn';
         }
     }
@@ -435,10 +435,12 @@ Best regards`;
             this.toggleAllDocuments();
         });
 
-        attachListener(DOM.SUBMISSION.SHOW_ALL_TOGGLE, () => {
+        attachListener(DOM.SUBMISSION.SHOW_ALL_TOGGLE, (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.toggle('active');
             this.populateSubmissionLenders();
             this.updateLenderSelectionCount();
-        }, 'change');
+        });
 
         attachListener(DOM.SUBMISSION.SEND_BTN, async (e) => {
             e.preventDefault();
@@ -522,7 +524,7 @@ Best regards`;
         const checkboxes = document.querySelectorAll('#lenderSelectionList input[type="checkbox"]:checked');
         const countEl = document.getElementById(DOM.SUBMISSION.COUNT);
         if (countEl) {
-            countEl.textContent = `(${checkboxes.length} selected)`;
+            countEl.textContent = `${checkboxes.length} Selected`;
         }
     }
 }

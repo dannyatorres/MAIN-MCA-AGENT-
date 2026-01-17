@@ -541,12 +541,18 @@
                 <div class="submission-grid">
                     <div class="submission-col">
                         <div class="submission-col-header">
-                            <span class="submission-col-title">Select Lenders <span id="lenderSelectionCount" style="color: #58a6ff; font-weight: 600;">(0)</span></span>
+                            <div class="submission-col-title">
+                                <div class="toolbar-info-card" id="lenderCountCard">
+                                    0 Selected
+                                </div>
+                            </div>
                             <div class="header-actions">
-                                <label class="toggle-override-label">
-                                    <input type="checkbox" id="showAllLendersToggle"> Override Filters
-                                </label>
-                                <button id="toggleAllLendersBtn" class="toolbar-card-btn">DESELECT ALL</button>
+                                <button class="toolbar-card-btn" id="overrideToggleBtn">
+                                    Override Filters
+                                </button>
+                                <button class="toolbar-card-btn" id="deselectAllLendersBtn">
+                                    Deselect All
+                                </button>
                             </div>
                         </div>
                         <div class="submission-search-container">
@@ -557,8 +563,12 @@
 
                     <div class="submission-col">
                         <div class="submission-col-header">
-                            <span class="submission-col-title">Select Documents</span>
-                            <button id="toggleAllDocumentsBtn" class="toolbar-card-btn">SELECT ALL</button>
+                            <div class="submission-col-title"></div>
+                            <div class="header-actions">
+                                <button class="toolbar-card-btn" id="selectAllDocsBtn">
+                                    Select All
+                                </button>
+                            </div>
                         </div>
                         <div class="submission-search-container hidden">
                             <input type="text" class="submission-search-input">

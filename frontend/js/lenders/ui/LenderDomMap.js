@@ -38,10 +38,10 @@ export const DOM = {
         DOC_LIST: 'submissionDocumentList',
         SEND_BTN: 'confirmLenderSubmission',
         SEARCH_INPUT: 'lenderSearchInput',
-        TOGGLE_LENDERS: 'toggleAllLendersBtn',
-        TOGGLE_DOCS: 'toggleAllDocumentsBtn',
-        SHOW_ALL_TOGGLE: 'showAllLendersToggle',
-        COUNT: 'lenderSelectionCount'
+        TOGGLE_LENDERS: 'deselectAllLendersBtn',
+        TOGGLE_DOCS: 'selectAllDocsBtn',
+        SHOW_ALL_TOGGLE: 'overrideToggleBtn',
+        COUNT: 'lenderCountCard'
     },
     RESPONSE: {
         MODAL: 'lenderResponseModal',

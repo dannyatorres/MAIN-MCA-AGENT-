@@ -131,7 +131,7 @@
 }
 
 /* ==========================================================================
-   3. PROFESSIONAL HEADER & BUTTONS (Card Style)
+   3. PROFESSIONAL HEADER & BUTTONS (Unified Card Style)
    ========================================================================== */
 
 .submission-col-header {
@@ -145,33 +145,46 @@
     flex-shrink: 0;
 }
 
+/* Container for the left side (The Count) */
 .submission-col-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #e6edf3;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     display: flex;
     align-items: center;
-    gap: 8px;
 }
 
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px; /* Space between the toggle and the deselect button */
 }
 
-/* --- TOOLBAR BUTTONS (The "Card" Look) --- */
-/* We use a specific class to override global .btn styles */
-.toolbar-card-btn {
-    /* 1. Reset Global Button Styles */
-    background: #0d1117 !important;   /* Dark card bg */
-    border: 1px solid #30363d !important; /* Visible border */
-    border-radius: 6px !important;    /* Boxy corners (Overrides 30px pill) */
-    padding: 6px 12px !important;     /* Compact padding */
+/* --- A. STATUS CARD (For the "150 Selected" Count) --- */
+/* Looks like a button but isn't clickable */
+.toolbar-info-card {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 6px 12px;
 
-    /* 2. Text Styles */
+    color: #58a6ff; /* Blue text to highlight the data */
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none; /* Can't highlight the text */
+}
+
+/* --- B. INTERACTIVE BUTTONS (For Override & Deselect) --- */
+.toolbar-card-btn {
+    background: #0d1117 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+
     color: #c9d1d9;
     font-size: 11px;
     font-weight: 600;
@@ -179,7 +192,6 @@
     letter-spacing: 0.5px;
     line-height: 1;
 
-    /* 3. Behavior */
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -187,15 +199,12 @@
     gap: 6px;
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-
-    /* Remove default button junk */
     appearance: none;
     outline: none;
-    text-decoration: none; /* Just in case */
 }
 
 .toolbar-card-btn:hover {
-    background: #21262d !important; /* Lighter on hover */
+    background: #21262d !important;
     border-color: #8b949e !important;
     color: #ffffff;
     transform: translateY(-1px);
@@ -207,29 +216,13 @@
     background: #161b22 !important;
 }
 
-/* --- TOGGLE SWITCH CONTAINER --- */
-.toggle-override-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #0d1117; /* Match the buttons */
-    padding: 5px 10px;   /* Match button padding visually */
-    border-radius: 6px;
-    border: 1px solid #30363d;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #c9d1d9;
-    transition: all 0.2s;
-    height: 26px; /* Explicit height to align with buttons */
-    box-sizing: content-box;
-}
-
-.toggle-override-label:hover {
-    background: #21262d;
-    border-color: #8b949e;
-    color: white;
+/* --- C. ACTIVE STATE (For the Toggle Button) --- */
+/* When "Override Filters" is ON, it glows blue */
+.toolbar-card-btn.active {
+    background: rgba(56, 139, 253, 0.15) !important; /* Subtle blue tint */
+    border-color: #3b82f6 !important; /* Bright blue border */
+    color: #58a6ff !important; /* Blue text */
+    box-shadow: 0 0 0 1px rgba(56, 139, 253, 0.4); /* Glow effect */
 }
 
 /* Consistent checkbox accent across the modal */
