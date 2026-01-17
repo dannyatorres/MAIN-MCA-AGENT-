@@ -116,22 +116,38 @@ const BASE_TOOLS = [
     }
 ];
 
-// 📖 HELPER: Load Persona + Strategy
-function getGlobalPrompt() {
+// 📖 HELPER: Load Persona + Strategy (now with dynamic agent name)
+async function getGlobalPrompt(userId) {
     try {
         const promptPath = path.join(__dirname, '../prompts/dan_torres.md');
 
+        // Get user's agent name
+        let agentName = 'Dan Torres'; // default
+        if (userId) {
+            const db = getDatabase();
+            const result = await db.query('SELECT agent_name FROM users WHERE id = $1', [userId]);
+            if (result.rows[0]?.agent_name) {
+                agentName = result.rows[0].agent_name;
+            }
+        }
+
         if (fs.existsSync(promptPath)) {
-            console.log('✅ Loaded: dan_torres.md');
-            return fs.readFileSync(promptPath, 'utf8');
+            console.log(`✅ Loaded: dan_torres.md (Agent: ${agentName})`);
+            let prompt = fs.readFileSync(promptPath, 'utf8');
+
+            // Replace placeholders
+            prompt = prompt.replace(/\{\{AGENT_NAME\}\}/g, agentName);
+            prompt = prompt.replace(/\{\{AGENT_NAME_LOWER\}\}/g, agentName.toLowerCase());
+
+            return prompt;
         }
 
         console.log('⚠️ Missing: dan_torres.md');
-        return 'You are Dan Torres, an underwriter at JMS Global. Keep texts short and professional.';
+        return `You are ${agentName}, an underwriter at JMS Global. Keep texts short and professional.`;
 
     } catch (err) {
         console.error('⚠️ Error loading prompt:', err.message);
-        return 'You are Dan Torres. Keep texts short.';
+        return 'You are an underwriter. Keep texts short.';
     }
 }
 
@@ -393,7 +409,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         }
 
         // 5. BUILD SYSTEM PROMPT
-        let systemPrompt = getGlobalPrompt();
+        let systemPrompt = await getGlobalPrompt(usageUserId);
 
         // Check if this conversation has active offers - use negotiation mode
         const hasActiveOffer = await db.query(`

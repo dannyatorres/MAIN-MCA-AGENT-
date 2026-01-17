@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
   try {
     const db = getDatabase();
     const result = await db.query(`
-      SELECT id, email, username, name, role, is_active, created_at, last_login
+      SELECT id, email, username, name, role, is_active, created_at, last_login, agent_name
       FROM users
       ORDER BY created_at DESC
     `);
@@ -31,7 +31,7 @@ router.get('/:id', async (req, res) => {
   try {
     const db = getDatabase();
     const result = await db.query(`
-      SELECT id, email, username, name, role, is_active, created_at, last_login
+      SELECT id, email, username, name, role, is_active, created_at, last_login, agent_name
       FROM users WHERE id = $1
     `, [req.params.id]);
 
@@ -49,7 +49,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/users - Create new user
 router.post('/', async (req, res) => {
   try {
-    const { email, username, name, password, role } = req.body;
+    const { email, username, name, password, role, agent_name } = req.body;
 
     // Validation
     if (!email || !username || !name || !password) {
@@ -86,10 +86,10 @@ router.post('/', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     const result = await db.query(`
-      INSERT INTO users (email, username, name, password_hash, role, is_active, created_by)
-      VALUES ($1, $2, $3, $4, $5, TRUE, $6)
-      RETURNING id, email, username, name, role, is_active, created_at
-    `, [email, username, name, passwordHash, role || 'agent', req.user.id]);
+      INSERT INTO users (email, username, name, password_hash, role, is_active, created_by, agent_name)
+      VALUES ($1, $2, $3, $4, $5, TRUE, $6, $7)
+      RETURNING id, email, username, name, role, is_active, created_at, agent_name
+    `, [email, username, name, passwordHash, role || 'agent', req.user.id, agent_name || 'Dan Torres']);
 
     res.status(201).json({ user: result.rows[0] });
   } catch (error) {
@@ -101,7 +101,7 @@ router.post('/', async (req, res) => {
 // PUT /api/users/:id - Update user
 router.put('/:id', async (req, res) => {
   try {
-    const { email, username, name, role, is_active } = req.body;
+    const { email, username, name, role, is_active, agent_name } = req.body;
     const db = getDatabase();
 
     // Check user exists
@@ -133,10 +133,11 @@ router.put('/:id', async (req, res) => {
         name = COALESCE($3, name),
         role = COALESCE($4, role),
         is_active = COALESCE($5, is_active),
+        agent_name = COALESCE($6, agent_name),
         updated_at = NOW()
-      WHERE id = $6
-      RETURNING id, email, username, name, role, is_active, created_at, last_login
-    `, [email, username, name, role, is_active, req.params.id]);
+      WHERE id = $7
+      RETURNING id, email, username, name, role, is_active, created_at, last_login, agent_name
+    `, [email, username, name, role, is_active, agent_name, req.params.id]);
 
     res.json({ user: result.rows[0] });
   } catch (error) {
