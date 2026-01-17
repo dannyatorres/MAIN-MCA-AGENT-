@@ -157,12 +157,7 @@ export class SubmissionManager {
         }
 
         if (available.length > 0) {
-            html += `
-                <div class="submission-section">
-                    <div class="submission-header available">
-                        ✅ Available Lenders (${available.length})
-                    </div>
-            `;
+            html += `<div class="submission-section">`;
 
             const lendersByTier = {};
             available.forEach(lender => {
