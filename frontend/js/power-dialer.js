@@ -39,7 +39,12 @@ class PowerDialer {
     bindEvents() {
         // Back button
         document.getElementById('dialerBackBtn')?.addEventListener('click', () => {
-            this.hide();
+            if (this.hasActiveCall()) {
+                this.minimizeToFloatingBar();
+                document.getElementById('dashboardView')?.classList.remove('hidden');
+            } else {
+                this.hide();
+            }
         });
 
         // Start button
