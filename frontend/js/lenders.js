@@ -348,6 +348,11 @@ class LendersModule {
                 }
             });
         }
+
+        // Skip to Send button
+        document.getElementById('skipToSendBtn')?.addEventListener('click', () => {
+            this.skipToSendModal();
+        });
     }
 
     // Fetch FCS data from backend for autopopulation
@@ -450,6 +455,29 @@ class LendersModule {
         }
 
         console.log('✨ Lender form populated from FCS');
+    }
+
+    // Skip qualification and go directly to send modal with all lenders
+    async skipToSendModal() {
+        console.log('⏩ Skipping qualification, loading all lenders...');
+
+        try {
+            const result = await this.parent.apiCall('/api/qualification/all-lenders');
+
+            if (result.success && result.lenders) {
+                this.qualifiedLenders = result.lenders;
+                this.nonQualifiedLenders = [];
+
+                console.log(`✅ Loaded ${result.lenders.length} lenders`);
+
+                await this.showLenderSubmissionModal();
+            } else {
+                throw new Error('Failed to load lenders');
+            }
+        } catch (error) {
+            console.error('❌ Error skipping to send modal:', error);
+            this.utils.showNotification('Failed to load lenders', 'error');
+        }
     }
 
     displayLenderResults(data, criteria) {
@@ -1650,6 +1678,9 @@ Best regards`;
 
                 <div class="lender-form-footer">
                     <button type="button" id="clearLenderCacheBtn" style="background: transparent; border: none; color: #8b949e; font-size: 13px; cursor: pointer; margin-right: auto;">Clear Form</button>
+                    <button type="button" id="skipToSendBtn" class="btn btn-secondary" style="margin-right: 10px;">
+                        <i class="fas fa-forward"></i> Skip to Send
+                    </button>
                     <button type="button" onclick="document.getElementById('lenderForm').dispatchEvent(new Event('submit'))" class="btn btn-primary">
                         <span id="processLendersText">Process Qualification</span>
                         <span id="processLendersSpinner" style="display: none;">...</span>

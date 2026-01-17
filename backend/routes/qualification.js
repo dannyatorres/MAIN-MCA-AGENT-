@@ -655,4 +655,33 @@ router.post('/qualify', async (req, res) => {
     }
 });
 
+// GET /api/qualification/all-lenders - Get all lenders without qualification
+router.get('/all-lenders', async (req, res) => {
+    try {
+        const db = getDatabase();
+
+        const lendersResult = await db.query(`
+            SELECT * FROM lenders
+            WHERE name IS NOT NULL AND name != ''
+            ORDER BY tier ASC, name ASC
+        `);
+
+        const allLenders = lendersResult.rows.map(lender => ({
+            ...lender,
+            'Lender Name': lender.name,
+            isPreferred: false
+        }));
+
+        res.json({
+            success: true,
+            lenders: allLenders,
+            count: allLenders.length
+        });
+
+    } catch (error) {
+        console.error('Error fetching all lenders:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
