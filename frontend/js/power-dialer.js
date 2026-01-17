@@ -165,6 +165,14 @@ class PowerDialer {
 
             this.show();
         });
+
+        document.getElementById('dialerConvoBtn')?.addEventListener('click', () => {
+            if (this.currentLead?.id) {
+                this.minimizeToFloatingBar();
+                const core = window.app?.conversationCore || window.conversationUI?.core;
+                core?.selectConversation(this.currentLead.id);
+            }
+        });
     }
 
     // Add a single lead manually to queue
@@ -721,7 +729,8 @@ class PowerDialer {
     bindFloatingBarEvents() {
         document.getElementById('fcbConvoBtn')?.addEventListener('click', () => {
             if (this.currentLead?.id) {
-                window.app?.conversationCore?.selectConversation(this.currentLead.id);
+                const core = window.app?.conversationCore || window.conversationUI?.core;
+                core?.selectConversation(this.currentLead.id);
             }
         });
 
