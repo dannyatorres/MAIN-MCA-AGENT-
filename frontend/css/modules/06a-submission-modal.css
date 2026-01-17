@@ -116,13 +116,16 @@
     border: 1px solid #30363d;
     border-radius: 8px; /* Match other cards */
     padding: 12px;
-    height: 100%;
-    min-height: 120px; /* Give it a decent default height */
-    resize: none; /* Disable manual resize since it fits the grid */
+    min-height: 180px; /* Increased for better usability in L-shape */
+    resize: none;
+    color: #e6edf3;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.2s;
 }
 .submission-message-area .submission-textarea:focus {
     border-color: #3b82f6;
-    height: 100%; /* Prevent popping */
+    outline: none;
 }
 
 /* Keep shared column styling */
@@ -328,33 +331,6 @@
 /* ==========================================================================
    6. FOOTER AREA
    ========================================================================== */
-
-.submission-message-area {
-    margin-top: auto;
-    padding: 12px 0 12px 0;
-    flex-shrink: 0;
-}
-
-.submission-textarea {
-    width: 100%;
-    min-height: 50px;
-    height: 50px;
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 6px;
-    padding: 10px;
-    color: #e6edf3;
-    resize: none;
-    font-size: 12px;
-    font-family: inherit;
-    transition: height 0.2s, border-color 0.2s;
-}
-
-.submission-textarea:focus {
-    height: 80px; /* Expand on focus */
-    border-color: #3b82f6;
-    outline: none;
-}
 
 .modal-footer {
     border-top: 1px solid #30363d;
