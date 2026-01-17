@@ -530,7 +530,7 @@ router.post('/:id/toggle-ai', requireConversationAccess('id'), requireModifyPerm
 });
 
 // Bulk delete conversations (Admin only)
-router.post('/bulk-delete', requireRole('admin'), async (req, res) => {
+router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
     try {
         const { conversationIds } = req.body;
 

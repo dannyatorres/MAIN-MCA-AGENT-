@@ -268,8 +268,17 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // 2. TEMPLATE MODE (The "Free" Drip Campaign)
         // Checks instructions from index.js and returns text instantly.
+        // Get agent name for templates
+        let agentName = 'Dan Torres'; // default
+        if (usageUserId) {
+            const agentRes = await db.query('SELECT agent_name FROM users WHERE id = $1', [usageUserId]);
+            if (agentRes.rows[0]?.agent_name) {
+                agentName = agentRes.rows[0].agent_name;
+            }
+        }
+
         if (systemInstruction.includes("Underwriter Hook")) {
-            const content = `Hi ${nameToUse} my name is Dan Torres I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
+            const content = `Hi ${nameToUse} my name is ${agentName} I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
             await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_HOOK');
             return { shouldReply: true, content };
         }
