@@ -84,8 +84,8 @@
 
 .floating-call-bar {
     position: fixed;
-    top: 12px;
-    right: 12px;
+    bottom: 20px;
+    left: 20px;
     background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
