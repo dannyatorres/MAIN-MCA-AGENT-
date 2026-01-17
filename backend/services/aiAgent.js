@@ -572,7 +572,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                         toolResult = "Documents already synced. No need to sync again.";
                     } else {
                         console.log(`📂 AI DECISION: Syncing Drive for "${businessName}"...`);
-                        syncDriveFiles(conversationId, businessName);
+                        syncDriveFiles(conversationId, businessName, usageUserId);
                         toolResult = "Drive sync started in background.";
                     }
                 }
