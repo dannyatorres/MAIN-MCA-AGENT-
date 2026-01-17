@@ -579,10 +579,13 @@ class PowerDialer {
         completeEl.classList.remove('hidden');
 
         // Bind done button
-        document.getElementById('dialerDoneBtn')?.addEventListener('click', () => {
-            this.reset();
-            this.loadQueue(); // Reload fresh queue
-        });
+        const doneBtn = document.getElementById('dialerDoneBtn');
+        if (doneBtn) {
+            doneBtn.onclick = () => {
+                this.reset();
+                this.loadQueue();
+            };
+        }
     }
 
     // Timer
@@ -633,7 +636,7 @@ class PowerDialer {
 
     // Check if we have an active call in progress
     hasActiveCall() {
-        return this.isActive && window.callManager?.activeCall;
+        return this.isActive && this.currentLead;
     }
 
     // Minimize to floating bar (keeps call alive, hides full dialer UI)
@@ -748,7 +751,6 @@ class PowerDialer {
     reset() {
         this.queue = [];
         this.dialQueue = [];
-        this.selectedLeadIds = new Set();
         this.currentIndex = 0;
         this.currentLead = null;
         this.isActive = false;
