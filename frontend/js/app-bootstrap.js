@@ -1,4 +1,5 @@
 import { LeadFormController } from './lead-form-controller.js';
+import LenderController from './lenders/LenderController.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 [DEBUG] Main Module: DOM Loaded. Waiting for CommandCenter...');
@@ -63,6 +64,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             window.commandCenter.leadFormController = new LeadFormController(window.commandCenter);
+
+            const lendersParent = window.conversationUI || window.commandCenter;
+            if (lendersParent) {
+                lendersParent.lenders = new LenderController(lendersParent);
+                console.log('✅ LenderController initialized via ESM');
+            }
 
             if (!window.commandCenter.lenderAdmin && typeof LenderAdmin !== 'undefined') {
                 window.commandCenter.lenderAdmin = new LenderAdmin();

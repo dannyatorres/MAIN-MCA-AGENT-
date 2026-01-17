@@ -168,9 +168,11 @@ class CommandCenter {
             // 7. Lenders Module
             console.log('7. Initializing Lenders...');
             if (typeof LendersModule !== 'undefined') {
+                // Legacy support
                 this.lenders = new LendersModule(this);
             } else {
-                console.error('LendersModule class not found!');
+                // ESM Support: LenderController is injected via app-bootstrap.js
+                console.log('ℹ️ LendersModule global not found (awaiting ESM injection)');
             }
 
             // 8. AI Assistant
