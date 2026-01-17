@@ -28,19 +28,25 @@ export class ResponseManager {
         if (!modal) return;
 
         const statusSelect = document.getElementById('responseStatus');
+        const offerFields = document.getElementById('offerFields');
+        const declineFields = document.getElementById('declineFields');
+        const prevPositionFields = document.getElementById('prevPositionFields');
         statusSelect.onchange = () => {
             const status = statusSelect.value;
-            document.getElementById('offerFields').style.display =
-                ['OFFER', 'FUNDED'].includes(status) ? 'block' : 'none';
-            document.getElementById('declineFields').style.display =
-                status === 'DECLINE' ? 'block' : 'none';
+            if (offerFields) {
+                offerFields.classList.toggle('hidden', !['OFFER', 'FUNDED'].includes(status));
+            }
+            if (declineFields) {
+                declineFields.classList.toggle('hidden', status !== 'DECLINE');
+            }
         };
 
         const positionSelect = document.getElementById('responsePosition');
         positionSelect.onchange = () => {
             const pos = parseInt(positionSelect.value) || 0;
-            document.getElementById('prevPositionFields').style.display =
-                pos > 1 ? 'block' : 'none';
+            if (prevPositionFields) {
+                prevPositionFields.classList.toggle('hidden', !(pos > 1));
+            }
         };
 
         document.getElementById('closeLenderResponseModal').onclick = () => {

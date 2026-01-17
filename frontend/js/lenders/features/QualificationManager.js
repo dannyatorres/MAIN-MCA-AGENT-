@@ -70,9 +70,7 @@ export class QualificationManager {
 
                 if (submitBtn) {
                     submitBtn.disabled = true;
-                    submitBtn.style.opacity = '0.7';
-                    submitBtn.style.transform = 'scale(0.98)';
-                    submitBtn.style.cursor = 'not-allowed';
+                    submitBtn.classList.add('btn-loading');
                 }
 
                 if (btnText) btnText.style.display = 'none';
@@ -140,9 +138,7 @@ export class QualificationManager {
 
                     if (submitBtn) {
                         submitBtn.disabled = false;
-                        submitBtn.style.opacity = '1';
-                        submitBtn.style.transform = 'scale(1)';
-                        submitBtn.style.cursor = 'pointer';
+                        submitBtn.classList.remove('btn-loading');
                     }
 
                     if (btnText) btnText.style.display = 'inline';
@@ -202,8 +198,7 @@ export class QualificationManager {
         if (fcs.withholding_percentage) {
             populateField(DOM.FORM.INPUTS.WITHHOLDING, fcs.withholding_percentage + '%');
             if (parseFloat(fcs.withholding_percentage) > 40) {
-                const el = document.getElementById(DOM.FORM.INPUTS.WITHHOLDING);
-                if (el) el.style.borderColor = '#ef4444';
+                document.getElementById(DOM.FORM.INPUTS.WITHHOLDING)?.classList.add('input-error');
             }
         }
 

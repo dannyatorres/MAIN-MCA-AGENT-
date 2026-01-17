@@ -899,6 +899,180 @@ select.form-input {
 }
 
 /* ==========================================================================
+   [LENDER TEMPLATE CLEANUP CLASSES]
+   ========================================================================== */
+
+/* --- Layout & Containers --- */
+.lender-scroll-container {
+    height: calc(100vh - 200px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.lender-scroll-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.lender-field-wrap {
+    position: relative;
+}
+
+.lender-input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.lender-form-footer {
+    margin-top: auto;
+    padding-top: 15px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    border-top: 1px solid var(--border-color, #30363d);
+}
+
+.lender-results {
+    margin-top: 20px;
+}
+
+.lender-results-wrapper {
+    padding: 10px;
+}
+
+.lender-results-actions {
+    margin: 20px 0;
+    text-align: center;
+}
+
+.lender-results-section {
+    margin-top: 20px;
+}
+
+.lender-results-section-spaced {
+    margin-top: 30px;
+}
+
+.lender-section-spacer {
+    margin-bottom: 12px;
+}
+
+.lender-nonqual-list {
+    display: none;
+    margin-top: 10px;
+}
+
+.lender-nonqual-name {
+    font-weight: 500;
+    color: #e6edf3;
+}
+
+/* --- Typography & Colors --- */
+.lender-text-danger { color: #ef4444 !important; }
+.lender-text-success { color: #10b981 !important; }
+.lender-text-warning { color: #f59e0b !important; }
+.lender-text-muted   { color: #8b949e !important; }
+.lender-text-primary { color: #3b82f6 !important; }
+
+.lender-label-small {
+    font-size: 11px;
+    margin-bottom: 4px;
+    display: block;
+    color: #8b949e;
+}
+
+/* --- Components --- */
+.lender-checkbox-card {
+    margin: 0 0 20px 0;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+}
+
+.lender-notes-area {
+    height: 80px;
+    width: 100%;
+    resize: vertical;
+}
+
+.lender-btn-link {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    font-size: 13px;
+    cursor: pointer;
+    margin-right: auto;
+    padding: 0;
+}
+.lender-btn-link:hover { text-decoration: underline; color: #58a6ff; }
+
+.lender-skip-btn {
+    margin-right: 10px;
+}
+
+.lender-response-modal {
+    max-width: 450px;
+}
+
+.lender-response-display {
+    background: #1a1a2e;
+}
+
+.lender-optional-note {
+    font-weight: normal;
+    color: #888;
+}
+
+/* --- Status Messages --- */
+.lender-status-loading {
+    display: none;
+    text-align: center;
+    margin-top: 15px;
+    color: #8b949e;
+}
+.lender-status-loading.active { display: block; }
+
+.lender-status-error {
+    display: none;
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+    color: #ef4444;
+}
+.lender-status-error.active { display: block; }
+
+.input-error { border-color: #ef4444 !important; }
+
+.btn-loading {
+    opacity: 0.7;
+    transform: scale(0.98);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* --- Submission Modal Specifics --- */
+.submission-list-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+}
+.submission-list-item:hover { background: rgba(255,255,255,0.03); }
+
+.submission-meta-badge {
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
    [MODAL] Lender Submission - COMPACT LAYOUT
    ========================================================================== */
 

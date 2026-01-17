@@ -39,7 +39,7 @@ export const LenderTemplates = {
             const field = fields.find(f => f.id === fieldId);
             if (!field) return '';
 
-            const requiredMark = field.required ? '<span class="required" style="color:#ef4444">*</span>' : '';
+            const requiredMark = field.required ? '<span class="required">*</span>' : '';
             let inputHtml = '';
 
             if (field.type === 'select') {
@@ -66,8 +66,10 @@ export const LenderTemplates = {
                 ? '<div id="lenderTibDisplay" class="tib-display hidden"></div>'
                 : '';
 
+            const wrapperClass = spanClass ? `${spanClass} lender-field-wrap` : 'lender-field-wrap';
+
             return `
-                <div class="${spanClass}" style="position: relative;">
+                <div class="${wrapperClass}">
                     <div class="form-group">
                         <label for="${field.id}">${field.label} ${requiredMark}</label>
                         ${inputHtml}
@@ -83,9 +85,9 @@ export const LenderTemplates = {
             </label>`;
 
         return `
-            <div class="lender-qualification-system" style="height: calc(100vh - 200px); overflow: hidden;">
+            <div class="lender-qualification-system lender-scroll-container">
                 ${this.renderHeader()}
-                <div style="display: flex; flex-direction: column; height: 100%;">
+                <div class="lender-scroll-inner">
                     <div class="lender-form-scroll-area custom-scrollbar">
                         <form id="lenderForm">
                             <div class="lender-input-grid">
@@ -102,35 +104,35 @@ export const LenderTemplates = {
                                 <div></div>
                             </div>
 
-                            <div class="checkbox-row-card" style="margin: 0 0 20px 0; padding: 12px;">
+                            <div class="checkbox-row-card lender-checkbox-card">
                                 ${checkboxes.map(renderCheckboxHTML).join('')}
                             </div>
 
-                            <div style="margin-bottom: 12px;">
-                                <label class="field-label" style="font-size: 11px; margin-bottom: 4px; display:block; color:#8b949e;">Current Positions</label>
-                                <input type="text" id="lenderCurrentPositions" class="form-input" style="width: 100%;">
+                            <div class="lender-section-spacer">
+                                <label class="field-label lender-label-small">Current Positions</label>
+                                <input type="text" id="lenderCurrentPositions" class="form-input">
                             </div>
 
                             <div>
-                                <label class="field-label" style="font-size: 11px; margin-bottom: 4px; display:block; color:#8b949e;">Additional Notes</label>
-                                <textarea id="lenderAdditionalNotes" class="form-textarea" style="height: 80px; width: 100%; resize: vertical;"></textarea>
+                                <label class="field-label lender-label-small">Additional Notes</label>
+                                <textarea id="lenderAdditionalNotes" class="form-textarea lender-notes-area"></textarea>
                             </div>
 
-                            <div class="loading" id="lenderLoading" style="display: none; text-align: center; margin-top: 15px; color: #8b949e;">Processing...</div>
-                            <div class="error" id="lenderErrorMsg" style="display: none; margin-top: 15px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; color: #ef4444;"></div>
+                            <div class="loading lender-status-loading" id="lenderLoading">Processing...</div>
+                            <div class="error lender-status-error" id="lenderErrorMsg"></div>
                         </form>
 
-                        <div id="lenderResults" style="margin-top: 20px;"></div>
+                        <div id="lenderResults" class="lender-results"></div>
                     </div>
 
                     <div class="lender-form-footer">
-                        <button type="button" id="clearLenderCacheBtn" style="background: transparent; border: none; color: #8b949e; font-size: 13px; cursor: pointer; margin-right: auto;">Clear Form</button>
-                        <button type="button" id="skipToSendBtn" class="btn btn-secondary" style="margin-right: 10px;">
+                        <button type="button" id="clearLenderCacheBtn" class="lender-btn-link">Clear Form</button>
+                        <button type="button" id="skipToSendBtn" class="btn btn-secondary lender-skip-btn">
                             <i class="fas fa-forward"></i> Skip to Send
                         </button>
                         <button type="button" onclick="document.getElementById('lenderForm').dispatchEvent(new Event('submit'))" class="btn btn-primary">
                             <span id="processLendersText">Process Qualification</span>
-                            <span id="processLendersSpinner" style="display: none;">...</span>
+                            <span id="processLendersSpinner" class="hidden">...</span>
                         </button>
                     </div>
                 </div>
@@ -146,7 +148,7 @@ export const LenderTemplates = {
         const nonQualifiedCount = data.nonQualified?.length || 0;
 
         let html = `
-            <div style="padding: 10px;">
+            <div class="lender-results-wrapper">
                 <div class="lender-summary-container">
                     <div class="lender-stat-box">
                         <div class="lender-stat-number qualified">${qualifiedCount}</div>
@@ -161,12 +163,12 @@ export const LenderTemplates = {
         // Qualified Section
         if (qualifiedCount > 0) {
             html += `
-                <div style="margin: 20px 0; text-align: center;">
+                <div class="lender-results-actions">
                     <button id="sendToLendersBtn" class="trigger-lender-modal btn btn-primary">
                         📧 Send to Lenders
                     </button>
                 </div>
-                <div style="margin-top: 20px;">
+                <div class="lender-results-section">
                     <div class="qualified-section-header">✅ Qualified Lenders</div>
                     <div id="qualifiedSection">`;
 
@@ -193,14 +195,14 @@ export const LenderTemplates = {
         // Non-Qualified Section
         if (nonQualifiedCount > 0) {
             html += `
-                <div style="margin-top: 30px;">
+                <div class="lender-results-section lender-results-section-spaced">
                     <button id="toggleNonQualified" class="non-qual-toggle" onclick="document.getElementById('nonQualList').style.display = document.getElementById('nonQualList').style.display === 'none' ? 'block' : 'none'">
                         ❌ View Non-Qualified Lenders (${nonQualifiedCount}) ▼
                     </button>
-                    <div id="nonQualList" style="display: none; margin-top: 10px;">
+                    <div id="nonQualList" class="lender-nonqual-list">
                         ${data.nonQualified.map(item => `
                             <div class="non-qual-item">
-                                <span style="font-weight: 500; color: #e6edf3;">${escapeHtml(item.lender)}</span>
+                                <span class="lender-nonqual-name">${escapeHtml(item.lender)}</span>
                                 <span class="non-qual-reason">${escapeHtml(item.blockingRule)}</span>
                             </div>
                         `).join('')}
@@ -240,7 +242,7 @@ export const LenderTemplates = {
         const safeId = escapeHtml(conversationId);
 
         return `
-            <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-content lender-response-modal">
                 <div class="modal-header">
                     <h3>Log Lender Response</h3>
                     <button id="closeLenderResponseModal" class="modal-close">&times;</button>
@@ -251,7 +253,7 @@ export const LenderTemplates = {
 
                     <div class="form-group">
                         <label>Lender</label>
-                        <input type="text" id="responseLenderDisplay" readonly class="form-input" style="background: #1a1a2e;" value="${safeLender}">
+                        <input type="text" id="responseLenderDisplay" readonly class="form-input lender-response-display" value="${safeLender}">
                     </div>
 
                     <div class="form-group">
@@ -272,7 +274,7 @@ export const LenderTemplates = {
                         </select>
                     </div>
 
-                    <div id="offerFields" style="display: none;">
+                    <div id="offerFields" class="hidden">
                         <div class="form-section-header">New Offer Details</div>
                         <div class="form-row">
                             <div class="form-group half">
@@ -309,8 +311,8 @@ export const LenderTemplates = {
                         </div>
                     </div>
 
-                    <div id="prevPositionFields" style="display: none;">
-                        <div class="form-section-header">Previous Position Info <span style="font-weight: normal; color: #888;">(optional)</span></div>
+                    <div id="prevPositionFields" class="hidden">
+                        <div class="form-section-header">Previous Position Info <span class="lender-optional-note">(optional)</span></div>
                         <div class="form-row">
                             <div class="form-group half">
                                 <label>Amount ($)</label>
@@ -323,7 +325,7 @@ export const LenderTemplates = {
                         </div>
                     </div>
 
-                    <div id="declineFields" style="display: none;">
+                    <div id="declineFields" class="hidden">
                         <div class="form-group">
                             <label>Decline Reason</label>
                             <textarea id="responseDeclineReason" class="form-input" rows="2" placeholder="e.g., Restricted industry"></textarea>
