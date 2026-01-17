@@ -6,6 +6,9 @@
 
 /* Force the modal to flex vertically so the footer sticks to bottom */
 .lender-submission-modal {
+    width: 95vw !important;
+    max-width: 1000px !important;
+    height: 85vh !important;
     display: flex;
     flex-direction: column;
     max-height: 85vh; /* Prevent it from being taller than screen */
