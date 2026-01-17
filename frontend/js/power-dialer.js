@@ -735,8 +735,10 @@ class PowerDialer {
     bindFloatingBarEvents() {
         document.getElementById('fcbConvoBtn')?.addEventListener('click', () => {
             if (this.currentLead?.id) {
+                this._skipAllowSwitch = true;
                 const core = window.app?.conversationCore || window.conversationUI?.core;
                 core?.selectConversation(this.currentLead.id);
+                this._skipAllowSwitch = false;
             }
         });
 
