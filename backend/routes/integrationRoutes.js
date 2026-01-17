@@ -62,13 +62,22 @@ router.get('/drive/sync/status/:jobId', (req, res) => {
 // Background processor
 async function processSync(jobId, conversationId, businessName) {
     const job = jobs.get(jobId);
+    const { getDatabase } = require('../services/database');
 
     try {
         console.log(`☁️ Sync Job ${jobId} started for: ${businessName}`);
 
         job.progress = 'Searching Drive and downloading files...';
 
-        const result = await syncDriveFiles(conversationId, businessName);
+        // Get userId from conversation
+        const db = getDatabase();
+        const convResult = await db.query(
+            'SELECT assigned_user_id, created_by_user_id FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+        const userId = convResult.rows[0]?.assigned_user_id || convResult.rows[0]?.created_by_user_id || null;
+
+        const result = await syncDriveFiles(conversationId, businessName, userId);
 
         job.status = 'completed';
         job.progress = 'Complete';
