@@ -283,7 +283,7 @@
 .lender-input-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-xl) var(--space-lg);
+    gap: var(--space-lg) var(--space-lg);
     background: var(--bg-secondary);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
@@ -294,7 +294,6 @@
 .lender-input-grid .form-group {
     margin-bottom: 0;
     position: relative;
-    padding-bottom: var(--space-lg);
 }
 
 .form-group {
@@ -310,8 +309,7 @@
     background: var(--bg-secondary);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
-    margin-top: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
     margin-bottom: var(--space-lg);
 }
 
