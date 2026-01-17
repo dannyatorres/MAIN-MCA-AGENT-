@@ -139,9 +139,9 @@
     justify-content: space-between;
     align-items: center;
     background: #21262d;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border-bottom: 1px solid #30363d;
-    height: 50px;
+    min-height: 44px;
     flex-shrink: 0;
 }
 
@@ -154,75 +154,53 @@
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 10px; /* Space between the toggle and the deselect button */
+    gap: 8px;
 }
 
-/* --- A. STATUS CARD (For the "150 Selected" Count) --- */
-/* Looks like a button but isn't clickable */
+/* --- STATUS CARD (Count Display) --- */
 .toolbar-info-card {
-    background: #0d1117;
-    border: 1px solid #30363d;
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.3);
     border-radius: 6px;
     padding: 6px 12px;
-
-    color: #58a6ff; /* Blue text to highlight the data */
+    color: #2dd4bf;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    line-height: 1;
-
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    user-select: none; /* Can't highlight the text */
 }
 
-/* --- B. INTERACTIVE BUTTONS (For Override & Deselect) --- */
+/* --- INTERACTIVE BUTTONS --- */
 .toolbar-card-btn {
-    background: #0d1117 !important;
+    background: transparent !important;
     border: 1px solid #30363d !important;
     border-radius: 6px !important;
     padding: 6px 12px !important;
-
-    color: #c9d1d9;
+    color: #8b949e;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    line-height: 1;
-
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
     transition: all 0.2s ease;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    appearance: none;
-    outline: none;
 }
 
 .toolbar-card-btn:hover {
-    background: #21262d !important;
-    border-color: #8b949e !important;
-    color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    background: rgba(45, 212, 191, 0.1) !important;
+    border-color: #2dd4bf !important;
+    color: #2dd4bf;
 }
 
-.toolbar-card-btn:active {
-    transform: translateY(0);
-    background: #161b22 !important;
-}
-
-/* --- C. ACTIVE STATE (For the Toggle Button) --- */
-/* When "Override Filters" is ON, it glows blue */
+/* Active state (Override Filters ON) */
 .toolbar-card-btn.active {
-    background: rgba(56, 139, 253, 0.15) !important; /* Subtle blue tint */
-    border-color: #3b82f6 !important; /* Bright blue border */
-    color: #58a6ff !important; /* Blue text */
-    box-shadow: 0 0 0 1px rgba(56, 139, 253, 0.4); /* Glow effect */
+    background: rgba(45, 212, 191, 0.15) !important;
+    border-color: #2dd4bf !important;
+    color: #2dd4bf !important;
+    box-shadow: 0 0 8px rgba(45, 212, 191, 0.2);
 }
 
 /* Consistent checkbox accent across the modal */
