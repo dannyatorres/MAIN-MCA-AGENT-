@@ -1,12 +1,12 @@
 /* ==========================================================================
    03-MOBILE-INTELLIGENCE.CSS
-   Intelligence Hub - Final Polish (Dark Pro Theme)
+   Intelligence Hub - Final Layout (Centered & Clean)
    ========================================================================== */
 
 /* --- 1. MAIN CONTAINER --- */
 .details-content {
-    /* Reduced padding slightly so cards can be wider */
-    padding: 12px;
+    /* Increased padding to 16px to center the grid better on mobile screens */
+    padding: 16px;
     background-color: #0f1115;
     min-height: 100%;
     box-sizing: border-box;
@@ -17,29 +17,26 @@
     display: grid !important;
     /* Strict 2-column grid */
     grid-template-columns: 1fr 1fr !important;
+    /* 12px gap + 16px outer padding creates a balanced look */
     gap: 12px !important;
     padding-bottom: 40px;
 }
 
 /* --- 3. THE CARDS --- */
 .intel-card {
-    /* Visuals */
     background: linear-gradient(180deg, #1f242c 0%, #13171f 100%);
     border: 1px solid #30363d;
-    border-radius: 16px; /* Smooth Apple-like corners */
+    border-radius: 16px;
 
-    /* Layout */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
 
-    /* Sizing */
-    min-height: 165px !important; /* Fixed height for uniformity */
-    padding: 24px 12px;
+    min-height: 160px !important;
+    padding: 20px 12px;
 
-    /* Interaction */
     position: relative;
     cursor: pointer;
     overflow: hidden;
@@ -53,7 +50,7 @@
     border-color: #3b82f6;
 }
 
-/* Subtle Top Glow Line */
+/* Top Glow Line */
 .intel-card::before {
     content: '';
     position: absolute;
@@ -68,43 +65,29 @@
 .intel-card-icon {
     width: 54px;
     height: 54px;
-    border-radius: 14px; /* Squircle shape */
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
-    margin-bottom: 16px; /* Space between icon and text */
-
-    /* Glassy look */
+    margin-bottom: 16px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-/* Specific Colors (Matches your logic) */
-.intel-card[data-intel="ai"] .intel-card-icon {
-    color: #c4b5fd; background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3);
-}
-.intel-card[data-intel="edit"] .intel-card-icon {
-    color: #93c5fd; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3);
-}
-.intel-card[data-intel="documents"] .intel-card-icon {
-    color: #fca5a5; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3);
-}
-.intel-card[data-intel="lenders"] .intel-card-icon {
-    color: #6ee7b7; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3);
-}
-.intel-card[data-intel="fcs"] .intel-card-icon {
-    color: #fcd34d; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3);
-}
-.intel-card[data-intel="strategy"] .intel-card-icon {
-    color: #f9a8d4; background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3);
-}
+/* Specific Colors */
+.intel-card[data-intel="ai"] .intel-card-icon { color: #c4b5fd; background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3); }
+.intel-card[data-intel="edit"] .intel-card-icon { color: #93c5fd; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); }
+.intel-card[data-intel="documents"] .intel-card-icon { color: #fca5a5; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); }
+.intel-card[data-intel="lenders"] .intel-card-icon { color: #6ee7b7; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); }
+.intel-card[data-intel="fcs"] .intel-card-icon { color: #fcd34d; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); }
+.intel-card[data-intel="strategy"] .intel-card-icon { color: #f9a8d4; background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3); }
 
 /* --- 5. TEXT STYLING --- */
 .intel-card-info h3 {
     margin: 0 0 6px 0;
-    font-size: 15px; /* Clean, readable size */
+    font-size: 15px;
     font-weight: 600;
     color: #e6edf3;
     letter-spacing: 0.3px;
@@ -113,7 +96,7 @@
 .intel-card-info p {
     margin: 0;
     font-size: 12px;
-    color: #94a3b8; /* Muted text */
+    color: #94a3b8;
     line-height: 1.35;
     max-width: 95%;
 }
@@ -121,10 +104,11 @@
 /* Hide legacy arrows */
 .intel-card-arrow { display: none !important; }
 
-/* --- 6. VIEW CONTAINERS (Standard Layout) --- */
+/* --- 6. VIEW CONTAINERS --- */
 .intel-view {
     position: absolute;
-    top: 60px; left: 0; right: 0; bottom: 0;
+    top: 56px; /* Matches new header height */
+    left: 0; right: 0; bottom: 0;
     background: #0f1115;
     z-index: 20;
     display: flex;

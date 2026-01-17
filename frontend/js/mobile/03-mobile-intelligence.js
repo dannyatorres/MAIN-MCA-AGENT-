@@ -2,25 +2,47 @@
 Object.assign(window.MobileApp.prototype, {
     // ============ INTELLIGENCE HUB ============
     setupIntelligenceListeners() {
-        document.getElementById('intelligenceCards').addEventListener('click', (e) => {
-            const card = e.target.closest('.intel-card');
-            if (card) {
-                const intelType = card.dataset.intel;
-                this.openIntelView(intelType);
-            }
-        });
+        console.log('🧠 Setting up Intelligence listeners...');
 
+        // 1. Card Selection (Delegation)
+        const grid = document.getElementById('intelligenceCards');
+        if (grid) {
+            grid.addEventListener('click', (e) => {
+                const card = e.target.closest('.intel-card');
+                if (card) {
+                    const intelType = card.dataset.intel;
+                    console.log('👆 Card clicked:', intelType);
+                    this.openIntelView(intelType);
+                }
+            });
+        } else {
+            console.error('❌ Error: #intelligenceCards container not found');
+        }
+
+        // 2. AI Assistant Input
         const aiInput = document.getElementById('mobileAiInput');
         const aiSend = document.getElementById('mobileAiSend');
 
-        if (aiInput && aiSend) {
-            aiSend.addEventListener('click', () => this.sendAiMessage());
+        if (aiSend) {
+            // Remove old listeners to prevent duplicates (cloning trick)
+            const newAiSend = aiSend.cloneNode(true);
+            aiSend.parentNode.replaceChild(newAiSend, aiSend);
+
+            newAiSend.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent form submission if inside form
+                console.log('📨 AI Send clicked');
+                this.sendAiMessage();
+            });
+        }
+
+        if (aiInput) {
             aiInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     this.sendAiMessage();
                 }
             });
+            // Auto-resize
             aiInput.addEventListener('input', () => {
                 aiInput.style.height = 'auto';
                 aiInput.style.height = Math.min(aiInput.scrollHeight, 100) + 'px';
@@ -29,11 +51,15 @@ Object.assign(window.MobileApp.prototype, {
     },
 
     openIntelView(type) {
+        if (!type) return;
         this.currentIntelView = type;
 
-        document.getElementById('intelligenceCards').classList.add('hidden');
+        // Hide Grid
+        const grid = document.getElementById('intelligenceCards');
+        if (grid) grid.classList.add('hidden');
 
-        const titles = {
+        // Update Title
+        const titleMap = {
             ai: 'AI Assistant',
             edit: 'Edit Lead',
             lenders: 'Lenders',
@@ -41,37 +67,39 @@ Object.assign(window.MobileApp.prototype, {
             strategy: 'Strategy',
             documents: 'Documents'
         };
-        document.getElementById('detailsTitle').textContent = titles[type] || 'Intelligence';
+        const titleEl = document.getElementById('detailsTitle');
+        if (titleEl) titleEl.textContent = titleMap[type] || 'Intelligence';
 
-        // Hide all views first
+        // Hide all specific views first
         document.querySelectorAll('.intel-view').forEach(v => v.classList.add('hidden'));
 
-        // Route to the correct loader
-        if (type === 'ai') {
-            document.getElementById('aiAssistantView').classList.remove('hidden');
-            this.loadAiChat();
-        } else if (type === 'edit') {
-            document.getElementById('editView').classList.remove('hidden');
-            this.loadEditForm();
-        } else if (type === 'lenders') {
-            document.getElementById('lendersView').classList.remove('hidden');
-            this.loadLendersView();
-        } else if (type === 'documents') {
-            document.getElementById('documentsView').classList.remove('hidden');
-            this.loadDocumentsView();
-        } else if (type === 'fcs') {
-            document.getElementById('fcsView').classList.remove('hidden');
-            this.loadFcsView();
-        } else if (type === 'strategy') {
-            document.getElementById('strategyView').classList.remove('hidden');
-            this.loadStrategyView();
+        // Show the requested view
+        let viewId = '';
+        switch(type) {
+            case 'ai': viewId = 'aiAssistantView'; this.loadAiChat(); break;
+            case 'edit': viewId = 'editView'; this.loadEditForm(); break;
+            case 'lenders': viewId = 'lendersView'; this.loadLendersView(); break;
+            case 'documents': viewId = 'documentsView'; this.loadDocumentsView(); break;
+            case 'fcs': viewId = 'fcsView'; this.loadFcsView(); break;
+            case 'strategy': viewId = 'strategyView'; this.loadStrategyView(); break;
         }
+
+        const view = document.getElementById(viewId);
+        if (view) view.classList.remove('hidden');
     },
 
     closeIntelView() {
         this.currentIntelView = null;
+
+        // Hide all views
         document.querySelectorAll('.intel-view').forEach(v => v.classList.add('hidden'));
-        document.getElementById('intelligenceCards').classList.remove('hidden');
-        document.getElementById('detailsTitle').textContent = 'Intelligence';
+
+        // Show Grid
+        const grid = document.getElementById('intelligenceCards');
+        if (grid) grid.classList.remove('hidden');
+
+        // Reset Title
+        const titleEl = document.getElementById('detailsTitle');
+        if (titleEl) titleEl.textContent = 'Intelligence';
     }
 });
