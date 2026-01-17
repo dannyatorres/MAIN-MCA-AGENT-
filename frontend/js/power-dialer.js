@@ -33,7 +33,7 @@ class PowerDialer {
         } else {
             this.bindEvents();
         }
-        console.log('📞 PowerDialer initialized');
+        console.log('📞 SmartDialer initialized');
     }
 
     bindEvents() {
@@ -730,4 +730,4 @@ class PowerDialer {
 // Create global instance
 window.powerDialer = new PowerDialer();
 
-console.log('📞 power-dialer.js loaded');
+console.log('📞 smart-dialer.js loaded');

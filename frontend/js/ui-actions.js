@@ -23,7 +23,7 @@ const globalActions = {
         if (window.powerDialer) {
             window.powerDialer.show();
         } else {
-            console.warn('Power Dialer module not loaded');
+            console.warn('Smart Dialer module not loaded');
         }
     },
     'close-settings': () => {
