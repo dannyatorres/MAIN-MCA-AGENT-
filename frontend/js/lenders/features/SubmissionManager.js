@@ -81,40 +81,52 @@ export class SubmissionManager {
 
         if (!lenderList) return;
 
-        let displayList = [...(this.getQualifiedLenders() || [])];
-        if (showAll && this.getNonQualifiedLenders()) {
-            const qualifiedNames = new Set(
-                displayList.map(l => (l['Lender Name'] || l.name || '').toLowerCase())
-            );
-            const nonQualified = (this.getNonQualifiedLenders() || []).filter(l => {
-                const name = (l['Lender Name'] || l.name || '').toLowerCase();
-                return !qualifiedNames.has(name);
-            });
-            displayList = [...displayList, ...nonQualified];
-        }
+        // Build submission map
+        const submittedMap = new Map();
+        (this.submissionHistory || []).forEach(sub => {
+            submittedMap.set(sub.lender_name?.toLowerCase().trim(), sub);
+        });
 
-        if (displayList.length === 0) {
+        // Get qualified/non-qualified lists
+        let qualifiedList = [...(this.getQualifiedLenders() || [])];
+        let nonQualifiedList = showAll ? [...(this.getNonQualifiedLenders() || [])] : [];
+
+        // Dedupe non-qualified
+        const qualifiedNames = new Set(
+            qualifiedList.map(l => (l['Lender Name'] || l.name || '').toLowerCase().trim())
+        );
+        nonQualifiedList = nonQualifiedList.filter(l => {
+            const name = (l['Lender Name'] || l.name || '').toLowerCase().trim();
+            return !qualifiedNames.has(name);
+        });
+
+        // Combine for available lenders
+        const displayList = [...qualifiedList, ...nonQualifiedList];
+        const displayNames = new Set(
+            displayList.map(l => (l['Lender Name'] || l.name || '').toLowerCase().trim())
+        );
+
+        // Already submitted - ALL from history, check if qualified
+        const alreadySubmitted = (this.submissionHistory || []).map(sub => {
+            const nameNorm = sub.lender_name?.toLowerCase().trim();
+            const wasQualified = qualifiedNames.has(nameNorm);
+            return {
+                name: sub.lender_name,
+                submission: sub,
+                wasQualified
+            };
+        });
+
+        // Available - qualified lenders NOT in submission history
+        const available = displayList.filter(lender => {
+            const lenderName = (lender['Lender Name'] || lender.name || '').toLowerCase().trim();
+            return !submittedMap.has(lenderName);
+        });
+
+        if (alreadySubmitted.length === 0 && available.length === 0) {
             lenderList.innerHTML = '<p class="submission-empty-msg">No lenders available.</p>';
             return;
         }
-
-        const submittedMap = new Map();
-        (this.submissionHistory || []).forEach(sub => {
-            submittedMap.set(sub.lender_name?.toLowerCase(), sub);
-        });
-
-        const alreadySubmitted = [];
-        const available = [];
-
-        displayList.forEach(lender => {
-            const lenderName = (lender['Lender Name'] || lender.name || '').toLowerCase();
-            const submission = submittedMap.get(lenderName);
-            if (submission) {
-                alreadySubmitted.push({ ...lender, submission });
-            } else {
-                available.push(lender);
-            }
-        });
 
         let html = '';
 
@@ -126,9 +138,9 @@ export class SubmissionManager {
                     </div>
             `;
 
-            alreadySubmitted.forEach(lender => {
-                const lenderName = lender['Lender Name'] || lender.name;
-                const sub = lender.submission;
+            alreadySubmitted.forEach(item => {
+                const lenderName = item.name;
+                const sub = item.submission;
 
                 let statusBadge = '';
                 let statusClass = 'pending';
@@ -154,6 +166,7 @@ export class SubmissionManager {
                         <input type="checkbox" class="lender-checkbox" value="${lenderName}" disabled>
                         <div class="list-text submission-text-flex">
                             ${lenderName}
+                            ${!item.wasQualified ? '<span class="submission-status-badge not-qualified">NOT QUALIFIED</span>' : ''}
                             <span class="submission-status-badge ${statusClass}">${statusBadge}</span>
                             ${sentDate ? `<span class="submission-date">(${sentDate})</span>` : ''}
                         </div>
