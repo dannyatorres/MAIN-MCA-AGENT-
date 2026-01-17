@@ -222,6 +222,13 @@ class ConversationCore {
         console.trace('🔍 selectConversation called');
         console.log('🔍 selectConversation called from:', new Error().stack.split('\n')[2]);
         const convoId = String(conversationId);
+        // Handle dialer view - minimize if call active, hide if not
+        if (window.powerDialer) {
+            window.powerDialer.allowConversationSwitch();
+        }
+
+        // Ensure dialer view is hidden (safety net)
+        document.getElementById('dialerView')?.classList.add('hidden');
         if (this.currentConversationId === convoId) return;
 
         // 1. Clear badges immediately (Optimistic UI)

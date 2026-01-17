@@ -352,6 +352,7 @@ class PowerDialer {
     // Handle when call ends (either by us or them)
     handleCallEnd() {
         this.stopTimer();
+        this.hideFloatingCallBar();
 
         // If disposition not yet logged, show buttons
         // User will click a disposition button to continue
@@ -586,6 +587,120 @@ class PowerDialer {
         // Hide the default call bar since we have our own UI
         const callBar = document.getElementById('callBar');
         if (callBar) callBar.classList.add('hidden');
+    }
+
+    // Check if we have an active call in progress
+    hasActiveCall() {
+        return this.isActive && window.callManager?.activeCall;
+    }
+
+    // Minimize to floating bar (keeps call alive, hides full dialer UI)
+    minimizeToFloatingBar() {
+        const dialer = document.getElementById('dialerView');
+        dialer?.classList.add('hidden');
+
+        // Show the floating call bar with current lead info
+        this.showFloatingCallBar();
+    }
+
+    showFloatingCallBar() {
+        let bar = document.getElementById('floatingCallBar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'floatingCallBar';
+            bar.className = 'floating-call-bar';
+            document.body.appendChild(bar);
+        }
+
+        const lead = this.currentLead;
+        const name = lead ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown' : 'Unknown';
+
+        bar.innerHTML = `
+            <div class="fcb-status ${window.callManager?.activeCall ? 'connected' : 'ringing'}"></div>
+            <div class="fcb-info">
+                <span class="fcb-name">${this.escapeHtml(name)}</span>
+                <span class="fcb-timer" id="fcbTimer">00:00</span>
+            </div>
+            <div class="fcb-actions">
+                <button class="fcb-btn fcb-mute" id="fcbMuteBtn" title="Mute">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="fcb-btn fcb-end" id="fcbEndBtn" title="End Call">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <button class="fcb-btn fcb-expand" id="fcbExpandBtn" title="Back to Dialer">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        `;
+
+        bar.classList.remove('hidden');
+        this.bindFloatingBarEvents();
+        this.startFloatingTimer();
+    }
+
+    hideFloatingCallBar() {
+        const bar = document.getElementById('floatingCallBar');
+        if (bar) bar.classList.add('hidden');
+        this.stopFloatingTimer();
+    }
+
+    bindFloatingBarEvents() {
+        document.getElementById('fcbEndBtn')?.addEventListener('click', () => {
+            if (window.callManager?.activeCall) {
+                window.callManager.endCall();
+            }
+            this.stopTimer();
+            this.hideFloatingCallBar();
+            this.setStatus('ringing', 'CALL ENDED');
+        });
+
+        document.getElementById('fcbExpandBtn')?.addEventListener('click', () => {
+            this.hideFloatingCallBar();
+            this.show();
+        });
+
+        document.getElementById('fcbMuteBtn')?.addEventListener('click', (e) => {
+            const btn = e.currentTarget;
+            const call = window.callManager?.activeCall;
+            if (call) {
+                const isMuted = call.isMuted();
+                call.mute(!isMuted);
+                btn.innerHTML = `<i class="fas fa-microphone${!isMuted ? '-slash' : ''}"></i>`;
+                btn.classList.toggle('muted', !isMuted);
+            }
+        });
+    }
+
+    startFloatingTimer() {
+        this.floatingTimerInterval = setInterval(() => {
+            const timerEl = document.getElementById('fcbTimer');
+            if (timerEl && this.callStartTime) {
+                const elapsed = Math.floor((Date.now() - this.callStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const seconds = (elapsed % 60).toString().padStart(2, '0');
+                timerEl.textContent = `${minutes}:${seconds}`;
+            }
+        }, 1000);
+    }
+
+    stopFloatingTimer() {
+        if (this.floatingTimerInterval) {
+            clearInterval(this.floatingTimerInterval);
+            this.floatingTimerInterval = null;
+        }
+    }
+
+    // Called externally when user wants to switch to a conversation
+    allowConversationSwitch() {
+        if (this.hasActiveCall()) {
+            // Call is active - minimize to floating bar instead of blocking
+            this.minimizeToFloatingBar();
+        } else {
+            // No active call - just hide the dialer view
+            document.getElementById('dialerView')?.classList.add('hidden');
+        }
+        return true; // Always allow the switch now
     }
 
     reset() {

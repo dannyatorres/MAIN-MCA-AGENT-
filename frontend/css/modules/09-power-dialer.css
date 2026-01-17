@@ -78,6 +78,123 @@
     color: #e6edf3;
 }
 
+/* ==========================================================================
+   [MODULE: FLOATING CALL BAR]
+   ========================================================================== */
+
+.floating-call-bar {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.3s ease;
+}
+
+.floating-call-bar.hidden {
+    display: none;
+}
+
+.fcb-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #f59e0b;
+    animation: pulse 1.5s infinite;
+    flex-shrink: 0;
+}
+
+.fcb-status.connected {
+    background: #10b981;
+    animation: none;
+}
+
+.fcb-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.fcb-name {
+    color: #e6edf3;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+
+.fcb-timer {
+    color: #10b981;
+    font-size: 12px;
+    font-family: 'SF Mono', Consolas, monospace;
+    letter-spacing: 1px;
+}
+
+.fcb-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: 4px;
+}
+
+.fcb-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.fcb-mute {
+    background: rgba(255, 255, 255, 0.05);
+    color: #8b949e;
+}
+
+.fcb-mute:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e6edf3;
+}
+
+.fcb-mute.muted {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+.fcb-end {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.fcb-end:hover {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.fcb-expand {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+}
+
+.fcb-expand:hover {
+    background: rgba(59, 130, 246, 0.25);
+}
+
 .dialer-queue-count {
     font-size: 13px;
     color: #8b949e;
