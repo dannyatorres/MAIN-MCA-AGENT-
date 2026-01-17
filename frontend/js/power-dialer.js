@@ -57,6 +57,10 @@ class PowerDialer {
             this.stop();
         });
 
+        document.getElementById('dialerSkipBtn')?.addEventListener('click', () => {
+            this.logDisposition('skip');
+        });
+
         // Select All / Deselect All
         document.getElementById('queueSelectAll')?.addEventListener('click', () => {
             this.selectedLeadIds = new Set(this.queue.map(l => l.id));

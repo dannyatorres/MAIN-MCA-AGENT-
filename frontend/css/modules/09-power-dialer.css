@@ -233,6 +233,39 @@
     background: rgba(16, 185, 129, 0.25);
 }
 
+.disposition-convo {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.disposition-convo:hover {
+    background: rgba(16, 185, 129, 0.2) !important;
+}
+
+.disposition-convo i {
+    color: #10b981 !important;
+}
+
+.dialer-skip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #8b949e;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dialer-skip-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e6edf3;
+}
+
 /* 3. Main Calling Card */
 .dialer-calling-card {
     background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
