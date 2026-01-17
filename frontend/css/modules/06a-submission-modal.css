@@ -1,62 +1,112 @@
 /* css/modules/06a-submission-modal.css */
 
 /* ==========================================================================
-   1. MAIN MODAL STRUCTURE (The Grid Engine)
+   1. MAIN MODAL STRUCTURE & SPACE SAVING
    ========================================================================== */
 
-/* Force the modal to flex vertically so the footer sticks to bottom */
+/* Force modal size and dark theme */
 .lender-submission-modal {
     width: 95vw !important;
     max-width: 1000px !important;
     height: 85vh !important;
+    background: #0d1117 !important;
     display: flex;
     flex-direction: column;
-    max-height: 85vh; /* Prevent it from being taller than screen */
     overflow: hidden;
+    position: relative;
+    border: 1px solid #30363d;
+    border-radius: 12px;
 }
 
-/* The Body Wrapper */
+/* 🛑 HIDE THE DEFAULT HEADER to save space */
+.lender-submission-modal .modal-header {
+    display: none !important;
+}
+
+/* 🛑 HIDE THE GHOST OVERLAY */
+.submission-loading-overlay {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(13, 17, 23, 0.95);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+/* Create a custom close button since we hid the header */
+#closeLenderSubmissionModal {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 20;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid #30363d;
+    color: #8b949e;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+#closeLenderSubmissionModal:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+/* ==========================================================================
+   2. INTERNAL LAYOUT (The Grid)
+   ========================================================================== */
+
 .submission-body {
-    padding: 12px 16px;
-    overflow: hidden; /* Prevent body scroll, we scroll internal lists instead */
+    padding: 16px 20px 0 20px; /* Top padding acts as the new header space */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    flex: 1; /* Take up all available height */
-    gap: 10px;
+    flex: 1;
+    gap: 12px;
 }
 
-/* The 50/50 Split Grid */
 .submission-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Equal split */
-    gap: 16px;
-    flex: 1; /* Grow to fill space */
-    min-height: 0; /* Critical for nested scrolling */
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
 }
 
-/* Individual Columns (Lenders Left, Docs Right) */
 .submission-col {
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    background: #161b22; /* Inner card background */
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 /* ==========================================================================
-   2. COLUMN COMPONENTS
+   3. PROFESSIONAL HEADER & TOOLBAR
    ========================================================================== */
 
-/* Header (Select Lenders / Select Documents) */
+/* The Header Bar inside the columns */
 .submission-col-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #161b22;
-    padding: 8px 12px;
-    border: 1px solid #30363d;
-    border-bottom: 1px solid #21262d;
-    border-radius: 8px 8px 0 0;
-    min-height: 36px;
+    background: #21262d;
+    padding: 10px 12px;
+    border-bottom: 1px solid #30363d;
+    min-height: 40px;
     flex-shrink: 0;
 }
 
@@ -66,134 +116,209 @@
     color: #e6edf3;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* Search Bar Container */
+/* Group the actions (Override + Select All) */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Professional Toggle (Override Filters) */
+.toggle-override-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #8b949e;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    background: rgba(0,0,0,0.2);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.toggle-override-label:hover {
+    color: #e6edf3;
+    border-color: #30363d;
+}
+
+.toggle-override-label input {
+    accent-color: #f59e0b; /* Orange for override warning */
+}
+
+/* Professional "Select All" Button */
+.action-link {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-link:hover {
+    background: rgba(59, 130, 246, 0.2);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   4. CONTENT & SCROLLBARS
+   ========================================================================== */
+
+/* Search Bar - Sleek */
 .submission-search-container {
     background: #161b22;
-    border: 1px solid #30363d;
-    border-top: none;
-    border-bottom: none;
-    padding: 6px 12px;
-    flex-shrink: 0;
+    padding: 8px 12px;
+    border-bottom: 1px solid #30363d;
 }
 
 .submission-search-input {
     width: 100%;
-    height: 30px;
+    height: 32px;
     background: #0d1117;
     border: 1px solid #30363d;
-    border-radius: 5px;
+    border-radius: 6px;
     padding: 0 10px;
     color: #e6edf3;
     font-size: 12px;
-    box-sizing: border-box;
 }
 
-/* The Scrolling List (Where the magic happens) */
-.selection-list {
-    flex: 1; /* Fill remaining vertical space */
-    overflow-y: auto; /* Scroll ONLY this area */
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 0 0 8px 8px;
-    padding: 6px;
+.submission-search-input:focus {
+    border-color: #3b82f6;
+    outline: none;
 }
+
+/* The List Area */
+.selection-list {
+    flex: 1;
+    overflow-y: auto;
+    background: #0d1117;
+    padding: 8px;
+}
+
+/* CUSTOM SCROLLBAR (Dark Mode) */
+.selection-list::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.selection-list::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+
+.selection-list::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+.selection-list::-webkit-scrollbar-thumb:hover {
+    background: #58a6ff;
+}
+
+/* ==========================================================================
+   5. LIST ITEMS & VISUALS
+   ========================================================================== */
 
 /* List Items */
 .selection-list label {
-    margin-bottom: 4px !important;
-    padding: 6px 10px !important;
+    margin-bottom: 6px !important;
+    padding: 8px 12px !important;
     display: flex;
     align-items: center;
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .selection-list label:hover {
     background: #21262d;
     border-color: #3b82f6;
+    transform: translateX(2px);
 }
 
-/* Message Area (Bottom Pinned) */
+/* Checkboxes */
+.selection-list input[type="checkbox"] {
+    accent-color: #3b82f6;
+    width: 14px;
+    height: 14px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+/* Tiers & Headers */
+.submission-tier-header {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 16px 0 8px 4px;
+    letter-spacing: 0.5px;
+}
+.submission-tier-header.standard { color: #64748b; }
+.submission-tier-header.restricted { color: #ef4444; }
+
+/* Status Badges */
+.submission-status-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: auto; /* Push to right */
+    text-transform: uppercase;
+}
+.submission-status-badge.offer { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+.submission-status-badge.declined { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+.submission-status-badge.pending { background: rgba(107, 114, 128, 0.15); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.2); }
+
+/* ==========================================================================
+   6. FOOTER AREA
+   ========================================================================== */
+
 .submission-message-area {
     margin-top: auto;
-    padding-top: 8px;
+    padding: 12px 0 12px 0;
     flex-shrink: 0;
 }
 
 .submission-textarea {
     width: 100%;
-    min-height: 60px;
-    background: #0d1117;
+    min-height: 50px;
+    height: 50px;
+    background: #161b22;
     border: 1px solid #30363d;
     border-radius: 6px;
     padding: 10px;
     color: #e6edf3;
     resize: none;
     font-size: 12px;
+    font-family: inherit;
+    transition: height 0.2s, border-color 0.2s;
 }
 
-/* ==========================================================================
-   3. VISUAL STYLES (Badges, Colors, Icons)
-   ========================================================================== */
-
-/* Headers */
-.submission-header {
-    font-size: 11px;
-    font-weight: 700;
-    margin: 10px 0 6px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding-left: 2px;
-}
-.submission-header.submitted { color: #f59e0b; }
-.submission-header.available { color: #10b981; }
-
-.submission-tier-header {
-    font-size: 10px;
-    font-weight: 600;
-    margin: 12px 0 6px 4px;
-}
-.submission-tier-header.restricted { color: #ef4444; }
-.submission-tier-header.standard { color: #64748b; }
-
-/* Status Badges */
-.submission-status-badge {
-    font-size: 11px;
-    font-weight: 600;
-    margin-left: 8px;
-}
-.submission-status-badge.offer { color: #10b981; }
-.submission-status-badge.declined { color: #ef4444; }
-.submission-status-badge.pending { color: #6b7280; }
-
-/* Document Icons */
-.submission-doc-icon {
-    margin-right: 10px;
-    font-size: 16px;
-}
-.submission-doc-icon.pdf { color: #ef4444; }
-.submission-doc-icon.image { color: #3b82f6; }
-.submission-doc-icon.excel { color: #10b981; }
-.submission-doc-icon.default { color: #64748b; }
-
-.submission-doc-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 13px;
-    color: #e6edf3;
+.submission-textarea:focus {
+    height: 80px; /* Expand on focus */
+    border-color: #3b82f6;
+    outline: none;
 }
 
-/* Utility Helpers */
-.submission-empty-msg { color: #6b7280; padding: 10px; }
-.submission-text-flex { flex: 1; font-size: 13px; color: #e6edf3; font-weight: 500; }
-.submission-date { color: #6b7280; font-size: 10px; margin-left: 6px; }
-.submission-star { color: #3b82f6; margin-left: 6px; }
-.submission-reason { color: #ef4444; font-size: 11px; margin-left: 6px; }
-.toggle-override-label { font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 5px; cursor: pointer; }
-.action-link { background: none; border: none; color: #3b82f6; font-size: 10px; font-weight: 600; cursor: pointer; text-transform: uppercase; padding: 0; }
+.modal-footer {
+    border-top: 1px solid #30363d;
+    padding: 16px 20px;
+    background: #161b22;
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
