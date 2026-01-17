@@ -223,7 +223,7 @@ class PowerDialer {
             if (data.success && data.leads) {
                 this.queue = data.leads;
                 // Mark all as selected by default
-                this.selectedLeadIds = new Set(this.queue.map(l => l.id));
+                this.selectedLeadIds = new Set(this.queue.map(l => String(l.id)));
                 this.renderQueuePreview();
                 console.log(`📞 Loaded ${this.queue.length} leads for dialing`);
             } else {
@@ -263,7 +263,7 @@ class PowerDialer {
 
         listEl.innerHTML = this.queue.map(lead => {
             const name = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown';
-            const checked = this.selectedLeadIds.has(lead.id) ? 'checked' : '';
+            const checked = this.selectedLeadIds.has(String(lead.id)) ? 'checked' : '';
             const uncheckedClass = checked ? '' : 'unchecked';
 
             return `
@@ -309,7 +309,7 @@ class PowerDialer {
     // Start the dialing session
     async start() {
         // Filter queue to only selected leads
-        this.dialQueue = this.queue.filter(lead => this.selectedLeadIds.has(lead.id));
+        this.dialQueue = this.queue.filter(lead => this.selectedLeadIds.has(String(lead.id)));
 
         if (this.dialQueue.length === 0) {
             alert('No leads selected. Check at least one lead to start dialing.');
