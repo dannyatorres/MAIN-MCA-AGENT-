@@ -83,7 +83,14 @@ export class SubmissionManager {
 
         let displayList = [...(this.getQualifiedLenders() || [])];
         if (showAll && this.getNonQualifiedLenders()) {
-            displayList = [...displayList, ...this.getNonQualifiedLenders()];
+            const qualifiedNames = new Set(
+                displayList.map(l => (l['Lender Name'] || l.name || '').toLowerCase())
+            );
+            const nonQualified = (this.getNonQualifiedLenders() || []).filter(l => {
+                const name = (l['Lender Name'] || l.name || '').toLowerCase();
+                return !qualifiedNames.has(name);
+            });
+            displayList = [...displayList, ...nonQualified];
         }
 
         if (displayList.length === 0) {
@@ -144,7 +151,7 @@ export class SubmissionManager {
 
                 html += `
                     <label class="selection-item submission-item is-submitted">
-                        <input type="checkbox" class="lender-checkbox" value="${lenderName}">
+                        <input type="checkbox" class="lender-checkbox" value="${lenderName}" disabled>
                         <div class="list-text submission-text-flex">
                             ${lenderName}
                             <span class="submission-status-badge ${statusClass}">${statusBadge}</span>
