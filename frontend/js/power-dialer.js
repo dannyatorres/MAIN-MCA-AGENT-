@@ -364,9 +364,18 @@ class PowerDialer {
         // Lock channel on backend
         await this.lockChannel(this.currentLead.id, 'voice');
 
+        // Check if stopped while waiting
+        if (!this.isActive) return;
+
         // Make the call using existing CallManager
         const phone = this.currentLead.phone;
         const call = await window.callManager?.startCall(phone, this.currentLead.id);
+
+        // Check if stopped while call was connecting
+        if (!this.isActive) {
+            if (call) call.disconnect();
+            return;
+        }
 
         if (call) {
             // Override CallManager's UI since we have our own
