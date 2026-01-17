@@ -190,6 +190,11 @@ class CallManager {
         const muteBtn = document.getElementById('muteBtn');
         const icon = muteBtn?.querySelector('i');
 
+        // Notify power dialer if active
+        if (window.powerDialer?.isActive) {
+            window.powerDialer.onCallEnded();
+        }
+
         // Small delay before hiding to show "Ended" status
         setTimeout(() => {
             if (callBar) callBar.classList.add('hidden');

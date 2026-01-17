@@ -639,6 +639,17 @@ class PowerDialer {
         return this.isActive && this.currentLead;
     }
 
+    // Called by callManager when Twilio call disconnects
+    onCallEnded() {
+        console.log('📞 Dialer notified: call ended');
+        this.stopTimer();
+        this.hideFloatingCallBar();
+        this.setStatus('ringing', 'CALL ENDED');
+
+        // Show disposition buttons so user can log the outcome
+        document.getElementById('dialerDisposition')?.classList.remove('hidden');
+    }
+
     // Minimize to floating bar (keeps call alive, hides full dialer UI)
     minimizeToFloatingBar() {
         const dialer = document.getElementById('dialerView');
