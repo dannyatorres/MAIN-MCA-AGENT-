@@ -1,0 +1,86 @@
+/* css/submission-modal.css */
+
+/* General Utils */
+.submission-empty-msg {
+    color: #6b7280;
+    padding: 10px;
+}
+
+.submission-section {
+    margin-bottom: 20px;
+}
+
+.submission-text-flex {
+    flex: 1;
+}
+
+/* Headers */
+.submission-header {
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-left: 2px;
+}
+
+.submission-header.submitted { color: #f59e0b; }
+.submission-header.available { color: #10b981; }
+
+.submission-tier-header {
+    font-size: 10px;
+    font-weight: 600;
+    margin: 12px 0 6px 4px;
+}
+
+.submission-tier-header.restricted { color: #ef4444; }
+.submission-tier-header.standard { color: #64748b; }
+
+/* Items & Badges */
+.submission-item.is-submitted {
+    opacity: 0.7;
+}
+
+.submission-status-badge {
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.submission-status-badge.offer { color: #10b981; }
+.submission-status-badge.declined { color: #ef4444; }
+.submission-status-badge.pending { color: #6b7280; }
+
+.submission-date {
+    color: #6b7280;
+    font-size: 10px;
+    margin-left: 6px;
+}
+
+.submission-star {
+    color: #3b82f6;
+    margin-left: 6px;
+}
+
+.submission-reason {
+    color: #ef4444;
+    font-size: 11px;
+    margin-left: 6px;
+}
+
+/* Documents */
+.submission-doc-icon {
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+.submission-doc-icon.pdf { color: #ef4444; }
+.submission-doc-icon.image { color: #3b82f6; }
+.submission-doc-icon.excel { color: #10b981; }
+.submission-doc-icon.default { color: #64748b; }
+
+.submission-doc-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

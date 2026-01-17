@@ -86,7 +86,7 @@ export class SubmissionManager {
         }
 
         if (displayList.length === 0) {
-            lenderList.innerHTML = '<p style="color: #6b7280; padding: 10px;">No lenders available.</p>';
+            lenderList.innerHTML = '<p class="submission-empty-msg">No lenders available.</p>';
             return;
         }
 
@@ -112,8 +112,8 @@ export class SubmissionManager {
 
         if (alreadySubmitted.length > 0) {
             html += `
-                <div style="margin-bottom: 20px;">
-                    <div style="font-size: 11px; font-weight: 700; color: #f59e0b; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding-left: 2px;">
+                <div class="submission-section">
+                    <div class="submission-header submitted">
                         📤 Already Submitted (${alreadySubmitted.length})
                     </div>
             `;
@@ -123,16 +123,16 @@ export class SubmissionManager {
                 const sub = lender.submission;
 
                 let statusBadge = '';
-                let statusColor = '#6b7280';
+                let statusClass = 'pending';
 
                 if (sub.status === 'OFFER') {
                     statusBadge = sub.offer_amount
                         ? `OFFER $${Number(sub.offer_amount).toLocaleString()}`
                         : 'OFFER';
-                    statusColor = '#10b981';
+                    statusClass = 'offer';
                 } else if (sub.status === 'DECLINED' || sub.status === 'DECLINE') {
                     statusBadge = 'DECLINED';
-                    statusColor = '#ef4444';
+                    statusClass = 'declined';
                 } else {
                     statusBadge = sub.status || 'PENDING';
                 }
@@ -142,12 +142,12 @@ export class SubmissionManager {
                     : '';
 
                 html += `
-                    <label class="selection-item" style="opacity: 0.7;">
+                    <label class="selection-item submission-item is-submitted">
                         <input type="checkbox" class="lender-checkbox" value="${lenderName}">
-                        <div class="list-text" style="flex: 1;">
+                        <div class="list-text submission-text-flex">
                             ${lenderName}
-                            <span style="color: ${statusColor}; font-size: 11px; font-weight: 600; margin-left: 8px;">${statusBadge}</span>
-                            ${sentDate ? `<span style=\"color: #6b7280; font-size: 10px; margin-left: 6px;\">(${sentDate})</span>` : ''}
+                            <span class="submission-status-badge ${statusClass}">${statusBadge}</span>
+                            ${sentDate ? `<span class="submission-date">(${sentDate})</span>` : ''}
                         </div>
                     </label>
                 `;
@@ -158,8 +158,8 @@ export class SubmissionManager {
 
         if (available.length > 0) {
             html += `
-                <div style="margin-bottom: 16px;">
-                    <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding-left: 2px;">
+                <div class="submission-section">
+                    <div class="submission-header available">
                         ✅ Available Lenders (${available.length})
                     </div>
             `;
@@ -179,8 +179,8 @@ export class SubmissionManager {
             });
 
             sortedTiers.forEach(tier => {
-                const headerColor = tier === 'Restricted' ? '#ef4444' : '#64748b';
-                html += `<div style="font-size: 10px; font-weight: 600; color: ${headerColor}; margin: 12px 0 6px 4px;">Tier ${tier}</div>`;
+                const tierClass = tier === 'Restricted' ? 'restricted' : 'standard';
+                html += `<div class="submission-tier-header ${tierClass}">Tier ${tier}</div>`;
 
                 lendersByTier[tier].forEach(lender => {
                     const lenderName = lender['Lender Name'] || lender.name;
@@ -192,8 +192,8 @@ export class SubmissionManager {
                             <input type="checkbox" class="lender-checkbox" value="${lenderName}" checked>
                             <div class="list-text">
                                 ${lenderName}
-                                ${isPreferred ? '<span style="color:#3b82f6; margin-left:6px;">★</span>' : ''}
-                                ${reason ? `<span style=\"color:#ef4444; font-size:11px; margin-left:6px;\">${reason}</span>` : ''}
+                                ${isPreferred ? '<span class="submission-star">★</span>' : ''}
+                                ${reason ? `<span class="submission-reason">${reason}</span>` : ''}
                             </div>
                         </label>
                     `;
@@ -218,7 +218,7 @@ export class SubmissionManager {
 
         if (!docList) return;
         if (!documents || documents.length === 0) {
-            docList.innerHTML = '<p style="color: #6b7280; padding: 10px;">No documents available.</p>';
+            docList.innerHTML = '<p class="submission-empty-msg">No documents available.</p>';
             return;
         }
 
@@ -230,18 +230,18 @@ export class SubmissionManager {
                               name.toLowerCase().includes('application');
 
             let iconClass = 'fas fa-file-alt';
-            let colorStyle = 'color: #64748b;';
+            let typeClass = 'default';
             const lowerName = name.toLowerCase();
 
-            if (lowerName.endsWith('.pdf')) { iconClass = 'fas fa-file-pdf'; colorStyle = 'color: #ef4444;'; }
-            else if (lowerName.match(/\.(jpg|jpeg|png)$/)) { iconClass = 'fas fa-file-image'; colorStyle = 'color: #3b82f6;'; }
-            else if (lowerName.match(/\.(xls|xlsx|csv)$/)) { iconClass = 'fas fa-file-excel'; colorStyle = 'color: #10b981;'; }
+            if (lowerName.endsWith('.pdf')) { iconClass = 'fas fa-file-pdf'; typeClass = 'pdf'; }
+            else if (lowerName.match(/\.(jpg|jpeg|png)$/)) { iconClass = 'fas fa-file-image'; typeClass = 'image'; }
+            else if (lowerName.match(/\.(xls|xlsx|csv)$/)) { iconClass = 'fas fa-file-excel'; typeClass = 'excel'; }
 
             html += `
                 <label class="selection-item">
                     <input type="checkbox" class="document-checkbox" value="${doc.id}" ${isImportant ? 'checked' : ''}>
-                    <div style="margin-right: 10px; font-size: 16px; ${colorStyle}"><i class="${iconClass}"></i></div>
-                    <div class="list-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
+                    <div class="submission-doc-icon ${typeClass}"><i class="${iconClass}"></i></div>
+                    <div class="list-text submission-doc-name">${name}</div>
                 </label>
             `;
         });
