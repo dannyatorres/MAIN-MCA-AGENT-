@@ -7,6 +7,9 @@ const VoiceGrant = AccessToken.VoiceGrant;
 const VoiceResponse = twilio.twiml.VoiceResponse;
 const { getDatabase } = require('../services/database');
 
+// Store AMD results temporarily (in production, use Redis)
+const amdResults = new Map();
+
 const normalizePhoneNumber = (value) => {
     const digits = (value || '').replace(/\D/g, '');
     if (!digits) return null;
@@ -103,13 +106,18 @@ router.post('/voice', (req, res) => {
     } else {
         // Outbound: browser initiated; dial destination with our Twilio caller ID
         console.log(`📡 Outbound call. Dialing ${to}`);
+        const amdCallbackUrl = buildPublicUrl(req, `/api/calling/amd-status?conversationId=${conversationId || ''}`);
         const dial = response.dial({
             callerId: twilioNumber,
             answerOnBridge: true,
             record: 'record-from-answer-dual',
             recordingStatusCallback: recordingCallbackUrl,
             statusCallback: statusCallbackUrl,
-            statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed']
+            statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+            machineDetection: 'DetectMessageEnd',
+            machineDetectionTimeout: 5,
+            amdStatusCallback: amdCallbackUrl,
+            amdStatusCallbackMethod: 'POST'
         });
         dial.number(to);
     }
@@ -182,6 +190,38 @@ router.post('/recording-status', (req, res) => {
     // Add .mp3 or .wav to download
 
     res.sendStatus(200);
+});
+
+// 5. AMD STATUS WEBHOOK (Answering Machine Detection)
+router.post('/amd-status', (req, res) => {
+    const { CallSid, AnsweredBy, MachineDetectionDuration } = req.body;
+    const { conversationId } = req.query;
+
+    console.log('🤖 AMD Detection:', { CallSid, AnsweredBy, duration: MachineDetectionDuration, conversationId });
+
+    if (conversationId) {
+        amdResults.set(conversationId, {
+            answeredBy: AnsweredBy, // 'human', 'machine_start', 'machine_end_beep', 'machine_end_silence', 'machine_end_other', 'fax', 'unknown'
+            callSid: CallSid,
+            timestamp: Date.now()
+        });
+
+        // Clean up after 2 minutes
+        setTimeout(() => amdResults.delete(conversationId), 2 * 60 * 1000);
+    }
+
+    res.sendStatus(200);
+});
+
+// 6. GET AMD RESULT (Frontend polls this)
+router.get('/amd-result/:conversationId', (req, res) => {
+    const { conversationId } = req.params;
+    const result = amdResults.get(conversationId);
+
+    res.json({
+        success: true,
+        result: result || null
+    });
 });
 
 module.exports = router;

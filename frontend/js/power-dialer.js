@@ -362,6 +362,7 @@ class PowerDialer {
 
     // Stop the dialing session
     stop() {
+        this._amdPolling = false;
         this.isActive = false;
 
         // End any active call
@@ -370,6 +371,10 @@ class PowerDialer {
         }
 
         this.stopTimer();
+        // Unlock channel if we have a current lead
+        if (this.currentLead) {
+            this.unlockChannel(this.currentLead.id);
+        }
         this.showComplete();
     }
 
@@ -412,6 +417,8 @@ class PowerDialer {
             call.on('accept', () => {
                 this.setStatus('connected', 'CONNECTED');
                 this.startTimer();
+                // Start polling for AMD result
+                this.pollForAMD(this.currentLead.id);
             });
 
             call.on('disconnect', () => {
@@ -427,6 +434,99 @@ class PowerDialer {
         }
     }
 
+    // Poll for AMD (Answering Machine Detection) result
+    async pollForAMD(conversationId) {
+        this._amdPolling = true;
+        let attempts = 0;
+        const maxAttempts = 15; // Poll for up to 15 seconds
+
+        const poll = async () => {
+            if (!this._amdPolling || !this.isActive) return;
+
+            attempts++;
+            try {
+                const response = await fetch(`/api/calling/amd-result/${conversationId}`);
+                const data = await response.json();
+
+                if (data.result?.answeredBy) {
+                    const answeredBy = data.result.answeredBy;
+                    console.log('🤖 AMD Result:', answeredBy);
+
+                    // Check if it's a machine/voicemail
+                    if (answeredBy.startsWith('machine_') || answeredBy === 'fax') {
+                        console.log('📞 Voicemail detected - auto-retrying');
+                        this._amdPolling = false;
+
+                        // Hang up and retry
+                        if (window.callManager?.activeCall) {
+                            window.callManager.endCall();
+                        }
+                        this.stopTimer();
+                        this.setStatus('ringing', 'VOICEMAIL - RETRYING...');
+
+                        // Log as voicemail but trigger retry logic
+                        await this.autoRetryAfterVoicemail();
+                        return;
+                    } else if (answeredBy === 'human') {
+                        console.log('📞 Human answered');
+                        this._amdPolling = false;
+                        // Let call continue normally, user will disposition
+                        return;
+                    }
+                }
+
+                // Keep polling if no result yet
+                if (attempts < maxAttempts) {
+                    setTimeout(poll, 1000);
+                } else {
+                    this._amdPolling = false;
+                }
+            } catch (err) {
+                console.error('📞 AMD poll error:', err);
+                this._amdPolling = false;
+            }
+        };
+
+        setTimeout(poll, 2000); // Start polling after 2 seconds
+    }
+
+    // Auto-retry after voicemail detection
+    async autoRetryAfterVoicemail() {
+        // Update stats
+        this.stats.voicemail++;
+
+        // Log to backend (silent, no state change)
+        try {
+            await fetch('/api/dialer/disposition', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversationId: this.currentLead.id,
+                    disposition: 'voicemail_auto',
+                    attempt: this.currentAttempt,
+                    duration: this.getCallDuration()
+                })
+            });
+        } catch (err) {
+            console.error('📞 Failed to log voicemail:', err);
+        }
+
+        // Retry if under max attempts
+        if (this.currentAttempt < this.maxAttempts) {
+            this.currentAttempt++;
+            setTimeout(() => this.dialNext(), 1500);
+        } else {
+            // Max attempts reached, move to next lead
+            await this.unlockChannel(this.currentLead.id);
+            this.currentIndex++;
+            this.currentAttempt = 1;
+
+            if (this.isActive) {
+                setTimeout(() => this.dialNext(), 1500);
+            }
+        }
+    }
+
     // Handle when call ends (either by us or them)
     handleCallEnd() {
         this.stopTimer();
@@ -438,15 +538,17 @@ class PowerDialer {
 
     // Log disposition and move to next
     async logDisposition(disposition) {
+        if (this._processingDisposition) return;
+        this._processingDisposition = true;
+
         console.log('📞 logDisposition called:', disposition);
         console.log('📞 currentLead:', this.currentLead);
 
         if (!this.currentLead) {
             console.log('🚫 No currentLead - returning early!');
+            this._processingDisposition = false;
             return;
         }
-
-        if (!this.currentLead) return;
 
         // Update stats
         if (disposition === 'answered') this.stats.answered++;
@@ -497,6 +599,7 @@ class PowerDialer {
                 setTimeout(() => this.dialNext(), 1500);
             }
         }
+        this._processingDisposition = false;
     }
 
     // Channel locking
@@ -626,6 +729,7 @@ class PowerDialer {
 
     // Timer
     startTimer() {
+        this.stopTimer();
         this.callStartTime = Date.now();
         const timerEl = document.getElementById('dialerTimer');
 
@@ -733,7 +837,10 @@ class PowerDialer {
         `;
 
         bar.classList.remove('hidden');
-        this.bindFloatingBarEvents();
+        if (!this._floatingBarEventsBound) {
+            this.bindFloatingBarEvents();
+            this._floatingBarEventsBound = true;
+        }
         this.startFloatingTimer();
     }
 
@@ -785,6 +892,7 @@ class PowerDialer {
     }
 
     startFloatingTimer() {
+        this.stopFloatingTimer();
         this.floatingTimerInterval = setInterval(() => {
             const timerEl = document.getElementById('fcbTimer');
             if (timerEl && this.callStartTime) {
