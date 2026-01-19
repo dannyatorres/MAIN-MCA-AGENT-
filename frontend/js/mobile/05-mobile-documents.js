@@ -163,22 +163,31 @@ Object.assign(window.MobileApp.prototype, {
 
     // ============ PREVIEW ============
     previewDocument(docId) {
+        const doc = this.currentDocuments?.find(d => d.id == docId);
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-    
+        const mimeType = doc?.mimeType || doc?.mime_type || '';
+        const isImage = mimeType.includes('image');
+
         const overlay = document.createElement('div');
         overlay.id = 'docPreviewOverlay';
         overlay.className = 'doc-preview-overlay';
+
         overlay.innerHTML = `
             <header class="mobile-header">
                 <button class="back-btn" id="closePreviewBtn">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <h2>Document Preview</h2>
+                <h2>Preview</h2>
                 <a href="${url}" download class="back-btn">
                     <i class="fas fa-download"></i>
                 </a>
             </header>
-            <iframe src="${url}"></iframe>
+            <div class="doc-preview-content">
+                ${isImage
+                    ? `<img src="${url}" alt="Document">`
+                    : `<iframe src="${url}#zoom=page-width"></iframe>`
+                }
+            </div>
         `;
 
         document.body.appendChild(overlay);
