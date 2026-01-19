@@ -164,16 +164,42 @@ Object.assign(window.MobileApp.prototype, {
     // ============ PREVIEW ============
     previewDocument(docId) {
         const doc = this.currentDocuments?.find(d => d.id == docId);
-        // Add timestamp to prevent caching issues
+        if (!doc) return;
+
+        // Add timestamp to prevent caching
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-        const mimeType = doc?.mimeType || doc?.mime_type || '';
+
+        // 1. Better Type Detection
+        const mimeType = (doc.mimeType || doc.mime_type || '').toLowerCase();
         const isImage = mimeType.includes('image');
+        const isPdf = mimeType.includes('pdf');
         
         const overlay = document.createElement('div');
         overlay.id = 'docPreviewOverlay';
         overlay.className = 'doc-preview-overlay';
 
-        // CHANGED: "doc-view-header" instead of "mobile-header" to avoid conflicts
+        // 2. Generate Content Based on Type
+        let contentHtml = '';
+
+        if (isImage) {
+            contentHtml = `<img src="${url}" alt="Document">`;
+        } else if (isPdf) {
+            contentHtml = `<iframe src="${url}" type="application/pdf"></iframe>`;
+        } else {
+            // 3. Fallback for Word/Excel/etc.
+            const iconClass = this.getDocIconClass(mimeType, doc.documentType);
+            contentHtml = `
+                <div class="doc-no-preview">
+                    <div class="no-preview-icon"><i class="${iconClass}"></i></div>
+                    <h3>Preview Not Available</h3>
+                    <p>This file type cannot be viewed in the app.</p>
+                    <a href="${url}" download class="btn-mobile-primary" style="margin-top: 16px; display: inline-flex;">
+                        <i class="fas fa-download" style="margin-right: 8px;"></i> Download File
+                    </a>
+                </div>
+            `;
+        }
+
         overlay.innerHTML = `
             <header class="doc-view-header">
                 <button class="doc-close-btn" id="closePreviewBtn">
@@ -184,11 +210,8 @@ Object.assign(window.MobileApp.prototype, {
                     <i class="fas fa-download"></i>
                 </a>
             </header>
-            <div class="doc-preview-content ${isImage ? 'is-img' : 'is-pdf'}">
-                ${isImage
-                    ? `<img src="${url}" alt="Document">`
-                    : `<iframe src="${url}" type="application/pdf"></iframe>`
-                }
+            <div class="doc-preview-content ${isImage ? 'is-img' : ''} ${isPdf ? 'is-pdf' : ''} ${!isImage && !isPdf ? 'is-unsupported' : ''}">
+                ${contentHtml}
             </div>
         `;
 
