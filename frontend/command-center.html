@@ -626,6 +626,54 @@
         </div>
     </div>
 
+    <!-- Formatter Modal -->
+    <div id="formatterModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-table"></i> Lead Formatter</h3>
+                <button class="modal-close" data-action="close-formatter-modal">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+
+                <!-- Upload Area -->
+                <div class="formatter-upload-area" id="formatterUploadArea">
+                    <div class="formatter-upload-icon">📁</div>
+                    <div class="formatter-upload-text">Drop your CSV file here</div>
+                    <div class="formatter-upload-subtext">or click to browse</div>
+                </div>
+
+                <input type="file" id="formatterFileInput" accept=".csv" style="display: none;">
+
+                <!-- Status -->
+                <div class="formatter-status" id="formatterStatus"></div>
+
+                <!-- Download Section -->
+                <div id="formatterDownloadSection" style="display: none; margin-top: 20px;">
+                    <h4 style="margin-bottom: 16px; color: #e6edf3;">📥 Download Your Files</h4>
+                    <div class="formatter-downloads">
+                        <a href="#" class="formatter-download-btn" id="formatterCrmDownload">
+                            <span>📋 CRM Import File</span>
+                            <span class="download-desc">Full lead data for your CRM</span>
+                        </a>
+                        <a href="#" class="formatter-download-btn" id="formatterIphoneDownload">
+                            <span>📱 iPhone Mass Texting</span>
+                            <span class="download-desc">Name + Phone for SMS campaigns</span>
+                        </a>
+                        <a href="#" class="formatter-download-btn" id="formatterVonageDownload">
+                            <span>☎️ Vonage Format</span>
+                            <span class="download-desc">Ready for Vonage import</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Format Info -->
+                <div style="margin-top: 20px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; font-size: 13px; color: #8b949e;">
+                    <strong style="color: #3b82f6;">Auto-detects 3 formats:</strong> Standard, Braintrust, Braintrust TLO
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Usage Modal (Separate, Larger) -->
     <div id="usageModal" class="modal hidden">
         <div class="modal-content" style="max-width: 900px; max-height: 85vh;">
@@ -657,6 +705,7 @@
 
     <script src="js/websocket.js"></script>
 
+    <script src="js/lead-formatter.js"></script>
     <script src="js/app-core.js"></script>
 
     <script src="js/conversation-core.js?v=6"></script>

@@ -66,6 +66,7 @@ class CommandCenter {
         this.stats = null;
         this.stateManager = null;
         this.leadFormController = null; // Placeholder: main.js will inject this
+        this.leadFormatter = null;
 
         // Core properties
         this.currentConversationId = null;
@@ -200,6 +201,14 @@ class CommandCenter {
                 console.error('StatsModule class not found!');
             }
 
+            // 9.5 Lead Formatter Module
+            console.log('9.5 Initializing Lead Formatter...');
+            if (typeof LeadFormatterModule !== 'undefined') {
+                this.leadFormatter = new LeadFormatterModule(this);
+            } else {
+                console.warn('LeadFormatterModule class not found!');
+            }
+
             // 10. State Manager if available
             console.log('10. Initializing State Manager...');
             if (typeof StateManager !== 'undefined') {
@@ -232,7 +241,8 @@ class CommandCenter {
                 ai: !!this.ai,
                 emailTab: !!this.emailTab,
                 stats: !!this.stats,
-                leadFormController: '(pending injection from main.js)'
+                leadFormController: '(pending injection from main.js)',
+                leadFormatter: !!this.leadFormatter
             });
 
             // Make modules globally accessible for compatibility

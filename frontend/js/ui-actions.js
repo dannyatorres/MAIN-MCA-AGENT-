@@ -2,7 +2,13 @@
 
 const globalActions = {
     // --- Navigation & Modals ---
-    'open-formatter': () => window.open('/lead_reformatter.html', '_blank'),
+    'open-formatter': () => {
+        if (window.commandCenter?.leadFormatter) {
+            window.commandCenter.leadFormatter.open();
+        } else {
+            document.getElementById('formatterModal')?.classList.remove('hidden');
+        }
+    },
 
     'open-verifier': () => {
         if (typeof window.openCleanerModal === 'function') window.openCleanerModal();

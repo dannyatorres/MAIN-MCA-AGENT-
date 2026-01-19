@@ -150,6 +150,7 @@ app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/usage', usageRoutes);
 app.use('/api/strategies', require('./routes/strategies'));
 app.use('/api/submissions', require('./routes/submissions'));
+app.use('/api/formatter', require('./routes/lead-formatter'));
 
 // Contact Form
 app.post('/api/contact', (req, res) => {
