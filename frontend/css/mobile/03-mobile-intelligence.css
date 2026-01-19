@@ -22,6 +22,11 @@
     padding-bottom: 40px;
 }
 
+/* --- 8. FIX: Hidden state overrides (specificity fix) --- */
+#intelligenceCards.hidden {
+    display: none !important;
+}
+
 /* --- 3. THE CARDS --- */
 .intel-card {
     background: linear-gradient(180deg, #1f242c 0%, #13171f 100%);
