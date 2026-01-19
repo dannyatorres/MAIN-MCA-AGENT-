@@ -408,27 +408,28 @@
 
 /* PDF Handling */
 .doc-preview-content.is-pdf {
+    /* Fix "Greyish" look: Set background to pure white */
+    background: #ffffff;
+
     /*
-       We let the container scroll because the iframe inside will
-       expand to the full height of the PDF on iOS.
+       Set overflow to 'auto' on the container so scrolling works
+       if the PDF expands on iOS.
     */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 
-    /* Set background to white so it looks clean */
-    background: #ffffff;
-
-    /* Ensure it takes full available height so scrollbar appears */
-    height: 100%;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Important: fill the screen */
 }
 
-.doc-preview-content.is-pdf iframe {
+.doc-preview-content.is-pdf embed {
+    flex: 1;
     width: 100%;
     height: 100%;
-    min-height: 100vh;
     border: none;
     display: block;
+    background: #ffffff;
 }
 
 /* New: Unsupported File Type Styling */
