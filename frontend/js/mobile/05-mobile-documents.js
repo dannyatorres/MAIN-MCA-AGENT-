@@ -197,6 +197,9 @@ Object.assign(window.MobileApp.prototype, {
                 const pdf = await pdfjsLib.getDocument(url).promise;
                 content.innerHTML = '';
 
+                const existingLoader = document.getElementById('docViewerLoader');
+                if (existingLoader) existingLoader.style.display = 'none';
+
                 const container = document.createElement('div');
                 container.className = 'pdf-pages-container';
                 content.appendChild(container);
@@ -241,6 +244,9 @@ Object.assign(window.MobileApp.prototype, {
             content.innerHTML = '';
             viewer.style.display = 'none';
             mainApp.style.display = 'flex';
+
+            const existingLoader = document.getElementById('docViewerLoader');
+            if (existingLoader) existingLoader.style.display = 'flex';
         };
     },
 
