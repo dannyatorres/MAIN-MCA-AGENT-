@@ -65,10 +65,18 @@ window.MobileApp = class MobileApp {
     async apiCall(endpoint, options = {}) {
         try {
             if (typeof ApiService !== 'undefined') {
-                if (options.method === 'POST') {
-                    return await ApiService.post(endpoint, options.body ? JSON.parse(options.body) : {});
+                const body = options.body ? JSON.parse(options.body) : {};
+
+                switch (options.method) {
+                    case 'POST':
+                        return await ApiService.post(endpoint, body);
+                    case 'PUT':
+                        return await ApiService.put(endpoint, body);
+                    case 'DELETE':
+                        return await ApiService.delete(endpoint);
+                    default:
+                        return await ApiService.get(endpoint);
                 }
-                return await ApiService.get(endpoint);
             }
 
             // Fallback
