@@ -165,10 +165,42 @@ Object.assign(window.MobileApp.prototype, {
     previewDocument(docId) {
         const doc = this.currentDocuments?.find(d => d.id == docId);
         if (!doc) return;
+        
+        // 1. Get Elements
+        const mainApp = document.getElementById('panelContainer');
+        const viewer = document.getElementById('documentViewer');
+        const content = document.getElementById('docViewerContent');
+        const loader = document.getElementById('docViewerLoader');
+        const title = document.getElementById('docViewerTitle');
+        const closeBtn = document.getElementById('closeDocViewerBtn');
 
-        // Construct absolute URL to force native viewer
-        const fullUrl = `${window.location.origin}/api/documents/view/${docId}?t=${Date.now()}`;
-        window.location.assign(fullUrl);
+        if (!mainApp || !viewer || !content || !loader || !title || !closeBtn) return;
+
+        // 2. Immediate Feedback
+        title.textContent = doc.originalFilename || 'Document';
+        loader.style.display = 'flex';
+        content.innerHTML = '';
+        mainApp.style.display = 'none';
+        viewer.style.display = 'flex';
+
+        // 3. Load the PDF
+        const url = `/api/documents/view/${docId}?t=${Date.now()}`;
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.scrolling = 'no';
+
+        iframe.onload = () => {
+            loader.style.display = 'none';
+        };
+
+        content.appendChild(iframe);
+
+        // 4. Handle Close
+        closeBtn.onclick = () => {
+            content.innerHTML = '';
+            viewer.style.display = 'none';
+            mainApp.style.display = 'flex';
+        };
     },
 
     // ============ EDIT DOCUMENT ============
