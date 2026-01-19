@@ -163,46 +163,8 @@ Object.assign(window.MobileApp.prototype, {
 
     // ============ PREVIEW ============
     previewDocument(docId) {
-        const doc = this.currentDocuments?.find(d => d.id == docId);
-        const filename = doc?.originalFilename || doc?.original_filename || 'Document';
-        const mimeType = doc?.mimeType || doc?.mime_type || '';
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-
-        const isImage = mimeType.includes('image');
-
-        let contentHtml;
-        if (isImage) {
-            contentHtml = `<img src="${url}" class="doc-preview-image" alt="${this.utils.escapeHtml(filename)}">`;
-        } else {
-            // PDF - add #view=FitH to fit width
-            contentHtml = `<iframe src="${url}#view=FitH&toolbar=0" class="doc-preview-iframe"></iframe>`;
-        }
-
-        const modalHtml = `
-            <div class="doc-preview-modal" id="docPreviewModal">
-                <div class="doc-preview-header">
-                    <button class="doc-preview-close" id="closeDocPreview">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                    <span class="doc-preview-title">${this.utils.escapeHtml(filename)}</span>
-                    <a href="${url}" target="_blank" class="doc-preview-external" title="Open in new tab">
-                        <i class="fas fa-external-link-alt"></i>
-                    </a>
-                </div>
-                <div class="doc-preview-body">
-                    ${contentHtml}
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        document.getElementById('closeDocPreview').onclick = () => this.closeDocPreview();
-    },
-
-    closeDocPreview() {
-        const modal = document.getElementById('docPreviewModal');
-        if (modal) modal.remove();
+        window.open(url, '_blank');
     },
 
     // ============ EDIT DOCUMENT ============
