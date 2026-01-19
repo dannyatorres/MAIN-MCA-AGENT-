@@ -164,14 +164,22 @@ Object.assign(window.MobileApp.prototype, {
     // ============ PREVIEW ============
     previewDocument(docId) {
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-        const fullUrl = window.location.origin + url;
+        const modal = document.getElementById('docPreviewModal');
+        const frame = document.getElementById('docPreviewFrame');
+        const backBtn = document.getElementById('docPreviewBack');
 
-        // Create a temporary link to force external browser
-        const link = document.createElement('a');
-        link.href = fullUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.click();
+        if (!modal || !frame || !backBtn) {
+            window.open(url, '_blank');
+            return;
+        }
+
+        frame.src = url;
+        modal.classList.remove('hidden');
+
+        backBtn.onclick = () => {
+            modal.classList.add('hidden');
+            frame.src = '';
+        };
     },
 
     // ============ EDIT DOCUMENT ============
