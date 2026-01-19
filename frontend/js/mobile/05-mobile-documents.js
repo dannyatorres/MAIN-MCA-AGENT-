@@ -170,32 +170,47 @@ Object.assign(window.MobileApp.prototype, {
         const mainApp = document.getElementById('panelContainer');
         const viewer = document.getElementById('documentViewer');
         const content = document.getElementById('docViewerContent');
-        const loader = document.getElementById('docViewerLoader');
         const title = document.getElementById('docViewerTitle');
         const closeBtn = document.getElementById('closeDocViewerBtn');
 
-        if (!mainApp || !viewer || !content || !loader || !title || !closeBtn) return;
+        if (!mainApp || !viewer || !content || !title || !closeBtn) return;
 
         // 2. Immediate Feedback
         title.textContent = doc.originalFilename || 'Document';
-        loader.style.display = 'flex';
         content.innerHTML = '';
         mainApp.style.display = 'none';
         viewer.style.display = 'flex';
 
-        // 3. Load the PDF
+        // 3. Create Loader
+        const loader = document.createElement('div');
+        loader.className = 'doc-loader-overlay';
+        loader.innerHTML = '<div class="loading-spinner"></div><p>Loading Statement...</p>';
+        content.appendChild(loader);
+
+        // 4. Calculate scale for "paper" width
+        const paperWidth = 850;
+        const screenWidth = window.innerWidth;
+        const scale = (screenWidth - 20) / paperWidth;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'doc-iframe-wrapper';
+        wrapper.style.transform = `scale(${scale})`;
+        wrapper.style.height = `${100 / scale}%`;
+
+        // 5. Load the PDF
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
         const iframe = document.createElement('iframe');
         iframe.src = url;
-        iframe.scrolling = 'no';
+        iframe.scrolling = 'yes';
 
         iframe.onload = () => {
-            loader.style.display = 'none';
+            setTimeout(() => loader.remove(), 500);
         };
 
-        content.appendChild(iframe);
+        wrapper.appendChild(iframe);
+        content.appendChild(wrapper);
 
-        // 4. Handle Close
+        // 6. Handle Close
         closeBtn.onclick = () => {
             content.innerHTML = '';
             viewer.style.display = 'none';

@@ -312,62 +312,87 @@
     border-radius: 8px;
 }
 
-/* 1. The Viewer Page */
+/* 1. The Full Page Container */
 .doc-viewer-page {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: #ffffff;
-    z-index: 9999;
+    background: #525659; /* Standard PDF Grey Background */
+    z-index: 99999;
     display: flex;
     flex-direction: column;
 }
 
+/* 2. The Header */
 .doc-viewer-header {
     background: #0f1115;
     flex-shrink: 0;
+    z-index: 10;
 }
 
-/* 2. The Container */
+/* 3. The Scrollable Area */
 .doc-viewer-body {
     flex: 1;
     width: 100%;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    height: 100%;
+    overflow: hidden; /* We handle scrolling inside the scaled wrapper */
     position: relative;
-    background: #fff;
+    background: #525659;
+    display: flex;
+    justify-content: center; /* Centers the paper */
 }
 
-/* 3. The "Blown Up" Fix */
-.doc-viewer-body iframe {
-    width: 1px;
-    min-width: 100%;
-    min-height: 100%;
-    height: auto;
+/* 4. The "Paper" Container */
+.doc-iframe-wrapper {
+    width: 850px;
+    height: 100%;
+    transform-origin: top center;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.doc-iframe-wrapper iframe {
+    width: 100%;
+    height: 100%;
     border: none;
     display: block;
 }
 
-/* 4. The Loading Spinner */
+/* 5. The Loader */
 .doc-loader-overlay {
     position: absolute;
-    top: 60px;
+    top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 5;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 5;
+    backdrop-filter: blur(5px);
+}
+
+.doc-loader-overlay .loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
 }
 
 .doc-loader-overlay p {
-    margin-top: 15px;
-    color: #333;
+    color: #1f2937;
+    font-weight: 600;
     font-size: 14px;
-    font-weight: 500;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
