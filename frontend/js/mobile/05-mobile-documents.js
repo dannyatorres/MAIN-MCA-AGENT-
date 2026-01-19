@@ -255,65 +255,72 @@ Object.assign(window.MobileApp.prototype, {
 
     // ============ EDIT DOCUMENT ============
     editDocument(docId) {
-        const doc = this.currentDocuments?.find(d => d.id == docId);
-        if (!doc) {
-            this.showToast('Document not found', 'error');
-            return;
-        }
+        try {
+            const doc = this.currentDocuments?.find(d => d.id == docId);
+            if (!doc) {
+                alert('Doc not found. ID: ' + docId + '\nDocs loaded: ' + (this.currentDocuments?.length || 0));
+                return;
+            }
 
-        const filename = doc.originalFilename || doc.original_filename || 'Unknown';
-        const lastDot = filename.lastIndexOf('.');
-        const nameWithoutExt = lastDot > 0 ? filename.substring(0, lastDot) : filename;
-        const extension = lastDot > 0 ? filename.substring(lastDot) : '';
-        const docType = doc.documentType || doc.document_type || 'Other';
+            const filename = doc.originalFilename || doc.original_filename || 'Unknown';
+            const lastDot = filename.lastIndexOf('.');
+            const nameWithoutExt = lastDot > 0 ? filename.substring(0, lastDot) : filename;
+            const extension = lastDot > 0 ? filename.substring(lastDot) : '';
+            const docType = doc.documentType || doc.document_type || 'Other';
 
-        const docTypes = [
-            'Bank Statement', '4 Months Bank Statement', 'Tax Return',
-            'Signed Application', "Driver's License", 'Voided Check',
-            'Financial Statement', 'Business License', 'Invoice', 'Contract', 'Other'
-        ];
+            const docTypes = [
+                'Bank Statement', '4 Months Bank Statement', 'Tax Return',
+                'Signed Application', "Driver's License", 'Voided Check',
+                'Financial Statement', 'Business License', 'Invoice', 'Contract', 'Other'
+            ];
 
-        const modalHtml = `
-            <div class="upload-modal-mobile" id="editDocModalMobile">
-                <div class="upload-modal-content">
-                    <div class="upload-modal-header">
-                        <h3>Edit Document</h3>
-                        <button class="upload-modal-close" id="closeEditDocModal">&times;</button>
-                    </div>
+            const escapeHtml = (str) => str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');
 
-                    <div class="upload-file-item">
-                        <label class="edit-doc-label">Document Name</label>
-                        <div class="edit-doc-name-row">
-                            <input type="text" id="editDocName" class="mobile-form-input" value="${nameWithoutExt.replace(/\"/g, '&quot;')}">
-                            <span class="edit-doc-ext">${extension}</span>
+            const modalHtml = `
+                <div class="upload-modal-mobile" id="editDocModalMobile">
+                    <div class="upload-modal-content">
+                        <div class="upload-modal-header">
+                            <h3>Edit Document</h3>
+                            <button class="upload-modal-close" id="closeEditDocModal">&times;</button>
+                        </div>
+
+                        <div class="upload-file-item">
+                            <label class="edit-doc-label">Document Name</label>
+                            <div class="edit-doc-name-row">
+                                <input type="text" id="editDocName" class="mobile-form-input" value="${escapeHtml(nameWithoutExt)}">
+                                <span class="edit-doc-ext">${extension}</span>
+                            </div>
+                        </div>
+
+                        <div class="upload-file-item">
+                            <label class="edit-doc-label">Document Type</label>
+                            <select id="editDocType" class="upload-type-select">
+                                ${docTypes.map(type => `
+                                    <option value="${type}" ${docType === type ? 'selected' : ''}>${type}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <input type="hidden" id="editDocExtension" value="${extension}">
+                        <input type="hidden" id="editDocId" value="${docId}">
+
+                        <div class="upload-modal-actions">
+                            <button class="upload-cancel-btn" id="cancelEditDocMobile">Cancel</button>
+                            <button class="upload-confirm-btn" id="saveEditDocMobile">Save Changes</button>
                         </div>
                     </div>
-
-                    <div class="upload-file-item">
-                        <label class="edit-doc-label">Document Type</label>
-                        <select id="editDocType" class="upload-type-select">
-                            ${docTypes.map(type => `
-                                <option value="${type}" ${docType === type ? 'selected' : ''}>${type}</option>
-                            `).join('')}
-                        </select>
-                    </div>
-
-                    <input type="hidden" id="editDocExtension" value="${extension}">
-                    <input type="hidden" id="editDocId" value="${docId}">
-
-                    <div class="upload-modal-actions">
-                        <button class="upload-cancel-btn" id="cancelEditDocMobile">Cancel</button>
-                        <button class="upload-confirm-btn" id="saveEditDocMobile">Save Changes</button>
-                    </div>
                 </div>
-            </div>
-        `;
+            `;
 
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-        document.getElementById('closeEditDocModal').onclick = () => this.closeEditDocModal();
-        document.getElementById('cancelEditDocMobile').onclick = () => this.closeEditDocModal();
-        document.getElementById('saveEditDocMobile').onclick = () => this.saveDocumentEdit();
+            document.getElementById('closeEditDocModal').onclick = () => this.closeEditDocModal();
+            document.getElementById('cancelEditDocMobile').onclick = () => this.closeEditDocModal();
+            document.getElementById('saveEditDocMobile').onclick = () => this.saveDocumentEdit();
+        
+        } catch (err) {
+            alert('Edit error: ' + err.message);
+        }
     },
 
     closeEditDocModal() {
