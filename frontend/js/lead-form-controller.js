@@ -263,7 +263,7 @@ export class LeadFormController {
                                 <label>Ownership %</label>
                                 <div class="input-wrapper">
                                     ${iconInput('fas fa-percent')}
-                                    <input type="number" name="ownershipPercent" value="${val('ownership_percentage', 'ownership_percent', 'ownerOwnershipPercentage')}" class="form-input" max="100">
+                                    <input type="number" name="ownershipPercent" value="${val('owner_ownership_percent', 'ownership_percentage', 'ownership_percent', 'ownerOwnershipPercentage')}" class="form-input" max="100">
                                 </div>
                             </div>
                         </div>
