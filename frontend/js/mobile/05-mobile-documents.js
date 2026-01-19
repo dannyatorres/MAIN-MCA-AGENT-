@@ -165,43 +165,10 @@ Object.assign(window.MobileApp.prototype, {
     previewDocument(docId) {
         const doc = this.currentDocuments?.find(d => d.id == docId);
         if (!doc) return;
-        
-        // 1. Get Elements
-        const mainApp = document.getElementById('panelContainer');
-        const viewer = document.getElementById('documentViewer');
-        const content = document.getElementById('docViewerContent');
-        const title = document.getElementById('docViewerTitle');
-        const closeBtn = document.getElementById('closeDocViewerBtn');
 
-        if (!mainApp || !viewer || !content || !title || !closeBtn) return;
-
-        // 2. Prepare URL
-        const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-
-        // 3. Set Content
-        title.textContent = doc.originalFilename || 'Document';
-        content.innerHTML = `
-            <iframe 
-                src="${url}" 
-                type="application/pdf"
-                scrolling="no"
-                style="width: 100%; height: 100%; border: none;"
-            ></iframe>
-        `;
-
-        // 4. Swap Views (Hide App, Show Viewer)
-        mainApp.style.display = 'none';
-        viewer.style.display = 'flex';
-
-        // 5. Handle Close (Back Button)
-        closeBtn.onclick = () => {
-            // Destroy iframe to stop memory leaks
-            content.innerHTML = '';
-
-            // Swap Views Back
-            viewer.style.display = 'none';
-            mainApp.style.display = 'flex';
-        };
+        // Construct absolute URL to force native viewer
+        const fullUrl = `${window.location.origin}/api/documents/view/${docId}?t=${Date.now()}`;
+        window.location.assign(fullUrl);
     },
 
     // ============ EDIT DOCUMENT ============
