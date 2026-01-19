@@ -409,25 +409,25 @@
 /* PDF Handling */
 .doc-preview-content.is-pdf {
     /*
-       Changed 'hidden' to 'auto' so you can scroll around the "zoomed in" PDF.
-       Added momentum scrolling for iOS.
+       We let the container scroll because the iframe inside will
+       expand to the full height of the PDF on iOS.
     */
-    overflow: auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    background: #525659;
-    display: block; /* Ensure block formatting context */
+
+    /* Set background to white so it looks clean */
+    background: #ffffff;
+
+    /* Ensure it takes full available height so scrollbar appears */
+    height: 100%;
+    display: block;
 }
 
 .doc-preview-content.is-pdf iframe {
-    /*
-       On iOS, iframes flatten to the height of their content.
-       We set min-dimensions to ensure visibility, but let it grow.
-    */
     width: 100%;
-    min-height: 100%; /* Ensures it fills the view vertically */
-    height: auto;     /* Allows it to expand if the browser flattens it */
+    height: 100%;
+    min-height: 100vh;
     border: none;
-    background: #ffffff;
     display: block;
 }
 

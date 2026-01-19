@@ -184,9 +184,9 @@ Object.assign(window.MobileApp.prototype, {
         if (isImage) {
             contentHtml = `<img src="${url}" alt="Document">`;
         } else if (isPdf) {
-            contentHtml = `<object data="${url}" type="application/pdf" width="100%" height="100%">
-                             <p>Preview not available. <a href="${url}" class="doc-download-link">Download</a></p>
-                           </object>`;
+            // Revert to iframe for better scrolling support on iOS
+            // The CSS will handle the "one page" issue
+            contentHtml = `<iframe src="${url}" type="application/pdf" frameborder="0"></iframe>`;
         } else {
             // 3. Fallback for Word/Excel/etc.
             const iconClass = this.getDocIconClass(mimeType, doc.documentType);
