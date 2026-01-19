@@ -164,14 +164,39 @@ Object.assign(window.MobileApp.prototype, {
     // ============ PREVIEW ============
     previewDocument(docId) {
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-        const fullUrl = window.location.origin + url;
+        
+        // Create in-app preview overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'docPreviewOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0f1115;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+        `;
 
-        // Create a temporary link to force external browser
-        const link = document.createElement('a');
-        link.href = fullUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.click();
+        overlay.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #161b22; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <button id="closePreviewBtn" style="background: none; border: none; color: #e6edf3; font-size: 16px; padding: 8px 12px; cursor: pointer;">
+                    <i class="fas fa-chevron-left"></i> Back
+                </button>
+                <a href="${url}" download style="background: none; border: none; color: #3b82f6; font-size: 14px; padding: 8px 12px; text-decoration: none;">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+            <iframe src="${url}" style="flex: 1; border: none; width: 100%; background: white;"></iframe>
+        `;
+
+        document.body.appendChild(overlay);
+
+        document.getElementById('closePreviewBtn').onclick = () => {
+            overlay.remove();
+        };
     },
 
     // ============ EDIT DOCUMENT ============
