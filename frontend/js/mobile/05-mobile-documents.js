@@ -173,19 +173,19 @@ Object.assign(window.MobileApp.prototype, {
         overlay.className = 'doc-preview-overlay';
 
         overlay.innerHTML = `
-            <header class="mobile-header">
+            <header class="mobile-header preview-header">
                 <button class="back-btn" id="closePreviewBtn">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <h2>Preview</h2>
+                <h2 class="preview-title">${this.utils.escapeHtml(doc?.originalFilename || doc?.original_filename || 'Document')}</h2>
                 <a href="${url}" download class="back-btn">
                     <i class="fas fa-download"></i>
                 </a>
             </header>
-            <div class="doc-preview-content">
+            <div class="doc-preview-content ${isImage ? 'is-img' : 'is-pdf'}">
                 ${isImage
                     ? `<img src="${url}" alt="Document">`
-                    : `<iframe src="${url}#zoom=page-width"></iframe>`
+                    : `<iframe src="${url}" type="application/pdf"></iframe>`
                 }
             </div>
         `;
@@ -193,7 +193,8 @@ Object.assign(window.MobileApp.prototype, {
         document.body.appendChild(overlay);
 
         document.getElementById('closePreviewBtn').onclick = () => {
-            overlay.remove();
+            overlay.classList.add('closing');
+            setTimeout(() => overlay.remove(), 250);
         };
     },
 
