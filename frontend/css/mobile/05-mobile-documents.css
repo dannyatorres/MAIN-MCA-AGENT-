@@ -392,6 +392,26 @@
     font-size: 14px;
 }
 
+/* --- PDF.js Canvas Pages --- */
+.pdf-pages-container {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    height: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+.pdf-page-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border-radius: 4px;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

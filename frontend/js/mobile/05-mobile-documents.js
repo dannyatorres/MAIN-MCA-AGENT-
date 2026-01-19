@@ -165,8 +165,17 @@ Object.assign(window.MobileApp.prototype, {
     previewDocument(docId) {
         const doc = this.currentDocuments?.find(d => d.id == docId);
         if (!doc) return;
-        
-        // 1. Get Elements
+
+        const mimeType = doc.mimeType || doc.mime_type || '';
+        const url = `/api/documents/view/${docId}?t=${Date.now()}`;
+
+        // Non-PDFs: open in new tab
+        if (!mimeType.includes('pdf')) {
+            window.open(url, '_blank');
+            return;
+        }
+
+        // PDFs: use PDF.js
         const mainApp = document.getElementById('panelContainer');
         const viewer = document.getElementById('documentViewer');
         const content = document.getElementById('docViewerContent');
@@ -175,42 +184,59 @@ Object.assign(window.MobileApp.prototype, {
 
         if (!mainApp || !viewer || !content || !title || !closeBtn) return;
 
-        // 2. Immediate Feedback
         title.textContent = doc.originalFilename || 'Document';
-        content.innerHTML = '';
+        content.innerHTML = '<div class="doc-loader-overlay"><div class="loading-spinner"></div><p>Loading PDF...</p></div>';
         mainApp.style.display = 'none';
         viewer.style.display = 'flex';
 
-        // 3. Create Loader
-        const loader = document.createElement('div');
-        loader.className = 'doc-loader-overlay';
-        loader.innerHTML = '<div class="loading-spinner"></div><p>Loading Statement...</p>';
-        content.appendChild(loader);
+        // PDF.js setup
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // 4. Calculate scale for "paper" width
-        const paperWidth = 850;
-        const screenWidth = window.innerWidth;
-        const scale = (screenWidth - 20) / paperWidth;
+        const renderPDF = async () => {
+            try {
+                const pdf = await pdfjsLib.getDocument(url).promise;
+                content.innerHTML = '';
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'doc-iframe-wrapper';
-        wrapper.style.transform = `scale(${scale})`;
-        wrapper.style.height = `${100 / scale}%`;
+                const container = document.createElement('div');
+                container.className = 'pdf-pages-container';
+                content.appendChild(container);
 
-        // 5. Load the PDF
-        const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-        const iframe = document.createElement('iframe');
-        iframe.src = url;
-        iframe.scrolling = 'yes';
+                const containerWidth = content.clientWidth - 16;
 
-        iframe.onload = () => {
-            setTimeout(() => loader.remove(), 500);
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1 });
+                    const scale = containerWidth / viewport.width;
+                    const scaledViewport = page.getViewport({ scale });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.className = 'pdf-page-canvas';
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+                    container.appendChild(canvas);
+
+                    await page.render({
+                        canvasContext: canvas.getContext('2d'),
+                        viewport: scaledViewport
+                    }).promise;
+                }
+            } catch (err) {
+                console.error('PDF render failed:', err);
+                content.innerHTML = `
+                    <div class="docs-empty">
+                        <div class="docs-empty-icon"><i class="fas fa-exclamation-circle"></i></div>
+                        <h3>Cannot Preview</h3>
+                        <p>Unable to load PDF</p>
+                        <button class="upload-btn-mobile" style="margin-top:16px;width:auto;padding:12px 24px;" onclick="window.open('${url}', '_blank')">
+                            <i class="fas fa-external-link-alt"></i> Open in Browser
+                        </button>
+                    </div>
+                `;
+            }
         };
 
-        wrapper.appendChild(iframe);
-        content.appendChild(wrapper);
+        renderPDF();
 
-        // 6. Handle Close
         closeBtn.onclick = () => {
             content.innerHTML = '';
             viewer.style.display = 'none';
