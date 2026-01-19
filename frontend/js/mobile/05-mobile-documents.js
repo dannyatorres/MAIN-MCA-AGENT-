@@ -165,7 +165,8 @@ Object.assign(window.MobileApp.prototype, {
     previewDocument(docId) {
         const doc = this.currentDocuments?.find(d => d.id == docId);
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-        const filename = doc?.originalFilename || doc?.original_filename || 'Document';
+        const mimeType = doc?.mimeType || doc?.mime_type || '';
+        const isImage = mimeType.includes('image');
 
         const overlay = document.createElement('div');
         overlay.id = 'docPreviewOverlay';
@@ -177,13 +178,15 @@ Object.assign(window.MobileApp.prototype, {
                     <i class="fas fa-chevron-left"></i>
                 </button>
                 <h2>Preview</h2>
-                <div style="width:40px"></div>
+                <a href="${url}" download class="back-btn">
+                    <i class="fas fa-download"></i>
+                </a>
             </header>
-            <div class="doc-preview-message">
-                <i class="fas fa-file-alt"></i>
-                <h3>${this.utils.escapeHtml(filename)}</h3>
-                <p>Tap below to view document</p>
-                <a href="${url}" target="_blank" rel="noopener" class="doc-open-btn">Open Document</a>
+            <div class="doc-preview-content">
+                ${isImage
+                    ? `<img src="${url}" alt="Document">`
+                    : `<iframe src="${url}#zoom=page-width"></iframe>`
+                }
             </div>
         `;
 
