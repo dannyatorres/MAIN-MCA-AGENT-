@@ -327,3 +327,8 @@
     font-weight: bold;
     margin-right: 8px;
 }
+
+/* Ensure AI view displays when not hidden */
+#aiAssistantView:not(.hidden) {
+    display: flex !important;
+}

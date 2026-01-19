@@ -76,7 +76,11 @@ Object.assign(window.MobileApp.prototype, {
         // Show the requested view
         let viewId = '';
         switch(type) {
-            case 'ai': viewId = 'aiAssistantView'; this.loadAiChat(); break;
+            case 'ai':
+                viewId = 'aiAssistantView';
+                console.log('Opening AI view, viewId:', viewId);
+                this.loadAiChat();
+                break;
             case 'edit': viewId = 'editView'; this.loadEditForm(); break;
             case 'lenders': viewId = 'lendersView'; this.loadLendersView(); break;
             case 'documents': viewId = 'documentsView'; this.loadDocumentsView(); break;
@@ -85,7 +89,9 @@ Object.assign(window.MobileApp.prototype, {
         }
 
         const view = document.getElementById(viewId);
+        console.log('View element:', view, 'classList:', view?.classList);
         if (view) view.classList.remove('hidden');
+        console.log('After removing hidden:', view?.classList);
     },
 
     closeIntelView() {
