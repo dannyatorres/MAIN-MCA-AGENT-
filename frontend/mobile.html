@@ -40,7 +40,8 @@
                     <div class="connection-status">
                         <span class="status-dot" id="connectionDot"></span>
                     </div>
-                    <button class="logout-btn" id="logoutBtn" title="Sign Out">
+                    <button class="logout-btn" id="logoutBtn" title="Sign Out"
+                        onclick="if(confirm('Sign out?')) window.location.href='/logout';">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
@@ -56,12 +57,16 @@
         <!-- Panel 2: Chat -->
         <div class="panel" id="panelChat">
             <header class="mobile-header chat-header">
-                <button class="back-btn" id="backToList"><i class="fas fa-chevron-left"></i></button>
+                <button class="back-btn" id="backToList" onclick="window.mobileApp.goToPanel(0)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
                 <div class="chat-details-stack">
                     <h2 class="chat-business-title" id="chatName">Select a conversation</h2>
                     <span class="chat-row-secondary" id="chatBusiness"></span>
                 </div>
-                <button class="details-btn" id="goToDetails"><i class="fas fa-info-circle"></i></button>
+                <button class="details-btn" id="goToDetails" onclick="window.mobileApp.goToPanel(2)">
+                    <i class="fas fa-info-circle"></i>
+                </button>
             </header>
             <div class="messages-container" id="messagesContainer">
                 <div class="empty-state">
@@ -81,7 +86,10 @@
         <!-- Panel 3: Intelligence Hub -->
         <div class="panel" id="panelDetails">
             <header class="mobile-header">
-                <button class="back-btn" id="backToChat"><i class="fas fa-chevron-left"></i></button>
+                <button class="back-btn" id="backToChat"
+                    onclick="window.mobileApp.currentIntelView ? window.mobileApp.closeIntelView() : window.mobileApp.goToPanel(1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
                 <h2 id="detailsTitle">Intelligence</h2>
                 <div style="width: 40px;"></div>
             </header>

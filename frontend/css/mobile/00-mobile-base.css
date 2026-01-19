@@ -74,7 +74,8 @@ html, body {
     border-radius: 8px; /* Touch target feedback shape */
 }
 
-.back-btn:active {
+.back-btn:active,
+.logout-btn:active {
     background: rgba(255,255,255,0.05);
 }
 

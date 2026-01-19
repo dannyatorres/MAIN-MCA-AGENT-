@@ -112,31 +112,6 @@ window.MobileApp = class MobileApp {
 
     // ============ EVENT LISTENERS ============
     setupEventListeners() {
-        // Navigation
-        document.getElementById('backToList').addEventListener('click', () => this.goToPanel(0));
-        document.getElementById('goToDetails').addEventListener('click', () => this.goToPanel(2));
-        document.getElementById('backToChat').addEventListener('click', () => {
-            if (this.currentIntelView) {
-                this.closeIntelView();
-            } else {
-                this.goToPanel(1);
-            }
-        });
-
-        // Logout
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (confirm('Sign out?')) {
-                    window.location.href = '/logout';
-                }
-            });
-        } else {
-            console.error('Logout button not found!');
-        }
-
         // Conversation selection
         this.dom.conversationList.addEventListener('click', (e) => {
             const item = e.target.closest('.conversation-item');
