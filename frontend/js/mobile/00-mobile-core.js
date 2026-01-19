@@ -151,6 +151,13 @@ window.MobileApp = class MobileApp {
             this.dom.messageInput.style.height = Math.min(this.dom.messageInput.scrollHeight, 120) + 'px';
         });
 
+        // Logout
+        document.getElementById('logoutBtn')?.addEventListener('click', () => {
+            if (confirm('Sign out?')) {
+                window.location.href = '/logout';
+            }
+        });
+
         this.setupIntelligenceListeners();
     }
 }
