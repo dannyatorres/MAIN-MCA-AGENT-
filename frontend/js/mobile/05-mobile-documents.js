@@ -77,7 +77,7 @@ Object.assign(window.MobileApp.prototype, {
                         <button class="doc-action-btn preview-doc" data-doc-id="${doc.id}" title="Preview">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="doc-action-btn edit-doc" onclick="alert(JSON.stringify({id:'${doc.id}', _id:'${doc._id}', docId:'${doc.docId}'})); window.mobileApp.editDocument('${doc.id || doc._id || doc.docId}')" title="Edit">
+                        <button class="doc-action-btn" onclick="window.mobileApp.editDocument('${doc.id}')" title="Edit">
                             <i class="fas fa-pen"></i>
                         </button>
                         <button class="doc-action-btn delete delete-doc" data-doc-id="${doc.id}" title="Delete">
