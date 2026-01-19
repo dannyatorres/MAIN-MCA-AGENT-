@@ -319,7 +319,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: #000000; /* Pure black for immersive feel */
+    background: #000000;
     z-index: 9999;
     display: flex;
     flex-direction: column;
@@ -330,71 +330,89 @@
     animation: slideOutPreview 0.25s ease-in forwards;
 }
 
-/* Header tweaks for preview mode */
-.mobile-header.preview-header {
-    background: rgba(20, 20, 20, 0.9);
+/* HEADER STYLES */
+/* We use the ID to ensure these styles override standard header styles */
+#docPreviewOverlay .mobile-header {
+    background: rgba(20, 20, 20, 0.95); /* Dark background */
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    /* Handle Safe Area (Notch) */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    
+    /* CRITICAL: Handle the Notch */
     padding-top: max(12px, env(safe-area-inset-top));
     height: auto;
-    min-height: 60px;
-    z-index: 10;
+    min-height: 50px; /* Base height + padding */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-.preview-title {
+#docPreviewOverlay .preview-title {
     font-size: 16px;
     font-weight: 600;
-    color: #fff;
-    max-width: 200px;
+    color: #ffffff;
+    flex: 1;
+    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-align: center;
 }
 
-/* Content Container */
+/* Button Styling for Dark Mode */
+#docPreviewOverlay .back-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff; /* Force white icon */
+    font-size: 18px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* CONTENT CONTAINER */
 .doc-preview-content {
     flex: 1;
     position: relative;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #000;
+    overflow: hidden; /* Prevent double scrollbars */
+    background: #f0f0f0; /* Light grey behind doc */
 }
 
-/* --- IMAGE MODE --- */
+/* IMAGE MODE */
 .doc-preview-content.is-img {
-    overflow-y: auto; /* Allow scrolling for tall images */
+    overflow-y: auto;
     display: flex;
-    align-items: center; /* Center vertically */
-    justify-content: center; /* Center horizontally */
+    align-items: center;
+    justify-content: center;
     -webkit-overflow-scrolling: touch;
+    background: #000;
 }
 
 .doc-preview-content.is-img img {
     max-width: 100%;
-    max-height: 100%; /* Fit to screen by default */
-    width: auto;
-    height: auto;
+    max-height: 100%;
     object-fit: contain;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-/* --- PDF MODE --- */
+/* PDF MODE */
 .doc-preview-content.is-pdf {
-    display: block;
+    /* iOS PDF scrolling fix */
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
 }
 
 .doc-preview-content.is-pdf iframe {
     width: 100%;
     height: 100%;
     border: none;
-    background: #fff; /* PDFs need white bg to look right */
+    background: #ffffff;
     display: block;
 }
 
-/* Animations */
+/* ANIMATIONS */
 @keyframes slideInPreview {
     from { transform: translateY(100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
