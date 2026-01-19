@@ -118,13 +118,11 @@ Object.assign(window.MobileApp.prototype, {
     },
 
     setupDocumentsListeners() {
-        // File input - use cloneNode to prevent duplicate listeners
+        // File input
         const fileInput = document.getElementById('mobileFileInput');
-        if (fileInput) {
-            const newFileInput = fileInput.cloneNode(true);
-            fileInput.parentNode.replaceChild(newFileInput, fileInput);
-
-            newFileInput.addEventListener('change', (e) => {
+        if (fileInput && !fileInput._bound) {
+            fileInput._bound = true;
+            fileInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     this.showUploadModal(Array.from(e.target.files));
                     e.target.value = '';
@@ -132,23 +130,26 @@ Object.assign(window.MobileApp.prototype, {
             });
         }
 
-        // Document actions - NO cloneNode, use event delegation with a flag
+        // Document actions - just use delegation, no cloning
         const container = document.getElementById('documentsContainer');
-        if (container && !container._listenersAttached) {
-            container._listenersAttached = true;
-
+        if (container && !container._bound) {
+            container._bound = true;
             container.addEventListener('click', (e) => {
                 const card = e.target.closest('.doc-card-mobile');
                 if (!card) return;
 
                 const docId = card.dataset.docId;
+                const doc = this.currentDocuments?.find(d => d.id == docId);
+                if (!doc) return;
 
                 if (e.target.closest('.preview-doc')) {
                     this.previewDocument(docId);
                 }
 
                 if (e.target.closest('.edit-doc')) {
-                    this.editDocument(docId);
+                    const filename = doc.originalFilename || doc.original_filename || 'Unknown';
+                    const docType = doc.documentType || doc.document_type || 'Other';
+                    this.openEditModal(docId, filename, docType);
                 }
 
                 if (e.target.closest('.delete-doc')) {
