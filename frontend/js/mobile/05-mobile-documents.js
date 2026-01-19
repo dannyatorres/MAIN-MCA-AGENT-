@@ -163,74 +163,15 @@ Object.assign(window.MobileApp.prototype, {
 
     // ============ PREVIEW ============
     previewDocument(docId) {
-        const doc = this.currentDocuments?.find(d => d.id == docId);
-        if (!doc) {
-            this.showToast('Document not found', 'error');
-            return;
-        }
-
-        const filename = doc.originalFilename || doc.original_filename || 'Document';
-        const mimeType = doc.mimeType || doc.mime_type || '';
-        const docType = doc.documentType || doc.document_type || 'Document';
-        const fileSize = this.formatFileSize(doc.fileSize || doc.file_size || 0);
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-        const downloadUrl = `/api/documents/download/${docId}`;
+        const fullUrl = window.location.origin + url;
 
-        const isImage = mimeType.includes('image');
-
-        let contentHtml;
-        if (isImage) {
-            // Images: show directly with pinch-zoom
-            contentHtml = `
-                <div class="doc-preview-image-container">
-                    <img src="${url}" class="doc-preview-image" alt="${this.utils.escapeHtml(filename)}">
-                </div>
-            `;
-        } else {
-            // PDFs/Docs: show info card with download button
-            const iconClass = this.getDocIconClass(mimeType, docType);
-            const iconType = this.getDocIconType(mimeType, docType);
-
-            contentHtml = `
-                <div class="doc-preview-info">
-                    <div class="doc-preview-icon ${iconType}">
-                        <i class="${iconClass}"></i>
-                    </div>
-                    <div class="doc-preview-name">${this.utils.escapeHtml(filename)}</div>
-                    <div class="doc-preview-meta">
-                        <span class="doc-type-tag">${docType}</span>
-                        <span>${fileSize}</span>
-                    </div>
-                    <p class="doc-preview-hint">Tap download to open this document</p>
-                    <a href="${downloadUrl}" class="doc-preview-download-btn" download="${this.utils.escapeHtml(filename)}">
-                        <i class="fas fa-download"></i> Download & Open
-                    </a>
-                </div>
-            `;
-        }
-
-        const modalHtml = `
-            <div class="doc-preview-modal" id="docPreviewModal">
-                <div class="doc-preview-header">
-                    <button class="doc-preview-back" id="closeDocPreview">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                    <span class="doc-preview-title">${this.utils.escapeHtml(filename)}</span>
-                    <div style="width: 40px;"></div>
-                </div>
-                <div class="doc-preview-body">
-                    ${contentHtml}
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        document.getElementById('closeDocPreview').onclick = () => this.closeDocPreview();
-    },
-
-    closeDocPreview() {
-        const modal = document.getElementById('docPreviewModal');
-        if (modal) modal.remove();
+        // Create a temporary link to force external browser
+        const link = document.createElement('a');
+        link.href = fullUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.click();
     },
 
     // ============ EDIT DOCUMENT ============
