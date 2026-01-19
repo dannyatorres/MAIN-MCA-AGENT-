@@ -159,23 +159,23 @@ class LenderAdmin {
 
         const modalHTML = `
             <div id="networkDirectoryModal" class="modal" style="display:flex; z-index: 2000;">
-                <div class="modal-content" style="max-width: 550px; background: #161b22; border-radius: 12px;">
+                <div class="modal-content admin-modal">
                     <div class="modal-header">
                         <h3><i class="fas fa-building" style="margin-right: 8px; color: #3b82f6;"></i>Network Directory</h3>
                         <button class="modal-close" onclick="document.getElementById('networkDirectoryModal').remove()">×</button>
                     </div>
-                    <div class="modal-body submission-body" style="padding: 0;">
-                        <div style="padding: 12px; border-bottom: 1px solid #30363d;">
-                            <input type="text" id="lenderSearchInput" class="form-input" placeholder="Search lenders..." style="width: 100%;" oninput="window.commandCenter.lenderAdmin.filterLenders(this.value)">
+                    <div class="modal-body">
+                        <div class="admin-search">
+                            <input type="text" id="lenderSearchInput" class="form-input" placeholder="Search lenders..." oninput="window.commandCenter.lenderAdmin.filterLenders(this.value)">
                         </div>
-                        <div class="submission-col-header" style="border-radius: 0; border: none;">
-                            <div class="submission-col-title">All Lenders</div>
+                        <div class="admin-list-header">
+                            <span>All Lenders</span>
                             <div class="header-actions">
-                                <button onclick="window.commandCenter.lenderAdmin.showAddModal()" class="action-link" style="font-size: 11px;">+ Add New</button>
-                                <button onclick="window.commandCenter.lenderAdmin.loadNetworkDirectory()" class="action-link" style="font-size: 11px;">Refresh</button>
+                                <button onclick="window.commandCenter.lenderAdmin.showAddModal()" class="action-link">+ Add New</button>
+                                <button onclick="window.commandCenter.lenderAdmin.loadNetworkDirectory()" class="action-link">Refresh</button>
                             </div>
                         </div>
-                        <div id="networkDirectoryContainer" class="selection-list" style="flex: 1; border: none; background: #0d1117; max-height: 500px; overflow-y: auto;">
+                        <div id="networkDirectoryContainer" class="admin-list">
                             <div class="loading-state"><div class="loading-spinner"></div> Loading...</div>
                         </div>
                     </div>
@@ -249,13 +249,13 @@ class LenderAdmin {
 
         const modalHTML = `
             <div id="ruleSuggestionsModal" class="modal" style="display:flex; z-index: 2000;">
-                <div class="modal-content" style="max-width: 550px; background: #161b22; border-radius: 12px;">
+                <div class="modal-content admin-modal">
                     <div class="modal-header">
                         <h3><i class="fas fa-brain" style="margin-right: 8px; color: #8b5cf6;"></i>AI Rule Suggestions</h3>
                         <button class="modal-close" onclick="document.getElementById('ruleSuggestionsModal').remove()">×</button>
                     </div>
-                    <div class="modal-body submission-body" style="padding: 0;">
-                        <div id="ruleSuggestionsContainerNew" style="max-height: 500px; overflow-y: auto; background: #0d1117;">
+                    <div class="modal-body">
+                        <div id="ruleSuggestionsContainerNew" class="admin-list">
                             <div class="loading-state" style="padding: 15px;"><div class="loading-spinner"></div> Loading...</div>
                         </div>
                     </div>
@@ -304,13 +304,13 @@ class LenderAdmin {
 
         const modalHTML = `
             <div id="needsReviewModal" class="modal" style="display:flex; z-index: 2000;">
-                <div class="modal-content" style="max-width: 550px; background: #161b22; border-radius: 12px;">
+                <div class="modal-content admin-modal">
                     <div class="modal-header">
                         <h3><i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #f59e0b;"></i>Needs Review</h3>
                         <button class="modal-close" onclick="document.getElementById('needsReviewModal').remove()">×</button>
                     </div>
-                    <div class="modal-body submission-body" style="padding: 0;">
-                        <div id="needsReviewContainerNew" style="max-height: 500px; overflow-y: auto; background: #0d1117;">
+                    <div class="modal-body">
+                        <div id="needsReviewContainerNew" class="admin-list">
                             <div class="loading-state" style="padding: 15px;"><div class="loading-spinner"></div> Loading...</div>
                         </div>
                     </div>
