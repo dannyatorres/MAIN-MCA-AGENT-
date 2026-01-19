@@ -295,7 +295,7 @@
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const email = document.getElementById('username').value.trim(); // Can be email OR username
+            const email = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('loginError');
             const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -315,9 +315,11 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // Store user info for UI
                     localStorage.setItem('user', JSON.stringify(data.user));
-                    window.location.href = '/command-center.html';
+
+                    // Detect mobile and redirect accordingly
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    window.location.href = isMobile ? '/mobile' : '/command-center.html';
                 } else {
                     errorDiv.textContent = data.error || 'Login failed';
                     errorDiv.style.display = 'block';
