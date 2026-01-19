@@ -123,6 +123,13 @@ window.MobileApp = class MobileApp {
             }
         });
 
+        // Logout
+        document.getElementById('logoutBtn')?.addEventListener('click', () => {
+            if (confirm('Sign out?')) {
+                window.location.href = '/logout';
+            }
+        });
+
         // Conversation selection
         this.dom.conversationList.addEventListener('click', (e) => {
             const item = e.target.closest('.conversation-item');
@@ -149,13 +156,6 @@ window.MobileApp = class MobileApp {
         this.dom.messageInput.addEventListener('input', () => {
             this.dom.messageInput.style.height = 'auto';
             this.dom.messageInput.style.height = Math.min(this.dom.messageInput.scrollHeight, 120) + 'px';
-        });
-
-        // Logout
-        document.getElementById('logoutBtn')?.addEventListener('click', () => {
-            if (confirm('Sign out?')) {
-                window.location.href = '/logout';
-            }
         });
 
         this.setupIntelligenceListeners();
