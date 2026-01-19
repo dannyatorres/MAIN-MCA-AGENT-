@@ -164,7 +164,14 @@ Object.assign(window.MobileApp.prototype, {
     // ============ PREVIEW ============
     previewDocument(docId) {
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-        window.open(url, '_blank');
+        const fullUrl = window.location.origin + url;
+
+        // Create a temporary link to force external browser
+        const link = document.createElement('a');
+        link.href = fullUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.click();
     },
 
     // ============ EDIT DOCUMENT ============
