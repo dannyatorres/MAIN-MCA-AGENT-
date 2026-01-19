@@ -330,24 +330,27 @@
     animation: slideOutPreview 0.25s ease-in forwards;
 }
 
-/* HEADER STYLES */
-/* We use the ID to ensure these styles override standard header styles */
-#docPreviewOverlay .mobile-header {
-    background: rgba(20, 20, 20, 0.95); /* Dark background */
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+/* CUSTOM HEADER (Disconnected from .mobile-header) */
+.doc-view-header {
+    background: rgba(22, 27, 34, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     
-    /* CRITICAL: Handle the Notch */
-    padding-top: max(12px, env(safe-area-inset-top));
-    height: auto;
-    min-height: 50px; /* Base height + padding */
+    /* THE FIX: Explicitly handle the notch */
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: 12px;
+    padding-left: 16px;
+    padding-right: 16px;
+    
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    flex-shrink: 0; /* Prevents header from squishing */
 }
 
-#docPreviewOverlay .preview-title {
+/* Typography & Icons */
+.doc-view-title {
     font-size: 16px;
     font-weight: 600;
     color: #ffffff;
@@ -356,20 +359,27 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin: 0;
 }
 
-/* Button Styling for Dark Mode */
-#docPreviewOverlay .back-btn {
+.doc-close-btn,
+.doc-download-btn {
     background: transparent;
     border: none;
-    color: #ffffff; /* Force white icon */
+    color: #ffffff; /* Forces white icons */
     font-size: 18px;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    border-radius: 50%;
+}
+
+.doc-close-btn:active,
+.doc-download-btn:active {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* CONTENT CONTAINER */
@@ -377,18 +387,17 @@
     flex: 1;
     position: relative;
     width: 100%;
-    overflow: hidden; /* Prevent double scrollbars */
-    background: #f0f0f0; /* Light grey behind doc */
+    background: #1a1a1a;
+    overflow: hidden;
 }
 
-/* IMAGE MODE */
+/* Image Handling */
 .doc-preview-content.is-img {
     overflow-y: auto;
     display: flex;
     align-items: center;
     justify-content: center;
     -webkit-overflow-scrolling: touch;
-    background: #000;
 }
 
 .doc-preview-content.is-img img {
@@ -397,11 +406,10 @@
     object-fit: contain;
 }
 
-/* PDF MODE */
+/* PDF Handling */
 .doc-preview-content.is-pdf {
-    /* iOS PDF scrolling fix */
     -webkit-overflow-scrolling: touch;
-    overflow-y: auto;
+    overflow-y: scroll; /* Force scrolling for PDFs */
 }
 
 .doc-preview-content.is-pdf iframe {
@@ -412,10 +420,10 @@
     display: block;
 }
 
-/* ANIMATIONS */
+/* Animations */
 @keyframes slideInPreview {
-    from { transform: translateY(100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
 }
 
 @keyframes slideOutPreview {
