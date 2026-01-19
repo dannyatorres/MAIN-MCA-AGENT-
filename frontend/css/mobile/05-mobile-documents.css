@@ -432,6 +432,43 @@
     background: #ffffff;
 }
 
+/* The "Page" Container */
+.doc-viewer-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #ffffff; /* White for PDFs */
+    z-index: 9999;       /* Sit on top of everything */
+    display: flex;
+    flex-direction: column;
+}
+
+/* The Header */
+.doc-viewer-header {
+    background: #0f1115; /* Match your app theme */
+    flex-shrink: 0;
+}
+
+/* The Scrolling Body */
+.doc-viewer-body {
+    flex: 1;
+    overflow-y: auto; /* Enable vertical scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth iOS scrolling */
+    position: relative;
+    width: 100%;
+}
+
+/* The PDF Iframe */
+.doc-viewer-body iframe {
+    width: 100%;
+    min-height: 100%;
+    height: auto;
+    border: none;
+    display: block;
+}
+
 /* New: Unsupported File Type Styling */
 .doc-preview-content.is-unsupported {
     display: flex;
