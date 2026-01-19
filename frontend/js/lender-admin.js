@@ -159,7 +159,7 @@ class LenderAdmin {
 
         const modalHTML = `
             <div id="networkDirectoryModal" class="modal" style="display:flex; z-index: 2000;">
-                <div class="modal-content lender-submission-modal">
+                <div class="modal-content" style="max-width: 550px; background: #161b22; border-radius: 12px;">
                     <div class="modal-header">
                         <h3><i class="fas fa-building" style="margin-right: 8px; color: #3b82f6;"></i>Network Directory</h3>
                         <button class="modal-close" onclick="document.getElementById('networkDirectoryModal').remove()">×</button>
@@ -249,7 +249,7 @@ class LenderAdmin {
 
         const modalHTML = `
             <div id="ruleSuggestionsModal" class="modal" style="display:flex; z-index: 2000;">
-                <div class="modal-content lender-submission-modal">
+                <div class="modal-content" style="max-width: 550px; background: #161b22; border-radius: 12px;">
                     <div class="modal-header">
                         <h3><i class="fas fa-brain" style="margin-right: 8px; color: #8b5cf6;"></i>AI Rule Suggestions</h3>
                         <button class="modal-close" onclick="document.getElementById('ruleSuggestionsModal').remove()">×</button>
@@ -304,7 +304,7 @@ class LenderAdmin {
 
         const modalHTML = `
             <div id="needsReviewModal" class="modal" style="display:flex; z-index: 2000;">
-                <div class="modal-content lender-submission-modal">
+                <div class="modal-content" style="max-width: 550px; background: #161b22; border-radius: 12px;">
                     <div class="modal-header">
                         <h3><i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #f59e0b;"></i>Needs Review</h3>
                         <button class="modal-close" onclick="document.getElementById('needsReviewModal').remove()">×</button>
