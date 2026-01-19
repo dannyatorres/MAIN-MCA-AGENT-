@@ -165,7 +165,18 @@ Object.assign(window.MobileApp.prototype, {
     previewDocument(docId) {
         const doc = this.currentDocuments?.find(d => d.id == docId);
         const filename = doc?.originalFilename || doc?.original_filename || 'Document';
+        const mimeType = doc?.mimeType || doc?.mime_type || '';
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
+
+        const isImage = mimeType.includes('image');
+
+        let contentHtml;
+        if (isImage) {
+            contentHtml = `<img src="${url}" class="doc-preview-image" alt="${this.utils.escapeHtml(filename)}">`;
+        } else {
+            // PDF - add #view=FitH to fit width
+            contentHtml = `<iframe src="${url}#view=FitH&toolbar=0" class="doc-preview-iframe"></iframe>`;
+        }
 
         const modalHtml = `
             <div class="doc-preview-modal" id="docPreviewModal">
@@ -179,7 +190,7 @@ Object.assign(window.MobileApp.prototype, {
                     </a>
                 </div>
                 <div class="doc-preview-body">
-                    <iframe src="${url}" class="doc-preview-iframe"></iframe>
+                    ${contentHtml}
                 </div>
             </div>
         `;
