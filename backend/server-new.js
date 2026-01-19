@@ -159,10 +159,26 @@ app.post('/api/contact', (req, res) => {
     res.json({ success: true, message: 'Received' });
 });
 
-// --- MOBILE PWA ROUTE ---
+// --- MOBILE PWA ROUTE (with auto cache-busting) ---
+const fs = require('fs');
+const MOBILE_VERSION = Date.now(); // Updates on server restart
+
 app.get('/mobile', requireAuth, (req, res) => {
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.sendFile(path.join(__dirname, '../frontend/mobile.html'));
+    const htmlPath = path.join(__dirname, '../frontend/mobile.html');
+
+    fs.readFile(htmlPath, 'utf8', (err, html) => {
+        if (err) {
+            console.error('Failed to load mobile.html:', err);
+            return res.status(500).send('Error loading mobile app');
+        }
+
+        // Replace all ?v=XXXX with current version
+        const updatedHtml = html.replace(/\?v=\d+/g, `?v=${MOBILE_VERSION}`);
+
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Content-Type', 'text/html');
+        res.send(updatedHtml);
+    });
 });
 
 // --- 6. FRONTEND ROUTING ---

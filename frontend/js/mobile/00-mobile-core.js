@@ -124,11 +124,18 @@ window.MobileApp = class MobileApp {
         });
 
         // Logout
-        document.getElementById('logoutBtn')?.addEventListener('click', () => {
-            if (confirm('Sign out?')) {
-                window.location.href = '/logout';
-            }
-        });
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (confirm('Sign out?')) {
+                    window.location.href = '/logout';
+                }
+            });
+        } else {
+            console.error('Logout button not found!');
+        }
 
         // Conversation selection
         this.dom.conversationList.addEventListener('click', (e) => {
