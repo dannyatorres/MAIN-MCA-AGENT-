@@ -77,7 +77,7 @@ Object.assign(window.MobileApp.prototype, {
                         <button class="doc-action-btn preview-doc" data-doc-id="${doc.id}" title="Preview">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="doc-action-btn" onclick="window.mobileApp.editDocument('${doc.id}')" title="Edit">
+                        <button class="doc-action-btn" onclick="window.mobileApp.openEditModal('${doc.id}', '${(doc.originalFilename || doc.original_filename || 'Unknown').replace(/'/g, "\\'")}', '${doc.documentType || doc.document_type || 'Other'}')" title="Edit">
                             <i class="fas fa-pen"></i>
                         </button>
                         <button class="doc-action-btn delete delete-doc" data-doc-id="${doc.id}" title="Delete">
@@ -321,6 +321,62 @@ Object.assign(window.MobileApp.prototype, {
         } catch (err) {
             alert('Edit error: ' + err.message);
         }
+    },
+
+    openEditModal(docId, filename, docType) {
+        const lastDot = filename.lastIndexOf('.');
+        const nameWithoutExt = lastDot > 0 ? filename.substring(0, lastDot) : filename;
+        const extension = lastDot > 0 ? filename.substring(lastDot) : '';
+
+        const docTypes = [
+            'Bank Statement', '4 Months Bank Statement', 'Tax Return',
+            'Signed Application', "Driver's License", 'Voided Check',
+            'Financial Statement', 'Business License', 'Invoice', 'Contract', 'Other'
+        ];
+
+        const escapeHtml = (str) => String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');
+
+        const modalHtml = `
+            <div class="upload-modal-mobile" id="editDocModalMobile">
+                <div class="upload-modal-content">
+                    <div class="upload-modal-header">
+                        <h3>Edit Document</h3>
+                        <button class="upload-modal-close" id="closeEditDocModal">&times;</button>
+                    </div>
+
+                    <div class="upload-file-item">
+                        <label class="edit-doc-label">Document Name</label>
+                        <div class="edit-doc-name-row">
+                            <input type="text" id="editDocName" class="mobile-form-input" value="${escapeHtml(nameWithoutExt)}">
+                            <span class="edit-doc-ext">${extension}</span>
+                        </div>
+                    </div>
+
+                    <div class="upload-file-item">
+                        <label class="edit-doc-label">Document Type</label>
+                        <select id="editDocType" class="upload-type-select">
+                            ${docTypes.map(type => `
+                                <option value="${type}" ${docType === type ? 'selected' : ''}>${type}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+
+                    <input type="hidden" id="editDocExtension" value="${extension}">
+                    <input type="hidden" id="editDocId" value="${docId}">
+
+                    <div class="upload-modal-actions">
+                        <button class="upload-cancel-btn" id="cancelEditDocMobile">Cancel</button>
+                        <button class="upload-confirm-btn" id="saveEditDocMobile">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        document.getElementById('closeEditDocModal').onclick = () => this.closeEditDocModal();
+        document.getElementById('cancelEditDocMobile').onclick = () => this.closeEditDocModal();
+        document.getElementById('saveEditDocMobile').onclick = () => this.saveDocumentEdit();
     },
 
     closeEditDocModal() {
