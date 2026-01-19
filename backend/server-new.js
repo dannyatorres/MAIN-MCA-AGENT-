@@ -98,6 +98,21 @@ app.use(attachUser);
 // Auth routes (BEFORE requireAuth - these are public)
 app.use('/api/auth', require('./routes/auth'));
 
+// GET /logout - Browser redirect logout (for mobile and direct links)
+app.get('/logout', (req, res) => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(req.headers['user-agent']);
+
+    req.session.destroy(() => {
+        res.clearCookie('connect.sid');
+
+        if (isMobile) {
+            res.redirect('/mobile'); // Will redirect to login since no session
+        } else {
+            res.redirect('/'); // Goes to index.html (login page)
+        }
+    });
+});
+
 // Internal API endpoints (no user auth, uses secret key)
 app.post('/api/agent/morning-followup', async (req, res) => {
     const secret = req.headers['x-internal-secret'];
