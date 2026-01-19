@@ -284,7 +284,7 @@ Object.assign(window.MobileApp.prototype, {
                     <div class="upload-file-item">
                         <label class="edit-doc-label">Document Name</label>
                         <div class="edit-doc-name-row">
-                            <input type="text" id="editDocName" class="mobile-form-input" value="${this.utils.escapeHtml(nameWithoutExt)}">
+                            <input type="text" id="editDocName" class="mobile-form-input" value="${nameWithoutExt.replace(/\"/g, '&quot;')}">
                             <span class="edit-doc-ext">${extension}</span>
                         </div>
                     </div>
