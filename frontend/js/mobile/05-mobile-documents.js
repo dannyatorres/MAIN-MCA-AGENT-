@@ -163,14 +163,35 @@ Object.assign(window.MobileApp.prototype, {
 
     // ============ PREVIEW ============
     previewDocument(docId) {
+        const doc = this.currentDocuments?.find(d => d.id == docId);
+        const filename = doc?.originalFilename || doc?.original_filename || 'Document';
         const url = `/api/documents/view/${docId}?t=${Date.now()}`;
-        this.showToast('Opening document...', 'info');
 
-        const newWindow = window.open(url, '_blank');
-        if (!newWindow) {
-            // Popup blocked, try direct navigation
-            window.location.href = url;
-        }
+        const modalHtml = `
+            <div class="doc-preview-modal" id="docPreviewModal">
+                <div class="doc-preview-header">
+                    <button class="doc-preview-close" id="closeDocPreview">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <span class="doc-preview-title">${this.utils.escapeHtml(filename)}</span>
+                    <a href="${url}" target="_blank" class="doc-preview-external" title="Open in new tab">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
+                <div class="doc-preview-body">
+                    <iframe src="${url}" class="doc-preview-iframe"></iframe>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        document.getElementById('closeDocPreview').onclick = () => this.closeDocPreview();
+    },
+
+    closeDocPreview() {
+        const modal = document.getElementById('docPreviewModal');
+        if (modal) modal.remove();
     },
 
     // ============ EDIT DOCUMENT ============
