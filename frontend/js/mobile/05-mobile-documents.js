@@ -77,7 +77,7 @@ Object.assign(window.MobileApp.prototype, {
                         <button class="doc-action-btn preview-doc" data-doc-id="${doc.id}" title="Preview">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="doc-action-btn" onclick="window.mobileApp.openEditModal('${doc.id}', '${(doc.originalFilename || doc.original_filename || 'Unknown').replace(/'/g, "\\'")}', '${doc.documentType || doc.document_type || 'Other'}')" title="Edit">
+                        <button class="doc-action-btn edit-doc" data-doc-id="${doc.id}" title="Edit">
                             <i class="fas fa-pen"></i>
                         </button>
                         <button class="doc-action-btn delete delete-doc" data-doc-id="${doc.id}" title="Delete">
@@ -132,29 +132,26 @@ Object.assign(window.MobileApp.prototype, {
             });
         }
 
-        // Document actions - use cloneNode to prevent duplicate listeners
+        // Document actions - NO cloneNode, use event delegation with a flag
         const container = document.getElementById('documentsContainer');
-        if (container) {
-            const newContainer = container.cloneNode(true);
-            container.parentNode.replaceChild(newContainer, container);
+        if (container && !container._listenersAttached) {
+            container._listenersAttached = true;
 
-            newContainer.addEventListener('click', (e) => {
-                const previewBtn = e.target.closest('.preview-doc');
-                const editBtn = e.target.closest('.edit-doc');
-                const deleteBtn = e.target.closest('.delete-doc');
+            container.addEventListener('click', (e) => {
+                const card = e.target.closest('.doc-card-mobile');
+                if (!card) return;
 
-                if (previewBtn) {
-                    const docId = previewBtn.dataset.docId;
+                const docId = card.dataset.docId;
+
+                if (e.target.closest('.preview-doc')) {
                     this.previewDocument(docId);
                 }
 
-                if (editBtn) {
-                    const docId = editBtn.dataset.docId;
+                if (e.target.closest('.edit-doc')) {
                     this.editDocument(docId);
                 }
 
-                if (deleteBtn) {
-                    const docId = deleteBtn.dataset.docId;
+                if (e.target.closest('.delete-doc')) {
                     this.confirmDeleteDocument(docId);
                 }
             });
