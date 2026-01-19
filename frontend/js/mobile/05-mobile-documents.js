@@ -205,17 +205,20 @@ Object.assign(window.MobileApp.prototype, {
                 content.appendChild(container);
 
                 const containerWidth = content.clientWidth - 16;
+                const pixelRatio = window.devicePixelRatio || 1;
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const viewport = page.getViewport({ scale: 1 });
                     const scale = containerWidth / viewport.width;
-                    const scaledViewport = page.getViewport({ scale });
+                    const scaledViewport = page.getViewport({ scale: scale * pixelRatio });
 
                     const canvas = document.createElement('canvas');
                     canvas.className = 'pdf-page-canvas';
                     canvas.width = scaledViewport.width;
                     canvas.height = scaledViewport.height;
+                    canvas.style.width = `${containerWidth}px`;
+                    canvas.style.height = `${(viewport.height * scale)}px`;
                     container.appendChild(canvas);
 
                     await page.render({
