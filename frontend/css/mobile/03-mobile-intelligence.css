@@ -4,13 +4,6 @@
    ========================================================================== */
 
 /* --- 1. MAIN CONTAINER --- */
-.details-content {
-    /* Increased padding to 16px to center the grid better on mobile screens */
-    padding: 16px;
-    background-color: #0f1115;
-    min-height: 100%;
-    box-sizing: border-box;
-}
 
 /* --- 2. THE GRID --- */
 #intelligenceCards {
@@ -111,34 +104,37 @@
 
 /* --- 6. VIEW CONTAINERS --- */
 
-/* Parent needs positioning context */
+/* Panel uses flexbox - children fill remaining space */
 #panelDetails {
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+#panelDetails > .mobile-header {
+    flex-shrink: 0;
+}
+
+/* Both the card grid and intel-views fill remaining space */
+.details-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: #0f1115;
+    box-sizing: border-box;
 }
 
 .intel-view {
-    position: absolute;
-    /* Account for header height + safe area (notch) */
-    top: calc(56px + env(safe-area-inset-top, 0px));
-    left: 0;
-    right: 0;
-    /* Account for bottom safe area (home indicator) */
-    bottom: env(safe-area-inset-bottom, 0px);
-    background: #0f1115;
-    z-index: 20;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    animation: fadeIn 0.2s ease-out;
+    overflow: hidden;
+    background: #0f1115;
 }
 
 .intel-view.hidden {
     display: none !important;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 /* --- 7. UPLOAD BUTTON --- */
