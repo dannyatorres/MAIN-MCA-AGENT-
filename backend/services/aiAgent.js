@@ -69,7 +69,7 @@ const BASE_TOOLS = [
         type: "function",
         function: {
             name: "update_lead_status",
-            description: "Updates the lead's status/stage in the CRM.",
+            description: "CRITICAL: Call this IMMEDIATELY with status='DEAD' if the user says 'stop', 'not interested', 'unsubscribe', 'remove me', or 'wrong number'. This shuts off the auto-nudge system.",
             parameters: {
                 type: "object",
                 properties: {
