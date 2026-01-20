@@ -34,21 +34,33 @@ Object.assign(window.MobileApp.prototype, {
             let fcsData = null;
             try {
                 const fcsResult = await this.apiCall(`/api/fcs/results/${this.currentConversationId}`);
-                if (fcsResult.success) {
-                    fcsData = { ...fcsResult.analysis };
-                    const reportText = fcsResult.report || fcsResult.rawText;
-                    if (reportText) {
-                        const parsed = this.parseFcsReport(reportText);
-                        if (parsed.businessName) fcsData.businessName = parsed.businessName;
-                        if (parsed.position) fcsData.position = parsed.position;
-                        if (parsed.revenue) fcsData.average_revenue = parseInt(parsed.revenue);
-                        if (parsed.negativeDays) fcsData.average_negative_days = parseInt(parsed.negativeDays);
-                        if (parsed.deposits) fcsData.average_deposits = parseInt(parsed.deposits);
-                        if (parsed.state) fcsData.state = parsed.state;
-                        if (parsed.industry) fcsData.industry = parsed.industry;
+                if (fcsResult.success && fcsResult.analysis) {
+                    const a = fcsResult.analysis;
+                    const m = a.metrics || {};
+                    fcsData = {
+                        businessName: a.businessName,
+                        average_revenue: m.averageRevenue,
+                        average_deposits: m.averageDeposits,
+                        average_negative_days: m.averageNegativeDays,
+                        state: m.state,
+                        industry: m.industry,
+                        withholding_percentage: a.withholding_percentage || m.withholding_percentage,
+                        position: m.positionCount ? String(m.positionCount) : null
+                    };
+                    if (a.report) {
+                        const parsed = this.parseFcsReport(a.report);
+                        if (!fcsData.businessName && parsed.businessName) fcsData.businessName = parsed.businessName;
+                        if (!fcsData.position && parsed.position) fcsData.position = parsed.position;
+                        if (!fcsData.state && parsed.state) fcsData.state = parsed.state;
+                        if (!fcsData.industry && parsed.industry) fcsData.industry = parsed.industry;
+                        if (!fcsData.average_revenue && parsed.revenue) fcsData.average_revenue = parseInt(parsed.revenue);
+                        if (!fcsData.average_deposits && parsed.deposits) fcsData.average_deposits = parseInt(parsed.deposits);
+                        if (!fcsData.average_negative_days && parsed.negativeDays) fcsData.average_negative_days = parseInt(parsed.negativeDays);
                     }
                 }
-            } catch (e) { /* ignore FCS errors */ }
+            } catch (e) { 
+                console.error('FCS fetch error:', e);
+            }
 
             // Render the Form
             container.innerHTML = this.renderLendersForm(fcsData, cachedData);
