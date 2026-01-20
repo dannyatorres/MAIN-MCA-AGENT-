@@ -37,42 +37,41 @@
         <!-- Panel 1: Conversations List -->
         <div class="panel" id="panelConversations">
             <header class="mobile-header">
-                <div class="header-left">
-                    <div class="leads-dropdown" id="leadsDropdown">
-                        <button class="leads-dropdown-trigger" id="leadsDropdownTrigger">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <div class="leads-dropdown-menu" id="leadsDropdownMenu">
-                            <button class="leads-dropdown-item" id="dashboardBtn">
-                                <i class="fas fa-th-large"></i>
-                                <span>Dashboard</span>
-                            </button>
-                            <button class="leads-dropdown-item" id="newsBtn">
-                                <i class="fas fa-newspaper"></i>
-                                <span>News & Updates</span>
-                            </button>
-                            <div class="leads-dropdown-divider"></div>
-                            <button class="leads-dropdown-item" id="addNewLeadBtn">
-                                <i class="fas fa-plus"></i>
-                                <span>Add New Lead</span>
-                            </button>
-                            <button class="leads-dropdown-item" id="importCsvBtn">
-                                <i class="fas fa-file-import"></i>
-                                <span>Import CSV</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="leads-dropdown-backdrop" id="leadsDropdownBackdrop"></div>
+                <div class="header-user-menu" id="headerUserMenu">
+                    <div class="header-avatar" id="headerAvatar">MT</div>
+                    <span class="header-user-name" id="headerUserName">Mike Torres</span>
+                    <i class="fas fa-chevron-down header-chevron"></i>
                 </div>
-                <div class="header-actions">
-                    <div class="connection-status">
-                        <span class="status-dot" id="connectionDot"></span>
-                    </div>
-                    <button class="logout-btn" id="logoutBtn" title="Sign Out"
-                        onclick="if(confirm('Sign out?')) window.location.href='/logout';">
+                <div class="connection-status">
+                    <span class="status-dot" id="connectionDot"></span>
+                </div>
+                
+                <!-- Dropdown Menu -->
+                <div class="header-dropdown-menu" id="headerDropdownMenu">
+                    <button class="header-dropdown-item" id="dashboardBtn">
+                        <i class="fas fa-th-large"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="header-dropdown-item" id="newsBtn">
+                        <i class="fas fa-newspaper"></i>
+                        <span>News & Updates</span>
+                    </button>
+                    <div class="header-dropdown-divider"></div>
+                    <button class="header-dropdown-item" id="addNewLeadBtn">
+                        <i class="fas fa-plus"></i>
+                        <span>Add New Lead</span>
+                    </button>
+                    <button class="header-dropdown-item" id="importCsvBtn">
+                        <i class="fas fa-file-import"></i>
+                        <span>Import CSV</span>
+                    </button>
+                    <div class="header-dropdown-divider"></div>
+                    <button class="header-dropdown-item logout" id="logoutBtn">
                         <i class="fas fa-sign-out-alt"></i>
+                        <span>Sign Out</span>
                     </button>
                 </div>
+                <div class="header-dropdown-backdrop" id="headerDropdownBackdrop"></div>
             </header>
             <div class="search-bar" style="display: flex; gap: 8px; align-items: center;">
                 <div class="filter-wrapper" style="position: relative; flex-shrink: 0;">

@@ -180,44 +180,67 @@ window.MobileApp = class MobileApp {
     }
 
     setupLeadsDropdown() {
-        const dropdown = document.getElementById('leadsDropdown');
-        const trigger = document.getElementById('leadsDropdownTrigger');
-        const backdrop = document.getElementById('leadsDropdownBackdrop');
+        const headerUserMenu = document.getElementById('headerUserMenu');
+        const headerDropdownMenu = document.getElementById('headerDropdownMenu');
+        const headerDropdownBackdrop = document.getElementById('headerDropdownBackdrop');
 
-        if (!trigger || !dropdown) return;
+        if (!headerUserMenu || !headerDropdownMenu) return;
 
-        trigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            dropdown.classList.toggle('open');
+        const closeDropdown = () => {
+            headerUserMenu.classList.remove('open');
+            headerDropdownMenu.classList.remove('show');
+            headerDropdownBackdrop?.classList.remove('show');
+        };
+
+        headerUserMenu.addEventListener('click', () => {
+            headerUserMenu.classList.toggle('open');
+            headerDropdownMenu.classList.toggle('show');
+            headerDropdownBackdrop?.classList.toggle('show');
         });
 
-        backdrop?.addEventListener('click', () => {
-            dropdown.classList.remove('open');
+        headerDropdownBackdrop?.addEventListener('click', () => {
+            closeDropdown();
+        });
+
+        document.querySelectorAll('.header-dropdown-item').forEach(item => {
+            item.addEventListener('click', () => {
+                closeDropdown();
+            });
         });
 
         document.getElementById('addNewLeadBtn')?.addEventListener('click', () => {
-            dropdown.classList.remove('open');
             this.showToast('Add New Lead - Coming Soon', 'info');
         });
 
         document.getElementById('importCsvBtn')?.addEventListener('click', () => {
-            dropdown.classList.remove('open');
             this.showToast('Import CSV - Coming Soon', 'info');
         });
 
         document.getElementById('dashboardBtn')?.addEventListener('click', () => {
-            dropdown.classList.remove('open');
             this.openMobileDashboard();
         });
 
         document.getElementById('newsBtn')?.addEventListener('click', () => {
-            dropdown.classList.remove('open');
             this.showToast('News & Updates - Coming Soon', 'info');
+        });
+
+        document.getElementById('logoutBtn')?.addEventListener('click', () => {
+            if (confirm('Sign out?')) {
+                window.location.href = '/logout';
+            }
         });
 
         document.getElementById('closeDashboardBtn')?.addEventListener('click', () => {
             this.closeMobileDashboard();
         });
+
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userName = user.name || 'User';
+        const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const nameEl = document.getElementById('headerUserName');
+        const avatarEl = document.getElementById('headerAvatar');
+        if (nameEl) nameEl.textContent = userName;
+        if (avatarEl) avatarEl.textContent = initials;
     }
 
     async loadMobileDashboard() {
@@ -327,8 +350,9 @@ window.MobileApp = class MobileApp {
     openMobileDashboard() {
         const dashboard = document.getElementById('mobileDashboard');
         if (dashboard) dashboard.style.display = 'flex';
-        document.getElementById('leadsDropdownMenu')?.classList.remove('show');
-        document.getElementById('leadsDropdownBackdrop')?.classList.remove('show');
+        document.getElementById('headerUserMenu')?.classList.remove('open');
+        document.getElementById('headerDropdownMenu')?.classList.remove('show');
+        document.getElementById('headerDropdownBackdrop')?.classList.remove('show');
         this.loadMobileDashboard();
     }
 
