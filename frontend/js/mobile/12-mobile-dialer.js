@@ -386,16 +386,21 @@ Object.assign(window.MobileApp.prototype, {
 
         const leadId = this.dialerCurrentLead.id;
 
-        // Hide dialer but DON'T reset state
+        // Hide dialer
         document.getElementById('mobileDialer').style.display = 'none';
 
-        // Go to panel 0 first (conversations list)
-        this.goToPanel(0);
+        // Go directly to chat panel first
+        this.goToPanel(1);
 
-        // Then select and go to chat
-        setTimeout(() => {
-            this.selectConversation(leadId);
-        }, 100);
+        // Small delay to let panel transition complete, then load conversation
+        setTimeout(async () => {
+            try {
+                await this.selectConversation(leadId);
+            } catch (err) {
+                console.error('Error loading conversation:', err);
+                // Don't show error toast - it probably still loaded fine
+            }
+        }, 150);
     },
 
     dialerSkip() {
