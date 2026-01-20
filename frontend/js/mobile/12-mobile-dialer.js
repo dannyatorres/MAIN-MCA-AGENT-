@@ -134,7 +134,7 @@ Object.assign(window.MobileApp.prototype, {
 
             // Animate in
             card?.classList.remove('switching');
-        }, 150);
+        }, 80);
     },
 
     updateDialerNextUp() {
@@ -345,7 +345,36 @@ Object.assign(window.MobileApp.prototype, {
     },
 
     dialerSkip() {
-        this.logDialerDisposition('skip');
+        const lead = this.dialerCurrentLead;
+        if (!lead) return;
+
+        // Update stats immediately
+        this.dialerSessionStats.skipped++;
+        this.updateDialerSessionStats();
+
+        // Fire and forget API calls (don't wait)
+        this.apiCall('/api/dialer/disposition', {
+            method: 'POST',
+            body: JSON.stringify({
+                conversationId: lead.id,
+                disposition: 'skip',
+                attempt: this.dialerCurrentAttempt,
+                duration: 0
+            })
+        }).catch(err => console.error('Skip log failed:', err));
+
+        this.unlockDialerChannel(lead.id).catch(() => {});
+
+        // Move to next immediately
+        this.dialerCallStartTime = null;
+        this.dialerCurrentAttempt = 1;
+        this.dialerIndex++;
+
+        if (this.dialerIndex < this.dialerQueue.length) {
+            this.showCurrentDialerLead();
+        } else {
+            this.showDialerComplete();
+        }
     },
 
     showDialerDisposition() {

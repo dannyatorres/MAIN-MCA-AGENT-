@@ -79,12 +79,12 @@
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .dialer-lead-card.switching {
-    transform: scale(0.95);
-    opacity: 0.5;
+    transform: scale(0.97);
+    opacity: 0.7;
 }
 
 /* Loading spinner */
