@@ -335,7 +335,8 @@ class ConversationCore {
                 businessDisplay,
                 ownerDisplay,
                 c.lead_phone || c.phone,
-                c.id
+                c.id,
+                c.display_id
             );
         }
     }

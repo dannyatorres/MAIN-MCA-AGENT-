@@ -492,6 +492,13 @@
     white-space: nowrap;
 }
 
+.chat-row-cid {
+    font-size: 11px;
+    color: #2dd4bf;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
 .chat-header-actions {
     /* Actions stay on the right */
     margin-left: auto;
