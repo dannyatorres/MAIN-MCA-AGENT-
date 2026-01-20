@@ -46,6 +46,7 @@
                 </div>
             </header>
             <div class="search-bar" style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="searchInput" class="search-field-clean" placeholder="Search leads..." style="flex: 1;">
                 <div class="filter-wrapper" style="position: relative; flex-shrink: 0;">
                     <select class="state-filter-icon" id="mobileStateFilter" style="
                         appearance: none;
@@ -56,8 +57,9 @@
                         padding: 10px 28px 10px 12px;
                         font-size: 13px;
                         cursor: pointer;
+                        min-width: 44px;
                     ">
-                        <option value="">All</option>
+                        <option value=""></option>
                         <option value="UNREAD">Unread</option>
                         <option value="INTERESTED">Interested</option>
                         <option value="SUBMITTED">Submitted</option>
@@ -66,7 +68,6 @@
                     </select>
                     <i class="fas fa-filter" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 11px; color: var(--text-muted);"></i>
                 </div>
-                <input type="text" id="searchInput" class="search-field-clean" placeholder="Search leads..." style="flex: 1;">
             </div>
             <div class="conversations-list" id="conversationList">
                 <div class="loading-state"><div class="loading-spinner"></div><p>Loading...</p></div>
