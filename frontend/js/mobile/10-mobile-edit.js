@@ -315,11 +315,17 @@ Object.assign(window.MobileApp.prototype, {
                                 <input type="date" name="owner2DOB" class="mobile-form-input" value="${dateVal('owner2_dob', 'owner2DOB')}">
                             </div>
                         </div>
-                         <div class="mobile-form-group">
+                        <div class="mobile-form-group">
                             <label>Ownership %</label>
                             <input type="number" name="owner2OwnershipPercent" class="mobile-form-input" value="${val('owner2_ownership_percent', 'owner2OwnershipPercent')}" max="100">
                         </div>
                     </div>
+                </div>
+
+                <div class="mobile-form-section" style="background: transparent; border: none;">
+                    <button type="button" id="generateAppBtn" class="btn-mobile-generate">
+                        <i class="fas fa-file-pdf"></i> Generate App
+                    </button>
                 </div>
 
             </form>
@@ -445,6 +451,108 @@ Object.assign(window.MobileApp.prototype, {
             const newSave = saveBtn.cloneNode(true);
             saveBtn.parentNode.replaceChild(newSave, saveBtn);
             newSave.addEventListener('click', () => this.saveEditForm());
+        }
+
+        const generateBtn = document.getElementById('generateAppBtn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => this.generatePDF());
+        }
+    },
+
+    async generatePDF() {
+        const form = document.getElementById('mobileEditForm');
+        if (!form || !this.currentConversationId) {
+            alert('No form or conversation');
+            return;
+        }
+
+        const btn = document.getElementById('generateAppBtn');
+        const originalText = btn?.innerHTML || '';
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            btn.disabled = true;
+        }
+
+        try {
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => {
+                if (['annualRevenue', 'monthlyRevenue', 'requestedAmount'].includes(key)) {
+                    data[key] = String(value).replace(/[^0-9.]/g, '');
+                } else if (['primaryPhone', 'cellPhone', 'ownerPhone', 'owner2Phone'].includes(key)) {
+                    data[key] = String(value).replace(/\D/g, '');
+                } else {
+                    data[key] = value;
+                }
+            });
+
+            const pdfData = {
+                legalName: data.businessName,
+                dba: data.dbaName,
+                address: data.businessAddress,
+                city: data.businessCity,
+                state: data.businessState,
+                zip: data.businessZip,
+                telephone: data.primaryPhone,
+                businessEmail: data.businessEmail,
+                federalTaxId: data.federalTaxId,
+                dateBusinessStarted: data.businessStartDate,
+                entityType: data.entityType,
+                typeOfBusiness: data.industryType,
+                annualRevenue: data.annualRevenue,
+                requestedAmount: data.requestedAmount,
+                useOfFunds: data.useOfProceeds || 'Working Capital',
+                ownerFirstName: data.ownerFirstName,
+                ownerLastName: data.ownerLastName,
+                ownerTitle: 'Owner',
+                ownerAddress: data.ownerHomeAddress,
+                ownerCity: data.ownerHomeCity,
+                ownerState: data.ownerHomeState,
+                ownerZip: data.ownerHomeZip,
+                ownerEmail: data.ownerEmail,
+                ownerSSN: data.ownerSSN,
+                ownerDOB: data.ownerDOB,
+                ownershipPercent: data.ownershipPercent,
+                creditScore: data.creditScore || 'N/A',
+                owner2FirstName: data.owner2FirstName || '',
+                owner2LastName: data.owner2LastName || '',
+                owner2Address: data.owner2HomeAddress || '',
+                owner2City: data.owner2HomeCity || '',
+                owner2State: data.owner2HomeState || '',
+                owner2Zip: data.owner2HomeZip || '',
+                owner2Email: data.owner2Email || '',
+                owner2SSN: data.owner2SSN || '',
+                owner2DOB: data.owner2DOB || '',
+                owner2Percentage: data.owner2OwnershipPercent || '',
+                business_name: data.businessName,
+                phone: data.primaryPhone
+            };
+
+            const ownerName = `${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim();
+
+            const result = await this.apiCall(`/api/conversations/${this.currentConversationId}/generate-pdf-document`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    applicationData: pdfData,
+                    ownerName
+                })
+            });
+
+            if (result.success) {
+                this.showToast('Application PDF Generated!', 'success');
+                this.closeIntelView();
+                this.openIntelView('documents');
+            } else {
+                throw new Error(result.error || 'Failed to generate PDF');
+            }
+        } catch (err) {
+            console.error('PDF Generation Error:', err);
+            this.showToast('Failed to generate PDF', 'error');
+        } finally {
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
     },
 
