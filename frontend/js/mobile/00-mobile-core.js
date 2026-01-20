@@ -161,14 +161,8 @@ window.MobileApp = class MobileApp {
             this.dom.messageInput.style.height = Math.min(this.dom.messageInput.scrollHeight, 120) + 'px';
         });
 
-        // AI Toggle
-        document.getElementById('mobileAiToggleBtn')?.addEventListener('click', () => {
-            this.toggleAI();
-        });
-
-        // Call Button
-        document.getElementById('mobileCallBtn')?.addEventListener('click', () => {
-            this.startCall();
+        document.getElementById('chatActionsBtn')?.addEventListener('click', () => {
+            this.showChatActions();
         });
 
         this.setupIntelligenceListeners();

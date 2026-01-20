@@ -141,10 +141,10 @@ Object.assign(window.MobileApp.prototype, {
         async toggleAI() {
             if (!this.currentConversationId) return;
 
-            const btn = document.getElementById('mobileAiToggleBtn');
+            const btn = document.getElementById('chatActionsBtn');
             if (!btn) return;
 
-            const currentState = btn.dataset.state;
+            const currentState = btn.dataset.aiState;
             const newState = currentState !== 'on';
 
             this.updateAIButtonState(newState);
@@ -163,15 +163,9 @@ Object.assign(window.MobileApp.prototype, {
         },
 
         updateAIButtonState(enabled) {
-            const btn = document.getElementById('mobileAiToggleBtn');
-            if (!btn) return;
-
-            if (enabled) {
-                btn.dataset.state = 'on';
-                btn.classList.add('active');
-            } else {
-                btn.dataset.state = 'off';
-                btn.classList.remove('active');
+            const actionsBtn = document.getElementById('chatActionsBtn');
+            if (actionsBtn) {
+                actionsBtn.dataset.aiState = enabled ? 'on' : 'off';
             }
         },
 
@@ -179,11 +173,67 @@ Object.assign(window.MobileApp.prototype, {
             if (!this.currentConversationId) return;
 
             try {
-                const conv = await this.apiCall(`/api/conversations/${this.currentConversationId}`);
-                this.updateAIButtonState(conv.ai_enabled);
-            } catch (err) {
-                console.error('Failed to fetch AI state:', err);
-            }
+            const conv = await this.apiCall(`/api/conversations/${this.currentConversationId}`);
+            this.updateAIButtonState(conv.ai_enabled);
+        } catch (err) {
+            console.error('Failed to fetch AI state:', err);
+        }
+    },
+
+        showChatActions() {
+            document.getElementById('chatActionsPicker')?.remove();
+
+            const conv = this.selectedConversation;
+            const phone = conv?.lead_phone || conv?.phone;
+            const aiState = document.getElementById('chatActionsBtn')?.dataset.aiState === 'on';
+
+            const picker = document.createElement('div');
+            picker.id = 'chatActionsPicker';
+            picker.className = 'chat-actions-picker';
+            picker.innerHTML = `
+                <div class="chat-actions-backdrop"></div>
+                <div class="chat-actions-sheet">
+                    <button class="chat-action-item" data-action="call">
+                        <i class="fas fa-phone"></i>
+                        <span>Call Lead</span>
+                        ${phone ? `<span class="action-meta">${this.utils.formatPhone(phone)}</span>` : ''}
+                    </button>
+                    <button class="chat-action-item ${aiState ? 'active' : 'danger'}" data-action="ai-toggle">
+                        <i class="fas fa-robot"></i>
+                        <span>AI Auto-Reply</span>
+                        <span class="action-status ${aiState ? 'on' : 'off'}">${aiState ? 'ON' : 'OFF'}</span>
+                    </button>
+                    <button class="chat-action-item" data-action="intelligence">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Intelligence Hub</span>
+                    </button>
+                    <button class="chat-action-item cancel">Cancel</button>
+                </div>
+            `;
+
+            document.body.appendChild(picker);
+
+            picker.querySelector('.chat-actions-backdrop')?.addEventListener('click', () => picker.remove());
+            picker.querySelector('.cancel')?.addEventListener('click', () => picker.remove());
+
+            picker.querySelector('[data-action="call"]')?.addEventListener('click', () => {
+                picker.remove();
+                if (!phone) {
+                    alert('No phone number available');
+                    return;
+                }
+                this.showCallOptions(phone);
+            });
+
+            picker.querySelector('[data-action="ai-toggle"]')?.addEventListener('click', async () => {
+                picker.remove();
+                await this.toggleAI();
+            });
+
+            picker.querySelector('[data-action="intelligence"]')?.addEventListener('click', () => {
+                picker.remove();
+                this.goToPanel(2);
+            });
         },
 
         // ============ CALLING ============

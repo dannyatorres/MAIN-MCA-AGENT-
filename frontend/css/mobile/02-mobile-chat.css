@@ -33,6 +33,22 @@
     text-overflow: ellipsis;
 }
 
+.chat-actions-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: #8b949e;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-actions-btn:active {
+    color: #e6edf3;
+}
+
 .mobile-chat-actions {
     display: flex;
     gap: 8px;
@@ -170,6 +186,105 @@
 @keyframes callFadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+/* --- Chat Actions Sheet --- */
+.chat-actions-picker {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.chat-actions-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.2s ease;
+}
+
+.chat-actions-sheet {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    background: #1c1c1e;
+    border-radius: 14px 14px 0 0;
+    padding: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    animation: slideUp 0.25s ease;
+}
+
+.chat-action-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-radius: 10px;
+    color: #e6edf3;
+    font-size: 15px;
+    text-align: left;
+    margin-bottom: 6px;
+}
+
+.chat-action-item i {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    color: #3b82f6;
+}
+
+.chat-action-item .action-meta {
+    margin-left: auto;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.chat-action-item .action-status {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.chat-action-item .action-status.on {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.chat-action-item .action-status.off {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.chat-action-item.active i {
+    color: #10b981;
+}
+
+.chat-action-item.danger i {
+    color: #ef4444;
+}
+
+.chat-action-item.cancel {
+    justify-content: center;
+    background: transparent;
+    color: #6b7280;
+    margin-top: 8px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
 }
 
 /* --- 2. MESSAGES CONTAINER --- */
