@@ -417,6 +417,22 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             return { shouldReply: false };
         }
 
+        // =================================================================
+        // 🚨 LAYER 4D: CLOSE FILE CONFIRMATION CHECK
+        // If we asked to close and they said yes, stop immediately
+        // =================================================================
+        const weAskedToClose = lastOutbound.includes('close the file') || lastOutbound.includes('close it out');
+        const theySaidYes = ['yes', 'yeah', 'sure', 'go ahead', 'yes!'].includes(lastInbound);
+
+        if (weAskedToClose && theySaidYes) {
+            console.log('📁 Lead confirmed file close - marking as dead');
+            await db.query("UPDATE conversations SET state = 'DEAD' WHERE id = $1", [conversationId]);
+            return {
+                shouldReply: true,
+                content: "understood, ill close it out. if anything changes down the line feel free to reach back out"
+            };
+        }
+
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = await getGlobalPrompt(usageUserId);
 
