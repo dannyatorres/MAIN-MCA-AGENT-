@@ -39,15 +39,27 @@
             <header class="mobile-header">
                 <div class="header-user-menu" id="headerUserMenu">
                     <img src="/logo.png" alt="MCA" class="header-logo">
-                    <span class="header-user-name" id="headerUserName">Mike Torres</span>
+                    <span class="header-brand">MCAgent</span>
                     <i class="fas fa-chevron-down header-chevron"></i>
                 </div>
-                <div class="connection-status">
-                    <span class="status-dot" id="connectionDot"></span>
+                
+                <div class="header-right">
+                    <div class="header-role-badge" id="headerRoleBadge">Admin</div>
+                    <div class="connection-status">
+                        <span class="status-dot" id="connectionDot"></span>
+                    </div>
                 </div>
                 
                 <!-- Dropdown Menu -->
                 <div class="header-dropdown-menu" id="headerDropdownMenu">
+                    <div class="header-dropdown-user">
+                        <div class="dropdown-user-avatar" id="dropdownUserAvatar">MT</div>
+                        <div class="dropdown-user-info">
+                            <span class="dropdown-user-name" id="dropdownUserName">Mike Torres</span>
+                            <span class="dropdown-user-role" id="dropdownUserRole">Administrator</span>
+                        </div>
+                    </div>
+                    <div class="header-dropdown-divider"></div>
                     <button class="header-dropdown-item" id="dashboardBtn">
                         <i class="fas fa-th-large"></i>
                         <span>Dashboard</span>

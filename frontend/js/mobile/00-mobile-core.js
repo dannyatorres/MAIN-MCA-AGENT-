@@ -236,11 +236,22 @@ window.MobileApp = class MobileApp {
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const userName = user.name || 'User';
+        const userRole = user.role || 'agent';
         const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-        const nameEl = document.getElementById('headerUserName');
-        const avatarEl = document.getElementById('headerAvatar');
-        if (nameEl) nameEl.textContent = userName;
-        if (avatarEl) avatarEl.textContent = initials;
+
+        const roleBadge = document.getElementById('headerRoleBadge');
+        if (roleBadge) {
+            if (userRole === 'admin' || userRole === 'super_admin') {
+                roleBadge.textContent = 'Admin';
+                roleBadge.classList.add('admin');
+            } else {
+                roleBadge.textContent = 'Agent';
+            }
+        }
+
+        document.getElementById('dropdownUserName').textContent = userName;
+        document.getElementById('dropdownUserAvatar').textContent = initials;
+        document.getElementById('dropdownUserRole').textContent = (userRole === 'admin' || userRole === 'super_admin') ? 'Administrator' : 'Sales Agent';
     }
 
     async loadMobileDashboard() {

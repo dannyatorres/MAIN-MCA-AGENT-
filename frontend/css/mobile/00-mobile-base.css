@@ -395,7 +395,18 @@ html, body {
     to { transform: translateY(0); }
 }
 
-/* Header User Menu */
+/* Header Layout */
+.mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #0f1115;
+    border-bottom: 1px solid #30363d;
+    position: relative;
+}
+
+/* Left Side - Brand Menu */
 .header-user-menu {
     display: flex;
     align-items: center;
@@ -414,20 +425,17 @@ html, body {
 }
 
 .header-logo {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     object-fit: contain;
 }
 
-.header-user-name {
-    font-size: 14px;
-    font-weight: 600;
+.header-brand {
+    font-size: 15px;
+    font-weight: 700;
     color: #e6edf3;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    letter-spacing: -0.3px;
 }
 
 .header-chevron {
@@ -438,6 +446,48 @@ html, body {
 
 .header-user-menu.open .header-chevron {
     transform: rotate(180deg);
+}
+
+/* Right Side */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-role-badge {
+    padding: 6px 12px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.header-role-badge.admin {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.3);
+    color: #a78bfa;
+}
+
+.connection-status {
+    padding: 4px;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6e7681;
+    display: block;
+}
+
+.status-dot.connected {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
 }
 
 /* Dropdown Menu */
@@ -462,6 +512,44 @@ html, body {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
+}
+
+/* User Info in Dropdown */
+.header-dropdown-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+}
+
+.dropdown-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+}
+
+.dropdown-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dropdown-user-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e6edf3;
+}
+
+.dropdown-user-role {
+    font-size: 12px;
+    color: #8b949e;
 }
 
 .header-dropdown-item {
@@ -517,21 +605,4 @@ html, body {
 
 .header-dropdown-backdrop.show {
     display: block;
-}
-
-/* Connection status */
-.connection-status {
-    padding: 8px;
-}
-
-.status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #6e7681;
-}
-
-.status-dot.connected {
-    background: #10b981;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
 }
