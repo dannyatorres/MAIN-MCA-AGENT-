@@ -155,6 +155,18 @@ class ConversationCore {
             const stateFilter = document.getElementById('stateFilter')?.value || '';
 
             if (reset) {
+                // 1. VISUAL FEEDBACK: Clear list and show spinner IMMEDIATELY
+                const container = document.getElementById('conversationsList');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="loading-state" style="padding: 40px; text-align: center; color: #8b949e;">
+                            <div class="loading-spinner"></div>
+                            <p style="margin-top: 10px; font-size: 14px;">Updating list...</p>
+                        </div>
+                    `;
+                }
+
+                // 2. Reset Data
                 this.conversations.clear();
                 this.paginationOffset = 0;
                 this.hasMoreConversations = true;
