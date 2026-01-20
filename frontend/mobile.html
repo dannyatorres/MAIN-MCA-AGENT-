@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="/css/mobile/06-mobile-strategy.css?v=1019">
     <link rel="stylesheet" href="/css/mobile/07-mobile-ai.css?v=1019">
     <link rel="stylesheet" href="/css/mobile/08-mobile-fcs.css?v=1019">
+    <link rel="stylesheet" href="/css/mobile/09-mobile-dashboard.css?v=1019">
     <link rel="stylesheet" href="/css/mobile/10-mobile-edit.css?v=1019">
 
     <!-- Font Awesome for icons -->
@@ -295,6 +296,85 @@
                         </div>
                         <p>Loading strategy...</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Dashboard -->
+    <div id="mobileDashboard" class="mobile-dashboard-page" style="display: none;">
+        <header class="mobile-header">
+            <button class="back-btn" id="closeDashboardBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2>Dashboard</h2>
+            <div style="width: 40px;"></div>
+        </header>
+        
+        <div class="mobile-dashboard-content">
+            <!-- Hero Card -->
+            <div class="mobile-hero-card">
+                <h1 class="mobile-hero-greeting" id="mobileHeroGreeting">What's good?</h1>
+                <p class="mobile-hero-quote" id="mobileHeroQuote">"Success is not final, failure is not fatal."</p>
+                <div class="mobile-hero-date" id="mobileHeroDate"></div>
+            </div>
+            
+            <!-- Stats Grid -->
+            <div class="mobile-stats-grid">
+                <div class="mobile-stat-card">
+                    <div class="mobile-stat-icon"><i class="fas fa-fire"></i></div>
+                    <div class="mobile-stat-value" id="mobileActiveCount">-</div>
+                    <div class="mobile-stat-label">Active</div>
+                </div>
+                <div class="mobile-stat-card" data-action="show-submitted">
+                    <div class="mobile-stat-icon"><i class="fas fa-paper-plane"></i></div>
+                    <div class="mobile-stat-value" id="mobileSubmittedCount">-</div>
+                    <div class="mobile-stat-label">Submitted</div>
+                </div>
+                <div class="mobile-stat-card" data-action="show-offers">
+                    <div class="mobile-stat-icon" style="color: #10b981;"><i class="fas fa-dollar-sign"></i></div>
+                    <div class="mobile-stat-value" id="mobileOffersCount">-</div>
+                    <div class="mobile-stat-label">Offers</div>
+                </div>
+            </div>
+            
+            <!-- Goal Card -->
+            <div class="mobile-goal-card">
+                <div class="mobile-goal-header">
+                    <div>
+                        <div class="mobile-goal-title">Monthly Goal</div>
+                        <div class="mobile-goal-numbers">
+                            <span id="mobileFundedAmount">$0</span>
+                            <span class="mobile-goal-subtext">/ <span id="mobileGoalAmount">$500,000</span></span>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="mobile-goal-percentage" id="mobileGoalPercentage">0%</div>
+                        <div class="mobile-goal-deals"><span id="mobileDealsCount">0</span> deals</div>
+                    </div>
+                </div>
+                <div class="mobile-progress-track">
+                    <div class="mobile-progress-fill" id="mobileGoalProgressBar" style="width: 0%;"></div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="mobile-quick-actions">
+                <div class="mobile-action-card" data-action="open-dialer">
+                    <div class="mobile-action-icon"><i class="fas fa-phone-volume"></i></div>
+                    <div class="mobile-action-label">Dialer</div>
+                </div>
+                <div class="mobile-action-card" data-action="open-formatter">
+                    <div class="mobile-action-icon"><i class="fas fa-table"></i></div>
+                    <div class="mobile-action-label">Formatter</div>
+                </div>
+                <div class="mobile-action-card" data-action="open-lender-management">
+                    <div class="mobile-action-icon"><i class="fas fa-university"></i></div>
+                    <div class="mobile-action-label">Lenders</div>
+                </div>
+                <div class="mobile-action-card" data-action="open-verifier">
+                    <div class="mobile-action-icon"><i class="fas fa-user-check"></i></div>
+                    <div class="mobile-action-label">Verify</div>
                 </div>
             </div>
         </div>
