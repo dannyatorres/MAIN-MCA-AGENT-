@@ -268,7 +268,7 @@ Object.assign(window.MobileApp.prototype, {
 
                         <div class="mobile-form-group">
                             <label>Ownership %</label>
-                            <input type="number" name="ownershipPercent" class="mobile-form-input" value="${val('ownership_percentage', 'ownership_percent')}" max="100">
+                            <input type="number" name="ownershipPercent" class="mobile-form-input" value="${val('owner_ownership_percent', 'ownership_percentage', 'ownership_percent', 'ownerOwnershipPercentage')}" max="100">
                         </div>
                     </div>
                 </div>
