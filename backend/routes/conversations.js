@@ -25,9 +25,13 @@ router.get('/', async (req, res) => {
         // Get access clause based on user role
         const access = getConversationAccessClause(req.user, 'c');
 
+        // Only fetch assigned user info for admins
+        const includeAssignedUser = req.user.role === 'admin';
+
         let query = `
             SELECT
                 c.*,
+                ${includeAssignedUser ? `u.name as assigned_user_name, u.agent_name as assigned_agent_name,` : ''}
 
                 COALESCE((
                     SELECT COUNT(*) FROM messages m
@@ -46,6 +50,7 @@ router.get('/', async (req, res) => {
                  ORDER BY m.timestamp DESC LIMIT 1) as last_message
 
             FROM conversations c
+            ${includeAssignedUser ? 'LEFT JOIN users u ON c.assigned_user_id = u.id' : ''}
             WHERE ${access.clause}
         `;
 

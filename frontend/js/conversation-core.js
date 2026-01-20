@@ -443,6 +443,7 @@ class ConversationCore {
                     <div class="conversation-meta">
                         <span class="phone-number">${safePhone}</span>
                         <span class="cid-tag">CID# ${safeCid}</span>
+                        ${conv.assigned_user_name ? `<span class="agent-tag">${this.escapeHtml(conv.assigned_agent_name || conv.assigned_user_name)}</span>` : ''}
                     </div>
                 </div>
                 <div class="conversation-checkbox">

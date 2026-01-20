@@ -355,7 +355,8 @@
 /* Row 2: Phone ---------------- CID */
 .conversation-meta {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 8px;
     align-items: center;
     width: 100%;
 }
@@ -384,6 +385,14 @@
     padding: 2px 6px;
     border-radius: 4px;
     letter-spacing: -0.3px;
+}
+
+.agent-tag {
+    font-size: 11px;
+    color: #f39c12;
+    background: rgba(243, 156, 18, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 /* === ACTIVE STATE OVERRIDES === */
