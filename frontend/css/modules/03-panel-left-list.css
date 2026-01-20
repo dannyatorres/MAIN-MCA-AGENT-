@@ -358,6 +358,7 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    gap: 8px;
 }
 
 .phone-number {
@@ -386,12 +387,6 @@
     letter-spacing: -0.3px;
 }
 
-.conversation-agent {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 4px;
-}
-
 .agent-tag {
     font-size: 11px;
     font-weight: 600;
@@ -399,6 +394,7 @@
     background: rgba(243, 156, 18, 0.15);
     padding: 2px 8px;
     border-radius: 4px;
+    white-space: nowrap;
 }
 
 /* === ACTIVE STATE OVERRIDES === */
