@@ -30,16 +30,18 @@ class AIAssistant {
             return;
         }
 
-        // Reset when conversation changes
+        // Always reset init state because render() destroys the DOM
+        this.isInitialized = false;
+
+        // Reset loading state only when conversation changes
         if (String(this.currentConversationId) !== String(conversation.id)) {
             this.currentConversationId = String(conversation.id);
-            this.isInitialized = false;
             this.isLoading = false;
         }
 
         container.innerHTML = `
             <div class="ai-assistant-section">
-                <div id="aiChatMessages" class="ai-chat-messages">
+                <div id="aiChatMessages" class="ai-chat-scroll-area">
                     <div id="aiInitialSpinner" class="ai-loading-container">
                         <div class="ai-thinking ai-loading-spinner-center">
                             <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
