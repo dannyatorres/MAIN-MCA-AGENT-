@@ -538,18 +538,35 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
             return res.status(400).json({ error: 'No conversation IDs provided' });
         }
 
-        console.log('🗑️ Bulk deleting conversations:', conversationIds);
-
         const db = getDatabase();
 
+        // Filter conversations by user access
+        const access = getConversationAccessClause(req.user, 'c');
+        const accessPlaceholders = conversationIds
+            .map((_, index) => `$${access.paramOffset + index + 1}`)
+            .join(',');
+
+        const accessCheck = await db.query(
+            `SELECT id FROM conversations c WHERE ${access.clause} AND c.id IN (${accessPlaceholders})`,
+            [...access.params, ...conversationIds]
+        );
+
+        const allowedIds = accessCheck.rows.map(row => row.id);
+
+        if (allowedIds.length === 0) {
+            return res.status(403).json({ error: 'No permission to delete these conversations' });
+        }
+
+        console.log('🗑️ Bulk deleting conversations:', allowedIds);
+
         // Delete related records first to avoid foreign key constraints
-        const placeholders = conversationIds.map((_, index) => `$${index + 1}`).join(',');
+        const placeholders = allowedIds.map((_, index) => `$${index + 1}`).join(',');
 
         // Add error handling for each delete
         try {
             await db.query(
                 `DELETE FROM documents WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ Documents deleted');
         } catch (err) {
@@ -559,7 +576,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         try {
             await db.query(
                 `DELETE FROM messages WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ Messages deleted');
         } catch (err) {
@@ -572,7 +589,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         try {
             await db.query(
                 `DELETE FROM fcs_results WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ FCS results deleted');
         } catch (err) {
@@ -583,7 +600,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         try {
             await db.query(
                 `DELETE FROM lender_submissions WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ Lender submissions deleted');
         } catch (err) {
@@ -594,7 +611,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         try {
             await db.query(
                 `DELETE FROM lender_qualifications WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ Lender qualifications deleted');
         } catch (err) {
@@ -605,7 +622,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         try {
             await db.query(
                 `DELETE FROM ai_messages WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ AI messages deleted');
         } catch (err) {
@@ -616,7 +633,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         try {
             await db.query(
                 `DELETE FROM ai_chat_messages WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ AI chat messages deleted');
         } catch (err) {
@@ -627,7 +644,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         try {
             await db.query(
                 `DELETE FROM lender_matches WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ Lender matches deleted');
         } catch (err) {
@@ -638,7 +655,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         try {
             await db.query(
                 `DELETE FROM agent_actions WHERE conversation_id IN (${placeholders})`,
-                conversationIds
+                allowedIds
             );
             console.log('✅ Agent actions deleted');
         } catch (err) {
@@ -648,7 +665,7 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         // Finally delete conversations
         const result = await db.query(
             `DELETE FROM conversations WHERE id IN (${placeholders}) RETURNING id`,
-            conversationIds
+            allowedIds
         );
 
         console.log(`✅ Deleted ${result.rows.length} conversations`);
