@@ -115,13 +115,11 @@ router.get('/', async (req, res) => {
                 )`;
             }
             else if (filter === 'SUBMITTED') {
-                // Strict definition: sent to a lender, exclude offers
+                // Match stats card logic: any lender_submissions row counts as Submitted
                 query += ` AND EXISTS (
                     SELECT 1 FROM lender_submissions ls
                     WHERE ls.conversation_id = c.id
-                    AND ls.status = 'sent'
-                )
-                AND (c.has_offer IS FALSE OR c.has_offer IS NULL)`;
+                )`;
             }
             else if (filter === 'INTERESTED') {
                 query += ` AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound')`;
