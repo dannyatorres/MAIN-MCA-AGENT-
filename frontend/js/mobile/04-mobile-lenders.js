@@ -244,6 +244,10 @@ Object.assign(window.MobileApp.prototype, {
                 body: JSON.stringify(criteria)
             });
 
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
             // Cache results
             localStorage.setItem(`lender_results_${this.currentConversationId}`, JSON.stringify({
                 data: result,
