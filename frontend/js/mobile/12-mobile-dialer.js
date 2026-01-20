@@ -385,22 +385,36 @@ Object.assign(window.MobileApp.prototype, {
         if (!this.dialerCurrentLead) return;
 
         const leadId = this.dialerCurrentLead.id;
+        const lead = this.dialerCurrentLead;
 
         // Hide dialer
         document.getElementById('mobileDialer').style.display = 'none';
 
-        // Go directly to chat panel first
+        // Set current conversation
+        this.currentConversationId = leadId;
+        this.selectedConversation = lead;
+
+        // Update header
+        const personName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+        const displayName = personName || lead.business_name || 'Unknown';
+        this.dom.chatName.textContent = displayName.toUpperCase();
+        this.dom.chatBusiness.textContent = lead.business_name || '';
+
+        // Show loading state
+        if (this.dom.messagesContainer) {
+            this.dom.messagesContainer.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+        }
+
+        // Go to chat panel
         this.goToPanel(1);
 
-        // Small delay to let panel transition complete, then load conversation
-        setTimeout(async () => {
-            try {
-                await this.selectConversation(leadId);
-            } catch (err) {
-                console.error('Error loading conversation:', err);
-                // Don't show error toast - it probably still loaded fine
-            }
-        }, 150);
+        // Load messages once
+        this.loadMessages(leadId);
+
+        // Join socket room if connected
+        if (this.socket?.connected) {
+            this.socket.emit('join_conversation', leadId);
+        }
     },
 
     dialerSkip() {
