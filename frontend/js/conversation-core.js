@@ -403,17 +403,24 @@ class ConversationCore {
 
     generateConversationHTML(conv) {
         const timeSince = (d) => {
-            if(!d) return '';
-            // Normalize PostgreSQL timestamp format for JS Date parsing
-            const dateStr = String(d)
-                .replace(' ', 'T')
-                .replace(/([+-]\d{2})$/, '$1:00');
+            if (!d) return '';
+
+            let dateStr = String(d).replace(' ', 'T');
+
+            if (!dateStr.endsWith('Z') && !dateStr.match(/[+-]\d{2}:?\d{2}$/)) {
+                dateStr += 'Z';
+            }
+
             const serverDate = new Date(dateStr);
-            const s = Math.floor((Date.now() - serverDate.getTime()) / 1000);
-            if(s < 60) return 'Just now';
-            if(s < 3600) return Math.floor(s/60) + 'm ago';
-            if(s < 86400) return Math.floor(s/3600) + 'h ago';
-            return Math.floor(s/86400) + 'd ago';
+            const now = new Date();
+
+            let s = Math.floor((now - serverDate) / 1000);
+            if (s < 0) s = 0;
+
+            if (s < 60) return 'Just now';
+            if (s < 3600) return Math.floor(s / 60) + 'm ago';
+            if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+            return Math.floor(s / 86400) + 'd ago';
         };
 
         const formatPhone = (phone) => {
