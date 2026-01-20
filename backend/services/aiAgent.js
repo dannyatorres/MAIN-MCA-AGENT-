@@ -420,9 +420,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         `, [conversationId]);
 
         // 4b. CHECK FOR HANDOFF ACKNOWLEDGMENT - Stay silent
-        const recentMsgs = history.rows.slice(-4);
-        const lastOutbounds = recentMsgs.filter(m => m.direction === 'outbound');
-        const lastInbounds = recentMsgs.filter(m => m.direction === 'inbound');
+        // Use the full history (last 20) to find the absolute last outbound/inbound
+        const lastOutbounds = history.rows.filter(m => m.direction === 'outbound');
+        const lastInbounds = history.rows.filter(m => m.direction === 'inbound');
 
         const lastOutbound = lastOutbounds.slice(-1)[0]?.content?.toLowerCase() || '';
         const lastInbound = lastInbounds.slice(-1)[0]?.content?.toLowerCase().trim() || '';
@@ -561,7 +561,17 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         let messages = [{ role: "system", content: systemPrompt }];
 
         history.rows.forEach(msg => {
-            messages.push({ role: msg.direction === 'outbound' ? 'assistant' : 'user', content: msg.content });
+            let role;
+
+            if (msg.direction === 'outbound' || msg.direction === 'system') {
+                role = 'assistant';
+            } else if (msg.direction === 'inbound') {
+                role = 'user';
+            } else {
+                return;
+            }
+
+            messages.push({ role: role, content: msg.content });
         });
 
         // --- FIRST PASS (Decide what to do) ---
