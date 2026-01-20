@@ -10,6 +10,7 @@ Object.assign(window.MobileApp.prototype, {
     dialerMaxAttempts: 2,
     dialerCurrentAttempt: 1,
     dialerIsMuted: false,
+    dialerCallConnected: false,
 
     async openMobileDialer() {
         document.getElementById('mobileDialer').style.display = 'flex';
@@ -230,10 +231,45 @@ Object.assign(window.MobileApp.prototype, {
         // Open phone app
         window.location.href = `tel:${phone}`;
 
-        // Show disposition after delay
+        // When user returns, ask if they completed the call
         setTimeout(() => {
-            this.showDialerDisposition();
+            this.showNativeCallConfirm();
         }, 1000);
+    },
+
+    showNativeCallConfirm() {
+        // Create confirmation overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'dialerCallConfirm';
+        overlay.className = 'dialer-confirm-overlay';
+        overlay.innerHTML = `
+            <div class="dialer-confirm-card">
+                <p>Did you complete the call?</p>
+                <div class="dialer-confirm-actions">
+                    <button class="dialer-confirm-btn yes" id="dialerConfirmYes">
+                        <i class="fas fa-check"></i> Yes, log it
+                    </button>
+                    <button class="dialer-confirm-btn no" id="dialerConfirmNo">
+                        <i class="fas fa-times"></i> No, go back
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('mobileDialer').appendChild(overlay);
+
+        document.getElementById('dialerConfirmYes').addEventListener('click', () => {
+            overlay.remove();
+            this.showDialerDisposition();
+        });
+
+        document.getElementById('dialerConfirmNo').addEventListener('click', () => {
+            overlay.remove();
+            this.dialerCallStartTime = null;
+            this.unlockDialerChannel(this.dialerCurrentLead.id).catch(() => {});
+            // Stay on call actions screen - it's already showing
+            document.getElementById('dialerActions').style.display = 'flex';
+        });
     },
 
     // Twilio Call
@@ -249,6 +285,7 @@ Object.assign(window.MobileApp.prototype, {
         const phone = String(lead.phone).replace(/\D/g, '');
         this.dialerCallStartTime = Date.now();
         this.dialerIsMuted = false;
+        this.dialerCallConnected = false;
 
         // Lock channel
         await this.lockDialerChannel(lead.id);
@@ -273,6 +310,7 @@ Object.assign(window.MobileApp.prototype, {
                 document.getElementById('mobileCallBar')?.classList.add('hidden');
 
                 call.on('accept', () => {
+                    this.dialerCallConnected = true;
                     this.setDialerStatus('connected', 'CONNECTED');
                     this.startDialerTimer();
                 });
@@ -296,16 +334,32 @@ Object.assign(window.MobileApp.prototype, {
 
     handleDialerCallEnd() {
         this.stopDialerTimer();
-        this.setDialerStatus('ended', 'CALL ENDED');
         document.getElementById('dialerCallControls').style.display = 'none';
-        this.showDialerDisposition();
+
+        // If call never connected or was very short, go back to call options
+        const duration = this.dialerCallStartTime
+            ? Math.floor((Date.now() - this.dialerCallStartTime) / 1000)
+            : 0;
+
+        if (!this.dialerCallConnected || duration < 3) {
+            // Call didn't really happen - go back to options
+            this.dialerCallStartTime = null;
+            this.dialerCallConnected = false;
+            this.unlockDialerChannel(this.dialerCurrentLead?.id).catch(() => {});
+            document.getElementById('dialerStatus').style.display = 'none';
+            document.getElementById('dialerActions').style.display = 'flex';
+        } else {
+            // Real call happened - show disposition
+            this.setDialerStatus('ended', 'CALL ENDED');
+            this.showDialerDisposition();
+        }
     },
 
     dialerEndCall() {
         if (window.callManager?.activeCall) {
             window.callManager.endCall();
         }
-        this.handleDialerCallEnd();
+        // Don't call handleDialerCallEnd here - let the disconnect event handle it
     },
 
     dialerToggleMute() {

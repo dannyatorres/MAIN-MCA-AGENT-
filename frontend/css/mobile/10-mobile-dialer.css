@@ -632,3 +632,70 @@
 .dialer-done-btn:active {
     transform: scale(0.96);
 }
+
+/* Native Call Confirmation */
+.dialer-confirm-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+}
+
+.dialer-confirm-card {
+    background: linear-gradient(180deg, #1f242c 0%, #13171f 100%);
+    border: 1px solid #30363d;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    margin: 20px;
+    animation: popIn 0.2s ease;
+}
+
+.dialer-confirm-card p {
+    color: #e6edf3;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+}
+
+.dialer-confirm-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dialer-confirm-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.dialer-confirm-btn:active {
+    transform: scale(0.96);
+}
+
+.dialer-confirm-btn.yes {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.dialer-confirm-btn.no {
+    background: transparent;
+    border: 1px solid #30363d;
+    color: #8b949e;
+}
