@@ -52,6 +52,7 @@ window.MobileApp = class MobileApp {
         }
 
         this.setupEventListeners();
+        this.setupLeadsDropdown();
         this.setupCallListeners();
         this.setupInfiniteScroll();
         await this.loadConversations();
@@ -166,5 +167,42 @@ window.MobileApp = class MobileApp {
         });
 
         this.setupIntelligenceListeners();
+    }
+
+    setupLeadsDropdown() {
+        const dropdown = document.getElementById('leadsDropdown');
+        const trigger = document.getElementById('leadsDropdownTrigger');
+        const backdrop = document.getElementById('leadsDropdownBackdrop');
+
+        if (!trigger || !dropdown) return;
+
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+        });
+
+        backdrop?.addEventListener('click', () => {
+            dropdown.classList.remove('open');
+        });
+
+        document.getElementById('addNewLeadBtn')?.addEventListener('click', () => {
+            dropdown.classList.remove('open');
+            this.showToast('Add New Lead - Coming Soon', 'info');
+        });
+
+        document.getElementById('importCsvBtn')?.addEventListener('click', () => {
+            dropdown.classList.remove('open');
+            this.showToast('Import CSV - Coming Soon', 'info');
+        });
+
+        document.getElementById('dashboardBtn')?.addEventListener('click', () => {
+            dropdown.classList.remove('open');
+            this.showToast('Dashboard - Coming Soon', 'info');
+        });
+
+        document.getElementById('newsBtn')?.addEventListener('click', () => {
+            dropdown.classList.remove('open');
+            this.showToast('News & Updates - Coming Soon', 'info');
+        });
     }
 }

@@ -59,6 +59,138 @@ html, body {
 
 .header-actions { display: flex; gap: 12px; align-items: center; }
 
+/* ==========================================================================
+   LEADS DROPDOWN MENU
+   ========================================================================== */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-left h1 {
+    margin: 0;
+}
+
+.leads-dropdown {
+    position: relative;
+}
+
+.leads-dropdown-trigger {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #8b949e;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.leads-dropdown-trigger:active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.leads-dropdown.open .leads-dropdown-trigger {
+    background: #3b82f6;
+    color: white;
+}
+
+.leads-dropdown.open .leads-dropdown-trigger i {
+    transform: rotate(180deg);
+}
+
+.leads-dropdown-trigger i {
+    transition: transform 0.2s;
+}
+
+.leads-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 200px;
+    background: #1c1c1e;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    display: none;
+    animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.leads-dropdown.open .leads-dropdown-menu {
+    display: block;
+}
+
+.leads-dropdown-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #e6edf3;
+    font-size: 15px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.leads-dropdown-item:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.leads-dropdown-item i {
+    width: 20px;
+    text-align: center;
+    color: #8b949e;
+    font-size: 14px;
+}
+
+.leads-dropdown-item:active i {
+    color: #3b82f6;
+}
+
+.leads-dropdown-divider {
+    height: 1px;
+    background: #30363d;
+    margin: 8px 0;
+}
+
+.leads-dropdown-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    display: none;
+}
+
+.leads-dropdown.open + .leads-dropdown-backdrop,
+.leads-dropdown.open ~ .leads-dropdown-backdrop {
+    display: block;
+}
+
 /* Navigation Buttons */
 .back-btn, .details-btn, .logout-btn {
     background: transparent;

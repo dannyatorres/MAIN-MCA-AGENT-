@@ -35,7 +35,34 @@
         <!-- Panel 1: Conversations List -->
         <div class="panel" id="panelConversations">
             <header class="mobile-header">
-                <h1>Leads</h1>
+                <div class="header-left">
+                    <h1>Leads</h1>
+                    <div class="leads-dropdown" id="leadsDropdown">
+                        <button class="leads-dropdown-trigger" id="leadsDropdownTrigger">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="leads-dropdown-menu" id="leadsDropdownMenu">
+                            <button class="leads-dropdown-item" id="addNewLeadBtn">
+                                <i class="fas fa-plus"></i>
+                                <span>Add New Lead</span>
+                            </button>
+                            <button class="leads-dropdown-item" id="importCsvBtn">
+                                <i class="fas fa-file-import"></i>
+                                <span>Import CSV</span>
+                            </button>
+                            <div class="leads-dropdown-divider"></div>
+                            <button class="leads-dropdown-item" id="dashboardBtn">
+                                <i class="fas fa-th-large"></i>
+                                <span>Dashboard</span>
+                            </button>
+                            <button class="leads-dropdown-item" id="newsBtn">
+                                <i class="fas fa-newspaper"></i>
+                                <span>News & Updates</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="leads-dropdown-backdrop" id="leadsDropdownBackdrop"></div>
+                </div>
                 <div class="header-actions">
                     <div class="connection-status">
                         <span class="status-dot" id="connectionDot"></span>
