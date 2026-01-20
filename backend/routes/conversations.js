@@ -139,9 +139,15 @@ router.get('/:id', requireConversationAccess('id'), async (req, res) => {
         // Check if id is numeric (display_id) or UUID
         const isNumeric = /^\d+$/.test(id);
 
-        // Get conversation with all details (all data now in conversations table)
+        // Only fetch assigned user info for admins
+        const includeAssignedUser = req.user.role === 'admin';
+
+        // Get conversation with all details
         const query = `
-            SELECT * FROM conversations c
+            SELECT c.*
+            ${includeAssignedUser ? ', u.name as assigned_user_name, u.agent_name as assigned_agent_name' : ''}
+            FROM conversations c
+            ${includeAssignedUser ? 'LEFT JOIN users u ON c.assigned_user_id = u.id' : ''}
             WHERE ${isNumeric ? 'c.display_id = $1' : 'c.id = $1'}
         `;
 
