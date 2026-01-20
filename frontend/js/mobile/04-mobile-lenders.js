@@ -239,6 +239,15 @@ Object.assign(window.MobileApp.prototype, {
                 timestamp: Date.now()
             }));
 
+            if (this.currentConversationId) {
+                try {
+                    await this.apiCall(`/api/submissions/${this.currentConversationId}/qualifications/save`, {
+                        method: 'POST',
+                        body: JSON.stringify({ results: result, criteria: criteria })
+                    });
+                } catch (e) { /* ignore save errors */ }
+            }
+
             this.displayLenderResults(result, criteria);
             this.showToast(`${result.qualified?.length || 0} lenders qualified`, 'success');
 
@@ -405,8 +414,7 @@ Object.assign(window.MobileApp.prototype, {
         document.querySelectorAll('.log-response-btn-mobile').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const lender = e.target.closest('button').dataset.lender;
-                this.showToast(`Logging for ${lender} (Coming Soon)`, 'info');
-                // You can implement openResponseModal(lender) here if needed
+                this.openResponseModal(lender);
             });
         });
     },
@@ -602,6 +610,231 @@ Let me know if you need anything else.</textarea>
         if (modal) {
             modal.style.transform = 'translateY(100%)';
             setTimeout(() => modal.remove(), 300);
+        }
+    },
+
+    openResponseModal(lenderName) {
+        const existing = document.getElementById('mobileLenderResponseModal');
+        if (existing) existing.remove();
+
+        const safeLender = this.utils.escapeHtml(lenderName || '');
+        const safeId = this.utils.escapeHtml(String(this.currentConversationId || ''));
+
+        const modal = document.createElement('div');
+        modal.id = 'mobileLenderResponseModal';
+        modal.className = 'mobile-response-modal';
+        modal.innerHTML = `
+            <div class="mobile-response-content">
+                <div class="mobile-response-header">
+                    <h3>Log Lender Response</h3>
+                    <button id="closeLenderResponseModal" class="icon-btn-small">&times;</button>
+                </div>
+                <div class="mobile-response-body">
+                    <input type="hidden" id="responseConversationId" value="${safeId}">
+                    <input type="hidden" id="responseLenderName" value="${safeLender}">
+
+                    <div class="mobile-form-group">
+                        <label>Lender</label>
+                        <input type="text" id="responseLenderDisplay" readonly class="mobile-form-input" value="${safeLender}">
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label>Status</label>
+                        <select id="responseStatus" class="mobile-form-select">
+                            <option value="">Select...</option>
+                            <option value="OFFER">Offer Received</option>
+                            <option value="FUNDED">Funded</option>
+                            <option value="DECLINE">Declined</option>
+                        </select>
+                    </div>
+
+                    <div class="mobile-form-group">
+                        <label>Position</label>
+                        <select id="responsePosition" class="mobile-form-select">
+                            <option value="">Select...</option>
+                            ${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}">${i + 1}${['st','nd','rd'][i] || 'th'} Position</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div id="offerFields" class="hidden">
+                        <div class="form-section-header">New Offer Details</div>
+                        <div class="lender-form-grid">
+                            <div class="mobile-form-group">
+                                <label>Offer Amount ($)</label>
+                                <input type="number" id="responseOfferAmount" class="mobile-form-input" placeholder="15000">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Factor Rate</label>
+                                <input type="text" id="responseFactorRate" class="mobile-form-input" placeholder="1.49">
+                            </div>
+                        </div>
+                        <div class="lender-form-grid">
+                            <div class="mobile-form-group">
+                                <label>Term Length</label>
+                                <input type="number" id="responseTermLength" class="mobile-form-input" placeholder="60">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Term Unit</label>
+                                <select id="responseTermUnit" class="mobile-form-select">
+                                    <option value="Days">Days</option>
+                                    <option value="Weeks">Weeks</option>
+                                    <option value="Months">Months</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mobile-form-group">
+                            <label>Payment Frequency</label>
+                            <select id="responsePaymentFrequency" class="mobile-form-select">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="bi-weekly">Bi-Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="prevPositionFields" class="hidden">
+                        <div class="form-section-header">Previous Position Info <span class="lender-optional-note">(optional)</span></div>
+                        <div class="lender-form-grid">
+                            <div class="mobile-form-group">
+                                <label>Amount ($)</label>
+                                <input type="number" id="responsePrevAmount" class="mobile-form-input">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Daily Withhold ($)</label>
+                                <input type="number" id="responseDailyWithhold" class="mobile-form-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="declineFields" class="hidden">
+                        <div class="mobile-form-group">
+                            <label>Decline Reason</label>
+                            <textarea id="responseDeclineReason" class="mobile-form-input" rows="2" placeholder="e.g., Restricted industry"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mobile-response-footer">
+                    <button id="cancelLenderResponse" class="btn-mobile-secondary">Cancel</button>
+                    <button id="saveLenderResponse" class="btn-mobile-primary">Save Response</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const statusSelect = document.getElementById('responseStatus');
+        const offerFields = document.getElementById('offerFields');
+        const declineFields = document.getElementById('declineFields');
+        const prevPositionFields = document.getElementById('prevPositionFields');
+        statusSelect.onchange = () => {
+            const status = statusSelect.value;
+            if (offerFields) {
+                offerFields.classList.toggle('hidden', !['OFFER', 'FUNDED'].includes(status));
+            }
+            if (declineFields) {
+                declineFields.classList.toggle('hidden', status !== 'DECLINE');
+            }
+        };
+
+        const positionSelect = document.getElementById('responsePosition');
+        positionSelect.onchange = () => {
+            const pos = parseInt(positionSelect.value) || 0;
+            if (prevPositionFields) {
+                prevPositionFields.classList.toggle('hidden', !(pos > 1));
+            }
+        };
+
+        document.getElementById('closeLenderResponseModal').onclick = () => {
+            modal.remove();
+        };
+        document.getElementById('cancelLenderResponse').onclick = () => {
+            modal.remove();
+        };
+
+        document.getElementById('saveLenderResponse').onclick = async () => {
+            await this.saveLenderResponse();
+        };
+
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.remove();
+        };
+
+        statusSelect.dispatchEvent(new Event('change'));
+        positionSelect.dispatchEvent(new Event('change'));
+    },
+
+    async saveLenderResponse() {
+        const conversationId = document.getElementById('responseConversationId')?.value;
+        const lenderName = document.getElementById('responseLenderName')?.value;
+        const status = document.getElementById('responseStatus')?.value;
+
+        if (!status) {
+            this.showToast('Please select a status', 'warning');
+            return;
+        }
+
+        const data = {
+            conversation_id: conversationId,
+            lender_name: lenderName,
+            status: status
+        };
+
+        const position = document.getElementById('responsePosition')?.value;
+        if (position) data.position = parseInt(position);
+
+        if (['OFFER', 'FUNDED'].includes(status)) {
+            const amount = document.getElementById('responseOfferAmount')?.value;
+            const factor = document.getElementById('responseFactorRate')?.value;
+            const term = document.getElementById('responseTermLength')?.value;
+            const termUnit = document.getElementById('responseTermUnit')?.value;
+            const frequency = document.getElementById('responsePaymentFrequency')?.value;
+
+            if (amount) data.offer_amount = parseFloat(amount);
+            if (factor) data.factor_rate = parseFloat(factor);
+            if (term) data.term_length = parseInt(term);
+            if (termUnit) data.term_unit = termUnit;
+            if (frequency) data.payment_frequency = frequency;
+        }
+
+        const pos = parseInt(position) || 0;
+        if (pos > 1) {
+            const prevAmount = document.getElementById('responsePrevAmount')?.value;
+            const prevFactor = document.getElementById('responsePrevFactorRate')?.value;
+            const prevTerm = document.getElementById('responsePrevTermLength')?.value;
+            const prevTermUnit = document.getElementById('responsePrevTermUnit')?.value;
+            const prevFreq = document.getElementById('responsePrevPaymentFrequency')?.value;
+            const dailyWithhold = document.getElementById('responseDailyWithhold')?.value;
+            const daysIntoStack = document.getElementById('responseDaysIntoStack')?.value;
+
+            if (prevAmount) data.prev_amount = parseFloat(prevAmount);
+            if (prevFactor) data.prev_factor_rate = parseFloat(prevFactor);
+            if (prevTerm) data.prev_term_length = parseInt(prevTerm);
+            if (prevTermUnit) data.prev_term_unit = prevTermUnit;
+            if (prevFreq) data.prev_payment_frequency = prevFreq;
+            if (dailyWithhold) data.total_daily_withhold = parseFloat(dailyWithhold);
+            if (daysIntoStack) data.days_into_stack = parseInt(daysIntoStack);
+        }
+
+        if (status === 'DECLINE') {
+            const reason = document.getElementById('responseDeclineReason')?.value;
+            if (reason) data.decline_reason = reason;
+        }
+
+        try {
+            const result = await this.apiCall('/api/lenders/log-response', {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+            if (result.success) {
+                this.showToast('Response logged successfully', 'success');
+                document.getElementById('mobileLenderResponseModal')?.remove();
+            } else {
+                throw new Error(result.error || 'Failed to save');
+            }
+        } catch (err) {
+            console.error('Error saving lender response:', err);
+            this.showToast('Failed to save response: ' + err.message, 'error');
         }
     },
 

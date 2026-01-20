@@ -479,6 +479,54 @@
     background: rgba(255,255,255,0.1);
 }
 
+/* --- 10. LENDER RESPONSE MODAL --- */
+.mobile-response-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.mobile-response-content {
+    width: 100%;
+    max-width: 480px;
+    background: #1c1c1e;
+    border-radius: 16px 16px 0 0;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+}
+
+.mobile-response-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.mobile-response-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #e6edf3;
+}
+
+.mobile-response-body {
+    padding: 16px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.mobile-response-footer {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
 /* --- 8. SUBMISSION MODAL (Enhanced) --- */
 .mobile-submission-modal {
     position: fixed;
