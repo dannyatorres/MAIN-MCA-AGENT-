@@ -517,9 +517,41 @@ Let me know if you need anything else.</textarea>
                             </div>
                         </div>
 
+                        <div class="submission-search-container">
+                            <input type="text" id="lenderSearchInput" class="submission-search-input" placeholder="Search lenders...">
+                        </div>
+
                         ${submissionHistory.length > 0 ? `
-                            <div class="already-submitted-note">
-                                📤 ${submissionHistory.length} lender${submissionHistory.length > 1 ? 's' : ''} already submitted
+                            <div class="submitted-dropdown" id="submittedDropdown">
+                                <button type="button" class="submitted-dropdown-toggle" id="submittedToggle">
+                                    <span>📤 ${submissionHistory.length} Already Submitted</span>
+                                    <span class="submitted-dropdown-icon">▼</span>
+                                </button>
+                                <div class="submitted-dropdown-list">
+                                    ${submissionHistory.map(sub => {
+                                        const sentDate = sub.submitted_at
+                                            ? new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                            : '';
+                                        let statusClass = 'pending';
+                                        let statusText = sub.status || 'PENDING';
+                                        if (sub.status === 'OFFER') {
+                                            statusClass = 'offer';
+                                            statusText = sub.offer_amount ? `OFFER $${Number(sub.offer_amount).toLocaleString()}` : 'OFFER';
+                                        } else if (sub.status === 'DECLINED' || sub.status === 'DECLINE') {
+                                            statusClass = 'declined';
+                                            statusText = 'DECLINED';
+                                        }
+                                        return `
+                                            <div class="submitted-item">
+                                                <span class="submitted-item-name">${this.utils.escapeHtml(sub.lender_name)}</span>
+                                                <div class="submitted-item-info">
+                                                    <span class="submission-status-badge ${statusClass}">${statusText}</span>
+                                                    ${sentDate ? `<span class="submitted-item-date">${sentDate}</span>` : ''}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
                             </div>
                         ` : ''}
 
@@ -662,6 +694,35 @@ Let me know if you need anything else.</textarea>
                 }
             });
             updateDocCount();
+        });
+
+        document.getElementById('lenderSearchInput')?.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const items = document.querySelectorAll('#submissionLenderList .submission-list-item');
+
+            items.forEach(item => {
+                const name = item.dataset.name?.toLowerCase() || '';
+                if (name.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            const visible = document.querySelectorAll('#submissionLenderList .submission-list-item[style="display: flex"], #submissionLenderList .submission-list-item:not([style*="display"])').length;
+            const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
+
+            if (searchTerm) {
+                document.getElementById('lenderCount').textContent = `${checked} Selected (${visible} shown)`;
+            } else {
+                document.getElementById('lenderCount').textContent = `${checked} Selected`;
+            }
+        });
+
+        document.getElementById('submittedToggle')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const dropdown = document.getElementById('submittedDropdown');
+            dropdown.classList.toggle('open');
         });
 
         document.getElementById('confirmSubmissionBtn').onclick = async () => {
