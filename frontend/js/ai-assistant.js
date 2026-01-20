@@ -31,8 +31,8 @@ class AIAssistant {
         }
 
         // Reset when conversation changes
-        if (this.currentConversationId !== conversation.id) {
-            this.currentConversationId = conversation.id;
+        if (String(this.currentConversationId) !== String(conversation.id)) {
+            this.currentConversationId = String(conversation.id);
             this.isInitialized = false;
             this.isLoading = false;
         }
@@ -77,10 +77,10 @@ class AIAssistant {
     // ============================================================
 
     initializeAIChat() {
-        const conversationId = this.parent.getCurrentConversationId();
+        const conversationId = String(this.parent.getCurrentConversationId());
 
         // Prevent double-init
-        if (this.currentConversationId === conversationId && this.isInitialized) {
+        if (String(this.currentConversationId) === conversationId && this.isInitialized) {
             return;
         }
 
@@ -124,7 +124,7 @@ class AIAssistant {
         if (!input) return;
 
         const message = input.value.trim();
-        const conversationId = this.parent.getCurrentConversationId();
+        const conversationId = String(this.parent.getCurrentConversationId());
         const conversation = this.parent.getSelectedConversation();
 
         if (!message || !conversationId) return;
@@ -299,7 +299,7 @@ class AIAssistant {
             const data = await this.parent.apiCall(`/api/ai/chat/${conversationId}`);
 
             // TRAFFIC COP: STOP IF USER SWITCHED CONVERSATIONS
-            if (this.parent.getCurrentConversationId() !== conversationId) {
+            if (String(this.parent.getCurrentConversationId()) !== conversationId) {
                 console.log('🛑 Aborting AI load: User switched conversations');
                 this.isLoading = false;
                 return;
@@ -323,7 +323,7 @@ class AIAssistant {
             console.log('Error loading history:', error);
             this.isLoading = false;
 
-            if (this.parent.getCurrentConversationId() === conversationId) {
+            if (String(this.parent.getCurrentConversationId()) === conversationId) {
                 const activeSpinner = document.getElementById('aiInitialSpinner');
                 if (activeSpinner) activeSpinner.remove();
                 this.triggerSmartIntro();
