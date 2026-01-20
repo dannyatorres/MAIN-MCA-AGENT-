@@ -1,25 +1,46 @@
 // 01-mobile-conversations.js
 Object.assign(window.MobileApp.prototype, {
         // ============ CONVERSATIONS ============
-        async loadConversations(search = '') {
+        async loadConversations(search = '', append = false) {
+            if (!append) {
+                this.conversationOffset = 0;
+                this.hasMoreConversations = true;
+            }
+
+            if (this.isLoadingMore) return;
+            this.isLoadingMore = true;
+
             try {
-                const params = new URLSearchParams({ limit: '50', offset: '0' });
+                const params = new URLSearchParams({
+                    limit: String(this.conversationLimit),
+                    offset: String(this.conversationOffset)
+                });
                 if (search) params.append('search', search);
 
                 const data = await this.apiCall(`/api/conversations?${params}`);
+                const results = Array.isArray(data) ? data : [];
 
-                this.conversations.clear();
-                (Array.isArray(data) ? data : []).forEach(conv => {
-                    this.conversations.set(conv.id, conv);
-                });
+                if (append) {
+                    results.forEach(conv => this.conversations.set(conv.id, conv));
+                } else {
+                    this.conversations.clear();
+                    results.forEach(conv => this.conversations.set(conv.id, conv));
+                }
 
-                this.renderConversationList();
+                this.hasMoreConversations = results.length >= this.conversationLimit;
+                this.conversationOffset += results.length;
+
+                this.renderConversationList(append);
             } catch (err) {
-                this.dom.conversationList.innerHTML = '<div class="loading-state">Failed to load</div>';
+                if (!append) {
+                    this.dom.conversationList.innerHTML = '<div class="loading-state">Failed to load</div>';
+                }
+            } finally {
+                this.isLoadingMore = false;
             }
         },
 
-        renderConversationList() {
+        renderConversationList(append = false) {
             const convArray = Array.from(this.conversations.values());
 
             if (!convArray.length) {
@@ -27,7 +48,7 @@ Object.assign(window.MobileApp.prototype, {
                 return;
             }
 
-            this.dom.conversationList.innerHTML = convArray.map(conv => {
+            const html = convArray.map(conv => {
                 const businessName = conv.business_name || `${conv.first_name || ''} ${conv.last_name || ''}`.trim() || 'Unknown';
                 const initials = this.getInitials(businessName);
                 const phone = this.utils.formatPhone(conv.lead_phone || conv.phone || '');
@@ -57,6 +78,21 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 `;
             }).join('');
+
+            this.dom.conversationList.innerHTML = html;
+        },
+
+        setupInfiniteScroll() {
+            if (!this.dom.conversationList) return;
+
+            this.dom.conversationList.addEventListener('scroll', () => {
+                const el = this.dom.conversationList;
+                const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 100;
+
+                if (nearBottom && this.hasMoreConversations && !this.isLoadingMore) {
+                    this.loadConversations('', true);
+                }
+            });
         },
 
         async selectConversation(id) {

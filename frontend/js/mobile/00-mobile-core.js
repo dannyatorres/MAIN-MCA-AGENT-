@@ -17,6 +17,10 @@ window.MobileApp = class MobileApp {
         this.aiMessages = [];
         this.pendingUploadFiles = null;
         this.isAnalyzingStrategy = false;
+        this.conversationOffset = 0;
+        this.conversationLimit = 50;
+        this.hasMoreConversations = true;
+        this.isLoadingMore = false;
 
         // Initialize utilities (reuse existing class)
         this.utils = new MobileUtils(this);
@@ -47,6 +51,7 @@ window.MobileApp = class MobileApp {
         }
 
         this.setupEventListeners();
+        this.setupInfiniteScroll();
         await this.loadConversations();
         this.initWebSocket();
     }
