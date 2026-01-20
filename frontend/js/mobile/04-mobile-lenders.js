@@ -34,8 +34,8 @@ Object.assign(window.MobileApp.prototype, {
             let fcsData = null;
             try {
                 const fcsResult = await this.apiCall(`/api/fcs/results/${this.currentConversationId}`);
-                if (fcsResult.success && fcsResult.analysis) {
-                    fcsData = fcsResult.analysis;
+                if (fcsResult.success) {
+                    fcsData = fcsResult.analysis || this.parseFcsReport(fcsResult.rawText);
                 }
             } catch (e) { /* ignore FCS errors */ }
 
@@ -591,5 +591,20 @@ Let me know if you need anything else.</textarea>
             modal.style.transform = 'translateY(100%)';
             setTimeout(() => modal.remove(), 300);
         }
+    },
+
+    // FCS Report Parser - parses raw FCS report text
+    parseFcsReport(reportText) {
+        if (!reportText) return {};
+
+        return {
+            businessName: (reportText.match(/Business Name:\s*(.+?)(?:\u2022|\n|$)/i) || [])[1]?.trim(),
+            position: (reportText.match(/Looking for\s*(\d+)/i) || [])[1],
+            revenue: (reportText.match(/Average True Revenue:\s*\$([\d,]+)/i) || [])[1]?.replace(/,/g, ''),
+            negativeDays: (reportText.match(/Average Negative Days:\s*(\d+)/i) || [])[1],
+            deposits: (reportText.match(/Average Number of Deposits:\s*(\d+)/i) || [])[1],
+            state: (reportText.match(/State:\s*([A-Z]{2})/i) || [])[1],
+            industry: (reportText.match(/Industry:\s*(.+?)(?:\u2022|\n|$)/i) || [])[1]?.trim()
+        };
     }
 });
