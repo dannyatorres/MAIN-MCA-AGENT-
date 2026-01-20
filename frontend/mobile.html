@@ -314,5 +314,23 @@
             window.mobileApp = new MobileApp();
         });
     </script>
+    <!-- Mobile Call Bar -->
+    <div id="mobileCallBar" class="mobile-call-bar hidden">
+        <div class="mobile-call-content">
+            <div class="mobile-call-status">
+                <div class="call-pulse"></div>
+                <span class="call-status-text">Connecting...</span>
+            </div>
+            <div class="mobile-call-timer" id="mobileCallTimer">00:00</div>
+            <div class="mobile-call-actions">
+                <button class="mobile-call-btn-round mute" id="mobileMuteBtn">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="mobile-call-btn-round end" id="mobileEndCallBtn">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -259,11 +259,35 @@ Object.assign(window.MobileApp.prototype, {
         showCallUI() {
             const callBar = document.getElementById('mobileCallBar');
             if (callBar) callBar.classList.remove('hidden');
+            this.updateMobileCallStatus('Connecting...');
         },
 
         hideCallUI() {
             const callBar = document.getElementById('mobileCallBar');
             if (callBar) callBar.classList.add('hidden');
+
+            const timer = document.getElementById('mobileCallTimer');
+            const pulse = document.querySelector('.call-pulse');
+            const statusText = document.querySelector('.call-status-text');
+
+            if (timer) timer.textContent = '00:00';
+            if (pulse) pulse.classList.remove('connected');
+            if (statusText) statusText.textContent = 'Connecting...';
+        },
+
+        updateMobileCallStatus(status) {
+            const statusText = document.querySelector('.call-status-text');
+            const pulse = document.querySelector('.call-pulse');
+
+            if (statusText) statusText.textContent = status;
+
+            if (pulse) {
+                if (status === 'Connected') {
+                    pulse.classList.add('connected');
+                } else {
+                    pulse.classList.remove('connected');
+                }
+            }
         },
 
         endCall() {
@@ -271,6 +295,73 @@ Object.assign(window.MobileApp.prototype, {
                 window.callManager.endCall();
             }
             this.hideCallUI();
+        },
+
+        setupCallListeners() {
+            document.getElementById('mobileEndCallBtn')?.addEventListener('click', () => {
+                this.endCall();
+            });
+
+            document.getElementById('mobileMuteBtn')?.addEventListener('click', () => {
+                if (window.callManager) {
+                    const isMuted = window.callManager.toggleMute();
+                    const btn = document.getElementById('mobileMuteBtn');
+                    const icon = btn?.querySelector('i');
+
+                    btn?.classList.toggle('muted', isMuted);
+                    if (icon) {
+                        icon.classList.toggle('fa-microphone', !isMuted);
+                        icon.classList.toggle('fa-microphone-slash', isMuted);
+                    }
+                }
+            });
+
+            this.applyCallManagerOverrides();
+        },
+
+        applyCallManagerOverrides() {
+            if (!window.callManager) {
+                setTimeout(() => this.applyCallManagerOverrides(), 500);
+                return;
+            }
+
+            window.callManager.showCallUI = () => {
+                document.getElementById('mobileCallBar')?.classList.remove('hidden');
+            };
+
+            window.callManager.updateCallStatus = (status) => {
+                this.updateMobileCallStatus(status);
+            };
+
+            window.callManager.handleDisconnectUI = () => {
+                window.callManager.stopTimer();
+                window.callManager.activeCall = null;
+
+                setTimeout(() => {
+                    document.getElementById('mobileCallBar')?.classList.add('hidden');
+                    const timer = document.getElementById('mobileCallTimer');
+                    if (timer) timer.textContent = '00:00';
+                    document.querySelector('.call-pulse')?.classList.remove('connected');
+
+                    const muteBtn = document.getElementById('mobileMuteBtn');
+                    muteBtn?.classList.remove('muted');
+                    muteBtn?.querySelector('i')?.classList.replace('fa-microphone-slash', 'fa-microphone');
+                }, 1500);
+            };
+
+            window.callManager.startTimer = () => {
+                window.callManager.callStartTime = Date.now();
+                const timerEl = document.getElementById('mobileCallTimer');
+
+                window.callManager.timerInterval = setInterval(() => {
+                    if (timerEl && window.callManager.callStartTime) {
+                        const elapsed = Math.floor((Date.now() - window.callManager.callStartTime) / 1000);
+                        const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                        const seconds = String(elapsed % 60).padStart(2, '0');
+                        timerEl.textContent = `${minutes}:${seconds}`;
+                    }
+                }, 1000);
+            };
         }
 
 });

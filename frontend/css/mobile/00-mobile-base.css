@@ -156,3 +156,109 @@ html, body {
     font-size: 14px;
     margin: 0;
 }
+
+/* --- 12. MOBILE CALL BAR --- */
+.mobile-call-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(180deg, #1f2937 0%, #161b22 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 9999;
+    animation: slideUp 0.25s ease;
+}
+
+.mobile-call-bar.hidden {
+    display: none;
+}
+
+.mobile-call-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mobile-call-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.call-pulse {
+    width: 10px;
+    height: 10px;
+    background: #f59e0b;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+.call-pulse.connected {
+    background: #10b981;
+    animation: none;
+}
+
+.call-status-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e6edf3;
+}
+
+.mobile-call-timer {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'SF Mono', Consolas, monospace;
+    color: #10b981;
+    letter-spacing: 1px;
+}
+
+.mobile-call-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.mobile-call-btn-round {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mobile-call-btn-round:active {
+    transform: scale(0.92);
+}
+
+.mobile-call-btn-round.mute {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e6edf3;
+}
+
+.mobile-call-btn-round.mute.muted {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.mobile-call-btn-round.end {
+    background: #ef4444;
+    color: white;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}

@@ -52,6 +52,7 @@ window.MobileApp = class MobileApp {
         }
 
         this.setupEventListeners();
+        this.setupCallListeners();
         this.setupInfiniteScroll();
         await this.loadConversations();
         this.initWebSocket();
@@ -168,11 +169,6 @@ window.MobileApp = class MobileApp {
         // Call Button
         document.getElementById('mobileCallBtn')?.addEventListener('click', () => {
             this.startCall();
-        });
-
-        // End Call
-        document.getElementById('mobileEndCallBtn')?.addEventListener('click', () => {
-            this.endCall();
         });
 
         this.setupIntelligenceListeners();
