@@ -147,16 +147,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // UPDATE MODE: Just update text content, preserve call bar
                     const titleEl = header.querySelector('.chat-business-title');
                     const businessEl = header.querySelector('.chat-row-secondary span');
-                    const cidEl = header.querySelector('.chat-row-cid');
                     const callNameEl = header.querySelector('.call-contact-name');
                     const callBtnEl = document.getElementById('callBtn');
 
                     if (titleEl) titleEl.textContent = displayOwner;
                     if (businessEl) businessEl.textContent = displayBusiness;
-                    if (cidEl) {
-                        cidEl.textContent = displayId ? `CID# ${displayId}` : '';
-                        cidEl.style.display = displayId ? 'block' : 'none';
-                    }
                     if (callNameEl) callNameEl.textContent = displayOwner;
                     if (callBtnEl) callBtnEl.title = `Call ${phoneNumber || 'No phone'}`;
 
@@ -179,7 +174,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <i class="fas fa-building" style="font-size: 10px; margin-right: 4px;"></i>
                                     <span>${displayBusiness}</span>
                                 </div>
-                                ${displayId ? `<div class="chat-row-cid">CID# ${displayId}</div>` : ''}
                             </div>
 
                             <div class="chat-actions-group">
