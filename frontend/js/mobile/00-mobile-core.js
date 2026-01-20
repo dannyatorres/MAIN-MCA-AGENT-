@@ -58,6 +58,12 @@ window.MobileApp = class MobileApp {
 
     // ============ NAVIGATION ============
     goToPanel(index) {
+        if (index === 0) {
+            this.currentConversationId = null;
+            this.selectedConversation = null;
+            this.renderConversationList();
+        }
+
         this.currentPanel = index;
         this.dom.panelContainer.setAttribute('data-panel', index);
 
