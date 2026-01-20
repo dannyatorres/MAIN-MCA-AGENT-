@@ -423,7 +423,13 @@ Object.assign(window.MobileApp.prototype, {
         // Open Submission Modal
         const sendBtn = document.getElementById('openSubmissionModalBtn');
         if (sendBtn) {
-            sendBtn.addEventListener('click', () => this.showLenderSubmissionModal());
+            sendBtn.addEventListener('click', async () => {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                await this.showLenderSubmissionModal();
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send to Lenders';
+            });
         }
 
         // Log Response Buttons
@@ -490,7 +496,10 @@ Let me know if you need anything else.</textarea>
                     <div class="submission-section">
                         <div class="submission-section-title">
                             Select Lenders
-                            <span class="selection-count" id="lenderCount">${available.length} available</span>
+                            <div class="submission-controls">
+                                <button type="button" class="toggle-all-btn" id="toggleAllLenders">Deselect All</button>
+                                <span class="selection-count" id="lenderCount">${available.length} selected</span>
+                            </div>
                         </div>
                         ${submissionHistory.length > 0 ? `
                             <div class="already-submitted-note">
@@ -514,7 +523,10 @@ Let me know if you need anything else.</textarea>
                     <div class="submission-section">
                         <div class="submission-section-title">
                             Attach Documents
-                            <span class="selection-count" id="docCount">${documents.length} available</span>
+                            <div class="submission-controls">
+                                <button type="button" class="toggle-all-btn" id="toggleAllDocs">Deselect All</button>
+                                <span class="selection-count" id="docCount">${documents.length} selected</span>
+                            </div>
                         </div>
                         <div id="submissionDocList" class="submission-list">
                             ${documents.length === 0 ? '<p class="empty-msg">No documents uploaded</p>' : ''}
@@ -528,8 +540,8 @@ Let me know if you need anything else.</textarea>
                     </div>
                 </div>
                 <div class="submission-footer">
-                    <button class="btn-mobile-secondary" id="cancelSubmissionBtn">Cancel</button>
-                    <button class="btn-mobile-primary" id="confirmSubmissionBtn">
+                    <button type="button" class="btn-mobile-secondary" id="cancelSubmissionBtn">Cancel</button>
+                    <button type="button" class="btn-mobile-primary" id="confirmSubmissionBtn">
                         <i class="fas fa-paper-plane"></i> Send Emails
                     </button>
                 </div>
@@ -541,14 +553,44 @@ Let me know if you need anything else.</textarea>
         document.getElementById('closeSubmissionModal').onclick = () => this.closeSubmissionModal();
         document.getElementById('cancelSubmissionBtn').onclick = () => this.closeSubmissionModal();
 
-        document.getElementById('submissionLenderList')?.addEventListener('change', () => {
+        document.getElementById('toggleAllLenders')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const checkboxes = document.querySelectorAll('#submissionLenderList .lender-checkbox');
+            const btn = e.target;
+            const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+
+            checkboxes.forEach(cb => cb.checked = !anyChecked);
+            btn.textContent = anyChecked ? 'Select All' : 'Deselect All';
+
             const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
             document.getElementById('lenderCount').textContent = `${checked} selected`;
         });
 
-        document.getElementById('submissionDocList')?.addEventListener('change', () => {
+        document.getElementById('toggleAllDocs')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const checkboxes = document.querySelectorAll('#submissionDocList .doc-checkbox');
+            const btn = e.target;
+            const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+
+            checkboxes.forEach(cb => cb.checked = !anyChecked);
+            btn.textContent = anyChecked ? 'Select All' : 'Deselect All';
+
             const checked = document.querySelectorAll('#submissionDocList .doc-checkbox:checked').length;
             document.getElementById('docCount').textContent = `${checked} selected`;
+        });
+
+        document.getElementById('submissionLenderList')?.addEventListener('change', () => {
+            const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
+            const total = document.querySelectorAll('#submissionLenderList .lender-checkbox').length;
+            document.getElementById('lenderCount').textContent = `${checked} selected`;
+            document.getElementById('toggleAllLenders').textContent = checked === total ? 'Deselect All' : 'Select All';
+        });
+
+        document.getElementById('submissionDocList')?.addEventListener('change', () => {
+            const checked = document.querySelectorAll('#submissionDocList .doc-checkbox:checked').length;
+            const total = document.querySelectorAll('#submissionDocList .doc-checkbox').length;
+            document.getElementById('docCount').textContent = `${checked} selected`;
+            document.getElementById('toggleAllDocs').textContent = checked === total ? 'Deselect All' : 'Select All';
         });
 
         document.getElementById('confirmSubmissionBtn').onclick = async () => {
