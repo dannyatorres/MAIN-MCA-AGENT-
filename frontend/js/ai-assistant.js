@@ -137,6 +137,7 @@ class AIAssistant {
 
         const message = input.value.trim();
         const conversationId = this.parent.getCurrentConversationId();
+        const conversation = this.parent.getSelectedConversation();
 
         if (!message || !conversationId) return;
 
@@ -149,6 +150,10 @@ class AIAssistant {
         if (introMsg) introMsg.remove();
 
         this.addMessageToChat('user', message, false);
+
+        // Save user message to cache
+        this.saveToCache(conversationId, 'user', message);
+
         this.showTypingIndicator();
 
         try {
@@ -157,6 +162,7 @@ class AIAssistant {
                 body: JSON.stringify({
                     query: message,
                     conversationId: conversationId,
+                    displayId: conversation?.display_id || null,
                     includeContext: true
                 })
             });
@@ -164,7 +170,11 @@ class AIAssistant {
             this.hideTypingIndicator();
 
             if (data.success && (data.response || data.fallback)) {
-                this.addMessageToChat('assistant', data.response || data.fallback, true);
+                const response = data.response || data.fallback;
+                this.addMessageToChat('assistant', response, true);
+
+                // Save assistant response to cache
+                this.saveToCache(conversationId, 'assistant', response);
             } else {
                 throw new Error(data.error || 'Unknown error');
             }
@@ -231,6 +241,13 @@ class AIAssistant {
     hideTypingIndicator() {
         const indicator = document.getElementById('aiTypingIndicator');
         if (indicator) indicator.remove();
+    }
+
+    saveToCache(conversationId, role, content) {
+        if (!this.aiChatCache.has(conversationId)) {
+            this.aiChatCache.set(conversationId, []);
+        }
+        this.aiChatCache.get(conversationId).push({ role, content });
     }
 
     // ============================================================

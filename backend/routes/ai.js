@@ -117,6 +117,7 @@ router.post('/chat', async (req, res) => {
                 // 6. Pack it all up
                 conversationContext = {
                     // Standard Info
+                    display_id: conversation.display_id,
                     business_name: conversation.business_name,
                     monthly_revenue: conversation.monthly_revenue,
                     funding_amount: conversation.requested_amount,
