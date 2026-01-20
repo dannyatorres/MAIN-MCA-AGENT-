@@ -103,14 +103,24 @@ router.get('/', async (req, res) => {
             query += ` AND (${conditions.join(' OR ')})`;
         }
 
-        // 4. QUICK FILTERS
+        // 4. SMART FILTERS (The Fix)
         if (filter) {
-            if (filter === 'INTERESTED') {
+            if (filter === 'OFFER') {
+                // Checks for either the flag or the specific state
+                query += ` AND (c.has_offer = TRUE OR c.state = 'OFFER_READY')`;
+            }
+            else if (filter === 'INTERESTED') {
                 query += ` AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound')`;
-            } else if (filter === 'UNREAD') {
+            }
+            else if (filter === 'UNREAD') {
                 query += ` AND (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound' AND m.timestamp > COALESCE(c.last_read_at, '1970-01-01')) > 0`;
-            } else {
-                query += ` AND c.current_step = $${paramIndex++}`;
+            }
+            else if (filter === 'SUBMITTED') {
+                query += ` AND c.state IN ('FCS_QUEUE', 'FCS_RUNNING', 'STRATEGIZED', 'HUMAN_REVIEW', 'SUBMITTED')`;
+            }
+            else {
+                // Fallback for standard states like 'HOT_LEAD', 'STALE', 'DEAD'
+                query += ` AND c.state = $${paramIndex++}`;
                 values.push(filter);
             }
         }
