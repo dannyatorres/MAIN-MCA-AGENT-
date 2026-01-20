@@ -133,8 +133,19 @@ router.get('/', async (req, res) => {
             }
         }
 
-        // 5. SORTING & PAGING
-        query += ` ORDER BY c.last_activity DESC NULLS LAST LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
+        // 5. SORTING (Fixed: Strict "Text Message" Style)
+        // We prioritize the timestamp of the actual last message.
+        // If no messages exist (brand new lead), we fall back to created_at.
+        // This ignores "admin edits" so leads don't jump around when you just change a note.
+        query += `
+            ORDER BY (
+                SELECT MAX(m.timestamp)
+                FROM messages m
+                WHERE m.conversation_id = c.id
+            ) DESC NULLS LAST,
+            c.created_at DESC
+            LIMIT $${paramIndex++} OFFSET $${paramIndex}
+        `;
         values.push(parseInt(limit), parseInt(offset));
 
         const result = await db.query(query, values);
