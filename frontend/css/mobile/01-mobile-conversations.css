@@ -152,6 +152,17 @@
     flex-shrink: 0;
 }
 
+/* Agent Tag (Admin view) */
+.agent-tag {
+    font-size: 11px;
+    background: rgba(243, 156, 18, 0.15);
+    color: #f39c12;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
 /* Row 3: Message Preview */
 .message-preview {
     font-size: 13px;

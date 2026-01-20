@@ -65,10 +65,14 @@ Object.assign(window.MobileApp.prototype, {
 
             // Update header
             if (this.selectedConversation) {
-                const name = this.selectedConversation.first_name ||
-                           this.selectedConversation.business_name?.split(' ')[0] || 'Unknown';
-                const business = this.selectedConversation.business_name || '';
-                this.dom.chatName.textContent = name.toUpperCase();
+                const c = this.selectedConversation;
+                const firstName = (c.owner_first_name || c.first_name || '').trim();
+                const lastName = (c.owner_last_name || c.last_name || '').trim();
+                let fullName = [firstName, lastName].filter(Boolean).join(' ');
+                if (!fullName) fullName = c.owner_name || c.business_name || 'Unknown';
+
+                const business = c.business_name || '';
+                this.dom.chatName.textContent = fullName.toUpperCase();
                 this.dom.chatBusiness.textContent = business;
             }
 
