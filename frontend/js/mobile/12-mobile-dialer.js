@@ -65,14 +65,17 @@ Object.assign(window.MobileApp.prototype, {
         // Update progress
         document.getElementById('dialerProgress').textContent = `${this.dialerIndex + 1}/${this.dialerQueue.length}`;
 
-        // Get initials
-        const name = lead.business_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown';
-        const initials = this.getInitials(name);
+        // Get person name and business name separately
+        const personName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+        const businessName = lead.business_name || '';
+        const displayName = personName || businessName || 'Unknown';
+        const initials = this.getInitials(displayName);
 
         // Update UI
         document.getElementById('dialerAvatar').textContent = initials;
-        document.getElementById('dialerLeadName').textContent = name;
-        document.getElementById('dialerLeadBusiness').textContent = lead.business_name || '';
+        document.getElementById('dialerLeadName').textContent = displayName;
+        // Only show business name if we have a person name, otherwise it's redundant
+        document.getElementById('dialerLeadBusiness').textContent = personName ? businessName : '';
         document.getElementById('dialerLeadPhone').textContent = this.utils.formatPhone(lead.phone);
         document.getElementById('dialerLeadState').textContent = lead.state || 'NEW';
         document.getElementById('dialerLeadAttempts').textContent = `${lead.call_attempts || 0} attempts`;
