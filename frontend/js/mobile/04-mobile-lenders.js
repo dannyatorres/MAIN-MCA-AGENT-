@@ -35,7 +35,18 @@ Object.assign(window.MobileApp.prototype, {
             try {
                 const fcsResult = await this.apiCall(`/api/fcs/results/${this.currentConversationId}`);
                 if (fcsResult.success) {
-                    fcsData = fcsResult.analysis || this.parseFcsReport(fcsResult.rawText);
+                    fcsData = { ...fcsResult.analysis };
+                    const reportText = fcsResult.report || fcsResult.rawText;
+                    if (reportText) {
+                        const parsed = this.parseFcsReport(reportText);
+                        if (parsed.businessName) fcsData.businessName = parsed.businessName;
+                        if (parsed.position) fcsData.position = parsed.position;
+                        if (parsed.revenue) fcsData.average_revenue = parseInt(parsed.revenue);
+                        if (parsed.negativeDays) fcsData.average_negative_days = parseInt(parsed.negativeDays);
+                        if (parsed.deposits) fcsData.average_deposits = parseInt(parsed.deposits);
+                        if (parsed.state) fcsData.state = parsed.state;
+                        if (parsed.industry) fcsData.industry = parsed.industry;
+                    }
                 }
             } catch (e) { /* ignore FCS errors */ }
 
@@ -59,10 +70,11 @@ Object.assign(window.MobileApp.prototype, {
 
     renderLendersForm(fcsData, cachedData) {
         const conv = this.selectedConversation || {};
-        const businessName = conv.business_name || '';
-        const state = conv.us_state || conv.state || '';
-        const industry = conv.industry || conv.industry_type || conv.business_type || '';
+        const businessName = fcsData?.businessName || conv.business_name || '';
+        const state = fcsData?.state || conv.us_state || conv.state || '';
+        const industry = fcsData?.industry || conv.industry || conv.industry_type || conv.business_type || '';
         const fico = conv.credit_score || '';
+        const position = fcsData?.position || '1';
         const revenue = fcsData?.average_revenue ? Math.round(fcsData.average_revenue) :
             (conv.monthly_revenue || (conv.annual_revenue ? Math.round(conv.annual_revenue / 12) : ''));
         const deposits = fcsData?.average_deposits || '';
@@ -89,16 +101,16 @@ Object.assign(window.MobileApp.prototype, {
                     <div class="mobile-form-group">
                         <label>Position *</label>
                         <select name="position" class="mobile-form-select" required>
-                            <option value="1">1st Position</option>
-                            <option value="2">2nd Position</option>
-                            <option value="3">3rd Position</option>
-                            <option value="4">4th Position</option>
-                            <option value="5">5th Position</option>
-                            <option value="6">6th Position</option>
-                            <option value="7">7th Position</option>
-                            <option value="8">8th Position</option>
-                            <option value="9">9th Position</option>
-                            <option value="10">10th Position</option>
+                            <option value="1" ${position === '1' ? 'selected' : ''}>1st Position</option>
+                            <option value="2" ${position === '2' ? 'selected' : ''}>2nd Position</option>
+                            <option value="3" ${position === '3' ? 'selected' : ''}>3rd Position</option>
+                            <option value="4" ${position === '4' ? 'selected' : ''}>4th Position</option>
+                            <option value="5" ${position === '5' ? 'selected' : ''}>5th Position</option>
+                            <option value="6" ${position === '6' ? 'selected' : ''}>6th Position</option>
+                            <option value="7" ${position === '7' ? 'selected' : ''}>7th Position</option>
+                            <option value="8" ${position === '8' ? 'selected' : ''}>8th Position</option>
+                            <option value="9" ${position === '9' ? 'selected' : ''}>9th Position</option>
+                            <option value="10" ${position === '10' ? 'selected' : ''}>10th Position</option>
                         </select>
                     </div>
                     <div class="mobile-form-group">
@@ -596,7 +608,6 @@ Let me know if you need anything else.</textarea>
     // FCS Report Parser - parses raw FCS report text
     parseFcsReport(reportText) {
         if (!reportText) return {};
-
         return {
             businessName: (reportText.match(/Business Name:\s*(.+?)(?:\u2022|\n|$)/i) || [])[1]?.trim(),
             position: (reportText.match(/Looking for\s*(\d+)/i) || [])[1],
