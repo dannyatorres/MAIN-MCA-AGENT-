@@ -854,17 +854,56 @@ Let me know if you need anything else.</textarea>
         }
     },
 
-    // FCS Report Parser - parses raw FCS report text
+    // FCS Report Parser - REPLACED WITH ROBUST VERSION
     parseFcsReport(reportText) {
         if (!reportText) return {};
+
+        const find = (patterns) => {
+            for (const p of patterns) {
+                const match = reportText.match(p);
+                if (match && match[1]) return match[1].trim();
+            }
+            return null;
+        };
+
+        const cleanNum = (str) => (str ? str.replace(/[$,]/g, '') : null);
+
         return {
-            businessName: (reportText.match(/Business Name:\s*(.+?)(?:\u2022|\n|$)/i) || [])[1]?.trim(),
-            position: (reportText.match(/Looking for\s*(\d+)/i) || [])[1],
-            revenue: (reportText.match(/Average True Revenue:\s*\$([\d,]+)/i) || [])[1]?.replace(/,/g, ''),
-            negativeDays: (reportText.match(/Average Negative Days:\s*(\d+)/i) || [])[1],
-            deposits: (reportText.match(/Average Number of Deposits:\s*(\d+)/i) || [])[1],
-            state: (reportText.match(/State:\s*([A-Z]{2})/i) || [])[1],
-            industry: (reportText.match(/Industry:\s*(.+?)(?:\u2022|\n|$)/i) || [])[1]?.trim()
+            businessName: find([
+                /Business Name:\s*(.+?)(?:\u2022|\n|$)/i,
+                /Merchant:\s*(.+?)(?:\u2022|\n|$)/i,
+                /DBA:\s*(.+?)(?:\u2022|\n|$)/i
+            ]),
+            position: find([
+                /Looking for\s*(\d+)/i,
+                /Position:\s*(\d+)/i,
+                /Positions?:\s*(\d+)/i
+            ]),
+            revenue: cleanNum(find([
+                /Average True Revenue:\s*\$?([\d,]+)/i,
+                /Avg[\s.]*Revenue:\s*\$?([\d,]+)/i,
+                /Monthly Revenue:\s*\$?([\d,]+)/i,
+                /Revenue:\s*\$?([\d,]+)/i
+            ])),
+            negativeDays: find([
+                /Average Negative Days:\s*(\d+)/i,
+                /Neg[\s.]*Days:\s*(\d+)/i,
+                /Negative Days:\s*(\d+)/i
+            ]),
+            deposits: find([
+                /Average Number of Deposits:\s*(\d+)/i,
+                /Avg[\s.]*Deposits:\s*(\d+)/i,
+                /Deposits:\s*(\d+)/i,
+                /Deposit Count:\s*(\d+)/i
+            ]),
+            state: find([
+                /State:\s*([A-Z]{2})\b/i,
+                /State:\s*(.+?)(?:\u2022|\n|$)/i
+            ]),
+            industry: find([
+                /Industry:\s*(.+?)(?:\u2022|\n|$)/i,
+                /Business Type:\s*(.+?)(?:\u2022|\n|$)/i
+            ])
         };
     }
 });
