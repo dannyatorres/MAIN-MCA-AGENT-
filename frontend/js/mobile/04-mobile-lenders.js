@@ -455,17 +455,13 @@ Object.assign(window.MobileApp.prototype, {
             if (docResult.success && docResult.documents) {
                 documents = docResult.documents;
             }
-        } catch (e) {
-            // ignore
-        }
+        } catch (e) { /* ignore */ }
 
         let submissionHistory = [];
         try {
             const histResult = await this.apiCall(`/api/lenders/submissions/${this.currentConversationId}`);
             submissionHistory = histResult.submissions || [];
-        } catch (e) {
-            // ignore
-        }
+        } catch (e) { /* ignore */ }
 
         const submittedMap = new Map();
         submissionHistory.forEach(sub => {
@@ -477,16 +473,35 @@ Object.assign(window.MobileApp.prototype, {
             return !submittedMap.has(name);
         });
 
+        const getDocIcon = (filename) => {
+            const ext = (filename || '').split('.').pop().toLowerCase();
+            if (ext === 'pdf') return { class: 'pdf', icon: '📄' };
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return { class: 'image', icon: '🖼️' };
+            if (['xls', 'xlsx', 'csv'].includes(ext)) return { class: 'excel', icon: '📊' };
+            return { class: 'default', icon: '📎' };
+        };
+
+        const truncateFilename = (name, maxLen = 35) => {
+            if (!name || name.length <= maxLen) return name;
+            const ext = name.split('.').pop();
+            const base = name.slice(0, name.length - ext.length - 1);
+            const truncated = base.slice(0, maxLen - ext.length - 4) + '...' + ext;
+            return truncated;
+        };
+
         const modalHtml = `
             <div class="mobile-submission-modal" id="submissionModal">
                 <div class="submission-header">
                     <h3>Send to Lenders</h3>
-                    <button class="icon-btn-small" id="closeSubmissionModal">&times;</button>
+                    <button class="submission-close-btn" id="closeSubmissionModal">&times;</button>
                 </div>
+
                 <div class="submission-content">
                     <div class="submission-section">
-                        <div class="submission-section-title">Message</div>
-                        <textarea id="submissionMessage" class="mobile-form-input" rows="3">Hello,
+                        <div class="submission-section-header">
+                            <span class="submission-section-title">Message</span>
+                        </div>
+                        <textarea id="submissionMessage" class="submission-message-box" placeholder="Enter your message to lenders...">Hello,
 
 Please find attached the funding application for ${this.selectedConversation?.business_name || 'this business'}.
 
@@ -494,26 +509,33 @@ Let me know if you need anything else.</textarea>
                     </div>
 
                     <div class="submission-section">
-                        <div class="submission-section-title">
-                            Select Lenders
+                        <div class="submission-section-header">
+                            <span class="submission-section-title">Select Lenders</span>
                             <div class="submission-controls">
                                 <button type="button" class="toggle-all-btn" id="toggleAllLenders">Deselect All</button>
-                                <span class="selection-count" id="lenderCount">${available.length} selected</span>
+                                <span class="selection-count-badge" id="lenderCount">${available.length} Selected</span>
                             </div>
                         </div>
+
                         ${submissionHistory.length > 0 ? `
                             <div class="already-submitted-note">
-                                📤 ${submissionHistory.length} already submitted
+                                📤 ${submissionHistory.length} lender${submissionHistory.length > 1 ? 's' : ''} already submitted
                             </div>
                         ` : ''}
+
                         <div id="submissionLenderList" class="submission-list">
                             ${available.length === 0 ? '<p class="empty-msg">All qualified lenders already submitted</p>' : ''}
                             ${available.map(l => {
                                 const name = l.name || l['Lender Name'];
+                                const tier = l.Tier || l.tier || '';
                                 return `
-                                    <label class="submission-list-item">
+                                    <label class="submission-list-item selected" data-name="${this.utils.escapeHtml(name)}">
                                         <input type="checkbox" class="lender-checkbox" value="${this.utils.escapeHtml(name)}" data-email="${l.email || ''}" checked>
-                                        <span class="submission-list-text">${this.utils.escapeHtml(name)}</span>
+                                        <span class="submission-checkbox"></span>
+                                        <div class="submission-item-content">
+                                            <span class="submission-item-name">${this.utils.escapeHtml(name)}</span>
+                                            ${tier ? `<span class="submission-item-meta">Tier ${tier}</span>` : ''}
+                                        </div>
                                     </label>
                                 `;
                             }).join('')}
@@ -521,27 +543,39 @@ Let me know if you need anything else.</textarea>
                     </div>
 
                     <div class="submission-section">
-                        <div class="submission-section-title">
-                            Attach Documents
+                        <div class="submission-section-header">
+                            <span class="submission-section-title">Attach Documents</span>
                             <div class="submission-controls">
                                 <button type="button" class="toggle-all-btn" id="toggleAllDocs">Deselect All</button>
-                                <span class="selection-count" id="docCount">${documents.length} selected</span>
+                                <span class="selection-count-badge" id="docCount">${documents.length} Selected</span>
                             </div>
                         </div>
+
                         <div id="submissionDocList" class="submission-list">
                             ${documents.length === 0 ? '<p class="empty-msg">No documents uploaded</p>' : ''}
-                            ${documents.map(doc => `
-                                <label class="submission-list-item">
-                                    <input type="checkbox" class="doc-checkbox" value="${doc.id}" data-s3key="${doc.s3_key}" checked>
-                                    <span class="submission-list-text">${this.utils.escapeHtml(doc.filename || doc.original_filename)}</span>
-                                </label>
-                            `).join('')}
+                            ${documents.map(doc => {
+                                const filename = doc.filename || doc.original_filename || 'Document';
+                                const icon = getDocIcon(filename);
+                                const fileSize = doc.size ? (doc.size / 1024).toFixed(0) + ' KB' : '';
+                                return `
+                                    <label class="submission-list-item selected" data-id="${doc.id}">
+                                        <input type="checkbox" class="doc-checkbox" value="${doc.id}" data-s3key="${doc.s3_key}" checked>
+                                        <span class="submission-checkbox"></span>
+                                        <span class="submission-doc-icon ${icon.class}">${icon.icon}</span>
+                                        <div class="submission-item-content">
+                                            <span class="submission-item-name">${this.utils.escapeHtml(truncateFilename(filename))}</span>
+                                            ${fileSize ? `<span class="submission-item-meta">${fileSize}</span>` : ''}
+                                        </div>
+                                    </label>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 </div>
+
                 <div class="submission-footer">
-                    <button type="button" class="btn-mobile-secondary" id="cancelSubmissionBtn">Cancel</button>
-                    <button type="button" class="btn-mobile-primary" id="confirmSubmissionBtn">
+                    <button type="button" id="cancelSubmissionBtn">Cancel</button>
+                    <button type="button" id="confirmSubmissionBtn">
                         <i class="fas fa-paper-plane"></i> Send Emails
                     </button>
                 </div>
@@ -553,44 +587,81 @@ Let me know if you need anything else.</textarea>
         document.getElementById('closeSubmissionModal').onclick = () => this.closeSubmissionModal();
         document.getElementById('cancelSubmissionBtn').onclick = () => this.closeSubmissionModal();
 
+        const updateItemState = (item) => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (checkbox.checked) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        };
+
+        document.querySelectorAll('#submissionLenderList .submission-list-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                updateItemState(item);
+                updateLenderCount();
+            });
+        });
+
+        document.querySelectorAll('#submissionDocList .submission-list-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                updateItemState(item);
+                updateDocCount();
+            });
+        });
+
+        const updateLenderCount = () => {
+            const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
+            const total = document.querySelectorAll('#submissionLenderList .lender-checkbox').length;
+            document.getElementById('lenderCount').textContent = `${checked} Selected`;
+            document.getElementById('toggleAllLenders').textContent = checked === total ? 'Deselect All' : 'Select All';
+        };
+
+        const updateDocCount = () => {
+            const checked = document.querySelectorAll('#submissionDocList .doc-checkbox:checked').length;
+            const total = document.querySelectorAll('#submissionDocList .doc-checkbox').length;
+            document.getElementById('docCount').textContent = `${checked} Selected`;
+            document.getElementById('toggleAllDocs').textContent = checked === total ? 'Deselect All' : 'Select All';
+        };
+
         document.getElementById('toggleAllLenders')?.addEventListener('click', (e) => {
             e.preventDefault();
+            const items = document.querySelectorAll('#submissionLenderList .submission-list-item');
             const checkboxes = document.querySelectorAll('#submissionLenderList .lender-checkbox');
-            const btn = e.target;
             const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
 
             checkboxes.forEach(cb => cb.checked = !anyChecked);
-            btn.textContent = anyChecked ? 'Select All' : 'Deselect All';
-
-            const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
-            document.getElementById('lenderCount').textContent = `${checked} selected`;
+            items.forEach(item => {
+                if (anyChecked) {
+                    item.classList.remove('selected');
+                } else {
+                    item.classList.add('selected');
+                }
+            });
+            updateLenderCount();
         });
 
         document.getElementById('toggleAllDocs')?.addEventListener('click', (e) => {
             e.preventDefault();
+            const items = document.querySelectorAll('#submissionDocList .submission-list-item');
             const checkboxes = document.querySelectorAll('#submissionDocList .doc-checkbox');
-            const btn = e.target;
             const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
 
             checkboxes.forEach(cb => cb.checked = !anyChecked);
-            btn.textContent = anyChecked ? 'Select All' : 'Deselect All';
-
-            const checked = document.querySelectorAll('#submissionDocList .doc-checkbox:checked').length;
-            document.getElementById('docCount').textContent = `${checked} selected`;
-        });
-
-        document.getElementById('submissionLenderList')?.addEventListener('change', () => {
-            const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
-            const total = document.querySelectorAll('#submissionLenderList .lender-checkbox').length;
-            document.getElementById('lenderCount').textContent = `${checked} selected`;
-            document.getElementById('toggleAllLenders').textContent = checked === total ? 'Deselect All' : 'Select All';
-        });
-
-        document.getElementById('submissionDocList')?.addEventListener('change', () => {
-            const checked = document.querySelectorAll('#submissionDocList .doc-checkbox:checked').length;
-            const total = document.querySelectorAll('#submissionDocList .doc-checkbox').length;
-            document.getElementById('docCount').textContent = `${checked} selected`;
-            document.getElementById('toggleAllDocs').textContent = checked === total ? 'Deselect All' : 'Select All';
+            items.forEach(item => {
+                if (anyChecked) {
+                    item.classList.remove('selected');
+                } else {
+                    item.classList.add('selected');
+                }
+            });
+            updateDocCount();
         });
 
         document.getElementById('confirmSubmissionBtn').onclick = async () => {
