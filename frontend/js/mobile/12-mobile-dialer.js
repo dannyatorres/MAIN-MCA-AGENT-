@@ -34,10 +34,14 @@ Object.assign(window.MobileApp.prototype, {
         }
         this.stopDialerTimer();
 
-        // Unlock channel if we have a current lead
+        // Only unlock if we have a lead and we're truly closing
         if (this.dialerCurrentLead) {
             this.unlockDialerChannel(this.dialerCurrentLead.id);
         }
+
+        // Reset state
+        this.dialerCurrentLead = null;
+        this.dialerCallStartTime = null;
 
         document.getElementById('mobileDialer').style.display = 'none';
     },
@@ -326,9 +330,18 @@ Object.assign(window.MobileApp.prototype, {
     dialerGoToConversation() {
         if (!this.dialerCurrentLead) return;
 
-        // Close dialer and go to conversation
+        const leadId = this.dialerCurrentLead.id;
+
+        // Hide dialer but DON'T reset state
         document.getElementById('mobileDialer').style.display = 'none';
-        this.selectConversation(this.dialerCurrentLead.id);
+
+        // Go to panel 0 first (conversations list)
+        this.goToPanel(0);
+
+        // Then select and go to chat
+        setTimeout(() => {
+            this.selectConversation(leadId);
+        }, 100);
     },
 
     dialerSkip() {
