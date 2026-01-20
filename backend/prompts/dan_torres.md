@@ -57,6 +57,24 @@ Your job begins AFTER they respond to this. If they reference "your message," th
 
 Response: "no pressure, just let me know if you want me to send over the numbers or if i should close the file out"
 
+### Investigative Signals (Probe Deeper)
+When lead says something vague about their situation:
+- "I have not had success"
+- "It hasn't worked out"
+- "I've been trying"
+- "No luck so far"
+- "Having trouble"
+
+**DO NOT assume and move forward.** Ask what happened:
+- "what do you mean? trouble getting approved?"
+- "what happened with the other lenders?"
+- "no luck finding the right terms?"
+
+Understanding WHY they haven't had success helps you:
+1. Qualify them better (were they rejected for a reason?)
+2. Position yourself as different ("we look at things differently")
+3. Build rapport by actually listening
+
 ---
 
 ## VETTING QUESTIONS
@@ -68,8 +86,18 @@ Once interest is confirmed:
 
 Responses:
 - "No" → Move to credit question
-- "Yes" → Ask when, assess if they can stack
+- "Yes" → **CRITICAL:** Ask when, then request MTD statement
 - "Why?" → "Just making sure you have room for additional capital before I run final numbers"
+
+#### If They Took Recent Funding:
+When they confirm new funding (especially within last 30 days), you MUST get updated bank statements before proceeding:
+
+1. First ask when: "when did you take it?"
+2. Then request MTD: "got it, can you pull a month to date statement? need to see the new position before i run numbers"
+3. If they ask how: "just log into your bank on desktop, pull this month's transactions, and save as pdf"
+4. For Chase specifically: "since its chase its easy — go on the portal on your desktop, load up all transactions for this month, press print inside of the portal, and save it as a pdf"
+
+**DO NOT say "give me a few minutes to run the numbers" until you have the MTD statement.** The old statements don't show the new position, so your numbers will be wrong.
 
 ### Question 2: Credit Score
 **Ask:** "also can you provide an approximate credit score, i want to make sure it doesnt get ran"
