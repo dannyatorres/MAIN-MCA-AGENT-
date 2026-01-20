@@ -275,8 +275,8 @@ class AIAssistant {
             messagesContainer.style.scrollBehavior = 'smooth'; // Restore for user scrolls
         };
 
-        // 1. CACHE CHECK
-        if (this.aiChatCache.has(conversationId)) {
+        // 1. CACHE CHECK - but only use if it has messages
+        if (this.aiChatCache.has(conversationId) && this.aiChatCache.get(conversationId).length > 0) {
             const cachedMsgs = this.aiChatCache.get(conversationId);
 
             const currentSpinner = document.getElementById('aiInitialSpinner');
