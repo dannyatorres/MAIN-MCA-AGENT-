@@ -112,14 +112,18 @@ Object.assign(window.MobileApp.prototype, {
                 this.dom.chatBusiness.textContent = business;
             }
 
+            // Navigate to chat first for instant feedback
+            this.goToPanel(1);
+
+            if (this.dom.messagesContainer) {
+                this.dom.messagesContainer.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+            }
+
             // Update list selection
             this.renderConversationList();
 
             // Load messages
             await this.loadMessages(id);
-
-            // Navigate to chat
-            this.goToPanel(1);
 
             // Join socket room
             if (this.socket && this.socket.connected) {
