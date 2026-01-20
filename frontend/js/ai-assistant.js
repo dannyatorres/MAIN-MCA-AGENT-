@@ -22,6 +22,7 @@ class AIAssistant {
     // ============================================================
 
     render(container) {
+        console.log('🤖 Rendering AI Assistant Interface');
         const conversation = this.parent.getSelectedConversation();
 
         if (!conversation) {
@@ -29,15 +30,7 @@ class AIAssistant {
             return;
         }
 
-        // Skip if already rendering/loaded for this conversation
-        if (this.currentConversationId === conversation.id && (this.isInitialized || this.isLoading)) {
-            console.log('⚡ AI chat already initialized or loading, skipping');
-            return;
-        }
-
-        console.log('🤖 Rendering AI Assistant Interface');
-
-        // Reset state when conversation changes
+        // Reset when conversation changes
         if (this.currentConversationId !== conversation.id) {
             this.currentConversationId = conversation.id;
             this.isInitialized = false;
