@@ -277,35 +277,56 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
         }
 
-        if (systemInstruction.includes("Underwriter Hook")) {
-            const content = `Hi ${nameToUse} my name is ${agentName} I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
-            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_HOOK');
-            return { shouldReply: true, content };
-        }
-        if (systemInstruction.includes("Did you get funded already?")) {
-            const content = "Did you get funded already?";
-            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_FUNDED');
-            return { shouldReply: true, content };
-        }
-        if (systemInstruction.includes("The money is expensive as is")) {
-            const content = "The money is expensive as is let me compete.";
-            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_COMPETE');
-            return { shouldReply: true, content };
-        }
-        if (systemInstruction.includes("should i close the file out?")) {
-            const content = "Hey just following up again, should i close the file out?";
-            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE1');
-            return { shouldReply: true, content };
-        }
-        if (systemInstruction.includes("any response would be appreciated")) {
-            const content = "hey any response would be appreciated here, close this out?";
-            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE2');
-            return { shouldReply: true, content };
-        }
-        if (systemInstruction.includes("closing out the file")) {
-            const content = "Hey just wanted to follow up again, will be closing out the file if i dont hear a response today, ty";
-            await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE3');
-            return { shouldReply: true, content };
+        // =================================================================
+        // 🚨 LAYER 2B: DRIP CAMPAIGN CONTEXT CHECK
+        // Before sending any drip/template message, check if lead responded
+        // =================================================================
+        const recentHistory = await db.query(`
+            SELECT direction, content FROM messages
+            WHERE conversation_id = $1
+            ORDER BY timestamp DESC LIMIT 1
+        `, [conversationId]);
+        
+        const lastMsg = recentHistory.rows[0];
+        const isDripCampaign = systemInstruction.includes("Did you get funded") || 
+                               systemInstruction.includes("money is expensive") ||
+                               systemInstruction.includes("close the file") ||
+                               systemInstruction.includes("any response would be appreciated");
+        
+        // Only use templates if lead hasn't responded yet
+        if (!isDripCampaign || !lastMsg || lastMsg.direction === 'outbound') {
+            if (systemInstruction.includes("Underwriter Hook")) {
+                const content = `Hi ${nameToUse} my name is ${agentName} I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_HOOK');
+                return { shouldReply: true, content };
+            }
+            if (systemInstruction.includes("Did you get funded already?")) {
+                const content = "Did you get funded already?";
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_FUNDED');
+                return { shouldReply: true, content };
+            }
+            if (systemInstruction.includes("The money is expensive as is")) {
+                const content = "The money is expensive as is let me compete.";
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_COMPETE');
+                return { shouldReply: true, content };
+            }
+            if (systemInstruction.includes("should i close the file out?")) {
+                const content = "Hey just following up again, should i close the file out?";
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE1');
+                return { shouldReply: true, content };
+            }
+            if (systemInstruction.includes("any response would be appreciated")) {
+                const content = "hey any response would be appreciated here, close this out?";
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE2');
+                return { shouldReply: true, content };
+            }
+            if (systemInstruction.includes("closing out the file")) {
+                const content = "Hey just wanted to follow up again, will be closing out the file if i dont hear a response today, ty";
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE3');
+                return { shouldReply: true, content };
+            }
+        } else if (isDripCampaign && lastMsg && lastMsg.direction === 'inbound') {
+            console.log('📬 Drip skipped - lead has responded, switching to AI mode');
         }
 
         // 🟢 F. THE HAIL MARY (Ballpark Offer)
