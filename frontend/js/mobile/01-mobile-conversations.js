@@ -9,6 +9,7 @@ Object.assign(window.MobileApp.prototype, {
 
             if (this.isLoadingMore) return;
             this.isLoadingMore = true;
+            this.dom.conversationList?.classList.add('loading');
 
             try {
                 const params = new URLSearchParams({
@@ -39,6 +40,9 @@ Object.assign(window.MobileApp.prototype, {
                 }
             } finally {
                 this.isLoadingMore = false;
+                setTimeout(() => {
+                    this.dom.conversationList?.classList.remove('loading');
+                }, 50);
             }
         },
 
