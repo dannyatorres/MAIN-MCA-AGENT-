@@ -16,6 +16,8 @@ Object.assign(window.MobileApp.prototype, {
                     offset: String(this.conversationOffset)
                 });
                 if (search) params.append('search', search);
+                const stateFilter = document.getElementById('mobileStateFilter')?.value || '';
+                if (stateFilter) params.append('filter', stateFilter);
 
                 const data = await this.apiCall(`/api/conversations?${params}`);
                 const results = Array.isArray(data) ? data : [];
@@ -42,10 +44,6 @@ Object.assign(window.MobileApp.prototype, {
 
         renderConversationList(append = false) {
             let convArray = Array.from(this.conversations.values());
-
-            if (this.currentFilter) {
-                convArray = convArray.filter(c => c.state === this.currentFilter);
-            }
 
             if (!convArray.length) {
                 this.dom.conversationList.innerHTML = '<div class="loading-state">No conversations found</div>';

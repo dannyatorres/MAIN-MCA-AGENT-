@@ -149,10 +149,12 @@ window.MobileApp = class MobileApp {
         });
 
         // Mobile state filter
-        document.getElementById('mobileStateFilter')?.addEventListener('change', (e) => {
-            this.currentFilter = e.target.value;
-            this.renderConversationList();
-        });
+        const mobileStateFilter = document.getElementById('mobileStateFilter');
+        if (mobileStateFilter) {
+            mobileStateFilter.addEventListener('change', () => {
+                this.loadConversations('', false);
+            });
+        }
 
         // Send message
         this.dom.sendBtn.addEventListener('click', () => this.sendMessage());
