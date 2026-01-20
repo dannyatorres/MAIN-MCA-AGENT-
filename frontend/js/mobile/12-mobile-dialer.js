@@ -62,30 +62,45 @@ Object.assign(window.MobileApp.prototype, {
             return;
         }
 
-        // Update progress
-        document.getElementById('dialerProgress').textContent = `${this.dialerIndex + 1}/${this.dialerQueue.length}`;
+        const card = document.getElementById('dialerLeadCard');
+        const info = document.getElementById('dialerLeadInfo');
 
-        // Get person name and business name separately
-        const personName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
-        const businessName = lead.business_name || '';
-        const displayName = personName || businessName || 'Unknown';
-        const initials = this.getInitials(displayName);
+        // Animate out
+        card?.classList.add('switching');
 
-        // Update UI
-        document.getElementById('dialerAvatar').textContent = initials;
-        document.getElementById('dialerLeadName').textContent = displayName;
-        // Only show business name if we have a person name, otherwise it's redundant
-        document.getElementById('dialerLeadBusiness').textContent = personName ? businessName : '';
-        document.getElementById('dialerLeadPhone').textContent = this.utils.formatPhone(lead.phone);
-        document.getElementById('dialerLeadState').textContent = lead.state || 'NEW';
-        document.getElementById('dialerLeadAttempts').textContent = `${lead.call_attempts || 0} attempts`;
+        setTimeout(() => {
+            // Update progress
+            document.getElementById('dialerProgress').textContent = `${this.dialerIndex + 1}/${this.dialerQueue.length}`;
 
-        // Show lead info, hide loading
-        document.getElementById('dialerLoading').style.display = 'none';
-        document.getElementById('dialerLeadInfo').style.display = 'flex';
-        document.getElementById('dialerEmpty').style.display = 'none';
-        document.getElementById('dialerActions').style.display = 'flex';
-        document.getElementById('dialerDisposition').style.display = 'none';
+            // Get person name and business name separately
+            const personName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+            const businessName = lead.business_name || '';
+            const displayName = personName || businessName || 'Unknown';
+            const initials = this.getInitials(displayName);
+
+            // Update UI
+            document.getElementById('dialerAvatar').textContent = initials;
+            document.getElementById('dialerLeadName').textContent = displayName;
+            // Only show business name if we have a person name, otherwise it's redundant
+            document.getElementById('dialerLeadBusiness').textContent = personName ? businessName : '';
+            document.getElementById('dialerLeadPhone').textContent = this.utils.formatPhone(lead.phone);
+            document.getElementById('dialerLeadState').textContent = lead.state || 'NEW';
+            document.getElementById('dialerLeadAttempts').textContent = `${lead.call_attempts || 0} attempts`;
+
+            // Show lead info, hide loading
+            document.getElementById('dialerLoading').style.display = 'none';
+            info.style.display = 'flex';
+            document.getElementById('dialerEmpty').style.display = 'none';
+            document.getElementById('dialerActions').style.display = 'flex';
+            document.getElementById('dialerDisposition').style.display = 'none';
+
+            // Force re-trigger animations by cloning
+            const newInfo = info.cloneNode(true);
+            info.parentNode.replaceChild(newInfo, info);
+
+            // Animate in
+            card?.classList.remove('switching');
+        }, 150);
     },
 
     showDialerEmpty() {
@@ -198,9 +213,21 @@ Object.assign(window.MobileApp.prototype, {
     },
 
     updateDialerSessionStats() {
-        document.getElementById('dialerAnswered').textContent = this.dialerSessionStats.answered;
-        document.getElementById('dialerVoicemail').textContent = this.dialerSessionStats.voicemail;
-        document.getElementById('dialerNoAnswer').textContent = this.dialerSessionStats.no_answer;
+        const answered = document.getElementById('dialerAnswered');
+        const voicemail = document.getElementById('dialerVoicemail');
+        const noAnswer = document.getElementById('dialerNoAnswer');
+
+        if (answered) {
+            answered.textContent = this.dialerSessionStats.answered;
+            answered.classList.add('bump');
+            setTimeout(() => answered.classList.remove('bump'), 200);
+        }
+        if (voicemail) {
+            voicemail.textContent = this.dialerSessionStats.voicemail;
+        }
+        if (noAnswer) {
+            noAnswer.textContent = this.dialerSessionStats.no_answer;
+        }
     },
 
     setupDialerListeners() {

@@ -20,6 +20,7 @@
     font-size: 14px;
     color: #8b949e;
     padding-right: 8px;
+    transition: color 0.2s ease;
 }
 
 .mobile-dialer-content {
@@ -51,6 +52,12 @@
     font-size: 24px;
     font-weight: 700;
     color: #e6edf3;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.dialer-stat-value.bump {
+    transform: scale(1.2);
+    color: #6ee7b7;
 }
 
 .dialer-stat-label {
@@ -59,7 +66,7 @@
     text-transform: uppercase;
 }
 
-/* Lead Card */
+/* Lead Card - slide/fade animation */
 .dialer-lead-card {
     background: linear-gradient(180deg, #1f242c 0%, #13171f 100%);
     border: 1px solid #30363d;
@@ -72,26 +79,28 @@
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
+.dialer-lead-card.switching {
+    transform: scale(0.95);
+    opacity: 0.5;
+}
+
+/* Loading spinner */
 .dialer-lead-loading {
     color: #8b949e;
     display: flex;
     flex-direction: column;
     align-items: center;
+    animation: fadeIn 0.3s ease;
 }
 
 .dialer-lead-loading .loading-spinner {
     margin: 0 auto 16px;
 }
 
-.dialer-lead-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-}
-
+/* Avatar with subtle pulse */
 .dialer-lead-avatar {
     width: 80px;
     height: 80px;
@@ -104,6 +113,42 @@
     font-weight: 700;
     color: white;
     margin-bottom: 16px;
+    animation: avatarPulse 2s ease-in-out infinite;
+}
+
+@keyframes avatarPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+}
+
+/* Lead info with stagger fade-in */
+.dialer-lead-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.dialer-lead-info > * {
+    animation: fadeSlideUp 0.4s ease forwards;
+    opacity: 0;
+}
+
+.dialer-lead-info > *:nth-child(1) { animation-delay: 0s; }
+.dialer-lead-info > *:nth-child(2) { animation-delay: 0.05s; }
+.dialer-lead-info > *:nth-child(3) { animation-delay: 0.1s; }
+.dialer-lead-info > *:nth-child(4) { animation-delay: 0.15s; }
+.dialer-lead-info > *:nth-child(5) { animation-delay: 0.2s; }
+
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .dialer-lead-name {
@@ -128,10 +173,8 @@
 
 .dialer-lead-meta {
     display: flex;
-    flex-direction: row;
     gap: 12px;
     align-items: center;
-    justify-content: center;
 }
 
 .dialer-lead-state {
@@ -153,11 +196,13 @@
     flex-direction: column;
     align-items: center;
     color: #6ee7b7;
+    animation: fadeSlideUp 0.4s ease;
 }
 
 .dialer-empty i {
     font-size: 48px;
     margin-bottom: 16px;
+    animation: checkPop 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dialer-empty h3 {
@@ -170,11 +215,29 @@
     color: #8b949e;
 }
 
+@keyframes checkPop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 /* Call Actions */
 .dialer-actions {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .dialer-call-btn {
@@ -188,27 +251,38 @@
     font-weight: 600;
     border: none;
     cursor: pointer;
-    transition: transform 0.1s ease, opacity 0.2s ease;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease;
 }
 
 .dialer-call-btn:active {
-    transform: scale(0.98);
+    transform: scale(0.96);
 }
 
 .dialer-call-btn.native {
     background: linear-gradient(135deg, #10b981, #059669);
     color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.dialer-call-btn.native:active {
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 .dialer-call-btn.twilio {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.dialer-call-btn.twilio:active {
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
 }
 
 .dialer-call-btn i {
     font-size: 20px;
 }
 
+/* Skip button */
 .dialer-skip-btn {
     background: transparent;
     border: 1px solid #30363d;
@@ -221,18 +295,21 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    transition: all 0.2s ease;
 }
 
 .dialer-skip-btn:active {
     background: #1f242c;
+    transform: scale(0.98);
 }
 
-/* Disposition Panel */
+/* Disposition Panel - slide up */
 .dialer-disposition {
     background: linear-gradient(180deg, #1f242c 0%, #13171f 100%);
     border: 1px solid #30363d;
     border-radius: 16px;
     padding: 20px;
+    animation: slideUp 0.3s ease;
 }
 
 .disposition-prompt {
@@ -243,6 +320,7 @@
     margin: 0 0 16px 0;
 }
 
+/* Disposition buttons - stagger animation */
 .disposition-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -260,11 +338,31 @@
     border: 1px solid #30363d;
     background: #161b22;
     cursor: pointer;
-    transition: transform 0.1s ease, border-color 0.2s ease;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: popIn 0.3s ease forwards;
+    opacity: 0;
+}
+
+.disposition-btn:nth-child(1) { animation-delay: 0s; }
+.disposition-btn:nth-child(2) { animation-delay: 0.03s; }
+.disposition-btn:nth-child(3) { animation-delay: 0.06s; }
+.disposition-btn:nth-child(4) { animation-delay: 0.09s; }
+.disposition-btn:nth-child(5) { animation-delay: 0.12s; }
+.disposition-btn:nth-child(6) { animation-delay: 0.15s; }
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .disposition-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.92);
 }
 
 .disposition-btn i {
@@ -319,4 +417,9 @@
 .disposition-btn.danger:active {
     border-color: #ef4444;
     background: rgba(239, 68, 68, 0.1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
