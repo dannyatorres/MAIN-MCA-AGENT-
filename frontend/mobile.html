@@ -46,28 +46,29 @@
                 </div>
             </header>
             <div class="search-bar" style="display: flex; gap: 8px; align-items: center;">
-                <input type="text" id="searchInput" class="search-field-clean" placeholder="Search leads..." style="flex: 1;">
                 <div class="filter-wrapper" style="position: relative; flex-shrink: 0;">
-                    <select class="state-filter-icon" id="mobileStateFilter" style="
+                    <select class="state-filter-icon" id="mobileStateFilter" title="Filter Status" style="
                         appearance: none;
                         background: var(--bg-tertiary);
                         border: 1px solid var(--border-primary);
                         border-radius: 8px;
-                        color: var(--text-secondary);
-                        padding: 10px 28px 10px 12px;
+                        color: transparent;
+                        padding: 10px 12px;
                         font-size: 13px;
                         cursor: pointer;
-                        min-width: 44px;
+                        width: 38px;
+                        height: 38px;
                     ">
-                        <option value=""></option>
+                        <option value="">All</option>
                         <option value="UNREAD">Unread</option>
                         <option value="INTERESTED">Interested</option>
                         <option value="SUBMITTED">Submitted</option>
                         <option value="OFFER">Has Offer</option>
                         <option value="DEAD">Dead</option>
                     </select>
-                    <i class="fas fa-filter" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 11px; color: var(--text-muted);"></i>
+                    <i class="fas fa-filter" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; font-size: 12px; color: var(--text-muted);"></i>
                 </div>
+                <input type="text" id="searchInput" class="search-field-clean" placeholder="Search leads..." style="flex: 1;">
             </div>
             <div class="conversations-list" id="conversationList">
                 <div class="loading-state"><div class="loading-spinner"></div><p>Loading...</p></div>
