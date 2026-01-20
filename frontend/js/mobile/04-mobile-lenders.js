@@ -666,8 +666,8 @@ Let me know if you need anything else.</textarea>
     closeSubmissionModal() {
         const modal = document.getElementById('submissionModal');
         if (modal) {
-            modal.style.transform = 'translateY(100%)';
-            setTimeout(() => modal.remove(), 300);
+            modal.style.animation = 'slideOut 0.25s ease-in forwards';
+            setTimeout(() => modal.remove(), 250);
         }
     },
 
