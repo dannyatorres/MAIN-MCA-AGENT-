@@ -422,6 +422,14 @@
                     <h2 class="dialer-lead-name" id="dialerLeadName">John Smith</h2>
                     <p class="dialer-lead-business" id="dialerLeadBusiness">Smith Enterprises</p>
                     <p class="dialer-lead-phone" id="dialerLeadPhone">(555) 123-4567</p>
+                    
+                    <!-- Status Badge -->
+                    <div class="dialer-status" id="dialerStatus" style="display: none;">
+                        <div class="dialer-status-badge" id="dialerStatusBadge"></div>
+                        <span class="dialer-status-text" id="dialerStatusText">READY</span>
+                        <span class="dialer-timer" id="dialerTimer">00:00</span>
+                    </div>
+                    
                     <div class="dialer-lead-meta">
                         <span class="dialer-lead-state" id="dialerLeadState">INTERESTED</span>
                         <span class="dialer-lead-attempts" id="dialerLeadAttempts">0 attempts</span>
@@ -433,6 +441,34 @@
                     <h3>Queue Complete!</h3>
                     <p>You've worked through all leads</p>
                 </div>
+                
+                <!-- Session Complete -->
+                <div class="dialer-complete" id="dialerComplete" style="display: none;">
+                    <i class="fas fa-trophy"></i>
+                    <h3>Session Complete!</h3>
+                    <div class="dialer-complete-stats">
+                        <div class="complete-stat">
+                            <span class="complete-stat-value" id="completeAnswered">0</span>
+                            <span class="complete-stat-label">Answered</span>
+                        </div>
+                        <div class="complete-stat">
+                            <span class="complete-stat-value" id="completeNoAnswer">0</span>
+                            <span class="complete-stat-label">No Answer</span>
+                        </div>
+                        <div class="complete-stat">
+                            <span class="complete-stat-value" id="completeSkipped">0</span>
+                            <span class="complete-stat-label">Skipped</span>
+                        </div>
+                    </div>
+                    <button class="dialer-done-btn" id="dialerDoneBtn">Done</button>
+                </div>
+            </div>
+
+            <!-- Next Up Preview -->
+            <div class="dialer-next-up" id="dialerNextUp" style="display: none;">
+                <span class="next-up-label">Next up:</span>
+                <span class="next-up-name" id="dialerNextName">-</span>
+                <span class="next-up-business" id="dialerNextBusiness"></span>
             </div>
 
             <!-- Call Actions -->
@@ -445,12 +481,29 @@
                     <i class="fas fa-headset"></i>
                     <span>Call In-App</span>
                 </button>
-                <button class="dialer-skip-btn" id="dialerSkip">
-                    <i class="fas fa-forward"></i> Skip
+                <div class="dialer-action-row">
+                    <button class="dialer-secondary-btn" id="dialerGoToConvo">
+                        <i class="fas fa-comment-dots"></i> View Chat
+                    </button>
+                    <button class="dialer-secondary-btn" id="dialerSkip">
+                        <i class="fas fa-forward"></i> Skip
+                    </button>
+                </div>
+            </div>
+
+            <!-- In-Call Controls (shows during Twilio call) -->
+            <div class="dialer-call-controls" id="dialerCallControls" style="display: none;">
+                <button class="dialer-control-btn" id="dialerMuteBtn">
+                    <i class="fas fa-microphone"></i>
+                    <span>Mute</span>
+                </button>
+                <button class="dialer-control-btn danger" id="dialerEndCallBtn">
+                    <i class="fas fa-phone-slash"></i>
+                    <span>End Call</span>
                 </button>
             </div>
 
-            <!-- Disposition Panel (shows after call) -->
+            <!-- Disposition Panel -->
             <div class="dialer-disposition" id="dialerDisposition" style="display: none;">
                 <p class="disposition-prompt">How did the call go?</p>
                 <div class="disposition-grid">

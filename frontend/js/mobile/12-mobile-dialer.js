@@ -1,10 +1,15 @@
-// 12-mobile-dialer.js - Mobile Power Dialer
+// 12-mobile-dialer.js - Mobile Power Dialer (Full Featured)
 Object.assign(window.MobileApp.prototype, {
 
     dialerQueue: [],
     dialerIndex: 0,
-    dialerSessionStats: { answered: 0, voicemail: 0, no_answer: 0 },
+    dialerSessionStats: { answered: 0, voicemail: 0, no_answer: 0, skipped: 0 },
     dialerCallStartTime: null,
+    dialerTimerInterval: null,
+    dialerCurrentLead: null,
+    dialerMaxAttempts: 2,
+    dialerCurrentAttempt: 1,
+    dialerIsMuted: false,
 
     async openMobileDialer() {
         document.getElementById('mobileDialer').style.display = 'flex';
@@ -12,21 +17,41 @@ Object.assign(window.MobileApp.prototype, {
 
         // Reset session
         this.dialerIndex = 0;
-        this.dialerSessionStats = { answered: 0, voicemail: 0, no_answer: 0 };
+        this.dialerCurrentAttempt = 1;
+        this.dialerSessionStats = { answered: 0, voicemail: 0, no_answer: 0, skipped: 0 };
         this.updateDialerSessionStats();
 
         // Show loading
-        document.getElementById('dialerLoading').style.display = 'block';
-        document.getElementById('dialerLeadInfo').style.display = 'none';
-        document.getElementById('dialerEmpty').style.display = 'none';
-        document.getElementById('dialerActions').style.display = 'none';
-        document.getElementById('dialerDisposition').style.display = 'none';
+        this.showDialerLoading();
 
         await this.loadDialerQueue();
     },
 
     closeMobileDialer() {
+        // End any active call
+        if (window.callManager?.activeCall) {
+            window.callManager.endCall();
+        }
+        this.stopDialerTimer();
+
+        // Unlock channel if we have a current lead
+        if (this.dialerCurrentLead) {
+            this.unlockDialerChannel(this.dialerCurrentLead.id);
+        }
+
         document.getElementById('mobileDialer').style.display = 'none';
+    },
+
+    showDialerLoading() {
+        document.getElementById('dialerLoading').style.display = 'flex';
+        document.getElementById('dialerLeadInfo').style.display = 'none';
+        document.getElementById('dialerEmpty').style.display = 'none';
+        document.getElementById('dialerComplete').style.display = 'none';
+        document.getElementById('dialerActions').style.display = 'none';
+        document.getElementById('dialerCallControls').style.display = 'none';
+        document.getElementById('dialerDisposition').style.display = 'none';
+        document.getElementById('dialerNextUp').style.display = 'none';
+        document.getElementById('dialerStatus').style.display = 'none';
     },
 
     async loadDialerQueue() {
@@ -34,7 +59,7 @@ Object.assign(window.MobileApp.prototype, {
             const response = await this.apiCall('/api/dialer/queue');
             let leads = response.leads || [];
 
-            // Filter out leads with offers or other states we don't want to call
+            // Filter out leads we don't want to call
             const excludeStates = ['OFFER', 'OFFER_RECEIVED', 'FUNDED', 'DEAD', 'ARCHIVED'];
             leads = leads.filter(lead => !excludeStates.includes(lead.state));
 
@@ -58,12 +83,12 @@ Object.assign(window.MobileApp.prototype, {
     showCurrentDialerLead() {
         const lead = this.dialerQueue[this.dialerIndex];
         if (!lead) {
-            this.showDialerEmpty();
+            this.showDialerComplete();
             return;
         }
 
+        this.dialerCurrentLead = lead;
         const card = document.getElementById('dialerLeadCard');
-        const info = document.getElementById('dialerLeadInfo');
 
         // Animate out
         card?.classList.add('switching');
@@ -72,7 +97,7 @@ Object.assign(window.MobileApp.prototype, {
             // Update progress
             document.getElementById('dialerProgress').textContent = `${this.dialerIndex + 1}/${this.dialerQueue.length}`;
 
-            // Get person name and business name separately
+            // Get names
             const personName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
             const businessName = lead.business_name || '';
             const displayName = personName || businessName || 'Unknown';
@@ -81,54 +106,135 @@ Object.assign(window.MobileApp.prototype, {
             // Update UI
             document.getElementById('dialerAvatar').textContent = initials;
             document.getElementById('dialerLeadName').textContent = displayName;
-            // Only show business name if we have a person name, otherwise it's redundant
             document.getElementById('dialerLeadBusiness').textContent = personName ? businessName : '';
             document.getElementById('dialerLeadPhone').textContent = this.utils.formatPhone(lead.phone);
             document.getElementById('dialerLeadState').textContent = lead.state || 'NEW';
             document.getElementById('dialerLeadAttempts').textContent = `${lead.call_attempts || 0} attempts`;
 
-            // Show lead info, hide loading
+            // Reset status
+            this.setDialerStatus('ready', 'READY');
+            document.getElementById('dialerStatus').style.display = 'none';
+            document.getElementById('dialerTimer').textContent = '00:00';
+
+            // Show UI
             document.getElementById('dialerLoading').style.display = 'none';
-            info.style.display = 'flex';
+            document.getElementById('dialerLeadInfo').style.display = 'flex';
             document.getElementById('dialerEmpty').style.display = 'none';
+            document.getElementById('dialerComplete').style.display = 'none';
             document.getElementById('dialerActions').style.display = 'flex';
+            document.getElementById('dialerCallControls').style.display = 'none';
             document.getElementById('dialerDisposition').style.display = 'none';
 
-            // Force re-trigger animations by cloning
-            const newInfo = info.cloneNode(true);
-            info.parentNode.replaceChild(newInfo, info);
+            // Update Next Up
+            this.updateDialerNextUp();
 
             // Animate in
             card?.classList.remove('switching');
         }, 150);
     },
 
+    updateDialerNextUp() {
+        const nextLead = this.dialerQueue[this.dialerIndex + 1];
+        const container = document.getElementById('dialerNextUp');
+
+        if (nextLead && container) {
+            const nextName = `${nextLead.first_name || ''} ${nextLead.last_name || ''}`.trim() || nextLead.business_name || 'Unknown';
+            document.getElementById('dialerNextName').textContent = nextName;
+            document.getElementById('dialerNextBusiness').textContent = nextLead.business_name || '';
+            container.style.display = 'flex';
+        } else if (container) {
+            container.style.display = 'none';
+        }
+    },
+
     showDialerEmpty() {
         document.getElementById('dialerLoading').style.display = 'none';
         document.getElementById('dialerLeadInfo').style.display = 'none';
-        document.getElementById('dialerEmpty').style.display = 'block';
+        document.getElementById('dialerEmpty').style.display = 'flex';
+        document.getElementById('dialerComplete').style.display = 'none';
         document.getElementById('dialerActions').style.display = 'none';
+        document.getElementById('dialerCallControls').style.display = 'none';
         document.getElementById('dialerDisposition').style.display = 'none';
+        document.getElementById('dialerNextUp').style.display = 'none';
     },
 
+    showDialerComplete() {
+        // Update complete stats
+        document.getElementById('completeAnswered').textContent = this.dialerSessionStats.answered;
+        document.getElementById('completeNoAnswer').textContent = this.dialerSessionStats.voicemail + this.dialerSessionStats.no_answer;
+        document.getElementById('completeSkipped').textContent = this.dialerSessionStats.skipped;
+
+        document.getElementById('dialerLoading').style.display = 'none';
+        document.getElementById('dialerLeadInfo').style.display = 'none';
+        document.getElementById('dialerEmpty').style.display = 'none';
+        document.getElementById('dialerComplete').style.display = 'flex';
+        document.getElementById('dialerActions').style.display = 'none';
+        document.getElementById('dialerCallControls').style.display = 'none';
+        document.getElementById('dialerDisposition').style.display = 'none';
+        document.getElementById('dialerNextUp').style.display = 'none';
+    },
+
+    setDialerStatus(type, text) {
+        const badge = document.getElementById('dialerStatusBadge');
+        const textEl = document.getElementById('dialerStatusText');
+        const statusContainer = document.getElementById('dialerStatus');
+
+        if (badge) {
+            badge.className = 'dialer-status-badge ' + type;
+        }
+        if (textEl) {
+            textEl.textContent = text;
+        }
+        if (statusContainer) {
+            statusContainer.style.display = 'flex';
+        }
+    },
+
+    // Channel Locking
+    async lockDialerChannel(conversationId) {
+        try {
+            await this.apiCall(`/api/dialer/${conversationId}/channel-lock`, {
+                method: 'POST',
+                body: JSON.stringify({ channel: 'voice' })
+            });
+        } catch (err) {
+            console.error('Failed to lock channel:', err);
+        }
+    },
+
+    async unlockDialerChannel(conversationId) {
+        try {
+            await this.apiCall(`/api/dialer/${conversationId}/channel-lock`, {
+                method: 'DELETE'
+            });
+        } catch (err) {
+            console.error('Failed to unlock channel:', err);
+        }
+    },
+
+    // Native Call
     dialerCallNative() {
-        const lead = this.dialerQueue[this.dialerIndex];
+        const lead = this.dialerCurrentLead;
         if (!lead) return;
 
         const phone = String(lead.phone).replace(/\D/g, '');
         this.dialerCallStartTime = Date.now();
 
+        // Lock channel
+        this.lockDialerChannel(lead.id);
+
         // Open phone app
         window.location.href = `tel:${phone}`;
 
-        // Show disposition after a short delay (user will return after call)
+        // Show disposition after delay
         setTimeout(() => {
             this.showDialerDisposition();
         }, 1000);
     },
 
+    // Twilio Call
     async dialerCallTwilio() {
-        const lead = this.dialerQueue[this.dialerIndex];
+        const lead = this.dialerCurrentLead;
         if (!lead) return;
 
         if (!window.callManager) {
@@ -138,40 +244,105 @@ Object.assign(window.MobileApp.prototype, {
 
         const phone = String(lead.phone).replace(/\D/g, '');
         this.dialerCallStartTime = Date.now();
+        this.dialerIsMuted = false;
 
-        // Show call UI
-        this.showCallUI();
+        // Lock channel
+        await this.lockDialerChannel(lead.id);
+
+        // Update UI
+        this.setDialerStatus('ringing', 'CALLING...');
+        document.getElementById('dialerActions').style.display = 'none';
+        document.getElementById('dialerCallControls').style.display = 'flex';
+
+        // Reset mute button
+        const muteBtn = document.getElementById('dialerMuteBtn');
+        if (muteBtn) {
+            muteBtn.innerHTML = '<i class="fas fa-microphone"></i><span>Mute</span>';
+            muteBtn.classList.remove('muted');
+        }
 
         try {
-            await window.callManager.startCall(phone, lead.id);
+            const call = await window.callManager.startCall(phone, lead.id);
 
-            // Listen for call end to show disposition
-            const checkCallEnd = setInterval(() => {
-                if (!window.callManager.activeCall) {
-                    clearInterval(checkCallEnd);
-                    setTimeout(() => {
-                        this.showDialerDisposition();
-                    }, 500);
-                }
-            }, 500);
+            if (call) {
+                // Hide default call bar
+                document.getElementById('mobileCallBar')?.classList.add('hidden');
+
+                call.on('accept', () => {
+                    this.setDialerStatus('connected', 'CONNECTED');
+                    this.startDialerTimer();
+                });
+
+                call.on('disconnect', () => {
+                    this.handleDialerCallEnd();
+                });
+
+                call.on('cancel', () => {
+                    this.handleDialerCallEnd();
+                });
+            } else {
+                this.handleDialerCallEnd();
+            }
         } catch (error) {
             console.error('Twilio call failed:', error);
             this.showToast('Call failed', 'error');
-            this.hideCallUI();
+            this.handleDialerCallEnd();
         }
     },
 
+    handleDialerCallEnd() {
+        this.stopDialerTimer();
+        this.setDialerStatus('ended', 'CALL ENDED');
+        document.getElementById('dialerCallControls').style.display = 'none';
+        this.showDialerDisposition();
+    },
+
+    dialerEndCall() {
+        if (window.callManager?.activeCall) {
+            window.callManager.endCall();
+        }
+        this.handleDialerCallEnd();
+    },
+
+    dialerToggleMute() {
+        const call = window.callManager?.activeCall;
+        if (!call) return;
+
+        this.dialerIsMuted = !this.dialerIsMuted;
+        call.mute(this.dialerIsMuted);
+
+        const muteBtn = document.getElementById('dialerMuteBtn');
+        if (muteBtn) {
+            if (this.dialerIsMuted) {
+                muteBtn.innerHTML = '<i class="fas fa-microphone-slash"></i><span>Unmute</span>';
+                muteBtn.classList.add('muted');
+            } else {
+                muteBtn.innerHTML = '<i class="fas fa-microphone"></i><span>Mute</span>';
+                muteBtn.classList.remove('muted');
+            }
+        }
+    },
+
+    dialerGoToConversation() {
+        if (!this.dialerCurrentLead) return;
+
+        // Close dialer and go to conversation
+        document.getElementById('mobileDialer').style.display = 'none';
+        this.selectConversation(this.dialerCurrentLead.id);
+    },
+
     dialerSkip() {
-        this.logDisposition('skip');
+        this.logDialerDisposition('skip');
     },
 
     showDialerDisposition() {
         document.getElementById('dialerActions').style.display = 'none';
+        document.getElementById('dialerCallControls').style.display = 'none';
         document.getElementById('dialerDisposition').style.display = 'block';
     },
 
-    async logDisposition(disposition) {
-        const lead = this.dialerQueue[this.dialerIndex];
+    async logDialerDisposition(disposition) {
+        const lead = this.dialerCurrentLead;
         if (!lead) return;
 
         // Calculate duration
@@ -183,8 +354,14 @@ Object.assign(window.MobileApp.prototype, {
         if (disposition === 'answered') this.dialerSessionStats.answered++;
         else if (disposition === 'voicemail') this.dialerSessionStats.voicemail++;
         else if (disposition === 'no_answer') this.dialerSessionStats.no_answer++;
+        else if (disposition === 'skip') this.dialerSessionStats.skipped++;
 
         this.updateDialerSessionStats();
+
+        // End active call if still going
+        if (window.callManager?.activeCall) {
+            window.callManager.endCall();
+        }
 
         // Log to server
         try {
@@ -193,7 +370,7 @@ Object.assign(window.MobileApp.prototype, {
                 body: JSON.stringify({
                     conversationId: lead.id,
                     disposition,
-                    attempt: (lead.call_attempts || 0) + 1,
+                    attempt: this.dialerCurrentAttempt,
                     duration
                 })
             });
@@ -201,14 +378,49 @@ Object.assign(window.MobileApp.prototype, {
             console.error('Failed to log disposition:', error);
         }
 
+        // Unlock channel
+        await this.unlockDialerChannel(lead.id);
+
+        // Handle retry logic for no_answer
+        if (disposition === 'no_answer' && this.dialerCurrentAttempt < this.dialerMaxAttempts) {
+            this.dialerCurrentAttempt++;
+            this.showToast(`Retrying... Attempt ${this.dialerCurrentAttempt}`, 'info');
+            setTimeout(() => this.showCurrentDialerLead(), 1000);
+            return;
+        }
+
         // Reset and move to next
         this.dialerCallStartTime = null;
+        this.dialerCurrentAttempt = 1;
         this.dialerIndex++;
 
         if (this.dialerIndex < this.dialerQueue.length) {
             this.showCurrentDialerLead();
         } else {
-            this.showDialerEmpty();
+            this.showDialerComplete();
+        }
+    },
+
+    // Timer
+    startDialerTimer() {
+        this.stopDialerTimer();
+        this.dialerCallStartTime = Date.now();
+        const timerEl = document.getElementById('dialerTimer');
+
+        this.dialerTimerInterval = setInterval(() => {
+            if (timerEl && this.dialerCallStartTime) {
+                const elapsed = Math.floor((Date.now() - this.dialerCallStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const seconds = (elapsed % 60).toString().padStart(2, '0');
+                timerEl.textContent = `${minutes}:${seconds}`;
+            }
+        }, 1000);
+    },
+
+    stopDialerTimer() {
+        if (this.dialerTimerInterval) {
+            clearInterval(this.dialerTimerInterval);
+            this.dialerTimerInterval = null;
         }
     },
 
@@ -245,16 +457,34 @@ Object.assign(window.MobileApp.prototype, {
             this.dialerCallTwilio();
         });
 
-        // Skip button
+        // Secondary actions
+        document.getElementById('dialerGoToConvo')?.addEventListener('click', () => {
+            this.dialerGoToConversation();
+        });
+
         document.getElementById('dialerSkip')?.addEventListener('click', () => {
             this.dialerSkip();
         });
 
+        // Call controls
+        document.getElementById('dialerMuteBtn')?.addEventListener('click', () => {
+            this.dialerToggleMute();
+        });
+
+        document.getElementById('dialerEndCallBtn')?.addEventListener('click', () => {
+            this.dialerEndCall();
+        });
+
+        // Done button
+        document.getElementById('dialerDoneBtn')?.addEventListener('click', () => {
+            this.closeMobileDialer();
+        });
+
         // Disposition buttons
-        document.querySelectorAll('.disposition-btn').forEach(btn => {
+        document.querySelectorAll('#dialerDisposition .disposition-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const disposition = btn.dataset.disposition;
-                this.logDisposition(disposition);
+                this.logDialerDisposition(disposition);
             });
         });
 
