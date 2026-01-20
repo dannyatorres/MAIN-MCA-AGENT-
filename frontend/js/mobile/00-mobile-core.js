@@ -206,8 +206,7 @@ window.MobileApp = class MobileApp {
 
         document.getElementById('dashboardBtn')?.addEventListener('click', () => {
             dropdown.classList.remove('open');
-            const dashboard = document.getElementById('mobileDashboard');
-            if (dashboard) dashboard.style.display = 'flex';
+            this.openMobileDashboard();
         });
 
         document.getElementById('newsBtn')?.addEventListener('click', () => {
@@ -216,8 +215,124 @@ window.MobileApp = class MobileApp {
         });
 
         document.getElementById('closeDashboardBtn')?.addEventListener('click', () => {
-            const dashboard = document.getElementById('mobileDashboard');
-            if (dashboard) dashboard.style.display = 'none';
+            this.closeMobileDashboard();
         });
+    }
+
+    async loadMobileDashboard() {
+        this.updateMobileHeroCard();
+        await this.loadMobileStats();
+    }
+
+    updateMobileHeroCard() {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userName = user.name?.split(' ')[0] || 'Boss';
+
+        const greetings = [
+            `Peace, ${userName}!`,
+            `What's good, ${userName}?`,
+            `Yo, what's the word, ${userName}?`,
+            `What up, ${userName}!`,
+            `Salute, ${userName}!`,
+            `What's really good, ${userName}?`,
+            `Yo, what's poppin, ${userName}?`,
+            `Peace, king!`,
+            `What's the science?`,
+            `Blessings, ${userName}!`,
+            `Talk to me, ${userName}!`,
+            `Word up, let's work!`,
+            `It's only right, ${userName}!`,
+            `Yo, we here!`,
+            `You already know, ${userName}!`,
+            `Let's build, ${userName}!`
+        ];
+
+        const quotes = [
+            'Success is not final, failure is not fatal: it is the courage to continue that counts.',
+            'The secret of getting ahead is getting started.',
+            "Don't watch the clock; do what it does. Keep going.",
+            'The only way to do great work is to love what you do.',
+            "Opportunities don't happen. You create them.",
+            'Success usually comes to those who are too busy to be looking for it.',
+            "The harder you work for something, the greater you'll feel when you achieve it.",
+            'Dream bigger. Do bigger.',
+            "Your limitation—it's only your imagination.",
+            "Push yourself, because no one else is going to do it for you."
+        ];
+
+        const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+        const quote = quotes[Math.floor(Math.random() * quotes.length)];
+
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const now = new Date();
+        const dateStr = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+        const greetingEl = document.getElementById('mobileHeroGreeting');
+        const quoteEl = document.getElementById('mobileHeroQuote');
+        const dateEl = document.getElementById('mobileHeroDate');
+
+        if (greetingEl) greetingEl.textContent = greeting;
+        if (quoteEl) quoteEl.textContent = `"${quote}"`;
+        if (dateEl) dateEl.textContent = dateStr;
+    }
+
+    async loadMobileStats() {
+        const activeEl = document.getElementById('mobileActiveCount');
+        const submittedEl = document.getElementById('mobileSubmittedCount');
+        const offersEl = document.getElementById('mobileOffersCount');
+
+        if (activeEl) activeEl.textContent = '...';
+        if (submittedEl) submittedEl.textContent = '...';
+        if (offersEl) offersEl.textContent = '...';
+
+        try {
+            const stats = await this.apiCall('/api/stats');
+
+            if (activeEl) activeEl.textContent = stats.active ?? stats.totalConversations ?? 0;
+            if (submittedEl) submittedEl.textContent = stats.submitted ?? 0;
+            if (offersEl) offersEl.textContent = stats.offers ?? 0;
+
+            this.updateMobileFundingGoal(stats);
+        } catch (error) {
+            console.error('Error loading mobile stats:', error);
+            if (activeEl) activeEl.textContent = '-';
+            if (submittedEl) submittedEl.textContent = '-';
+            if (offersEl) offersEl.textContent = '-';
+        }
+    }
+
+    updateMobileFundingGoal(stats) {
+        const funded = stats.fundedThisMonth || 0;
+        const goal = stats.monthlyGoal || 500000;
+        const deals = stats.dealsClosedThisMonth || 0;
+        const percentage = Math.min(Math.round((funded / goal) * 100), 100);
+
+        const formatMoney = (num) => '$' + num.toLocaleString();
+
+        const fundedEl = document.getElementById('mobileFundedAmount');
+        const goalEl = document.getElementById('mobileGoalAmount');
+        const percentEl = document.getElementById('mobileGoalPercentage');
+        const dealsEl = document.getElementById('mobileDealsCount');
+        const progressBar = document.getElementById('mobileGoalProgressBar');
+
+        if (fundedEl) fundedEl.textContent = formatMoney(funded);
+        if (goalEl) goalEl.textContent = formatMoney(goal);
+        if (percentEl) percentEl.textContent = `${percentage}%`;
+        if (dealsEl) dealsEl.textContent = deals;
+        if (progressBar) progressBar.style.width = `${percentage}%`;
+    }
+
+    openMobileDashboard() {
+        const dashboard = document.getElementById('mobileDashboard');
+        if (dashboard) dashboard.style.display = 'flex';
+        document.getElementById('leadsDropdownMenu')?.classList.remove('show');
+        document.getElementById('leadsDropdownBackdrop')?.classList.remove('show');
+        this.loadMobileDashboard();
+    }
+
+    closeMobileDashboard() {
+        const dashboard = document.getElementById('mobileDashboard');
+        if (dashboard) dashboard.style.display = 'none';
     }
 }
