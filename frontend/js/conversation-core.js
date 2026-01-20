@@ -393,7 +393,7 @@ class ConversationCore {
         let html = visible.map(conv => this.generateConversationHTML(conv)).join('');
 
         if (this.hasMoreConversations) {
-            html += `<div class="list-limit-message"><button class="btn-load-more" id="loadMoreBtn">Load More Leads</button></div>`;
+            html += `<div class="list-limit-message"><button class="btn btn-secondary full-width" id="loadMoreBtn">Load More Leads</button></div>`;
         }
 
         container.innerHTML = html;
