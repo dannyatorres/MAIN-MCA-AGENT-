@@ -159,9 +159,8 @@ class ConversationCore {
                 const container = document.getElementById('conversationsList');
                 if (container) {
                     container.innerHTML = `
-                        <div class="loading-state" style="padding: 40px; text-align: center; color: #8b949e;">
+                        <div style="display: flex; justify-content: center; padding-top: 50px;">
                             <div class="loading-spinner"></div>
-                            <p style="margin-top: 10px; font-size: 14px;">Updating list...</p>
                         </div>
                     `;
                 }
