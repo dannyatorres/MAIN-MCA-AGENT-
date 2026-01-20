@@ -529,7 +529,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // --- FIRST PASS (Decide what to do) ---
         const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-5-mini",
             messages: messages,
             tools: availableTools, // Use filtered tools list (Layer 3)
             tool_choice: "auto"
@@ -541,7 +541,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 conversationId,
                 type: 'llm_call',
                 service: 'openai',
-                model: completion.model || 'gpt-4o',
+                model: completion.model || 'gpt-5-mini',
                 inputTokens: completion.usage.prompt_tokens,
                 outputTokens: completion.usage.completion_tokens,
                 metadata: { pass: 'first' }
@@ -624,7 +624,7 @@ Send this message to the lead: "${offer.pitch_message}"`;
 
             // --- SECOND PASS (Generate the Final Reply with Context) ---
             const secondPass = await openai.chat.completions.create({
-                model: "gpt-4o",
+                model: "gpt-5-mini",
                 messages: messages
             });
 
@@ -634,7 +634,7 @@ Send this message to the lead: "${offer.pitch_message}"`;
                     conversationId,
                     type: 'llm_call',
                     service: 'openai',
-                    model: secondPass.model || 'gpt-4o',
+                    model: secondPass.model || 'gpt-5-mini',
                     inputTokens: secondPass.usage.prompt_tokens,
                     outputTokens: secondPass.usage.completion_tokens,
                     metadata: { pass: 'second' }
