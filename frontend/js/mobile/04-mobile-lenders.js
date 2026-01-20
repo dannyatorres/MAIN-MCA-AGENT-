@@ -628,30 +628,40 @@ Let me know if you need anything else.</textarea>
             }
         };
 
-        document.querySelectorAll('#submissionLenderList .submission-list-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (e.target.tagName === 'INPUT') return;
-                const checkbox = item.querySelector('input[type="checkbox"]');
-                checkbox.checked = !checkbox.checked;
+        document.querySelectorAll('#submissionLenderList .lender-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const item = checkbox.closest('.submission-list-item');
                 updateItemState(item);
                 updateLenderCount();
             });
         });
 
-        document.querySelectorAll('#submissionDocList .submission-list-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (e.target.tagName === 'INPUT') return;
-                const checkbox = item.querySelector('input[type="checkbox"]');
-                checkbox.checked = !checkbox.checked;
+        document.querySelectorAll('#submissionDocList .doc-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const item = checkbox.closest('.submission-list-item');
                 updateItemState(item);
                 updateDocCount();
             });
         });
 
         const updateLenderCount = () => {
-            const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
-            const total = document.querySelectorAll('#submissionLenderList .lender-checkbox').length;
-            document.getElementById('lenderCount').textContent = `${checked} Selected`;
+            const allCheckboxes = document.querySelectorAll('#submissionLenderList .lender-checkbox');
+            const checkedCheckboxes = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked');
+            const total = allCheckboxes.length;
+            const checked = checkedCheckboxes.length;
+
+            const searchInput = document.getElementById('lenderSearchInput');
+            const isSearching = searchInput && searchInput.value.trim() !== '';
+
+            if (isSearching) {
+                const visibleChecked = Array.from(checkedCheckboxes).filter(cb =>
+                    cb.closest('.submission-list-item').style.display !== 'none'
+                ).length;
+                document.getElementById('lenderCount').textContent = `${checked} Selected`;
+            } else {
+                document.getElementById('lenderCount').textContent = `${checked} Selected`;
+            }
+
             document.getElementById('toggleAllLenders').textContent = checked === total ? 'Deselect All' : 'Select All';
         };
 
@@ -702,21 +712,14 @@ Let me know if you need anything else.</textarea>
 
             items.forEach(item => {
                 const name = item.dataset.name?.toLowerCase() || '';
-                if (name.includes(searchTerm)) {
-                    item.style.display = 'flex';
+                if (!searchTerm || name.includes(searchTerm)) {
+                    item.style.display = '';
                 } else {
                     item.style.display = 'none';
                 }
             });
 
-            const visible = document.querySelectorAll('#submissionLenderList .submission-list-item[style="display: flex"], #submissionLenderList .submission-list-item:not([style*="display"])').length;
-            const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
-
-            if (searchTerm) {
-                document.getElementById('lenderCount').textContent = `${checked} Selected (${visible} shown)`;
-            } else {
-                document.getElementById('lenderCount').textContent = `${checked} Selected`;
-            }
+            updateLenderCount();
         });
 
         document.getElementById('submittedToggle')?.addEventListener('click', (e) => {
