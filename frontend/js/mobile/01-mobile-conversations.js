@@ -142,17 +142,23 @@ Object.assign(window.MobileApp.prototype, {
             if (!this.currentConversationId) return;
 
             const btn = document.getElementById('mobileAiToggleBtn');
-            const currentState = btn?.dataset.state;
+            if (!btn) return;
+
+            const currentState = btn.dataset.state;
+            const newState = currentState !== 'on';
+
+            this.updateAIButtonState(newState);
 
             try {
                 const response = await this.apiCall(`/api/conversations/${this.currentConversationId}/toggle-ai`, {
                     method: 'POST',
-                    body: JSON.stringify({ enabled: currentState !== 'on' })
+                    body: JSON.stringify({ enabled: newState })
                 });
 
                 this.updateAIButtonState(response.ai_enabled);
             } catch (err) {
                 console.error('AI toggle failed:', err);
+                this.updateAIButtonState(!newState);
             }
         },
 

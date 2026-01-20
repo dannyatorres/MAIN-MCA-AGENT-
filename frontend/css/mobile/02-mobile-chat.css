@@ -60,10 +60,24 @@
     text-transform: uppercase;
 }
 
+.mobile-ai-toggle {
+    transition: all 0.15s ease;
+}
+
+.mobile-ai-toggle:active {
+    transform: scale(0.92);
+}
+
 .mobile-ai-toggle.active {
     background: rgba(16, 185, 129, 0.15);
     border-color: rgba(16, 185, 129, 0.3);
     color: #10b981;
+}
+
+.mobile-ai-toggle:not(.active) {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
 }
 
 .mobile-call-btn {
