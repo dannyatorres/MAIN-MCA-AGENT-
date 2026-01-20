@@ -336,7 +336,7 @@ class ConversationCore {
                 ownerDisplay,
                 c.lead_phone || c.phone,
                 c.id,
-                c.display_id
+                c.assigned_user_name ? c.display_id : null
             );
         }
     }
