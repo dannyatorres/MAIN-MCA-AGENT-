@@ -220,7 +220,7 @@ Object.assign(window.MobileApp.prototype, {
         const formData = new FormData(form);
         const criteria = {
             businessName: formData.get('businessName'),
-            position: parseInt(formData.get('position')) || 1,
+            requestedPosition: parseInt(formData.get('position')) || 1,
             monthlyRevenue: parseInt(formData.get('revenue')) || 0,
             fico: parseInt(formData.get('fico')) || 600,
             state: formData.get('state'),
