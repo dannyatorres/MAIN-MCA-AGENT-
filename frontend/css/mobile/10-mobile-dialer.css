@@ -33,39 +33,6 @@
     background: #0f1115;
 }
 
-/* Session Stats */
-.dialer-session-stats {
-    display: flex;
-    justify-content: space-around;
-    background: linear-gradient(180deg, #1f242c 0%, #13171f 100%);
-    border: 1px solid #30363d;
-    border-radius: 12px;
-    padding: 16px;
-}
-
-.dialer-stat {
-    text-align: center;
-}
-
-.dialer-stat-value {
-    display: block;
-    font-size: 24px;
-    font-weight: 700;
-    color: #e6edf3;
-    transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.dialer-stat-value.bump {
-    transform: scale(1.2);
-    color: #6ee7b7;
-}
-
-.dialer-stat-label {
-    font-size: 11px;
-    color: #8b949e;
-    text-transform: uppercase;
-}
-
 /* Lead Card - slide/fade animation */
 .dialer-lead-card {
     background: linear-gradient(180deg, #1f242c 0%, #13171f 100%);
@@ -73,7 +40,7 @@
     border-radius: 16px;
     padding: 32px 24px;
     text-align: center;
-    min-height: 280px;
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
