@@ -12,6 +12,7 @@ class AIAssistant {
         this.currentConversationId = null;
         this.isInitialized = false;
         this.aiChatCache = new Map();
+        this.isLoading = false;
 
         console.log('🔧 AI Assistant Module Loaded');
     }
@@ -260,12 +261,25 @@ class AIAssistant {
 
         if (!messagesContainer) return;
 
+        // Prevent duplicate calls
+        if (this.isLoading) {
+            console.log('⏳ Already loading AI chat, skipping duplicate call');
+            return;
+        }
+        this.isLoading = true;
+
         // Helper: Render messages without flash
         const renderMessages = (messages) => {
             messagesContainer.style.visibility = 'hidden';
             messagesContainer.style.scrollBehavior = 'auto'; // Force instant scroll
             messagesContainer.innerHTML = '';
 
+            // Always show intro first
+            const conversation = this.parent.getSelectedConversation();
+            const businessName = conversation?.business_name || 'this deal';
+            this.addMessageToChat('assistant', `How can I help you with **${businessName}** today?`, false, false);
+
+            // Then show history
             messages.forEach(msg => {
                 this.addMessageToChat(msg.role, msg.content, false, false);
             });
@@ -289,6 +303,7 @@ class AIAssistant {
                 console.log(`⚡ [Cache] Empty history, showing intro for ${conversationId}`);
                 this.triggerSmartIntro();
             }
+            this.isLoading = false;
             return;
         }
 
@@ -299,6 +314,7 @@ class AIAssistant {
             // TRAFFIC COP: STOP IF USER SWITCHED CONVERSATIONS
             if (this.parent.getCurrentConversationId() !== conversationId) {
                 console.log('🛑 Aborting AI load: User switched conversations');
+                this.isLoading = false;
                 return;
             }
 
@@ -314,9 +330,11 @@ class AIAssistant {
                 this.aiChatCache.set(conversationId, []);
                 this.triggerSmartIntro();
             }
+            this.isLoading = false;
 
         } catch (error) {
             console.log('Error loading history:', error);
+            this.isLoading = false;
 
             if (this.parent.getCurrentConversationId() === conversationId) {
                 const activeSpinner = document.getElementById('aiInitialSpinner');
