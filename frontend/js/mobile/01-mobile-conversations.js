@@ -125,6 +125,9 @@ Object.assign(window.MobileApp.prototype, {
             // Load messages
             await this.loadMessages(id);
 
+            // Fetch AI state after messages load
+            await this.fetchAIState();
+
             // Join socket room
             if (this.socket && this.socket.connected) {
                 this.socket.emit('join_conversation', id);
@@ -132,6 +135,136 @@ Object.assign(window.MobileApp.prototype, {
 
             // Clear unread
             this.clearUnreadBadge(id);
+        },
+
+        // ============ AI TOGGLE ============
+        async toggleAI() {
+            if (!this.currentConversationId) return;
+
+            const btn = document.getElementById('mobileAiToggleBtn');
+            const currentState = btn?.dataset.state;
+
+            try {
+                const response = await this.apiCall(`/api/conversations/${this.currentConversationId}/toggle-ai`, {
+                    method: 'POST',
+                    body: JSON.stringify({ enabled: currentState !== 'on' })
+                });
+
+                this.updateAIButtonState(response.ai_enabled);
+            } catch (err) {
+                console.error('AI toggle failed:', err);
+            }
+        },
+
+        updateAIButtonState(enabled) {
+            const btn = document.getElementById('mobileAiToggleBtn');
+            if (!btn) return;
+
+            if (enabled) {
+                btn.dataset.state = 'on';
+                btn.classList.add('active');
+            } else {
+                btn.dataset.state = 'off';
+                btn.classList.remove('active');
+            }
+        },
+
+        async fetchAIState() {
+            if (!this.currentConversationId) return;
+
+            try {
+                const conv = await this.apiCall(`/api/conversations/${this.currentConversationId}`);
+                this.updateAIButtonState(conv.ai_enabled);
+            } catch (err) {
+                console.error('Failed to fetch AI state:', err);
+            }
+        },
+
+        // ============ CALLING ============
+        async startCall() {
+            if (!this.currentConversationId || !this.selectedConversation) {
+                alert('Select a conversation first');
+                return;
+            }
+
+            const phone = this.selectedConversation.lead_phone || this.selectedConversation.phone;
+            if (!phone) {
+                alert('No phone number available');
+                return;
+            }
+
+            this.showCallOptions(phone);
+        },
+
+        showCallOptions(phone) {
+            document.getElementById('callOptionsPicker')?.remove();
+
+            const cleanPhone = String(phone).replace(/\D/g, '');
+            const formattedPhone = this.utils.formatPhone(phone);
+
+            const picker = document.createElement('div');
+            picker.id = 'callOptionsPicker';
+            picker.className = 'call-options-picker';
+            picker.innerHTML = `
+                <div class="call-options-backdrop"></div>
+                <div class="call-options-sheet">
+                    <div class="call-options-header">
+                        <span>Call ${formattedPhone}</span>
+                    </div>
+                    <button class="call-option" data-type="native">
+                        <i class="fas fa-mobile-alt"></i>
+                        <div>
+                            <strong>Use My Phone</strong>
+                            <span>Call with your number</span>
+                        </div>
+                    </button>
+                    <button class="call-option" data-type="twilio">
+                        <i class="fas fa-headset"></i>
+                        <div>
+                            <strong>Call In-App</strong>
+                            <span>Call through system</span>
+                        </div>
+                    </button>
+                    <button class="call-option cancel">Cancel</button>
+                </div>
+            `;
+
+            document.body.appendChild(picker);
+
+            picker.querySelector('.call-options-backdrop')?.addEventListener('click', () => picker.remove());
+            picker.querySelector('.cancel')?.addEventListener('click', () => picker.remove());
+
+            picker.querySelector('[data-type="native"]')?.addEventListener('click', () => {
+                picker.remove();
+                window.location.href = `tel:${cleanPhone}`;
+            });
+
+            picker.querySelector('[data-type="twilio"]')?.addEventListener('click', async () => {
+                picker.remove();
+                if (!window.callManager) {
+                    alert('Calling system not available');
+                    return;
+                }
+                this.showCallUI();
+                await window.callManager.startCall(cleanPhone, this.currentConversationId);
+            });
+        },
+
+        showCallUI() {
+            const callBar = document.getElementById('mobileCallBar');
+            if (callBar) callBar.classList.remove('hidden');
+        },
+
+        hideCallUI() {
+            const callBar = document.getElementById('mobileCallBar');
+            if (callBar) callBar.classList.add('hidden');
+        },
+
+        endCall() {
+            if (window.callManager) {
+                window.callManager.endCall();
+            }
+            this.hideCallUI();
         }
 
 });

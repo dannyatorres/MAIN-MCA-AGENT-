@@ -17,6 +17,7 @@ window.MobileApp = class MobileApp {
         this.aiMessages = [];
         this.pendingUploadFiles = null;
         this.isAnalyzingStrategy = false;
+        this.useNativeDialer = true;
         this.conversationOffset = 0;
         this.conversationLimit = 50;
         this.hasMoreConversations = true;
@@ -157,6 +158,21 @@ window.MobileApp = class MobileApp {
         this.dom.messageInput.addEventListener('input', () => {
             this.dom.messageInput.style.height = 'auto';
             this.dom.messageInput.style.height = Math.min(this.dom.messageInput.scrollHeight, 120) + 'px';
+        });
+
+        // AI Toggle
+        document.getElementById('mobileAiToggleBtn')?.addEventListener('click', () => {
+            this.toggleAI();
+        });
+
+        // Call Button
+        document.getElementById('mobileCallBtn')?.addEventListener('click', () => {
+            this.startCall();
+        });
+
+        // End Call
+        document.getElementById('mobileEndCallBtn')?.addEventListener('click', () => {
+            this.endCall();
         });
 
         this.setupIntelligenceListeners();
