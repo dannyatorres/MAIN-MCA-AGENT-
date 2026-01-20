@@ -103,11 +103,25 @@ router.get('/', async (req, res) => {
             query += ` AND (${conditions.join(' OR ')})`;
         }
 
-        // 4. SMART FILTERS (The Fix)
+        // 4. SOURCE OF TRUTH FILTER
         if (filter) {
             if (filter === 'OFFER') {
-                // Checks for either the flag or the specific state
-                query += ` AND (c.has_offer = TRUE OR c.state = 'OFFER_READY')`;
+                // Checks the lender_submissions table dynamically
+                query += ` AND EXISTS (
+                    SELECT 1 FROM lender_submissions ls
+                    WHERE ls.conversation_id = c.id
+                    AND ls.status IN ('OFFER', 'APPROVED')
+                    AND (ls.dismissed IS FALSE OR ls.dismissed IS NULL)
+                )`;
+            }
+            else if (filter === 'SUBMITTED') {
+                // Strict definition: sent to a lender, exclude offers
+                query += ` AND EXISTS (
+                    SELECT 1 FROM lender_submissions ls
+                    WHERE ls.conversation_id = c.id
+                    AND ls.status = 'sent'
+                )
+                AND (c.has_offer IS FALSE OR c.has_offer IS NULL)`;
             }
             else if (filter === 'INTERESTED') {
                 query += ` AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound')`;
@@ -115,11 +129,7 @@ router.get('/', async (req, res) => {
             else if (filter === 'UNREAD') {
                 query += ` AND (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound' AND m.timestamp > COALESCE(c.last_read_at, '1970-01-01')) > 0`;
             }
-            else if (filter === 'SUBMITTED') {
-                query += ` AND c.state IN ('FCS_QUEUE', 'FCS_RUNNING', 'STRATEGIZED', 'HUMAN_REVIEW', 'SUBMITTED')`;
-            }
             else {
-                // Fallback for standard states like 'HOT_LEAD', 'STALE', 'DEAD'
                 query += ` AND c.state = $${paramIndex++}`;
                 values.push(filter);
             }
