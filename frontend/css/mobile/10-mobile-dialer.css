@@ -76,10 +76,20 @@
 
 .dialer-lead-loading {
     color: #8b949e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .dialer-lead-loading .loading-spinner {
     margin: 0 auto 16px;
+}
+
+.dialer-lead-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 .dialer-lead-avatar {
@@ -118,8 +128,10 @@
 
 .dialer-lead-meta {
     display: flex;
+    flex-direction: row;
     gap: 12px;
     align-items: center;
+    justify-content: center;
 }
 
 .dialer-lead-state {
@@ -137,6 +149,9 @@
 }
 
 .dialer-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     color: #6ee7b7;
 }
 

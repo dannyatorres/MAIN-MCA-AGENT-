@@ -32,7 +32,13 @@ Object.assign(window.MobileApp.prototype, {
     async loadDialerQueue() {
         try {
             const response = await this.apiCall('/api/dialer/queue');
-            this.dialerQueue = response.leads || [];
+            let leads = response.leads || [];
+
+            // Filter out leads with offers or other states we don't want to call
+            const excludeStates = ['OFFER', 'OFFER_RECEIVED', 'FUNDED', 'DEAD', 'ARCHIVED'];
+            leads = leads.filter(lead => !excludeStates.includes(lead.state));
+
+            this.dialerQueue = leads;
             this.dialerIndex = 0;
 
             document.getElementById('dialerProgress').textContent = `0/${this.dialerQueue.length}`;
