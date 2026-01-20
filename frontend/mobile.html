@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="/css/mobile/07-mobile-ai.css?v=1019">
     <link rel="stylesheet" href="/css/mobile/08-mobile-fcs.css?v=1019">
     <link rel="stylesheet" href="/css/mobile/09-mobile-dashboard.css?v=1019">
+    <link rel="stylesheet" href="/css/mobile/10-mobile-dialer.css?v=1019">
     <link rel="stylesheet" href="/css/mobile/10-mobile-edit.css?v=1019">
 
     <!-- Font Awesome for icons -->
@@ -380,6 +381,108 @@
         </div>
     </div>
 
+    <!-- Mobile Dialer -->
+    <div id="mobileDialer" class="mobile-dialer-page" style="display: none;">
+        <header class="mobile-header">
+            <button class="back-btn" id="closeDialerBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2>Power Dialer</h2>
+            <div class="dialer-stats-mini">
+                <span id="dialerProgress">0/0</span>
+            </div>
+        </header>
+        
+        <div class="mobile-dialer-content">
+            <!-- Session Stats -->
+            <div class="dialer-session-stats">
+                <div class="dialer-stat">
+                    <span class="dialer-stat-value" id="dialerAnswered">0</span>
+                    <span class="dialer-stat-label">Answered</span>
+                </div>
+                <div class="dialer-stat">
+                    <span class="dialer-stat-value" id="dialerVoicemail">0</span>
+                    <span class="dialer-stat-label">Voicemail</span>
+                </div>
+                <div class="dialer-stat">
+                    <span class="dialer-stat-value" id="dialerNoAnswer">0</span>
+                    <span class="dialer-stat-label">No Answer</span>
+                </div>
+            </div>
+
+            <!-- Current Lead Card -->
+            <div class="dialer-lead-card" id="dialerLeadCard">
+                <div class="dialer-lead-loading" id="dialerLoading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading queue...</p>
+                </div>
+                
+                <div class="dialer-lead-info" id="dialerLeadInfo" style="display: none;">
+                    <div class="dialer-lead-avatar" id="dialerAvatar">JS</div>
+                    <h2 class="dialer-lead-name" id="dialerLeadName">John Smith</h2>
+                    <p class="dialer-lead-business" id="dialerLeadBusiness">Smith Enterprises</p>
+                    <p class="dialer-lead-phone" id="dialerLeadPhone">(555) 123-4567</p>
+                    <div class="dialer-lead-meta">
+                        <span class="dialer-lead-state" id="dialerLeadState">INTERESTED</span>
+                        <span class="dialer-lead-attempts" id="dialerLeadAttempts">0 attempts</span>
+                    </div>
+                </div>
+
+                <div class="dialer-empty" id="dialerEmpty" style="display: none;">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Queue Complete!</h3>
+                    <p>You've worked through all leads</p>
+                </div>
+            </div>
+
+            <!-- Call Actions -->
+            <div class="dialer-actions" id="dialerActions" style="display: none;">
+                <button class="dialer-call-btn native" id="dialerCallNative">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>Use My Phone</span>
+                </button>
+                <button class="dialer-call-btn twilio" id="dialerCallTwilio">
+                    <i class="fas fa-headset"></i>
+                    <span>Call In-App</span>
+                </button>
+                <button class="dialer-skip-btn" id="dialerSkip">
+                    <i class="fas fa-forward"></i> Skip
+                </button>
+            </div>
+
+            <!-- Disposition Panel (shows after call) -->
+            <div class="dialer-disposition" id="dialerDisposition" style="display: none;">
+                <p class="disposition-prompt">How did the call go?</p>
+                <div class="disposition-grid">
+                    <button class="disposition-btn success" data-disposition="answered">
+                        <i class="fas fa-check"></i>
+                        <span>Answered</span>
+                    </button>
+                    <button class="disposition-btn warning" data-disposition="voicemail">
+                        <i class="fas fa-voicemail"></i>
+                        <span>Voicemail</span>
+                    </button>
+                    <button class="disposition-btn neutral" data-disposition="no_answer">
+                        <i class="fas fa-phone-slash"></i>
+                        <span>No Answer</span>
+                    </button>
+                    <button class="disposition-btn info" data-disposition="callback">
+                        <i class="fas fa-clock"></i>
+                        <span>Callback</span>
+                    </button>
+                    <button class="disposition-btn danger" data-disposition="wrong_number">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Wrong #</span>
+                    </button>
+                    <button class="disposition-btn danger" data-disposition="not_interested">
+                        <i class="fas fa-ban"></i>
+                        <span>Not Interested</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast notifications -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -427,6 +530,7 @@
     <script src="/js/mobile/06-mobile-strategy.js?v=1000"></script>
     <script src="/js/mobile/07-mobile-ai.js?v=1000"></script>
     <script src="/js/mobile/08-mobile-fcs.js?v=1000"></script>
+    <script src="/js/mobile/12-mobile-dialer.js?v=1000"></script>
     <script src="/js/mobile/10-mobile-edit.js?v=1000"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

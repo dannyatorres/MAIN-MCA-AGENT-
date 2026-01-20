@@ -55,6 +55,7 @@ window.MobileApp = class MobileApp {
         this.setupEventListeners();
         this.setupLeadsDropdown();
         this.setupCallListeners();
+        this.setupDialerListeners();
         this.setupInfiniteScroll();
         await this.loadConversations();
         this.initWebSocket();
