@@ -206,12 +206,18 @@ window.MobileApp = class MobileApp {
 
         document.getElementById('dashboardBtn')?.addEventListener('click', () => {
             dropdown.classList.remove('open');
-            this.showToast('Dashboard - Coming Soon', 'info');
+            const dashboard = document.getElementById('mobileDashboard');
+            if (dashboard) dashboard.style.display = 'flex';
         });
 
         document.getElementById('newsBtn')?.addEventListener('click', () => {
             dropdown.classList.remove('open');
             this.showToast('News & Updates - Coming Soon', 'info');
+        });
+
+        document.getElementById('closeDashboardBtn')?.addEventListener('click', () => {
+            const dashboard = document.getElementById('mobileDashboard');
+            if (dashboard) dashboard.style.display = 'none';
         });
     }
 }
