@@ -35,35 +35,7 @@
         <!-- Panel 1: Conversations List -->
         <div class="panel" id="panelConversations">
             <header class="mobile-header">
-                <div class="header-left">
-                    <h1>Leads</h1>
-                    <div class="leads-dropdown" id="leadsDropdown">
-                        <button class="leads-dropdown-trigger" id="leadsDropdownTrigger">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <div class="leads-dropdown-menu" id="leadsDropdownMenu">
-                            <button class="leads-dropdown-item" id="addNewLeadBtn">
-                                <i class="fas fa-plus"></i>
-                                <span>Add New Lead</span>
-                            </button>
-                            <button class="leads-dropdown-item" id="importCsvBtn">
-                                <i class="fas fa-file-import"></i>
-                                <span>Import CSV</span>
-                            </button>
-                            <div class="leads-dropdown-divider"></div>
-                            <button class="leads-dropdown-item" id="dashboardBtn">
-                                <i class="fas fa-th-large"></i>
-                                <span>Dashboard</span>
-                            </button>
-                            <button class="leads-dropdown-item" id="newsBtn">
-                                <i class="fas fa-newspaper"></i>
-                                <span>News & Updates</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="leads-dropdown-backdrop" id="leadsDropdownBackdrop"></div>
-                </div>
-                <div class="header-actions">
+                <div class="header-actions" style="margin-left: 0;">
                     <div class="connection-status">
                         <span class="status-dot" id="connectionDot"></span>
                     </div>
@@ -73,8 +45,28 @@
                     </button>
                 </div>
             </header>
-            <div class="search-bar">
-                <input type="text" id="searchInput" class="search-field-clean" placeholder="Search leads...">
+            <div class="search-bar" style="display: flex; gap: 8px; align-items: center;">
+                <div class="filter-wrapper" style="position: relative; flex-shrink: 0;">
+                    <select class="state-filter-icon" id="mobileStateFilter" style="
+                        appearance: none;
+                        background: var(--bg-tertiary);
+                        border: 1px solid var(--border-primary);
+                        border-radius: 8px;
+                        color: var(--text-secondary);
+                        padding: 10px 28px 10px 12px;
+                        font-size: 13px;
+                        cursor: pointer;
+                    ">
+                        <option value="">All</option>
+                        <option value="UNREAD">Unread</option>
+                        <option value="INTERESTED">Interested</option>
+                        <option value="SUBMITTED">Submitted</option>
+                        <option value="OFFER">Has Offer</option>
+                        <option value="DEAD">Dead</option>
+                    </select>
+                    <i class="fas fa-filter" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 11px; color: var(--text-muted);"></i>
+                </div>
+                <input type="text" id="searchInput" class="search-field-clean" placeholder="Search leads..." style="flex: 1;">
             </div>
             <div class="conversations-list" id="conversationList">
                 <div class="loading-state"><div class="loading-spinner"></div><p>Loading...</p></div>

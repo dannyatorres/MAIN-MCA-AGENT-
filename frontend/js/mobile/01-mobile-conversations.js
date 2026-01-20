@@ -41,7 +41,11 @@ Object.assign(window.MobileApp.prototype, {
         },
 
         renderConversationList(append = false) {
-            const convArray = Array.from(this.conversations.values());
+            let convArray = Array.from(this.conversations.values());
+
+            if (this.currentFilter) {
+                convArray = convArray.filter(c => c.state === this.currentFilter);
+            }
 
             if (!convArray.length) {
                 this.dom.conversationList.innerHTML = '<div class="loading-state">No conversations found</div>';

@@ -18,6 +18,7 @@ window.MobileApp = class MobileApp {
         this.pendingUploadFiles = null;
         this.isAnalyzingStrategy = false;
         this.useNativeDialer = true;
+        this.currentFilter = '';
         this.conversationOffset = 0;
         this.conversationLimit = 50;
         this.hasMoreConversations = true;
@@ -145,6 +146,12 @@ window.MobileApp = class MobileApp {
         this.dom.searchInput.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => this.loadConversations(e.target.value), 400);
+        });
+
+        // Mobile state filter
+        document.getElementById('mobileStateFilter')?.addEventListener('change', (e) => {
+            this.currentFilter = e.target.value;
+            this.renderConversationList();
         });
 
         // Send message
