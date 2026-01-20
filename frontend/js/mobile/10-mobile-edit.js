@@ -512,7 +512,7 @@ Object.assign(window.MobileApp.prototype, {
                 ownerEmail: data.ownerEmail,
                 ownerSSN: data.ownerSSN,
                 ownerDOB: data.ownerDOB,
-                ownershipPercent: data.ownershipPercent,
+                ownershipPercentage: data.ownershipPercent,
                 creditScore: data.creditScore || 'N/A',
                 owner2FirstName: data.owner2FirstName || '',
                 owner2LastName: data.owner2LastName || '',
