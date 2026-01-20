@@ -663,9 +663,15 @@ class ConversationCore {
 
             } catch (error) {
                 console.error(error);
-                this.utils.showNotification('Delete failed', 'error');
-                // If it fails, restore the button text
+                
+                if (error.message?.includes('500') || error.message?.includes('403') || error.message?.includes('401')) {
+                    this.utils.showNotification('Unauthorized - only admins can bulk delete', 'error');
+                } else {
+                    this.utils.showNotification('Delete failed', 'error');
+                }
+                
                 if (btn) btn.textContent = originalText;
+                this.toggleDeleteMode(false);
             }
         }
     }
