@@ -61,12 +61,13 @@ Object.assign(window.MobileApp.prototype, {
         const conv = this.selectedConversation || {};
         const businessName = conv.business_name || '';
         const state = conv.us_state || conv.state || '';
-        const industry = conv.industry || conv.business_type || '';
+        const industry = conv.industry || conv.industry_type || conv.business_type || '';
         const fico = conv.credit_score || '';
         const revenue = fcsData?.average_revenue ? Math.round(fcsData.average_revenue) :
-            (conv.annual_revenue ? Math.round(conv.annual_revenue / 12) : '');
+            (conv.monthly_revenue || (conv.annual_revenue ? Math.round(conv.annual_revenue / 12) : ''));
         const deposits = fcsData?.average_deposits || '';
         const negativeDays = fcsData?.average_negative_days || '';
+        const withholding = fcsData?.withholding_percentage || '';
 
         // TIB Calculation
         let startDate = '';
@@ -101,23 +102,43 @@ Object.assign(window.MobileApp.prototype, {
                         </select>
                     </div>
                     <div class="mobile-form-group">
-                        <label>Monthly Revenue</label>
+                        <label>Monthly Revenue *</label>
                         <input type="number" name="revenue" class="mobile-form-input" value="${revenue}" required>
                     </div>
                 </div>
 
                 <div class="lender-form-grid col-3">
                     <div class="mobile-form-group">
-                        <label>FICO</label>
-                        <input type="number" name="fico" class="mobile-form-input" value="${fico}">
+                        <label>FICO *</label>
+                        <input type="number" name="fico" class="mobile-form-input" value="${fico}" required>
                     </div>
                     <div class="mobile-form-group">
-                        <label>State</label>
-                        <input type="text" name="state" class="mobile-form-input" value="${state}" maxlength="2">
+                        <label>State *</label>
+                        <input type="text" name="state" class="mobile-form-input" value="${state}" maxlength="2" required>
                     </div>
                     <div class="mobile-form-group">
-                        <label>Start Date</label>
-                        <input type="text" name="startDate" class="mobile-form-input" value="${startDate}" placeholder="MM/DD/YYYY">
+                        <label>Start Date *</label>
+                        <input type="text" name="startDate" class="mobile-form-input" value="${startDate}" placeholder="MM/DD/YYYY" required>
+                    </div>
+                </div>
+
+                <div class="mobile-form-group full-width">
+                    <label>Industry *</label>
+                    <input type="text" name="industry" class="mobile-form-input" value="${this.utils.escapeHtml(industry)}" placeholder="e.g. Restaurant, Trucking" required>
+                </div>
+
+                <div class="lender-form-grid col-3">
+                    <div class="mobile-form-group">
+                        <label>Deposits/Mo</label>
+                        <input type="number" name="deposits" class="mobile-form-input" value="${deposits}" placeholder="# deposits">
+                    </div>
+                    <div class="mobile-form-group">
+                        <label>Neg Days (90d)</label>
+                        <input type="number" name="negativeDays" class="mobile-form-input" value="${negativeDays}" placeholder="0">
+                    </div>
+                    <div class="mobile-form-group">
+                        <label>Withholding %</label>
+                        <input type="text" name="withholding" class="mobile-form-input" value="${withholding}" placeholder="Auto" readonly>
                     </div>
                 </div>
 
@@ -126,13 +147,24 @@ Object.assign(window.MobileApp.prototype, {
                         <input type="checkbox" name="soleProp"> Sole Prop
                     </label>
                     <label class="lender-checkbox-item">
+                        <input type="checkbox" name="nonProfit"> Non-Profit
+                    </label>
+                    <label class="lender-checkbox-item">
                         <input type="checkbox" name="mercuryBank"> Mercury Bank
+                    </label>
+                    <label class="lender-checkbox-item">
+                        <input type="checkbox" name="reverseConsolidation"> Reverse Consol
                     </label>
                 </div>
 
-                <button type="submit" class="lender-qualify-btn" id="runQualificationBtn">
-                    <i class="fas fa-search"></i> Run Qualification
-                </button>
+                <div class="lender-form-actions">
+                    <button type="submit" class="lender-qualify-btn" id="runQualificationBtn">
+                        <i class="fas fa-search"></i> Run Qualification
+                    </button>
+                    <button type="button" class="lender-skip-btn" id="skipToSendBtn">
+                        <i class="fas fa-forward"></i> Skip to Send
+                    </button>
+                </div>
             </form>
 
             <div id="lenderResultsContainer" class="lender-results"></div>
@@ -145,6 +177,13 @@ Object.assign(window.MobileApp.prototype, {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await this.runLenderQualification();
+            });
+        }
+
+        const skipBtn = document.getElementById('skipToSendBtn');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', async () => {
+                await this.skipToSendModal();
             });
         }
     },
@@ -161,9 +200,15 @@ Object.assign(window.MobileApp.prototype, {
             monthlyRevenue: parseInt(formData.get('revenue')) || 0,
             fico: parseInt(formData.get('fico')) || 600,
             state: formData.get('state'),
+            industry: formData.get('industry'),
             startDate: formData.get('startDate'),
+            depositsPerMonth: parseInt(formData.get('deposits')) || 0,
+            negativeDays: parseInt(formData.get('negativeDays')) || 0,
+            withholding: formData.get('withholding'),
             isSoleProp: formData.get('soleProp') === 'on',
-            hasMercuryBank: formData.get('mercuryBank') === 'on'
+            isNonProfit: formData.get('nonProfit') === 'on',
+            hasMercuryBank: formData.get('mercuryBank') === 'on',
+            isReverseConsolidation: formData.get('reverseConsolidation') === 'on'
         };
 
         btn.disabled = true;
@@ -193,7 +238,39 @@ Object.assign(window.MobileApp.prototype, {
         }
     },
 
+    async skipToSendModal() {
+        const btn = document.getElementById('skipToSendBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+        }
+
+        try {
+            const result = await this.apiCall('/api/qualification/all-lenders');
+            if (result.success && result.lenders) {
+                this.currentLenderResults = {
+                    qualified: result.lenders,
+                    nonQualified: []
+                };
+                await this.showLenderSubmissionModal();
+            } else {
+                throw new Error('Failed to load lenders');
+            }
+        } catch (err) {
+            console.error('Skip to send error:', err);
+            this.showToast('Failed to load lenders', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-forward"></i> Skip to Send';
+            }
+        }
+    },
+
     displayLenderResults(data, criteria) {
+        this.currentLenderResults = data;
+        this.currentLenderCriteria = criteria;
+
         const container = document.getElementById('lenderResultsContainer');
         if (!container) return;
 
@@ -323,24 +400,51 @@ Object.assign(window.MobileApp.prototype, {
     },
 
     // ADDED: The Submission Modal Logic
-    showLenderSubmissionModal() {
+    async showLenderSubmissionModal() {
         const qualified = this.currentLenderResults?.qualified || [];
         if (qualified.length === 0) {
             this.showToast('No qualified lenders to send to', 'error');
             return;
         }
 
-        // 1. Create Modal HTML
+        let documents = [];
+        try {
+            const docResult = await this.apiCall(`/api/documents/${this.currentConversationId}`);
+            if (docResult.success && docResult.documents) {
+                documents = docResult.documents;
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        let submissionHistory = [];
+        try {
+            const histResult = await this.apiCall(`/api/lenders/submissions/${this.currentConversationId}`);
+            submissionHistory = histResult.submissions || [];
+        } catch (e) {
+            // ignore
+        }
+
+        const submittedMap = new Map();
+        submissionHistory.forEach(sub => {
+            submittedMap.set(sub.lender_name?.toLowerCase().trim(), sub);
+        });
+
+        const available = qualified.filter(l => {
+            const name = (l.name || l['Lender Name'] || '').toLowerCase().trim();
+            return !submittedMap.has(name);
+        });
+
         const modalHtml = `
             <div class="mobile-submission-modal" id="submissionModal">
                 <div class="submission-header">
-                    <h3>Send to ${qualified.length} Lenders</h3>
+                    <h3>Send to Lenders</h3>
                     <button class="icon-btn-small" id="closeSubmissionModal">&times;</button>
                 </div>
                 <div class="submission-content">
                     <div class="submission-section">
-                        <div class="submission-section-title">Message to Lenders</div>
-                        <textarea id="submissionMessage" class="mobile-form-input" rows="4" style="font-size:14px;">Hello,
+                        <div class="submission-section-title">Message</div>
+                        <textarea id="submissionMessage" class="mobile-form-input" rows="3">Hello,
 
 Please find attached the funding application for ${this.selectedConversation?.business_name || 'this business'}.
 
@@ -348,20 +452,48 @@ Let me know if you need anything else.</textarea>
                     </div>
 
                     <div class="submission-section">
-                        <div class="submission-section-title">Select Lenders</div>
-                        <div id="submissionLenderList">
-                            ${qualified.map(l => `
+                        <div class="submission-section-title">
+                            Select Lenders
+                            <span class="selection-count" id="lenderCount">${available.length} available</span>
+                        </div>
+                        ${submissionHistory.length > 0 ? `
+                            <div class="already-submitted-note">
+                                📤 ${submissionHistory.length} already submitted
+                            </div>
+                        ` : ''}
+                        <div id="submissionLenderList" class="submission-list">
+                            ${available.length === 0 ? '<p class="empty-msg">All qualified lenders already submitted</p>' : ''}
+                            ${available.map(l => {
+                                const name = l.name || l['Lender Name'];
+                                return `
+                                    <label class="submission-list-item">
+                                        <input type="checkbox" class="lender-checkbox" value="${this.utils.escapeHtml(name)}" data-email="${l.email || ''}" checked>
+                                        <span class="submission-list-text">${this.utils.escapeHtml(name)}</span>
+                                    </label>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <div class="submission-section">
+                        <div class="submission-section-title">
+                            Attach Documents
+                            <span class="selection-count" id="docCount">${documents.length} available</span>
+                        </div>
+                        <div id="submissionDocList" class="submission-list">
+                            ${documents.length === 0 ? '<p class="empty-msg">No documents uploaded</p>' : ''}
+                            ${documents.map(doc => `
                                 <label class="submission-list-item">
-                                    <input type="checkbox" class="lender-checkbox" value="${l.name || l['Lender Name']}" checked>
-                                    <span class="submission-list-text">${l.name || l['Lender Name']}</span>
+                                    <input type="checkbox" class="doc-checkbox" value="${doc.id}" data-s3key="${doc.s3_key}" checked>
+                                    <span class="submission-list-text">${this.utils.escapeHtml(doc.filename || doc.original_filename)}</span>
                                 </label>
                             `).join('')}
                         </div>
                     </div>
                 </div>
                 <div class="submission-footer">
-                    <button class="btn-mobile-secondary" id="cancelSubmissionBtn" style="flex:1">Cancel</button>
-                    <button class="btn-mobile-primary" id="confirmSubmissionBtn" style="flex:2">
+                    <button class="btn-mobile-secondary" id="cancelSubmissionBtn">Cancel</button>
+                    <button class="btn-mobile-primary" id="confirmSubmissionBtn">
                         <i class="fas fa-paper-plane"></i> Send Emails
                     </button>
                 </div>
@@ -370,21 +502,87 @@ Let me know if you need anything else.</textarea>
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-        // 2. Attach Listeners
         document.getElementById('closeSubmissionModal').onclick = () => this.closeSubmissionModal();
         document.getElementById('cancelSubmissionBtn').onclick = () => this.closeSubmissionModal();
 
+        document.getElementById('submissionLenderList')?.addEventListener('change', () => {
+            const checked = document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').length;
+            document.getElementById('lenderCount').textContent = `${checked} selected`;
+        });
+
+        document.getElementById('submissionDocList')?.addEventListener('change', () => {
+            const checked = document.querySelectorAll('#submissionDocList .doc-checkbox:checked').length;
+            document.getElementById('docCount').textContent = `${checked} selected`;
+        });
+
         document.getElementById('confirmSubmissionBtn').onclick = async () => {
-            const btn = document.getElementById('confirmSubmissionBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-
-            // Simulate sending (Replace with actual API call)
-            await new Promise(r => setTimeout(r, 1500));
-
-            this.showToast('Applications sent successfully!', 'success');
-            this.closeSubmissionModal();
+            await this.sendLenderSubmissions();
         };
+    },
+
+    async sendLenderSubmissions() {
+        const btn = document.getElementById('confirmSubmissionBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+        try {
+            const selectedLenders = [];
+            document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').forEach(cb => {
+                selectedLenders.push({
+                    name: cb.value,
+                    email: cb.dataset.email
+                });
+            });
+
+            if (selectedLenders.length === 0) {
+                this.showToast('Please select at least one lender', 'warning');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                return;
+            }
+
+            const selectedDocuments = [];
+            document.querySelectorAll('#submissionDocList .doc-checkbox:checked').forEach(cb => {
+                selectedDocuments.push({
+                    id: cb.value,
+                    s3_key: cb.dataset.s3key
+                });
+            });
+
+            const message = document.getElementById('submissionMessage')?.value || '';
+
+            const conv = this.selectedConversation || {};
+            const businessData = {
+                businessName: conv.business_name || '',
+                state: conv.us_state || conv.state || '',
+                revenue: conv.monthly_revenue || conv.annual_revenue || '',
+                fico: conv.credit_score || '',
+                customMessage: message
+            };
+
+            const result = await this.apiCall(`/api/submissions/${this.currentConversationId}/send`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    selectedLenders,
+                    businessData,
+                    documents: selectedDocuments
+                })
+            });
+
+            if (result.success) {
+                this.showToast(`Sending to ${selectedLenders.length} lenders!`, 'success');
+                this.closeSubmissionModal();
+            } else {
+                throw new Error(result.error || 'Failed to send');
+            }
+        } catch (err) {
+            console.error('Submission error:', err);
+            this.showToast('Failed to send: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     },
 
     closeSubmissionModal() {

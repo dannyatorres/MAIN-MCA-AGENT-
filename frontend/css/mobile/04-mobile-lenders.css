@@ -394,3 +394,202 @@
     border-radius: 8px;
     font-weight: 600;
 }
+
+/* --- 9. MOBILE LENDER FORM LAYOUT --- */
+.lender-form-mobile {
+    padding: 16px;
+}
+
+.lender-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.lender-form-grid.col-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.mobile-form-group.full-width {
+    margin-bottom: 12px;
+}
+
+.lender-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.lender-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #e6edf3;
+}
+
+.lender-checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #3b82f6;
+}
+
+.lender-form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.lender-qualify-btn {
+    flex: 2;
+    padding: 14px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.lender-skip-btn {
+    flex: 1;
+    padding: 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: #8b949e;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.lender-skip-btn:active {
+    background: rgba(255,255,255,0.1);
+}
+
+/* --- 8. SUBMISSION MODAL (Enhanced) --- */
+.mobile-submission-modal {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 85vh;
+    background: #1c1c1e;
+    border-radius: 16px 16px 0 0;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+.submission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.submission-header h3 {
+    margin: 0;
+    font-size: 17px;
+    color: #e6edf3;
+}
+
+.submission-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.submission-section {
+    margin-bottom: 20px;
+}
+
+.submission-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8b949e;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.selection-count {
+    font-size: 11px;
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+.submission-list {
+    max-height: 180px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.submission-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    cursor: pointer;
+}
+
+.submission-list-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #3b82f6;
+}
+
+.submission-list-text {
+    flex: 1;
+    font-size: 14px;
+    color: #e6edf3;
+}
+
+.already-submitted-note {
+    font-size: 12px;
+    color: #6b7280;
+    padding: 8px 12px;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.empty-msg {
+    color: #6b7280;
+    font-size: 13px;
+    text-align: center;
+    padding: 20px;
+}
+
+.submission-footer {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+.submission-footer button {
+    flex: 1;
+}
