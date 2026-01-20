@@ -22,7 +22,6 @@ class AIAssistant {
     // ============================================================
 
     render(container) {
-        console.log('🤖 Rendering AI Assistant Interface');
         const conversation = this.parent.getSelectedConversation();
 
         if (!conversation) {
@@ -30,22 +29,21 @@ class AIAssistant {
             return;
         }
 
-        // 🔔 Reset state when conversation changes
+        // Skip if already rendering/loaded for this conversation
+        if (this.currentConversationId === conversation.id && (this.isInitialized || this.isLoading)) {
+            console.log('⚡ AI chat already initialized or loading, skipping');
+            return;
+        }
+
+        console.log('🤖 Rendering AI Assistant Interface');
+
+        // Reset state when conversation changes
         if (this.currentConversationId !== conversation.id) {
             this.currentConversationId = conversation.id;
             this.isInitialized = false;
+            this.isLoading = false;
         }
 
-        // If already initialized for THIS conversation, skip entirely
-        if (this.isInitialized) {
-            const existingChat = document.getElementById('aiChatMessages');
-            if (existingChat && existingChat.children.length > 0) {
-                console.log('⚡ AI chat already rendered, skipping');
-                return;
-            }
-        }
-
-        // Only wipe if we are changing conversations or initializing
         container.innerHTML = `
             <div class="ai-assistant-section">
                 <div id="aiChatMessages" class="ai-chat-messages">
@@ -67,10 +65,6 @@ class AIAssistant {
                 </div>
             </div>
         `;
-
-        // CRITICAL FIX: Since we just wiped the HTML, we must reset the init flag
-        // This ensures initializeAIChat() will actually run again for the new elements.
-        this.isInitialized = false;
 
         this.initializeAIChat();
     }
