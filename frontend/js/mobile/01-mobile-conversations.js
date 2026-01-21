@@ -114,13 +114,26 @@ Object.assign(window.MobileApp.prototype, {
             let pullStartY = 0;
             let isPulling = false;
             let pullDistance = 0;
-            const PULL_THRESHOLD = 60; // pixels to pull before triggering
+            const PULL_THRESHOLD = 80;
 
-            // Create the pull indicator element
-            const indicator = document.createElement('div');
-            indicator.className = 'pull-load-indicator';
-            indicator.innerHTML = '<div class="pull-load-spinner"></div>';
-            list.appendChild(indicator);
+            // Create pull indicator with progress ring
+            this.pullIndicator = document.createElement('div');
+            this.pullIndicator.className = 'pull-load-indicator';
+            this.pullIndicator.innerHTML = `
+                <div class="pull-progress-ring">
+                    <svg viewBox="0 0 36 36">
+                        <circle class="ring-bg" cx="18" cy="18" r="14"></circle>
+                        <circle class="ring-progress" cx="18" cy="18" r="14"></circle>
+                    </svg>
+                    <div class="pull-checkmark">↓</div>
+                </div>
+            `;
+
+            const progressCircle = this.pullIndicator.querySelector('.ring-progress');
+            const checkmark = this.pullIndicator.querySelector('.pull-checkmark');
+            const circumference = 2 * Math.PI * 14; // r=14
+            progressCircle.style.strokeDasharray = circumference;
+            progressCircle.style.strokeDashoffset = circumference;
 
             const isAtBottom = () => {
                 return list.scrollTop + list.clientHeight >= list.scrollHeight - 5;
@@ -130,6 +143,7 @@ Object.assign(window.MobileApp.prototype, {
                 if (isAtBottom() && this.hasMoreConversations && !this.isLoadingMore) {
                     pullStartY = e.touches[0].clientY;
                     isPulling = true;
+                    this.pullIndicator.style.opacity = 0;
                 }
             }, { passive: true });
 
@@ -137,14 +151,26 @@ Object.assign(window.MobileApp.prototype, {
                 if (!isPulling || this.isLoadingMore) return;
 
                 const currentY = e.touches[0].clientY;
-                pullDistance = pullStartY - currentY; // positive when pulling up
+                pullDistance = pullStartY - currentY;
 
                 if (pullDistance > 0 && isAtBottom()) {
-                    // Show indicator based on pull distance
                     const progress = Math.min(pullDistance / PULL_THRESHOLD, 1);
-                    indicator.style.opacity = progress;
-                    indicator.style.transform = `translateY(${-10 + (progress * 10)}px)`;
-                    indicator.classList.toggle('ready', pullDistance >= PULL_THRESHOLD);
+
+                    // Show indicator
+                    this.pullIndicator.style.opacity = Math.min(progress * 2, 1);
+
+                    // Fill the ring based on progress
+                    const offset = circumference * (1 - progress);
+                    progressCircle.style.strokeDashoffset = offset;
+
+                    // Change arrow to checkmark when ready
+                    if (progress >= 1) {
+                        checkmark.textContent = '✓';
+                        this.pullIndicator.classList.add('ready');
+                    } else {
+                        checkmark.textContent = '↓';
+                        this.pullIndicator.classList.remove('ready');
+                    }
                 }
             }, { passive: true });
 
@@ -152,18 +178,22 @@ Object.assign(window.MobileApp.prototype, {
                 if (!isPulling) return;
 
                 if (pullDistance >= PULL_THRESHOLD && this.hasMoreConversations && !this.isLoadingMore) {
-                    // Keep indicator visible during load
-                    indicator.classList.add('loading');
+                    // Show loading state
+                    this.pullIndicator.classList.add('loading');
+                    checkmark.textContent = '';
+
                     await this.loadConversations('', true);
-                    indicator.classList.remove('loading');
+
+                    this.pullIndicator.classList.remove('loading');
                 }
 
                 // Reset
                 isPulling = false;
                 pullDistance = 0;
-                indicator.style.opacity = 0;
-                indicator.style.transform = 'translateY(-10px)';
-                indicator.classList.remove('ready');
+                this.pullIndicator.style.opacity = 0;
+                this.pullIndicator.classList.remove('ready');
+                progressCircle.style.strokeDashoffset = circumference;
+                checkmark.textContent = '↓';
             });
         },
 
