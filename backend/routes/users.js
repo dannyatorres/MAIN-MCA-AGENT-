@@ -176,7 +176,7 @@ router.put('/:id/password', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     await db.query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      'UPDATE users SET password_hash = $1, session_version = COALESCE(session_version, 1) + 1, updated_at = NOW() WHERE id = $2',
       [passwordHash, req.params.id]
     );
 
