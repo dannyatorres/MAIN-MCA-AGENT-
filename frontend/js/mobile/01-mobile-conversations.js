@@ -72,9 +72,14 @@ Object.assign(window.MobileApp.prototype, {
                 const time = this.utils.formatDate(conv.last_activity, 'ago');
                 const isSelected = conv.id === this.currentConversationId;
                 const unread = conv.unread_count || 0;
-                const metaBadge = conv.assigned_user_name 
-                    ? `<span class="agent-tag">${this.utils.escapeHtml(conv.assigned_agent_name || conv.assigned_user_name)}</span>`
-                    : (conv.display_id ? `<span class="conversation-id-badge">CID# ${conv.display_id}</span>` : '');
+                let metaBadge = '';
+                if (conv.assigned_user_role === 'admin') {
+                    metaBadge = '<span class="agent-tag admin-badge">Admin</span>';
+                } else if (conv.assigned_user_name) {
+                    metaBadge = `<span class="agent-tag">${this.utils.escapeHtml(conv.assigned_agent_name || conv.assigned_user_name)}</span>`;
+                } else if (conv.display_id) {
+                    metaBadge = `<span class="conversation-id-badge">CID# ${conv.display_id}</span>`;
+                }
                 const preview = conv.last_message ? `<div class="message-preview">${this.utils.escapeHtml(conv.last_message)}</div>` : '';
 
                 return `

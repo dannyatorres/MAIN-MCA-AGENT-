@@ -171,6 +171,13 @@
     flex-shrink: 0;
 }
 
+/* Admin badge styling */
+.agent-tag.admin-badge {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
 /* Row 3: Message Preview */
 .message-preview {
     font-size: 13px;

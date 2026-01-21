@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
         let query = `
             SELECT
                 c.*,
-                ${includeAssignedUser ? `u.name as assigned_user_name, u.agent_name as assigned_agent_name,` : ''}
+                ${includeAssignedUser ? `u.name as assigned_user_name, u.agent_name as assigned_agent_name, u.role as assigned_user_role,` : ''}
 
                 COALESCE((
                     SELECT COUNT(*) FROM messages m
@@ -382,7 +382,10 @@ router.post('/', requireModifyPermission, async (req, res) => {
 
         // Fetch with user info for proper badge display
         const finalQuery = `
-            SELECT c.*, u.name as assigned_user_name, u.agent_name as assigned_agent_name
+            SELECT c.*,
+                   u.name as assigned_user_name,
+                   u.agent_name as assigned_agent_name,
+                   u.role as assigned_user_role
             FROM conversations c
             LEFT JOIN users u ON c.assigned_user_id = u.id
             WHERE c.id = $1
