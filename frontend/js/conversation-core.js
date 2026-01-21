@@ -463,7 +463,9 @@ class ConversationCore {
                         <span class="phone-number">${safePhone}</span>
                         ${conv.assigned_user_role === 'admin'
                             ? `<span class="agent-tag admin-badge">Admin</span>`
-                            : `<span class="cid-tag">CID# ${safeCid}</span>`}
+                            : conv.assigned_user_name
+                                ? `<span class="agent-tag">${this.escapeHtml(conv.assigned_user_name)}</span>`
+                                : `<span class="cid-tag">CID# ${safeCid}</span>`}
                     </div>
                 </div>
                 <div class="conversation-checkbox">
