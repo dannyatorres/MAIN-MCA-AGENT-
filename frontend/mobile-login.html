@@ -162,9 +162,6 @@
 
                 const data = await res.json();
 
-                // DEBUG - remove after fixing
-                alert('API response: ' + JSON.stringify(data, null, 2));
-
                 if (res.ok && data.success) {
                     localStorage.setItem('user', JSON.stringify(data.user));
                     window.location.href = '/mobile';
