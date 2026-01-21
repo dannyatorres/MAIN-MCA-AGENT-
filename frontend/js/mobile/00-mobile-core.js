@@ -212,7 +212,7 @@ window.MobileApp = class MobileApp {
         });
 
         document.getElementById('addNewLeadBtn')?.addEventListener('click', () => {
-            this.showToast('Add New Lead - Coming Soon', 'info');
+            this.openCreateLeadForm();
         });
 
         document.getElementById('importCsvBtn')?.addEventListener('click', () => {

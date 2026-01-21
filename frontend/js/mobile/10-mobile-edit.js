@@ -556,6 +556,328 @@ Object.assign(window.MobileApp.prototype, {
         }
     },
 
+    // ============ CREATE NEW LEAD ============
+    openCreateLeadForm() {
+        // Remove existing modal if any
+        document.getElementById('createLeadModal')?.remove();
+
+        const modalHTML = `
+            <div id="createLeadModal" class="create-lead-modal">
+                <header class="mobile-header">
+                    <button class="back-btn" id="closeCreateLeadBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <h2>New Lead</h2>
+                    <div style="width: 40px;"></div>
+                </header>
+                <div class="edit-form-scroll" id="createFormContainer">
+                    ${this.renderCreateForm()}
+                </div>
+                <div class="edit-form-actions" id="createFormActions">
+                    <button class="btn-mobile-secondary" id="createCancelBtn">Cancel</button>
+                    <button class="btn-mobile-primary" id="createSaveBtn">Create Lead</button>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        this.setupCreateFormListeners();
+    },
+
+    renderCreateForm() {
+        const usStates = [
+            'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'
+        ];
+        const getStateOptions = () => {
+            return `<option value="">State</option>` + usStates.map(s =>
+                `<option value="${s}">${s}</option>`
+            ).join('');
+        };
+
+        return `
+            <form id="mobileCreateForm" class="mobile-edit-form">
+
+                <div class="mobile-form-section">
+                    <div class="mobile-section-header" data-section="business">
+                        <h4><i class="fas fa-building"></i> Business Profile</h4>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="mobile-section-content" id="section-business">
+                        <div class="mobile-form-group">
+                            <label>Legal Name *</label>
+                            <input type="text" name="businessName" class="mobile-form-input" required placeholder="Business legal name">
+                        </div>
+                        <div class="mobile-form-group">
+                            <label>DBA Name</label>
+                            <input type="text" name="dbaName" class="mobile-form-input" placeholder="Doing business as">
+                        </div>
+
+                        <div class="mobile-form-row col-2">
+                            <div class="mobile-form-group">
+                                <label>Primary Phone *</label>
+                                <input type="tel" name="primaryPhone" class="mobile-form-input phone-format" required placeholder="(555) 555-5555">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Cell Phone</label>
+                                <input type="tel" name="cellPhone" class="mobile-form-input phone-format" placeholder="(555) 555-5555">
+                            </div>
+                        </div>
+
+                        <div class="mobile-form-group">
+                            <label>Email</label>
+                            <input type="email" name="businessEmail" class="mobile-form-input" placeholder="email@company.com">
+                        </div>
+
+                        <div class="mobile-form-group">
+                            <label>Address</label>
+                            <input type="text" name="businessAddress" class="mobile-form-input" placeholder="Street address">
+                        </div>
+
+                        <div class="mobile-form-row col-3">
+                            <div class="mobile-form-group" style="flex: 2;">
+                                <label>City</label>
+                                <input type="text" name="businessCity" class="mobile-form-input">
+                            </div>
+                            <div class="mobile-form-group" style="flex: 1;">
+                                <label>State</label>
+                                <select name="businessState" class="mobile-form-select">
+                                    ${getStateOptions()}
+                                </select>
+                            </div>
+                            <div class="mobile-form-group" style="flex: 1.5;">
+                                <label>Zip</label>
+                                <input type="text" name="businessZip" class="mobile-form-input" maxlength="10">
+                            </div>
+                        </div>
+
+                        <div class="mobile-form-row col-2">
+                            <div class="mobile-form-group">
+                                <label>Industry</label>
+                                <input type="text" name="industryType" class="mobile-form-input" placeholder="e.g., Restaurant">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Start Date</label>
+                                <input type="date" name="businessStartDate" class="mobile-form-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mobile-form-section">
+                    <div class="mobile-section-header" data-section="financials">
+                        <h4><i class="fas fa-chart-line"></i> Financials</h4>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="mobile-section-content" id="section-financials">
+                        <div class="mobile-form-row col-2">
+                            <div class="mobile-form-group">
+                                <label>Monthly Revenue</label>
+                                <input type="text" name="monthlyRevenue" class="mobile-form-input money-input" placeholder="$0">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Requested Amount</label>
+                                <input type="text" name="requestedAmount" class="mobile-form-input money-input" placeholder="$0">
+                            </div>
+                        </div>
+
+                        <div class="mobile-form-row col-2">
+                            <div class="mobile-form-group">
+                                <label>Credit Score</label>
+                                <input type="text" name="creditScore" class="mobile-form-input" placeholder="e.g., 650">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Funding Status</label>
+                                <select name="fundingStatus" class="mobile-form-select">
+                                    <option value="">-- Select --</option>
+                                    <option value="none">No Funding</option>
+                                    <option value="1_position">1 Position</option>
+                                    <option value="2_positions">2 Positions</option>
+                                    <option value="3_plus">3+ Positions</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mobile-form-section">
+                    <div class="mobile-section-header" data-section="owner">
+                        <h4><i class="fas fa-user-tie"></i> Owner Info</h4>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="mobile-section-content" id="section-owner">
+                        <div class="mobile-form-row col-2">
+                            <div class="mobile-form-group">
+                                <label>First Name</label>
+                                <input type="text" name="ownerFirstName" class="mobile-form-input">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Last Name</label>
+                                <input type="text" name="ownerLastName" class="mobile-form-input">
+                            </div>
+                        </div>
+
+                        <div class="mobile-form-row col-2">
+                            <div class="mobile-form-group">
+                                <label>Email</label>
+                                <input type="email" name="ownerEmail" class="mobile-form-input">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Mobile</label>
+                                <input type="tel" name="ownerPhone" class="mobile-form-input phone-format">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        `;
+    },
+
+    setupCreateFormListeners() {
+        const form = document.getElementById('mobileCreateForm');
+        if (!form) return;
+
+        // Accordion toggles
+        form.querySelectorAll('.mobile-section-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.classList.toggle('collapsed');
+                const content = header.nextElementSibling;
+                content?.classList.toggle('collapsed');
+            });
+        });
+
+        // Phone formatting
+        form.querySelectorAll('.phone-format').forEach(input => {
+            input.addEventListener('input', (e) => {
+                e.target.value = this.utils.formatPhone(e.target.value);
+            });
+        });
+
+        // Money formatting
+        form.querySelectorAll('.money-input').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, '');
+                e.target.value = raw ? '$' + Number(raw).toLocaleString() : '';
+            });
+        });
+
+        // ZIP auto-fill
+        const businessZip = form.querySelector('[name="businessZip"]');
+        if (businessZip) {
+            businessZip.addEventListener('blur', async () => {
+                const zip = businessZip.value.replace(/\D/g, '').slice(0, 5);
+                if (zip.length !== 5) return;
+                try {
+                    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data.places?.[0]) {
+                        form.querySelector('[name="businessCity"]').value = data.places[0]['place name'];
+                        form.querySelector('[name="businessState"]').value = data.places[0]['state abbreviation'];
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            });
+        }
+
+        // Close button
+        document.getElementById('closeCreateLeadBtn')?.addEventListener('click', () => {
+            this.closeCreateLeadForm();
+        });
+
+        // Cancel button
+        document.getElementById('createCancelBtn')?.addEventListener('click', () => {
+            this.closeCreateLeadForm();
+        });
+
+        // Save button
+        document.getElementById('createSaveBtn')?.addEventListener('click', () => {
+            this.submitCreateForm();
+        });
+    },
+
+    closeCreateLeadForm() {
+        document.getElementById('createLeadModal')?.remove();
+    },
+
+    async submitCreateForm() {
+        const form = document.getElementById('mobileCreateForm');
+        if (!form) return;
+
+        // Basic validation
+        const businessName = form.querySelector('[name="businessName"]')?.value?.trim();
+        const primaryPhone = form.querySelector('[name="primaryPhone"]')?.value?.trim();
+
+        if (!businessName) {
+            this.showToast('Business name is required', 'error');
+            return;
+        }
+        if (!primaryPhone) {
+            this.showToast('Primary phone is required', 'error');
+            return;
+        }
+
+        const saveBtn = document.getElementById('createSaveBtn');
+        saveBtn.textContent = 'Creating...';
+        saveBtn.disabled = true;
+
+        const formData = new FormData(form);
+        const data = {};
+
+        formData.forEach((value, key) => {
+            if (['annualRevenue', 'monthlyRevenue', 'requestedAmount'].includes(key)) {
+                data[key] = String(value).replace(/[^0-9.]/g, '');
+            } else if (['primaryPhone', 'cellPhone', 'ownerPhone'].includes(key)) {
+                data[key] = String(value).replace(/\D/g, '');
+            } else {
+                data[key] = value;
+            }
+        });
+
+        // Map to API field names
+        const apiData = {
+            business_name: data.businessName,
+            lead_phone: data.primaryPhone,
+            email: data.businessEmail,
+            us_state: data.businessState,
+            business_address: data.businessAddress,
+            credit_score: data.creditScore,
+            funding_status: data.fundingStatus,
+            first_name: data.ownerFirstName,
+            last_name: data.ownerLastName,
+            ...data
+        };
+
+        try {
+            const res = await this.apiCall('/api/conversations', {
+                method: 'POST',
+                body: JSON.stringify(apiData)
+            });
+
+            if (res.success) {
+                this.showToast('Lead created!', 'success');
+                this.closeCreateLeadForm();
+
+                // Refresh the list
+                await this.loadConversations('', true);
+
+                // Optionally select the new lead
+                if (res.conversation?.id) {
+                    this.selectConversation(res.conversation.id);
+                }
+            } else {
+                throw new Error(res.error || 'Failed to create lead');
+            }
+        } catch (err) {
+            console.error('Create lead error:', err);
+            this.showToast('Failed to create lead', 'error');
+        } finally {
+            saveBtn.textContent = 'Create Lead';
+            saveBtn.disabled = false;
+        }
+    },
+
     async saveEditForm() {
         const form = document.getElementById('mobileEditForm');
         if (!form) return;

@@ -207,3 +207,68 @@ input:checked + .slider:before { transform: translateX(16px); }
 .btn-mobile-generate:disabled {
     opacity: 0.6;
 }
+
+/* --- CREATE LEAD MODAL (Full Screen) --- */
+.create-lead-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #0f1115;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+.create-lead-modal .mobile-header {
+    flex-shrink: 0;
+}
+
+.create-lead-modal .edit-form-scroll {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.create-lead-modal .edit-form-actions {
+    flex-shrink: 0;
+}
+
+/* Button styles */
+.btn-mobile-primary {
+    flex: 1;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-mobile-primary:disabled {
+    opacity: 0.6;
+}
+
+.btn-mobile-secondary {
+    flex: 1;
+    padding: 14px 20px;
+    background: #30363d;
+    border: none;
+    border-radius: 10px;
+    color: #e6edf3;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
