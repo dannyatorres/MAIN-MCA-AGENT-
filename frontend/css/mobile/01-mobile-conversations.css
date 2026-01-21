@@ -254,13 +254,13 @@
 
 .pull-progress-ring .ring-bg {
     fill: none;
-    stroke: rgba(59, 130, 246, 0.2);
+    stroke: rgba(139, 148, 158, 0.2);
     stroke-width: 3;
 }
 
 .pull-progress-ring .ring-progress {
     fill: none;
-    stroke: #3b82f6;
+    stroke: #8b949e;
     stroke-width: 3;
     stroke-linecap: round;
     transition: stroke-dashoffset 0.1s ease;
@@ -277,7 +277,7 @@
 }
 
 .pull-load-indicator.ready .pull-checkmark {
-    color: #3b82f6;
+    color: #e6edf3;
     font-weight: bold;
 }
 
