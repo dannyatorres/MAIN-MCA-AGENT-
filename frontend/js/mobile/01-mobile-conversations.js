@@ -79,7 +79,7 @@ Object.assign(window.MobileApp.prototype, {
                 if (conv.assigned_user_role === 'admin') {
                     metaBadge = '<span class="agent-tag admin-badge">Admin</span>';
                 } else if (conv.assigned_user_name) {
-                    metaBadge = `<span class="agent-tag">${this.utils.escapeHtml(conv.assigned_agent_name || conv.assigned_user_name)}</span>`;
+                    metaBadge = `<span class="agent-tag">${this.utils.escapeHtml(conv.assigned_user_name)}</span>`;
                 } else if (conv.display_id) {
                     metaBadge = `<span class="conversation-id-badge">CID# ${conv.display_id}</span>`;
                 }
