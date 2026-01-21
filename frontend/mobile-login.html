@@ -188,8 +188,13 @@
 
             try {
                 const res = await fetch('/api/auth/me', { credentials: 'include' });
-                if (res.ok) window.location.href = '/mobile';
-                else localStorage.removeItem('user');
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/mobile';
+                } else {
+                    localStorage.removeItem('user');
+                }
             } catch {}
         })();
     </script>
