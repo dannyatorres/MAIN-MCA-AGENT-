@@ -649,12 +649,19 @@ export class LeadFormController {
 
                         if (newConv?.id && conversationUI) {
                             const id = String(newConv.id);
+                            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
                             // 1. Set timestamps so it sorts to top
                             newConv.last_activity = new Date().toISOString();
                             newConv.created_at = newConv.created_at || new Date().toISOString();
                             newConv.unread_count = 0;
                             newConv._fullLoaded = false;
+
+                            // Ensure assignment fields are present (API should return these, but just in case)
+                            if (!newConv.assigned_user_name && currentUser.role === 'agent') {
+                                newConv.assigned_user_id = currentUser.id;
+                                newConv.assigned_user_name = currentUser.name;
+                            }
 
                             // 2. Add to Map FIRST (before any reload)
                             conversationUI.conversations.set(id, newConv);
@@ -727,6 +734,9 @@ export class LeadFormController {
     }
 
     prepareForCreate(data) {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const isAgent = currentUser.role === 'agent';
+
         return {
             business_name: data.businessName,
             lead_phone: data.primaryPhone,
@@ -738,6 +748,11 @@ export class LeadFormController {
             recent_funding: data.recentFunding,
             first_name: data.ownerFirstName,
             last_name: data.ownerLastName,
+
+            // Assignment: Agents auto-assign to themselves
+            assigned_user_id: isAgent ? currentUser.id : null,
+            assigned_user_name: isAgent ? currentUser.name : null,
+
             ...data
         };
     }

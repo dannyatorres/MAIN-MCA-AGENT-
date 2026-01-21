@@ -1077,6 +1077,10 @@ Object.assign(window.MobileApp.prototype, {
             }
         });
 
+        // Get current user for assignment
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const isAgent = currentUser.role === 'agent';
+
         // Map to API field names (matches desktop prepareForCreate)
         const apiData = {
             business_name: data.businessName,
@@ -1126,6 +1130,10 @@ Object.assign(window.MobileApp.prototype, {
             owner2_city: data.owner2HomeCity,
             owner2_state: data.owner2HomeState,
             owner2_zip: data.owner2HomeZip,
+
+            // Assignment: Agents auto-assign to themselves
+            assigned_user_id: isAgent ? currentUser.id : null,
+            assigned_user_name: isAgent ? currentUser.name : null,
             
             // Spread remaining data for any fields we missed
             ...data
@@ -1145,11 +1153,18 @@ Object.assign(window.MobileApp.prototype, {
 
                 if (newConv?.id) {
                     const id = String(newConv.id);
+                    const sessionUser = JSON.parse(localStorage.getItem('user') || '{}');
 
                     // 1. Set last_activity to NOW so it sorts to top
                     newConv.last_activity = new Date().toISOString();
                     newConv.created_at = newConv.created_at || new Date().toISOString();
                     newConv.unread_count = 0;
+
+                    // Ensure assignment fields for badge display
+                    if (!newConv.assigned_user_name && sessionUser.role === 'agent') {
+                        newConv.assigned_user_id = sessionUser.id;
+                        newConv.assigned_user_name = sessionUser.name;
+                    }
 
                     // 2. Add to local Map FIRST
                     this.conversations.set(id, newConv);
