@@ -641,18 +641,39 @@ export class LeadFormController {
                         body: apiData
                     });
 
-                    if(res.success) {
+                    if (res.success) {
                         document.getElementById('leadModalWrapper').remove();
 
-                        // 🟢 FIX: Refresh the list immediately
-                        console.log('🔄 Refreshing lead list...');
-                        if (this.parent.conversationUI) {
-                            await this.parent.conversationUI.loadConversations(true); // 'true' resets the list to page 1
-                        } else if (window.conversationUI) {
-                            await window.conversationUI.loadConversations(true);
-                        }
+                        const newConv = res.conversation;
+                        const conversationUI = this.parent.conversationUI || window.conversationUI;
 
-                        this.parent.utils.showNotification('Lead created successfully!', 'success');
+                        if (newConv?.id && conversationUI) {
+                            const id = String(newConv.id);
+
+                            // 1. Set timestamps so it sorts to top
+                            newConv.last_activity = new Date().toISOString();
+                            newConv.created_at = newConv.created_at || new Date().toISOString();
+                            newConv.unread_count = 0;
+                            newConv._fullLoaded = false;
+
+                            // 2. Add to Map FIRST (before any reload)
+                            conversationUI.conversations.set(id, newConv);
+
+                            // 3. Render immediately (new lead appears at top)
+                            conversationUI.renderConversationsList();
+
+                            // 4. Select the new lead
+                            conversationUI.selectConversation(id);
+
+                            this.parent.utils.showNotification('Lead created successfully!', 'success');
+
+                        } else {
+                            // Fallback if no conversation returned
+                            if (conversationUI) {
+                                await conversationUI.loadConversations(true);
+                            }
+                            this.parent.utils.showNotification('Lead created successfully!', 'success');
+                        }
                     }
                 } else {
                     // === EDIT MODE ===
