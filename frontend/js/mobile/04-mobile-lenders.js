@@ -283,16 +283,37 @@ Object.assign(window.MobileApp.prototype, {
         }
 
         try {
-            const result = await this.apiCall('/api/qualification/all-lenders');
-            if (result.success && result.lenders) {
-                this.currentLenderResults = {
-                    qualified: result.lenders,
-                    nonQualified: []
-                };
-                await this.showLenderSubmissionModal();
-            } else {
-                throw new Error('Failed to load lenders');
+            // 1. Check cache first for all-lenders (rarely changes)
+            let lenders = null;
+            const cached = sessionStorage.getItem('all_lenders_cache');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                // Cache for 1 hour
+                if (Date.now() - parsed.timestamp < 60 * 60 * 1000) {
+                    lenders = parsed.lenders;
+                }
             }
+
+            // 2. If not cached, fetch it
+            if (!lenders) {
+                const result = await this.apiCall('/api/qualification/all-lenders');
+                if (result.success && result.lenders) {
+                    lenders = result.lenders;
+                    sessionStorage.setItem('all_lenders_cache', JSON.stringify({
+                        lenders,
+                        timestamp: Date.now()
+                    }));
+                } else {
+                    throw new Error('Failed to load lenders');
+                }
+            }
+
+            this.currentLenderResults = {
+                qualified: lenders,
+                nonQualified: []
+            };
+
+            await this.showLenderSubmissionModal();
         } catch (err) {
             console.error('Skip to send error:', err);
             this.showToast('Failed to load lenders', 'error');
@@ -449,19 +470,14 @@ Object.assign(window.MobileApp.prototype, {
             return;
         }
 
-        let documents = [];
-        try {
-            const docResult = await this.apiCall(`/api/documents/${this.currentConversationId}`);
-            if (docResult.success && docResult.documents) {
-                documents = docResult.documents;
-            }
-        } catch (e) { /* ignore */ }
+        // Fetch documents and submission history in PARALLEL
+        const [docResult, histResult] = await Promise.all([
+            this.apiCall(`/api/documents/${this.currentConversationId}`).catch(() => ({})),
+            this.apiCall(`/api/lenders/submissions/${this.currentConversationId}`).catch(() => ({}))
+        ]);
 
-        let submissionHistory = [];
-        try {
-            const histResult = await this.apiCall(`/api/lenders/submissions/${this.currentConversationId}`);
-            submissionHistory = histResult.submissions || [];
-        } catch (e) { /* ignore */ }
+        const documents = docResult.success && docResult.documents ? docResult.documents : [];
+        const submissionHistory = histResult.submissions || [];
 
         const submittedMap = new Map();
         submissionHistory.forEach(sub => {
