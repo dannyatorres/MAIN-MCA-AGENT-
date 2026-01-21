@@ -9,6 +9,48 @@
     <title>MCA Mobile</title>
     <link rel="apple-touch-icon" href="/logo.png">
     <link rel="manifest" href="/manifest.json">
+    <style>
+        /* Splash screen - inline so it shows immediately */
+        .splash-screen {
+            position: fixed;
+            inset: 0;
+            background: #0f1115;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        .splash-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .splash-logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 24px;
+            border-radius: 20px;
+        }
+        .splash-brand {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: #c9d1d9;
+            margin-bottom: 24px;
+        }
+        .splash-spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: #10b981;
+            border-radius: 50%;
+            animation: splash-spin 0.8s linear infinite;
+        }
+        @keyframes splash-spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 
     <!-- Theme (shared) -->
     <link rel="stylesheet" href="/css/modules/01-theme.css">
@@ -32,6 +74,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <div class="splash-screen" id="splashScreen">
+        <img src="/logo.png" alt="MCAgent" class="splash-logo">
+        <span class="splash-brand">MCAgent</span>
+        <div class="splash-spinner"></div>
+    </div>
     <!-- Panel Container - slides horizontally -->
     <div class="panel-container" id="panelContainer" data-panel="0">
 
@@ -597,8 +644,22 @@
     <script src="/js/mobile/12-mobile-dialer.js?v=1000"></script>
     <script src="/js/mobile/10-mobile-edit.js?v=1000"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const splash = document.getElementById('splashScreen');
+
+            // Initialize app
             window.mobileApp = new MobileApp();
+
+            // Preload conversations before hiding splash
+            try {
+                await window.mobileApp.loadConversations();
+            } catch (e) {
+                console.error('Preload failed:', e);
+            }
+
+            // Fade out splash
+            splash.classList.add('fade-out');
+            setTimeout(() => splash.remove(), 300);
         });
     </script>
     <!-- Mobile Call Bar -->
