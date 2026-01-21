@@ -226,7 +226,7 @@ window.MobileApp = class MobileApp {
 
         document.getElementById('logoutBtn')?.addEventListener('click', () => {
             if (confirm('Sign out?')) {
-                window.location.href = '/logout';
+                window.location.href = '/mobile-login.html';
             }
         });
 
