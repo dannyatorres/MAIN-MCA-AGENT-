@@ -105,15 +105,62 @@ Object.assign(window.MobileApp.prototype, {
         },
 
         setupInfiniteScroll() {
-            if (!this.dom.conversationList) return;
+            const list = this.dom.conversationList;
+            if (!list) return;
 
-            this.dom.conversationList.addEventListener('scroll', () => {
-                const el = this.dom.conversationList;
-                const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 100;
+            let pullStartY = 0;
+            let isPulling = false;
+            let pullDistance = 0;
+            const PULL_THRESHOLD = 60; // pixels to pull before triggering
 
-                if (nearBottom && this.hasMoreConversations && !this.isLoadingMore) {
-                    this.loadConversations('', true);
+            // Create the pull indicator element
+            const indicator = document.createElement('div');
+            indicator.className = 'pull-load-indicator';
+            indicator.innerHTML = '<div class="pull-load-spinner"></div>';
+            list.appendChild(indicator);
+
+            const isAtBottom = () => {
+                return list.scrollTop + list.clientHeight >= list.scrollHeight - 5;
+            };
+
+            list.addEventListener('touchstart', (e) => {
+                if (isAtBottom() && this.hasMoreConversations && !this.isLoadingMore) {
+                    pullStartY = e.touches[0].clientY;
+                    isPulling = true;
                 }
+            }, { passive: true });
+
+            list.addEventListener('touchmove', (e) => {
+                if (!isPulling || this.isLoadingMore) return;
+
+                const currentY = e.touches[0].clientY;
+                pullDistance = pullStartY - currentY; // positive when pulling up
+
+                if (pullDistance > 0 && isAtBottom()) {
+                    // Show indicator based on pull distance
+                    const progress = Math.min(pullDistance / PULL_THRESHOLD, 1);
+                    indicator.style.opacity = progress;
+                    indicator.style.transform = `translateY(${-10 + (progress * 10)}px)`;
+                    indicator.classList.toggle('ready', pullDistance >= PULL_THRESHOLD);
+                }
+            }, { passive: true });
+
+            list.addEventListener('touchend', async () => {
+                if (!isPulling) return;
+
+                if (pullDistance >= PULL_THRESHOLD && this.hasMoreConversations && !this.isLoadingMore) {
+                    // Keep indicator visible during load
+                    indicator.classList.add('loading');
+                    await this.loadConversations('', true);
+                    indicator.classList.remove('loading');
+                }
+
+                // Reset
+                isPulling = false;
+                pullDistance = 0;
+                indicator.style.opacity = 0;
+                indicator.style.transform = 'translateY(-10px)';
+                indicator.classList.remove('ready');
             });
         },
 
