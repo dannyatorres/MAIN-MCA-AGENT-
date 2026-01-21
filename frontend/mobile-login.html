@@ -35,8 +35,8 @@
         }
 
         .login-logo {
-            width: 80px;
-            height: 80px;
+            width: 120px;
+            height: 120px;
             margin-bottom: 16px;
             border-radius: 16px;
         }
@@ -173,9 +173,17 @@
         });
 
         (async () => {
+            if (new URLSearchParams(window.location.search).has('logged_out')) {
+                localStorage.removeItem('user');
+                return;
+            }
+
+            if (!localStorage.getItem('user')) return;
+
             try {
                 const res = await fetch('/api/auth/me', { credentials: 'include' });
                 if (res.ok) window.location.href = '/mobile';
+                else localStorage.removeItem('user');
             } catch {}
         })();
     </script>
