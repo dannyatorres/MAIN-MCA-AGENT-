@@ -382,12 +382,19 @@ router.post('/', requireModifyPermission, async (req, res) => {
 
         console.log(`✅ Lead ${isUpdate ? 'updated' : 'created'}: ${newId}`);
 
-        // Fetch and return the full record to update the frontend state
-        const finalConversation = await db.query('SELECT * FROM conversations WHERE id = $1', [newId]);
+        // Fetch with user info for proper badge display
+        const finalQuery = `
+            SELECT c.*, u.name as assigned_user_name, u.agent_name as assigned_agent_name
+            FROM conversations c
+            LEFT JOIN users u ON c.assigned_user_id = u.id
+            WHERE c.id = $1
+        `;
+        const finalConversation = await db.query(finalQuery, [newId]);
 
         res.json({
             success: true,
-            conversation: finalConversation.rows[0]
+            conversation: finalConversation.rows[0],
+            isUpdate: isUpdate
         });
 
     } catch (error) {
@@ -700,6 +707,17 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
             console.log('✅ Agent actions deleted');
         } catch (err) {
             console.error('❌ Error deleting agent_actions:', err.message);
+        }
+
+        // Delete usage logs (MISSING - causes FK constraint error!)
+        try {
+            await db.query(
+                `DELETE FROM usage_logs WHERE conversation_id IN (${placeholders})`,
+                allowedIds
+            );
+            console.log('✅ Usage logs deleted');
+        } catch (err) {
+            console.error('❌ Error deleting usage_logs:', err.message);
         }
 
         // Finally delete conversations
