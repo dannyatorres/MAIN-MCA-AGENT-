@@ -56,10 +56,12 @@ window.MobileApp = class MobileApp {
         this.setupLeadsDropdown();
         this.setupCallListeners();
         this.setupDialerListeners();
+        this.setupNewsListeners();
         this.setupInfiniteScroll();
         await this.loadConversations();
         this.initWebSocket();
         this.loadMobileDashboard();
+        this.preloadNews();
     }
 
     // ============ NAVIGATION ============
@@ -221,9 +223,6 @@ window.MobileApp = class MobileApp {
             this.openMobileDashboard();
         });
 
-        document.getElementById('newsBtn')?.addEventListener('click', () => {
-            this.showToast('News & Updates - Coming Soon', 'info');
-        });
 
         document.getElementById('logoutBtn')?.addEventListener('click', () => {
             if (confirm('Sign out?')) {

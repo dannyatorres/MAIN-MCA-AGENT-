@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="/css/mobile/09-mobile-dashboard.css?v=1019">
     <link rel="stylesheet" href="/css/mobile/10-mobile-dialer.css?v=1019">
     <link rel="stylesheet" href="/css/mobile/10-mobile-edit.css?v=1019">
+    <link rel="stylesheet" href="/css/mobile/11-mobile-news.css?v=1000">
 
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -392,6 +393,20 @@
         </div>
     </div>
 
+    <!-- Mobile News Panel -->
+    <div id="mobileNews" class="mobile-overlay-panel" style="display: none;">
+        <header class="mobile-header">
+            <button class="back-btn" id="closeNewsBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2><i class="fas fa-newspaper"></i> News & Updates</h2>
+            <div style="width: 40px;"></div>
+        </header>
+        <div class="mobile-news-content" id="mobileNewsContainer">
+            <!-- News cards render here -->
+        </div>
+    </div>
+
     <!-- Mobile Dialer -->
     <div id="mobileDialer" class="mobile-dialer-page" style="display: none;">
         <header class="mobile-header">
@@ -578,6 +593,7 @@
     <script src="/js/mobile/06-mobile-strategy.js?v=1000"></script>
     <script src="/js/mobile/07-mobile-ai.js?v=1000"></script>
     <script src="/js/mobile/08-mobile-fcs.js?v=1000"></script>
+    <script src="/js/mobile/11-mobile-news.js?v=1000"></script>
     <script src="/js/mobile/12-mobile-dialer.js?v=1000"></script>
     <script src="/js/mobile/10-mobile-edit.js?v=1000"></script>
     <script>
