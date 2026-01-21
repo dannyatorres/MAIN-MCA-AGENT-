@@ -54,6 +54,17 @@ Object.assign(window.MobileApp.prototype, {
                 return;
             }
 
+            // SORT: Offers first, then unread, then by last_activity (matches desktop)
+            convArray.sort((a, b) => {
+                if (a.has_offer && !b.has_offer) return -1;
+                if (!a.has_offer && b.has_offer) return 1;
+
+                if ((a.unread_count > 0) && !(b.unread_count > 0)) return -1;
+                if (!(a.unread_count > 0) && (b.unread_count > 0)) return 1;
+
+                return new Date(b.last_activity || 0) - new Date(a.last_activity || 0);
+            });
+
             const html = convArray.map(conv => {
                 const businessName = conv.business_name || `${conv.first_name || ''} ${conv.last_name || ''}`.trim() || 'Unknown';
                 const initials = this.getInitials(businessName);

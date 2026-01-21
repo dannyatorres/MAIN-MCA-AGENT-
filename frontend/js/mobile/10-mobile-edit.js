@@ -1141,12 +1141,28 @@ Object.assign(window.MobileApp.prototype, {
                 this.showToast('Lead created!', 'success');
                 this.closeCreateLeadForm();
 
-                // Refresh the list
-                await this.loadConversations('', true);
+                const newConv = res.conversation;
 
-                // Optionally select the new lead
-                if (res.conversation?.id) {
-                    this.selectConversation(res.conversation.id);
+                if (newConv?.id) {
+                    const id = String(newConv.id);
+
+                    // 1. Set last_activity to NOW so it sorts to top
+                    newConv.last_activity = new Date().toISOString();
+                    newConv.created_at = newConv.created_at || new Date().toISOString();
+                    newConv.unread_count = 0;
+
+                    // 2. Add to local Map FIRST
+                    this.conversations.set(id, newConv);
+
+                    // 3. Re-render list (new lead will now appear at top due to sorting)
+                    this.renderConversationList();
+
+                    // 4. Select and navigate to the new lead
+                    this.selectConversation(id);
+
+                } else {
+                    // Fallback: full reload if API didn't return the conversation
+                    await this.loadConversations('', true);
                 }
             } else {
                 throw new Error(res.error || 'Failed to create lead');
