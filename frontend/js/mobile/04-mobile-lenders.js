@@ -734,68 +734,60 @@ Let me know if you need anything else.</textarea>
     },
 
     async sendLenderSubmissions() {
-        const btn = document.getElementById('confirmSubmissionBtn');
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-
-        try {
-            const selectedLenders = [];
-            document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').forEach(cb => {
-                selectedLenders.push({
-                    name: cb.value,
-                    email: cb.dataset.email
-                });
+        const selectedLenders = [];
+        document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').forEach(cb => {
+            selectedLenders.push({
+                name: cb.value,
+                email: cb.dataset.email
             });
+        });
 
-            if (selectedLenders.length === 0) {
-                this.showToast('Please select at least one lender', 'warning');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                return;
-            }
+        if (selectedLenders.length === 0) {
+            this.showToast('Please select at least one lender', 'warning');
+            return;
+        }
 
-            const selectedDocuments = [];
-            document.querySelectorAll('#submissionDocList .doc-checkbox:checked').forEach(cb => {
-                selectedDocuments.push({
-                    id: cb.value,
-                    s3_key: cb.dataset.s3key
-                });
+        const selectedDocuments = [];
+        document.querySelectorAll('#submissionDocList .doc-checkbox:checked').forEach(cb => {
+            selectedDocuments.push({
+                id: cb.value,
+                s3_key: cb.dataset.s3key
             });
+        });
 
-            const message = document.getElementById('submissionMessage')?.value || '';
+        const message = document.getElementById('submissionMessage')?.value || '';
 
-            const conv = this.selectedConversation || {};
-            const businessData = {
-                businessName: conv.business_name || '',
-                state: conv.us_state || conv.state || '',
-                revenue: conv.monthly_revenue || conv.annual_revenue || '',
-                fico: conv.credit_score || '',
-                customMessage: message
-            };
+        const conv = this.selectedConversation || {};
+        const businessData = {
+            businessName: conv.business_name || '',
+            state: conv.us_state || conv.state || '',
+            revenue: conv.monthly_revenue || conv.annual_revenue || '',
+            fico: conv.credit_score || '',
+            customMessage: message
+        };
 
-            const result = await this.apiCall(`/api/submissions/${this.currentConversationId}/send`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    selectedLenders,
-                    businessData,
-                    documents: selectedDocuments
-                })
-            });
+        // 1. OPTIMISTIC: Close modal and show success immediately
+        this.closeSubmissionModal();
+        this.showToast(`Sending to ${selectedLenders.length} lenders...`, 'success');
 
+        // 2. Fire API call in background (don't await)
+        this.apiCall(`/api/submissions/${this.currentConversationId}/send`, {
+            method: 'POST',
+            body: JSON.stringify({
+                selectedLenders,
+                businessData,
+                documents: selectedDocuments
+            })
+        }).then(result => {
             if (result.success) {
-                this.showToast(`Sending to ${selectedLenders.length} lenders!`, 'success');
-                this.closeSubmissionModal();
+                this.showToast(`✓ Sent to ${selectedLenders.length} lenders!`, 'success');
             } else {
                 throw new Error(result.error || 'Failed to send');
             }
-        } catch (err) {
+        }).catch(err => {
             console.error('Submission error:', err);
             this.showToast('Failed to send: ' + err.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
+        });
     },
 
     closeSubmissionModal() {
