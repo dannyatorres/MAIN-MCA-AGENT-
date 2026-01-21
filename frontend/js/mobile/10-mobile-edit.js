@@ -597,6 +597,7 @@ Object.assign(window.MobileApp.prototype, {
         return `
             <form id="mobileCreateForm" class="mobile-edit-form">
 
+                <!-- BUSINESS PROFILE -->
                 <div class="mobile-form-section">
                     <div class="mobile-section-header" data-section="business">
                         <h4><i class="fas fa-building"></i> Business Profile</h4>
@@ -652,6 +653,23 @@ Object.assign(window.MobileApp.prototype, {
 
                         <div class="mobile-form-row col-2">
                             <div class="mobile-form-group">
+                                <label>Tax ID (EIN)</label>
+                                <input type="text" name="federalTaxId" class="mobile-form-input ein-format" placeholder="XX-XXXXXXX" maxlength="10">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Entity Type</label>
+                                <select name="entityType" class="mobile-form-select">
+                                    <option value="">Select...</option>
+                                    <option value="LLC">LLC</option>
+                                    <option value="Corporation">Corp</option>
+                                    <option value="Sole Proprietorship">Sole Prop</option>
+                                    <option value="Partnership">Partnership</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mobile-form-row col-2">
+                            <div class="mobile-form-group">
                                 <label>Industry</label>
                                 <input type="text" name="industryType" class="mobile-form-input" placeholder="e.g., Restaurant">
                             </div>
@@ -663,6 +681,7 @@ Object.assign(window.MobileApp.prototype, {
                     </div>
                 </div>
 
+                <!-- FINANCIALS -->
                 <div class="mobile-form-section">
                     <div class="mobile-section-header" data-section="financials">
                         <h4><i class="fas fa-chart-line"></i> Financials</h4>
@@ -671,12 +690,23 @@ Object.assign(window.MobileApp.prototype, {
                     <div class="mobile-section-content" id="section-financials">
                         <div class="mobile-form-row col-2">
                             <div class="mobile-form-group">
+                                <label>Annual Revenue</label>
+                                <input type="text" name="annualRevenue" class="mobile-form-input money-input" placeholder="$0">
+                            </div>
+                            <div class="mobile-form-group">
                                 <label>Monthly Revenue</label>
                                 <input type="text" name="monthlyRevenue" class="mobile-form-input money-input" placeholder="$0">
                             </div>
+                        </div>
+
+                        <div class="mobile-form-row col-2">
                             <div class="mobile-form-group">
                                 <label>Requested Amount</label>
                                 <input type="text" name="requestedAmount" class="mobile-form-input money-input" placeholder="$0">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Use of Funds</label>
+                                <input type="text" name="useOfProceeds" class="mobile-form-input" placeholder="Working Capital">
                             </div>
                         </div>
 
@@ -696,15 +726,31 @@ Object.assign(window.MobileApp.prototype, {
                                 </select>
                             </div>
                         </div>
+
+                        <div class="mobile-form-group">
+                            <label>Funding Details</label>
+                            <input type="text" name="recentFunding" class="mobile-form-input" placeholder="e.g., $50k last month from XYZ">
+                        </div>
                     </div>
                 </div>
 
+                <!-- OWNER 1 -->
                 <div class="mobile-form-section">
-                    <div class="mobile-section-header" data-section="owner">
-                        <h4><i class="fas fa-user-tie"></i> Owner Info</h4>
+                    <div class="mobile-section-header" data-section="owner1">
+                        <h4><i class="fas fa-user-tie"></i> Owner 1</h4>
                         <i class="fas fa-chevron-down collapse-icon"></i>
                     </div>
-                    <div class="mobile-section-content" id="section-owner">
+                    <div class="mobile-section-content" id="section-owner1">
+                        
+                        <!-- Same Address Toggle -->
+                        <div class="mobile-toggle-row">
+                            <span class="toggle-text">Same as Business Address</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="createCopyAddr1">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+
                         <div class="mobile-form-row col-2">
                             <div class="mobile-form-group">
                                 <label>First Name</label>
@@ -726,6 +772,123 @@ Object.assign(window.MobileApp.prototype, {
                                 <input type="tel" name="ownerPhone" class="mobile-form-input phone-format">
                             </div>
                         </div>
+
+                        <div class="mobile-form-row col-3">
+                            <div class="mobile-form-group">
+                                <label>SSN</label>
+                                <input type="text" name="ownerSSN" class="mobile-form-input ssn-format" placeholder="XXX-XX-XXXX" maxlength="11">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>DOB</label>
+                                <input type="date" name="ownerDOB" class="mobile-form-input">
+                            </div>
+                            <div class="mobile-form-group">
+                                <label>Ownership %</label>
+                                <input type="number" name="ownershipPercent" class="mobile-form-input" max="100" placeholder="100">
+                            </div>
+                        </div>
+
+                        <div class="mobile-form-group">
+                            <label>Home Address</label>
+                            <input type="text" name="ownerHomeAddress" class="mobile-form-input">
+                        </div>
+
+                        <div class="mobile-form-row col-3">
+                            <div class="mobile-form-group" style="flex: 2;">
+                                <label>City</label>
+                                <input type="text" name="ownerHomeCity" class="mobile-form-input">
+                            </div>
+                            <div class="mobile-form-group" style="flex: 1;">
+                                <label>State</label>
+                                <select name="ownerHomeState" class="mobile-form-select">
+                                    ${getStateOptions()}
+                                </select>
+                            </div>
+                            <div class="mobile-form-group" style="flex: 1.5;">
+                                <label>Zip</label>
+                                <input type="text" name="ownerHomeZip" class="mobile-form-input" maxlength="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OWNER 2 / PARTNER -->
+                <div class="mobile-form-section">
+                    <div class="mobile-section-header" data-section="owner2">
+                        <h4><i class="fas fa-users"></i> Partner / Owner 2</h4>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="mobile-section-content collapsed" id="section-owner2">
+                        
+                        <!-- Has Partner Toggle -->
+                        <div class="mobile-toggle-row">
+                            <span class="toggle-text">Has Partner / Co-Owner</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="createHasPartner">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+
+                        <div id="createPartnerFields" class="hidden-section">
+                            <div class="mobile-form-row col-2">
+                                <div class="mobile-form-group">
+                                    <label>First Name</label>
+                                    <input type="text" name="owner2FirstName" class="mobile-form-input">
+                                </div>
+                                <div class="mobile-form-group">
+                                    <label>Last Name</label>
+                                    <input type="text" name="owner2LastName" class="mobile-form-input">
+                                </div>
+                            </div>
+
+                            <div class="mobile-form-row col-2">
+                                <div class="mobile-form-group">
+                                    <label>Email</label>
+                                    <input type="email" name="owner2Email" class="mobile-form-input">
+                                </div>
+                                <div class="mobile-form-group">
+                                    <label>Mobile</label>
+                                    <input type="tel" name="owner2Phone" class="mobile-form-input phone-format">
+                                </div>
+                            </div>
+
+                            <div class="mobile-form-row col-3">
+                                <div class="mobile-form-group">
+                                    <label>SSN</label>
+                                    <input type="text" name="owner2SSN" class="mobile-form-input ssn-format" placeholder="XXX-XX-XXXX" maxlength="11">
+                                </div>
+                                <div class="mobile-form-group">
+                                    <label>DOB</label>
+                                    <input type="date" name="owner2DOB" class="mobile-form-input">
+                                </div>
+                                <div class="mobile-form-group">
+                                    <label>Ownership %</label>
+                                    <input type="number" name="owner2OwnershipPercent" class="mobile-form-input" max="100">
+                                </div>
+                            </div>
+
+                            <div class="mobile-form-group">
+                                <label>Home Address</label>
+                                <input type="text" name="owner2HomeAddress" class="mobile-form-input">
+                            </div>
+
+                            <div class="mobile-form-row col-3">
+                                <div class="mobile-form-group" style="flex: 2;">
+                                    <label>City</label>
+                                    <input type="text" name="owner2HomeCity" class="mobile-form-input">
+                                </div>
+                                <div class="mobile-form-group" style="flex: 1;">
+                                    <label>State</label>
+                                    <select name="owner2HomeState" class="mobile-form-select">
+                                        ${getStateOptions()}
+                                    </select>
+                                </div>
+                                <div class="mobile-form-group" style="flex: 1.5;">
+                                    <label>Zip</label>
+                                    <input type="text" name="owner2HomeZip" class="mobile-form-input" maxlength="10">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -737,7 +900,7 @@ Object.assign(window.MobileApp.prototype, {
         const form = document.getElementById('mobileCreateForm');
         if (!form) return;
 
-        // Accordion toggles
+        // --- Accordion toggles ---
         form.querySelectorAll('.mobile-section-header').forEach(header => {
             header.addEventListener('click', () => {
                 header.classList.toggle('collapsed');
@@ -746,14 +909,14 @@ Object.assign(window.MobileApp.prototype, {
             });
         });
 
-        // Phone formatting
+        // --- Phone formatting (XXX) XXX-XXXX ---
         form.querySelectorAll('.phone-format').forEach(input => {
             input.addEventListener('input', (e) => {
                 e.target.value = this.utils.formatPhone(e.target.value);
             });
         });
 
-        // Money formatting
+        // --- Money formatting $X,XXX ---
         form.querySelectorAll('.money-input').forEach(input => {
             input.addEventListener('input', (e) => {
                 const raw = e.target.value.replace(/[^0-9]/g, '');
@@ -761,40 +924,114 @@ Object.assign(window.MobileApp.prototype, {
             });
         });
 
-        // ZIP auto-fill
-        const businessZip = form.querySelector('[name="businessZip"]');
-        if (businessZip) {
-            businessZip.addEventListener('blur', async () => {
-                const zip = businessZip.value.replace(/\D/g, '').slice(0, 5);
-                if (zip.length !== 5) return;
-                try {
-                    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-                    if (!res.ok) return;
-                    const data = await res.json();
-                    if (data.places?.[0]) {
-                        form.querySelector('[name="businessCity"]').value = data.places[0]['place name'];
-                        form.querySelector('[name="businessState"]').value = data.places[0]['state abbreviation'];
-                    }
-                } catch (e) {
-                    // ignore
+        // --- SSN formatting XXX-XX-XXXX ---
+        form.querySelectorAll('.ssn-format').forEach(input => {
+            input.addEventListener('input', (e) => {
+                let digits = e.target.value.replace(/\D/g, '').slice(0, 9);
+                if (digits.length >= 6) {
+                    e.target.value = `${digits.slice(0,3)}-${digits.slice(3,5)}-${digits.slice(5)}`;
+                } else if (digits.length >= 4) {
+                    e.target.value = `${digits.slice(0,3)}-${digits.slice(3)}`;
+                } else {
+                    e.target.value = digits;
+                }
+            });
+        });
+
+        // --- EIN formatting XX-XXXXXXX ---
+        form.querySelectorAll('.ein-format').forEach(input => {
+            input.addEventListener('input', (e) => {
+                let digits = e.target.value.replace(/\D/g, '').slice(0, 9);
+                if (digits.length > 2) {
+                    e.target.value = `${digits.slice(0,2)}-${digits.slice(2)}`;
+                } else {
+                    e.target.value = digits;
+                }
+            });
+        });
+
+        // --- Copy Business Address to Owner 1 ---
+        const copyAddrToggle = document.getElementById('createCopyAddr1');
+        if (copyAddrToggle) {
+            copyAddrToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    form.querySelector('[name="ownerHomeAddress"]').value = form.querySelector('[name="businessAddress"]').value;
+                    form.querySelector('[name="ownerHomeCity"]').value = form.querySelector('[name="businessCity"]').value;
+                    form.querySelector('[name="ownerHomeState"]').value = form.querySelector('[name="businessState"]').value;
+                    form.querySelector('[name="ownerHomeZip"]').value = form.querySelector('[name="businessZip"]').value;
                 }
             });
         }
 
-        // Close button
+        // --- Partner Toggle (Show/Hide Owner 2 Fields) ---
+        const hasPartnerToggle = document.getElementById('createHasPartner');
+        const partnerFields = document.getElementById('createPartnerFields');
+        if (hasPartnerToggle && partnerFields) {
+            hasPartnerToggle.addEventListener('change', (e) => {
+                partnerFields.classList.toggle('hidden-section', !e.target.checked);
+            });
+        }
+
+        // --- ZIP Auto-fill for Business ---
+        const businessZip = form.querySelector('[name="businessZip"]');
+        if (businessZip) {
+            businessZip.addEventListener('blur', () => this.lookupZipAndFill(
+                businessZip.value,
+                form.querySelector('[name="businessCity"]'),
+                form.querySelector('[name="businessState"]')
+            ));
+        }
+
+        // --- ZIP Auto-fill for Owner 1 ---
+        const ownerZip = form.querySelector('[name="ownerHomeZip"]');
+        if (ownerZip) {
+            ownerZip.addEventListener('blur', () => this.lookupZipAndFill(
+                ownerZip.value,
+                form.querySelector('[name="ownerHomeCity"]'),
+                form.querySelector('[name="ownerHomeState"]')
+            ));
+        }
+
+        // --- ZIP Auto-fill for Owner 2 ---
+        const owner2Zip = form.querySelector('[name="owner2HomeZip"]');
+        if (owner2Zip) {
+            owner2Zip.addEventListener('blur', () => this.lookupZipAndFill(
+                owner2Zip.value,
+                form.querySelector('[name="owner2HomeCity"]'),
+                form.querySelector('[name="owner2HomeState"]')
+            ));
+        }
+
+        // --- Close / Cancel / Save buttons ---
         document.getElementById('closeCreateLeadBtn')?.addEventListener('click', () => {
             this.closeCreateLeadForm();
         });
 
-        // Cancel button
         document.getElementById('createCancelBtn')?.addEventListener('click', () => {
             this.closeCreateLeadForm();
         });
 
-        // Save button
         document.getElementById('createSaveBtn')?.addEventListener('click', () => {
             this.submitCreateForm();
         });
+    },
+
+    // Helper for ZIP lookup (reusable)
+    async lookupZipAndFill(zipValue, cityInput, stateSelect) {
+        const zip = (zipValue || '').replace(/\D/g, '').slice(0, 5);
+        if (zip.length !== 5) return;
+        
+        try {
+            const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.places?.[0]) {
+                if (cityInput) cityInput.value = data.places[0]['place name'];
+                if (stateSelect) stateSelect.value = data.places[0]['state abbreviation'];
+            }
+        } catch (e) {
+            // ignore
+        }
     },
 
     closeCreateLeadForm() {
@@ -826,26 +1063,71 @@ Object.assign(window.MobileApp.prototype, {
         const data = {};
 
         formData.forEach((value, key) => {
+            // Strip money formatting
             if (['annualRevenue', 'monthlyRevenue', 'requestedAmount'].includes(key)) {
                 data[key] = String(value).replace(/[^0-9.]/g, '');
-            } else if (['primaryPhone', 'cellPhone', 'ownerPhone'].includes(key)) {
+            }
+            // Strip phone formatting
+            else if (['primaryPhone', 'cellPhone', 'ownerPhone', 'owner2Phone'].includes(key)) {
                 data[key] = String(value).replace(/\D/g, '');
-            } else {
+            }
+            // Keep SSN/EIN as-is (formatted) or strip if needed
+            else {
                 data[key] = value;
             }
         });
 
-        // Map to API field names
+        // Map to API field names (matches desktop prepareForCreate)
         const apiData = {
             business_name: data.businessName,
+            dba_name: data.dbaName,
             lead_phone: data.primaryPhone,
+            cell_phone: data.cellPhone,
             email: data.businessEmail,
-            us_state: data.businessState,
             business_address: data.businessAddress,
+            city: data.businessCity,
+            us_state: data.businessState,
+            zip: data.businessZip,
+            tax_id: data.federalTaxId,
+            entity_type: data.entityType,
+            industry_type: data.industryType,
+            business_start_date: data.businessStartDate,
+            
+            annual_revenue: data.annualRevenue,
+            monthly_revenue: data.monthlyRevenue,
+            funding_amount: data.requestedAmount,
+            use_of_proceeds: data.useOfProceeds,
             credit_score: data.creditScore,
             funding_status: data.fundingStatus,
+            recent_funding: data.recentFunding,
+            
+            // Owner 1
             first_name: data.ownerFirstName,
             last_name: data.ownerLastName,
+            owner_email: data.ownerEmail,
+            owner_phone: data.ownerPhone,
+            ssn: data.ownerSSN,
+            date_of_birth: data.ownerDOB,
+            ownership_percent: data.ownershipPercent,
+            owner_address: data.ownerHomeAddress,
+            owner_city: data.ownerHomeCity,
+            owner_state: data.ownerHomeState,
+            owner_zip: data.ownerHomeZip,
+            
+            // Owner 2
+            owner2_first_name: data.owner2FirstName,
+            owner2_last_name: data.owner2LastName,
+            owner2_email: data.owner2Email,
+            owner2_phone: data.owner2Phone,
+            owner2_ssn: data.owner2SSN,
+            owner2_dob: data.owner2DOB,
+            owner2_ownership_percent: data.owner2OwnershipPercent,
+            owner2_address: data.owner2HomeAddress,
+            owner2_city: data.owner2HomeCity,
+            owner2_state: data.owner2HomeState,
+            owner2_zip: data.owner2HomeZip,
+            
+            // Spread remaining data for any fields we missed
             ...data
         };
 
