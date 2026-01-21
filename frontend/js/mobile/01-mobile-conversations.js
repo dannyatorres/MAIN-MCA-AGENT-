@@ -105,6 +105,9 @@ Object.assign(window.MobileApp.prototype, {
             }).join('');
 
             this.dom.conversationList.innerHTML = html;
+            if (this.pullIndicator) {
+                this.dom.conversationList.appendChild(this.pullIndicator);
+            }
         },
 
         setupInfiniteScroll() {
