@@ -658,44 +658,32 @@ class ConversationCore {
     async confirmDeleteSelected() {
         if (this.selectedForDeletion.size === 0) return;
 
-        // 1. Confirm with user
         if (confirm(`Delete ${this.selectedForDeletion.size} leads?`)) {
-            const btn = document.getElementById('deleteSelectedBtn');
-            const originalText = btn ? btn.textContent : 'Delete';
+            const ids = Array.from(this.selectedForDeletion);
 
-            // Show loading text
-            if (btn) btn.textContent = 'Deleting...';
+            // 1. OPTIMISTIC: Remove from UI immediately
+            ids.forEach(id => this.conversations.delete(String(id)));
+            this.renderConversationsList();
 
-            try {
-                const ids = Array.from(this.selectedForDeletion);
+            // 2. Exit delete mode and show success immediately
+            this.toggleDeleteMode(false);
+            this.utils.showNotification('Leads deleted', 'success');
 
-                // 2. Perform the API call
-                await this.parent.apiCall('/api/conversations/bulk-delete', {
-                    method: 'POST',
-                    body: JSON.stringify({ conversationIds: ids })
-                });
-
-                this.utils.showNotification('Leads deleted', 'success');
-
-                // 3. CRITICAL FIX: Force everything OFF immediately
-                // This turns off the Red Header AND Hides the circles/buttons
-                this.toggleDeleteMode(false);
-
-                // 4. Reload the list to show the new empty slots
-                await this.loadConversations(true);
-
-            } catch (error) {
-                console.error(error);
-                
-                if (error.message?.includes('500') || error.message?.includes('403') || error.message?.includes('401')) {
-                    this.utils.showNotification('Unauthorized - only admins can bulk delete', 'error');
-                } else {
-                    this.utils.showNotification('Delete failed', 'error');
-                }
-                
-                if (btn) btn.textContent = originalText;
-                this.toggleDeleteMode(false);
+            // 3. Clear selection if current conversation was deleted
+            if (ids.includes(this.currentConversationId)) {
+                this.clearConversationDetails();
             }
+
+            // 4. Fire API call in background (don't await)
+            this.parent.apiCall('/api/conversations/bulk-delete', {
+                method: 'POST',
+                body: JSON.stringify({ conversationIds: ids })
+            }).catch(error => {
+                console.error('Delete failed:', error);
+                // Rollback: reload to restore if failed
+                this.utils.showNotification('Delete failed - refreshing list', 'error');
+                this.loadConversations(true);
+            });
         }
     }
 
