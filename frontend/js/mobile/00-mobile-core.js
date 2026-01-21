@@ -59,6 +59,7 @@ window.MobileApp = class MobileApp {
         this.setupInfiniteScroll();
         await this.loadConversations();
         this.initWebSocket();
+        this.loadMobileDashboard();
     }
 
     // ============ NAVIGATION ============
