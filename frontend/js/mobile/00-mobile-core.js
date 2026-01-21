@@ -237,7 +237,6 @@ window.MobileApp = class MobileApp {
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         console.log('User from storage:', user);
-        alert('Role: ' + user.role);  // temporary debug
         const userName = user.name || 'User';
         const userRole = user.role || 'agent';
         const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
