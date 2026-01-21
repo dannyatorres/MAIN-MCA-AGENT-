@@ -57,27 +57,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <script>
-    (async () => {
-        // Force fresh user data on every load
-        try {
-            const res = await fetch('/api/auth/me', {
-                credentials: 'include',
-                cache: 'no-store',
-                headers: { 'Cache-Control': 'no-cache' }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                localStorage.setItem('user', JSON.stringify(data.user));
-            } else {
-                localStorage.removeItem('user');
-                window.location.href = '/mobile-login.html';
-            }
-        } catch (e) {
-            console.error('Auth check failed:', e);
-        }
-    })();
-    </script>
     <div class="splash-screen" id="splashScreen">
         <img src="/logo.png" alt="" class="splash-logo">
         <span class="splash-brand">MCAgent</span>
@@ -650,17 +629,36 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const splash = document.getElementById('splashScreen');
 
-            // Initialize app
+            // 1. Auth check FIRST
+            try {
+                const res = await fetch('/api/auth/me', {
+                    credentials: 'include',
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                } else {
+                    localStorage.removeItem('user');
+                    window.location.href = '/mobile-login.html';
+                    return;
+                }
+            } catch (e) {
+                console.error('Auth check failed:', e);
+            }
+
+            // 2. Initialize app after auth confirmed
             window.mobileApp = new MobileApp();
 
-            // Preload conversations before hiding splash
             try {
                 await window.mobileApp.loadConversations();
             } catch (e) {
                 console.error('Preload failed:', e);
             }
 
-            // Fade out splash
+            // 3. Fade out splash
             splash.classList.add('fade-out');
             setTimeout(() => splash.remove(), 300);
         });
