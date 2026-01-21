@@ -128,6 +128,7 @@ Object.assign(window.MobileApp.prototype, {
                     <div class="pull-checkmark">↓</div>
                 </div>
             `;
+            list.appendChild(this.pullIndicator);
 
             const progressCircle = this.pullIndicator.querySelector('.ring-progress');
             const checkmark = this.pullIndicator.querySelector('.pull-checkmark');
