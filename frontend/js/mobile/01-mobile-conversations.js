@@ -9,7 +9,10 @@ Object.assign(window.MobileApp.prototype, {
 
             if (this.isLoadingMore) return;
             this.isLoadingMore = true;
-            this.dom.conversationList?.classList.add('loading');
+            // Only show loading state on initial load, not when appending
+            if (!append) {
+                this.dom.conversationList?.classList.add('loading');
+            }
 
             try {
                 const params = new URLSearchParams({
@@ -40,9 +43,9 @@ Object.assign(window.MobileApp.prototype, {
                 }
             } finally {
                 this.isLoadingMore = false;
-                setTimeout(() => {
+                if (!append) {
                     this.dom.conversationList?.classList.remove('loading');
-                }, 50);
+                }
             }
         },
 
