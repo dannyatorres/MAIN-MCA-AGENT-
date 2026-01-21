@@ -20,7 +20,7 @@ router.post('/login', async (req, res) => {
     }
 
     const result = await db.query(
-      'SELECT id, email, username, name, role, password_hash, is_active FROM users WHERE email = $1 OR username = $1',
+      'SELECT id, email, username, name, role, password_hash, is_active, session_version FROM users WHERE email = $1 OR username = $1',
       [loginField]
     );
 
@@ -56,7 +56,8 @@ router.post('/login', async (req, res) => {
 
     // Set session
     req.session.userId = user.id;
-    req.session.isAuthenticated = true; // Keep for backward compatibility
+    req.session.sessionVersion = user.session_version || 1;
+    req.session.isAuthenticated = true;
 
     console.log('✅ Login successful:', { userId: user.id, email: user.email });
 
@@ -89,9 +90,26 @@ router.post('/logout', (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const db = getDatabase();
+    const result = await db.query('SELECT session_version FROM users WHERE id = $1', [req.user.id]);
+
+    if (result.rows.length > 0) {
+      const dbVersion = result.rows[0].session_version || 1;
+      const sessionVersion = req.session.sessionVersion || 1;
+
+      if (dbVersion > sessionVersion) {
+        req.session.destroy(() => {});
+        return res.status(401).json({ error: 'Session expired' });
+      }
+    }
+  } catch (err) {
+    console.error('Session check error:', err);
   }
 
   res.json({
