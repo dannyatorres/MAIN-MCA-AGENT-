@@ -353,49 +353,55 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // 🟢 F. THE HAIL MARY (Ballpark Offer)
         if (systemInstruction.includes("Generate Ballpark Offer")) {
-            console.log(`🏈 AI MODE: Generating Gemini Ballpark Offer (Hail Mary)...`);
+            console.log(`🏈 AI MODE: Generating Ballpark Offer (Hail Mary)...`);
 
-            const fcsRes = await db.query(`
-                SELECT average_revenue, average_daily_balance
-                FROM fcs_analyses WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1
+            // Check if we have strategy
+            const strategyRes = await db.query(`
+                SELECT game_plan, lead_grade FROM lead_strategy
+                WHERE conversation_id = $1
             `, [conversationId]);
 
             let offerText = "";
+            const strategy = strategyRes.rows[0];
 
-            if (fcsRes.rows.length > 0) {
-                const fcs = fcsRes.rows[0];
-                const revenueNum = Math.round(fcs.average_revenue || 0);
-                const rev = revenueNum.toLocaleString();
-                const blindOffer = Math.round(revenueNum * 0.8).toLocaleString();
+            if (strategy?.game_plan) {
+                let gamePlan = strategy.game_plan;
+                if (typeof gamePlan === 'string') {
+                    gamePlan = JSON.parse(gamePlan);
+                }
 
                 const prompt = `
                     You are ${agentName}. This client has ghosted you.
 
-                    DATA:
-                    - Their Monthly Revenue: ${rev}
+                    CONTEXT:
+                    - Lead Grade: ${strategy.lead_grade || 'Unknown'}
+                    - Your Approach: ${gamePlan.approach || 'Standard'}
 
                     TASK:
-                    Write a text to wake them up.
-                    - State clearly: "I haven't heard back, but looking at the statements, I see about ${rev} in revenue."
-                    - Make a BLIND OFFER: "I can probably get you ${blindOffer} landed today if we move now."
-                    - End with: "Want me to lock that in?"
+                    Write a short text to wake them up. Keep it vague but compelling.
+                    - Mention you looked over their file/statements and liked what you saw
+                    - Say you wanted to make an offer before closing the file
+                    - Ask if they want you to send the numbers or close it out
 
-                    Keep it short and punchy. Do NOT introduce yourself by name.
+                    RULES:
+                    - Do NOT mention specific dollar amounts
+                    - Do NOT mention specific revenue numbers
+                    - Do NOT introduce yourself by name (they already know you)
+                    - Keep it under 160 characters if possible
+                    - Sound human, not salesy
                 `;
 
                 try {
                     const result = await geminiModel.generateContent(prompt);
                     offerText = result.response.text().replace(/"/g, '').trim();
                 } catch (e) {
-                    offerText = `I haven't heard back, but looking at the ${rev} revenue, I can probably get you funded today. Do you want me to finalize the offer?`;
+                    offerText = "hey looked over your file again, numbers look solid. want me to send over an offer or should i close it out?";
                 }
             } else {
-                offerText = "I haven't heard back—I'm assuming you found capital elsewhere? I'll go ahead and close the file.";
+                offerText = "hey i havent heard back — still interested or should i close the file out?";
             }
 
-            // 📊 TRACK BALLPARK OFFER
             await trackResponseForTraining(conversationId, systemInstruction, offerText, 'BALLPARK_OFFER');
-
             return { shouldReply: true, content: offerText };
         }
 
