@@ -270,10 +270,14 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // Checks instructions from index.js and returns text instantly.
         // Get agent name for templates
         let agentName = 'Dan Torres'; // default
+        let agentEmail = 'docs@jmsglobal.com'; // fallback
         if (usageUserId) {
-            const agentRes = await db.query('SELECT agent_name FROM users WHERE id = $1', [usageUserId]);
+            const agentRes = await db.query('SELECT agent_name, email FROM users WHERE id = $1', [usageUserId]);
             if (agentRes.rows[0]?.agent_name) {
                 agentName = agentRes.rows[0].agent_name;
+            }
+            if (agentRes.rows[0]?.email) {
+                agentEmail = agentRes.rows[0].email;
             }
         }
 
@@ -456,6 +460,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = await getGlobalPrompt(usageUserId);
+        systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
 
         // Check if this conversation has active offers - use negotiation mode
         const hasActiveOffer = await db.query(`
