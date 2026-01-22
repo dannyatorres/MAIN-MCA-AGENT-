@@ -219,7 +219,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const currentState = settingsRes.rows[0]?.state;
 
         // Add any statuses here where you want the AI to be completely dead
-        const RESTRICTED_STATES = ['HUMAN_REVIEW', 'OFFER_SENT', 'NEGOTIATING', 'FCS_COMPLETE'];
+        const RESTRICTED_STATES = ['HUMAN_REVIEW', 'OFFER_SENT', 'NEGOTIATING', 'FCS_COMPLETE', 'STRATEGIZED', 'HOT_LEAD'];
 
         // If it's a manual command (systemInstruction has value), we ignore the lock.
         // If it's autonomous (systemInstruction is empty/null), we respect the lock.
