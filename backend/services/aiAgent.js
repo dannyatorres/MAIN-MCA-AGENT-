@@ -369,7 +369,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 const blindOffer = Math.round(revenueNum * 0.8).toLocaleString();
 
                 const prompt = `
-                    You are Dan Torres. This client has ghosted you.
+                    You are ${agentName}. This client has ghosted you.
 
                     DATA:
                     - Their Monthly Revenue: ${rev}
@@ -380,7 +380,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     - Make a BLIND OFFER: "I can probably get you ${blindOffer} landed today if we move now."
                     - End with: "Want me to lock that in?"
 
-                    Keep it short and punchy.
+                    Keep it short and punchy. Do NOT introduce yourself by name.
                 `;
 
                 try {
