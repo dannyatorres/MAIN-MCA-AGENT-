@@ -89,6 +89,24 @@ const VETTING_TOOLS = [
                 required: ["reason"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "request_documents",
+            description: "Call this when FCS shows documents are missing or outdated (coverage gap between last statement and today). Ask merchant to send updated bank statements.",
+            parameters: {
+                type: "object",
+                properties: {
+                    documents_needed: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "List of documents needed (e.g., 'January statement', 'February statement')"
+                    }
+                },
+                required: ["documents_needed"]
+            }
+        }
     }
 ];
 
@@ -262,6 +280,10 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
         systemPrompt += `- **Credit Score:** ${conv.credit_score || 'Unknown'}\n`;
         systemPrompt += `- **Current State:** ${currentState}\n`;
 
+        // Add current date context
+        systemPrompt += `\n## CURRENT DATE\n`;
+        systemPrompt += `- **Today:** ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+
         // Add FCS context if available
         if (fcsData) {
             systemPrompt += `\n## FINANCIAL ANALYSIS (FCS)\n`;
@@ -359,6 +381,8 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
         // 10. HANDLE TOOL CALLS
         // =================================================================
         if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls) {
+            let toolResult = "Done";
+
             for (const tool of choice.message.tool_calls) {
                 console.log(`🔧 [VETTING AGENT] Tool called: ${tool.function.name}`);
 
@@ -394,10 +418,31 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                     const args = JSON.parse(tool.function.arguments);
                     console.log(`🚨 Escalating to human: ${args.reason}`);
                     await db.query(`UPDATE conversations SET state = 'HUMAN_REVIEW' WHERE id = $1`, [conversationId]);
-                    return { 
-                        shouldReply: true, 
-                        content: "let me have my manager take a look at this, one sec" 
+                    return {
+                        shouldReply: true,
+                        content: "let me have my manager take a look at this, one sec"
                     };
+                }
+
+                if (tool.function.name === 'request_documents') {
+                    const args = JSON.parse(tool.function.arguments);
+                    console.log(`📄 Requesting documents: ${args.documents_needed.join(', ')}`);
+
+                    // Get user's email to tell merchant where to send
+                    const userRes = await db.query(`
+                        SELECT u.email FROM users u
+                        JOIN conversations c ON c.assigned_user_id = u.id OR c.created_by_user_id = u.id
+                        WHERE c.id = $1 LIMIT 1
+                    `, [conversationId]);
+
+                    const sendToEmail = userRes.rows[0]?.email || null;
+
+                    // Store tool result for follow-up
+                    if (sendToEmail) {
+                        toolResult = `Ask merchant to send: ${args.documents_needed.join(', ')}. Email to: ${sendToEmail}`;
+                    } else {
+                        toolResult = `Ask merchant to send: ${args.documents_needed.join(', ')}. Ask them for email to send docs to.`;
+                    }
                 }
             }
 
@@ -406,7 +451,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
             messages.push({
                 role: "tool",
                 tool_call_id: choice.message.tool_calls[0].id,
-                content: "Done"
+                content: toolResult
             });
 
             const followUp = await openai.chat.completions.create({
