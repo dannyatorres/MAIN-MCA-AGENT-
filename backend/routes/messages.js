@@ -2,7 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
-const { processLeadWithAI, trackResponseForTraining } = require('../services/aiAgent');
+const { trackResponseForTraining } = require('../services/aiAgent');
+const { routeMessage } = require('../services/agentRouter');
 const { trackUsage } = require('../services/usageTracker');
 const multer = require('multer');
 const AWS = require('aws-sdk');
@@ -416,12 +417,12 @@ router.post('/webhook/receive', async (req, res) => {
         res.set('Content-Type', 'text/xml');
         res.send('<Response></Response>');
 
-        // AI Logic
-        if (processLeadWithAI) {
+        // AI Logic - Route through agentRouter
+        if (routeMessage) {
             (async () => {
                 try {
                     console.log(`🤖 AI thinking for ${conversation.business_name}...`);
-                    const aiResult = await processLeadWithAI(conversation.id, 'The user just replied. Read the history and respond naturally.');
+                    const aiResult = await routeMessage(conversation.id, 'The user just replied. Read the history and respond naturally.');
 
                     if (aiResult.shouldReply && aiResult.content) {
                         const aiMsgResult = await db.query(`

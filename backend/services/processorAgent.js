@@ -369,7 +369,7 @@ async function processEmail(email, db) {
     }
 
     if (data.category === 'OFFER') {
-        await db.query(`UPDATE conversations SET has_offer = TRUE, last_activity = NOW() WHERE id = $1`, [bestMatchId]);
+        await db.query(`UPDATE conversations SET has_offer = TRUE, state = 'OFFER_RECEIVED', last_activity = NOW() WHERE id = $1`, [bestMatchId]);
 
         // Record offer comparison for ML training
         try {

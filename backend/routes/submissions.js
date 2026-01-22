@@ -166,6 +166,12 @@ router.post('/:id/send', async (req, res) => {
 
         console.log(`🏁 Batch Complete: ${successful.length} sent, ${failed.length} failed.`);
 
+        // Update state to SUBMITTED after successful batch send
+        if (successful.length > 0) {
+            await db.query(`UPDATE conversations SET state = 'SUBMITTED', last_activity = NOW() WHERE id = $1`, [conversationId]);
+            console.log(`📝 State updated to SUBMITTED for conversation ${conversationId}`);
+        }
+
         res.json({
             success: true,
             results: { successful, failed, total: rankedLenders.length }
