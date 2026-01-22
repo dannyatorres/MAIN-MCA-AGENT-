@@ -151,6 +151,24 @@ async function getGlobalPrompt(userId) {
     }
 }
 
+// 📖 HELPER: Load Rebuttals
+async function getRebuttalsPrompt() {
+    try {
+        const rebuttalsPath = path.join(__dirname, '../prompts/rebuttals.md');
+
+        if (fs.existsSync(rebuttalsPath)) {
+            console.log('✅ Loaded: rebuttals.md');
+            return fs.readFileSync(rebuttalsPath, 'utf8');
+        }
+
+        console.log('⚠️ Missing: rebuttals.md');
+        return '';
+    } catch (err) {
+        console.error('⚠️ Error loading rebuttals:', err.message);
+        return '';
+    }
+}
+
 async function getLearnedCorrections(leadGrade, revenueRange) {
     const db = getDatabase();
     try {
@@ -461,6 +479,12 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = await getGlobalPrompt(usageUserId);
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
+
+        // Load rebuttals playbook
+        const rebuttals = await getRebuttalsPrompt();
+        if (rebuttals) {
+            systemPrompt += `\n\n---\n\n${rebuttals}`;
+        }
 
         // Check if this conversation has active offers - use negotiation mode
         const hasActiveOffer = await db.query(`
