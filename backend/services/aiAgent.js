@@ -680,12 +680,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 }
 
                 else if (tool.function.name === 'consult_analyst') {
-                    const args = JSON.parse(tool.function.arguments);
                     console.log(`🎓 [${leadName}] Handing off to human`);
 
-                    // 🔒 LOCK: Update status to HUMAN_REVIEW so AI stops replying
-                    await db.query("UPDATE conversations SET state = 'HUMAN_REVIEW' WHERE id = $1", [conversationId]);
-                    console.log(`🔒 Lead locked to HUMAN_REVIEW - AI will stop autonomous replies`);
+                    // ✅ HANDOFF: Move to PRE_VETTED (FCS should be ready by now)
+                    await db.query("UPDATE conversations SET state = 'PRE_VETTED' WHERE id = $1", [conversationId]);
+                    console.log(`✅ [${leadName}] Qualified → PRE_VETTED`);
 
                     // Simple handoff message - NO offer, NO numbers
                     toolResult = "Tell the lead: 'give me a few minutes to run the numbers and ill text you back shortly'";

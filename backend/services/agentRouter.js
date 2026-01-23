@@ -3,7 +3,7 @@
 // Central dispatcher that routes messages to the correct agent based on conversation state
 
 const { getDatabase } = require('./database');
-const aiAgent = require('./aiAgent');           // Agent 1: Qualifier
+const aiAgent = require('./aiAgent');           // Agent 1: Pre-Vetter
 const vettingAgent = require('./vettingAgent'); // Agent 2: Vetter
 const negotiatingAgent = require('./negotiatingAgent'); // Agent 3: Negotiator
 
@@ -11,28 +11,32 @@ const negotiatingAgent = require('./negotiatingAgent'); // Agent 3: Negotiator
 // STATE OWNERSHIP MAP
 // ==========================================
 const STATE_OWNERSHIP = {
-    // Agent 1: Qualifier (Dan Torres - initial contact)
-    'NEW': 'QUALIFIER',
-    'QUALIFYING': 'QUALIFIER',
-    'INTERESTED': 'QUALIFIER',
-    'QUALIFIED': 'QUALIFIER',
-    
+    // Agent 1: Pre-Vetter (gathering info: email, credit, loans)
+    'NEW': 'PRE_VETTER',
+    'REPLIED': 'PRE_VETTER',
+    'REPLIED_NUDGE_1': 'PRE_VETTER',
+    'REPLIED_NUDGE_2': 'PRE_VETTER',
+
+    // Handoff states
+    'PRE_VETTED': 'LOCKED',         // FCS/Strategy should be ready, human reviews
+    'HAIL_MARY': 'VETTER',          // Vetter throws ballpark
+
     // Locked states (no AI responds)
     'HUMAN_REVIEW': 'LOCKED',
     'FCS_RUNNING': 'LOCKED',
     'FCS_COMPLETE': 'LOCKED',
-    
+
     // Agent 2: Vetter (post-strategy)
     'STRATEGIZED': 'VETTER',
     'HOT_LEAD': 'VETTER',
     'VETTING': 'VETTER',
-    'SUBMITTED': 'VETTER',  // Stall mode - vetter handles with limited responses
-    
+    'SUBMITTED': 'VETTER',
+
     // Agent 3: Negotiator (post-offer)
     'OFFER_RECEIVED': 'NEGOTIATOR',
     'NEGOTIATING': 'NEGOTIATOR',
-    
-    // Cold drip states - dispatcher owns, AI locked out
+
+    // Cold drip states - dispatcher owns
     'SENT_HOOK': 'LOCKED',
     'SENT_FU_1': 'LOCKED',
     'SENT_FU_2': 'LOCKED',
@@ -40,7 +44,7 @@ const STATE_OWNERSHIP = {
     'SENT_FU_4': 'LOCKED',
     'STALE': 'LOCKED',
 
-    // Terminal states (no AI responds)
+    // Terminal states
     'VERBAL_ACCEPT': 'LOCKED',
     'CLOSED_WON': 'LOCKED',
     'CLOSED_LOST': 'LOCKED',
@@ -89,12 +93,12 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
 
         // Route to appropriate agent
         switch (finalOwner) {
-            case 'QUALIFIER':
-                const qualifierResult = await aiAgent.processLeadWithAI(conversationId, systemInstruction);
-                if (qualifierResult.content) {
-                    console.log(`📤 [${leadName}] Sending: "${qualifierResult.content.substring(0, 60)}..."`);
+            case 'PRE_VETTER':
+                const preVetterResult = await aiAgent.processLeadWithAI(conversationId, systemInstruction);
+                if (preVetterResult.content) {
+                    console.log(`📤 [${leadName}] Sending: "${preVetterResult.content.substring(0, 60)}..."`);
                 }
-                return { ...qualifierResult, agent: 'QUALIFIER' };
+                return { ...preVetterResult, agent: 'PRE_VETTER' };
 
             case 'VETTER':
                 const vetterResult = await vettingAgent.processMessage(conversationId, inboundMessage, systemInstruction);
@@ -124,7 +128,7 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
                     if (result.content) {
                         console.log(`📤 [${leadName}] Sending: "${result.content.substring(0, 60)}..."`);
                     }
-                    return { ...result, agent: 'DISPATCHER' };
+                    return { ...result, agent: 'PRE_VETTER' };
                 }
 
                 if (isManualCommand) {

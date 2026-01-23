@@ -401,7 +401,12 @@ router.post('/webhook/receive', async (req, res) => {
 
         await db.query(`
             UPDATE conversations
-            SET state = 'INTERESTED', current_step = 'INTERESTED', last_activity = NOW()
+            SET state = CASE 
+                    WHEN state IN ('NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'STALE') 
+                    THEN 'REPLIED'
+                    ELSE state
+                END,
+                last_activity = NOW()
             WHERE id = $1
         `, [conversation.id]);
 
