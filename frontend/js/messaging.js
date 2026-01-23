@@ -10,7 +10,7 @@ class MessagingModule {
 
         // NEW: Track pending messages in memory to prevent duplicates
         this.pendingMessages = [];
-        this.PENDING_TTL = 60000; // 60 seconds
+        this.PENDING_TTL = 300000; // 5 minutes
 
         this.isSending = false;
         this.lastSendTime = 0;
@@ -20,6 +20,10 @@ class MessagingModule {
     init() {
         this.setupEventListeners();
         this.requestNotificationPermissionOnDemand();
+    }
+
+    normalizeContent(str) {
+        return (str || '').trim().toLowerCase().replace(/\s+/g, ' ');
     }
 
     escapeHtml(str) {
@@ -107,7 +111,7 @@ class MessagingModule {
 
         if (input && textOverride === null) input.value = '';
 
-        const tempId = `temp-${Date.now()}`;
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
         // 1. REGISTER PENDING MESSAGE (The Fix)
         // Store the clean text and tempID in memory
@@ -240,7 +244,8 @@ class MessagingModule {
         // Since sendMessage() handles the optimistic UI and the HTTP response updates the ID,
         // we strictly ignore the WebSocket echo to prevent duplicates.
         const isOurOutbound = (message.direction === 'outbound' || message.sender_type === 'user')
-                              && message.sent_by !== 'ai';
+                              && message.sent_by !== 'ai'
+                              && message.sent_by !== 'system';
 
         if (isOurOutbound) {
             // We still update the sidebar preview so the "Last Message" text updates
@@ -248,7 +253,7 @@ class MessagingModule {
             const incomingContent = (message.content || message.message_content || '').trim();
             const incomingMedia = message.media_url || '';
             const isPendingHere = this.pendingMessages.some(p =>
-                p.content === incomingContent &&
+                this.normalizeContent(p.content) === this.normalizeContent(incomingContent) &&
                 p.mediaUrl === incomingMedia &&
                 p.conversationId === messageConversationId
             );
@@ -261,9 +266,6 @@ class MessagingModule {
         // --- Standard Handling for Incoming / AI Messages ---
         const currentConversationId = String(this.parent.getCurrentConversationId());
         const isCurrentChat = (messageConversationId === currentConversationId);
-
-        // Update preview for incoming messages
-        this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
 
         if (isCurrentChat) {
             this.addMessage(message);
@@ -374,7 +376,7 @@ class MessagingModule {
 
             // Find matching pending message in memory
             const pendingIndex = this.pendingMessages.findIndex(p =>
-                p.content === incomingContent &&
+                this.normalizeContent(p.content) === this.normalizeContent(incomingContent) &&
                 p.mediaUrl === incomingMedia &&
                 p.conversationId === convId
             );
@@ -403,9 +405,9 @@ class MessagingModule {
                         const cache = this.messageCache.get(convId);
                         const idx = cache.findIndex(m => m.id === pending.tempId);
                         if (idx !== -1) {
-                            cache[idx] = { ...message, _escaped: true };
+                            cache[idx] = { ...renderMessage };
                         } else {
-                            cache.push(message);
+                            cache.push({ ...renderMessage });
                         }
                     }
                     return; // STOP here. Do not create a duplicate bubble.
@@ -433,7 +435,7 @@ class MessagingModule {
         if (this.messageCache.has(convId)) {
             const cache = this.messageCache.get(convId);
             if (!cache.find(m => m.id === message.id)) {
-                cache.push(message);
+                cache.push({ ...renderMessage });
             }
         }
 
