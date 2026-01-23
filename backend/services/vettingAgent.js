@@ -355,7 +355,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
         console.log('🤖 [VETTING AGENT] Calling OpenAI...');
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: "gpt-5.2",
             messages: messages,
             tools: VETTING_TOOLS,
             tool_choice: "auto"
@@ -455,7 +455,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
             });
 
             const followUp = await openai.chat.completions.create({
-                model: "gpt-4o-mini",
+                model: "gpt-5.2",
                 messages: messages
             });
 
