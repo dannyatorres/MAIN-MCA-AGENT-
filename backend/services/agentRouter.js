@@ -106,12 +106,21 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
                 return { ...negotiatorResult, agent: 'NEGOTIATOR' };
 
             case 'LOCKED':
+                // Check if this is a cold drip state - NEVER override these
+                const COLD_DRIP_STATES = ['SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'STALE'];
+
+                if (COLD_DRIP_STATES.includes(state)) {
+                    console.log('❄️ [ROUTER] Cold drip state - dispatcher handles this, not AI agents');
+                    return { shouldReply: false, agent: 'COLD_DRIP' };
+                }
+
                 if (isManualCommand) {
-                    // Manual command override - use vetting agent as default
+                    // Manual command override - only for non-cold-drip locked states
                     console.log('🔓 [ROUTER] Manual override on locked state');
                     const manualResult = await vettingAgent.processMessage(conversationId, inboundMessage, systemInstruction);
                     return { ...manualResult, agent: 'MANUAL_OVERRIDE' };
                 }
+
                 console.log('🔒 [ROUTER] State is locked - no AI response');
                 return { shouldReply: false, agent: 'LOCKED' };
 
