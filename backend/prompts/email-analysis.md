@@ -162,19 +162,40 @@ Use this list to identify the lender if the email sender is generic.
     -   **STEP 3**: If still no match, fallback to the literal SENDER name (e.g., "John Doe" or "Underwriting Team").
 3.  **TERMS**: Scan the **BODY** for offers (e.g., "10k 70 days").
 
+**EMAILS TO IGNORE (return null for business_name):**
+These are NOT actionable - skip them entirely:
+- "Submission received" / "Application confirmed" / "We got your file"
+- "Need more documents" / "Missing stips" / "Please send bank statements"
+- "Under review" / "In underwriting" / "Being reviewed"
+- "Thank you for submitting" / "Broker confirmation"
+- "Following up" / "Checking in" / "Any updates?"
+- Marketing emails, newsletters, general announcements
+- Auto-replies, out of office, delivery confirmations
+
+For these, return: `{ "business_name": null, "lender": "Unknown", "category": "IGNORE", "summary": "Status update - not actionable" }`
+
+**CATEGORY RULES:**
+- **OFFER**: Contains SPECIFIC funding offer with dollar amount and/or terms (factor, days, payment). Must have real numbers.
+- **DECLINE**: Explicit rejection - "declined", "passed", "not approved", "unable to fund", "does not qualify"
+- **STIPS**: Requesting ADDITIONAL documents - bank statements, voided check, ID, tax returns, landlord letter, interview scheduling
+- **IGNORE**: Status updates, confirmations, follow-ups, marketing (use this instead of OTHER)
+
+**IMPORTANT:**
+- If you can't find a clear business name in the SUBJECT, return `null` for business_name
+- If the email is just a status update with no new information, return `null` for business_name
+- Only return a business_name if the email contains an OFFER, DECLINE, or STIPS request
+- When in doubt, return `null` - it's better to skip than create duplicate junk records
+
 **EXTRACTION LOGIC:**
--   **Terms**: "70 days" = `{ term_length: 70, term_unit: "Days" }`.
--   **Frequency**: "Daily" or "Weekly".
--   **Category**:
-    -   "OFFER": Contains money amounts/terms.
-    -   "DECLINE": "Declined", "Passed", "Not interested".
-    -   "STIPS": Requesting bank statements, voided check, interview.
+- **Terms**: "70 days" = `{ term_length: 70, term_unit: "Days" }`
+- **Frequency**: "Daily" or "Weekly"
+- **Factor**: "1.35" or "35%" (convert percentage to decimal: 35% = 1.35)
 
 Return strictly valid JSON:
 {
-    "business_name": string (or null),
+    "business_name": string|null,
     "lender": string,
-    "category": "OFFER"|"DECLINE"|"STIPS"|"OTHER",
+    "category": "OFFER"|"DECLINE"|"STIPS"|"IGNORE",
     "offer_amount": number|null,
     "factor_rate": number|null,
     "term_length": number|null,

@@ -249,8 +249,8 @@ async function processEmail(email, db) {
         .replace(/New Submission from\s*/gi, '')
         .trim();
 
-    if (!businessName || businessName === "null") {
-        console.log(`      ⚠️ [AI] Irrelevant or Spam (No Merchant Found). Skipping.`);
+    if (!businessName || businessName === "null" || data.category === "IGNORE") {
+        console.log(`      ⏭️ [AI] Skipping: ${data.category === 'IGNORE' ? 'Status update' : 'No merchant found'}`);
         return;
     }
 
