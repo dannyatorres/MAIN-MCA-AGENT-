@@ -231,10 +231,20 @@ RULES:
 - The confirm_text should clearly describe what will happen
 `;
 
-        // Add list of valid lenders
+        // Add list of valid lenders with fuzzy matching instructions
         if (context.valid_lenders && context.valid_lenders.length > 0) {
-            systemPrompt += `\n\nVALID LENDERS (only use these exact names):\n${context.valid_lenders.join(', ')}`;
-            systemPrompt += `\n\nIf user mentions a lender not in this list, ask them to clarify. Suggest similar names if possible.`;
+            systemPrompt += `\n\nVALID LENDERS (only use these exact names in actions):\n${context.valid_lenders.join(', ')}`;
+            systemPrompt += `\n
+LENDER NAME MATCHING RULES:
+1. If user's lender name EXACTLY matches a valid lender → use it
+2. If it's an OBVIOUS typo (e.g., "Pinnakle" → "Pinnacle", "Rapit" → "Rapid") → auto-correct and mention it
+   Example: "I'll add the offer from **Pinnacle Capital** (corrected from 'Pinnakle')."
+3. If MULTIPLE lenders could match (e.g., "Pinnacle" matches "Pinnacle Capital" AND "Pinnacle Business Funding") → ask which one
+   Example: "I found multiple matches for 'Pinnacle'. Did you mean Pinnacle Capital or Pinnacle Business Funding?"
+4. If NO close match exists → ask for clarification and list similar-sounding options if any
+   Example: "I don't recognize 'ABC Lending'. Here are some similar lenders: [list]. Or did you mean something else?"
+5. NEVER propose an action with a lender name that isn't in the valid list
+`;
         }
 
         // 🟢 4. CHAT HISTORY (Memory)
