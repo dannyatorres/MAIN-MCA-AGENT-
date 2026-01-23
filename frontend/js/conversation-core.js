@@ -53,7 +53,6 @@ class ConversationCore {
 
     // Call this when user clicks a conversation
     async clearBadge(conversationId) {
-        console.trace('clearBadge called');
         const id = String(conversationId);
 
         // Update local cache
@@ -230,8 +229,6 @@ class ConversationCore {
     // ============================================================
 
     async selectConversation(conversationId) {
-        console.trace('🔍 selectConversation called');
-        console.log('🔍 selectConversation called from:', new Error().stack.split('\n')[2]);
         const convoId = String(conversationId);
         // Handle dialer view - minimize if call active, hide if not
         if (window.powerDialer) {
@@ -246,9 +243,14 @@ class ConversationCore {
         this.clearBadge(convoId);
         this.clearOfferBadge(convoId);
 
+        // Leave old room before joining new
+        if (this.currentConversationId && this.parent?.wsManager?.leaveConversation) {
+            this.parent.wsManager.leaveConversation(this.currentConversationId);
+        }
+
         this.currentConversationId = convoId;
         if (this.parent) this.parent.currentConversationId = convoId;
-        if (this.parent.wsManager?.joinConversation) {
+        if (this.parent?.wsManager?.joinConversation) {
             this.parent.wsManager.joinConversation(convoId);
         }
 
@@ -513,7 +515,7 @@ class ConversationCore {
     }
 
     filterConversations() {
-        DEBUG.log('filters', '🔄 FILTER CHANGE - triggering reload');
+        if (window.DEBUG) DEBUG.log('filters', '🔄 FILTER CHANGE - triggering reload');
         this.loadConversations(true);  // Reset and reload with new filter
     }
 
@@ -547,16 +549,10 @@ class ConversationCore {
             freshConv._fullLoaded = true;
             this.conversations.set(String(freshConv.id), freshConv);
 
-            // 4. If this is a NEW conversation, increment pagination offset
-            // This prevents duplicate items when user clicks "Load More"
-            if (isNew) {
-                this.paginationOffset++;
-            }
-
-            // 5. Re-render the list (auto-sorts by last_activity)
+            // 4. Re-render the list (auto-sorts by last_activity)
             this.renderConversationsList();
 
-            // 6. Flash the row to indicate an update
+            // 5. Flash the row to indicate an update
             setTimeout(() => {
                 const row = document.querySelector(`.conversation-item[data-conversation-id="${String(freshConv.id)}"]`);
                 if (row) {
