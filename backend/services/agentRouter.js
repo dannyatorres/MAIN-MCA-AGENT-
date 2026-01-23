@@ -32,6 +32,14 @@ const STATE_OWNERSHIP = {
     'OFFER_RECEIVED': 'NEGOTIATOR',
     'NEGOTIATING': 'NEGOTIATOR',
     
+    // Cold drip states - dispatcher owns, AI locked out
+    'SENT_HOOK': 'LOCKED',
+    'SENT_FU_1': 'LOCKED',
+    'SENT_FU_2': 'LOCKED',
+    'SENT_FU_3': 'LOCKED',
+    'SENT_FU_4': 'LOCKED',
+    'STALE': 'LOCKED',
+
     // Terminal states (no AI responds)
     'VERBAL_ACCEPT': 'LOCKED',
     'CLOSED_WON': 'LOCKED',
