@@ -209,10 +209,19 @@ const generateResponse = async (query, context, userId = null) => {
 You can propose database actions when the user asks to add, update, or change data.
 When proposing an action, respond with ONLY valid JSON (no markdown, no backticks).
 
+**SMART PARSING:**
+If the user pastes an offer email or says "put this in" / "add this" / "log this", extract the data automatically:
+- Look for: Funding Amount, Sell Rate/Factor, Term, Payment Frequency, Weekly/Daily Payment
+- Match the lender name from the email signature, sender, or context
+- Propose an insert_offer with all extracted fields
+
+Example: User pastes "Funding Amount $70,000.00 Sell Rate 1.34 Term 56 Weeks Weekly Payment $1,675.00" from Newport
+→ You respond with insert_offer containing all those details
+
 Available actions:
 
 1. insert_offer - Add new lender submission
-{"message": "I'll add that offer.", "action": {"action": "insert_offer", "data": {"lender_name": "...", "offer_amount": 50000, "status": "OFFER", "factor_rate": 1.35, "term_length": 6, "term_unit": "months", "payment_frequency": "daily"}, "confirm_text": "Add $50,000 offer from [Lender]?"}}
+{"message": "I'll add the Newport offer: $70k at 1.34 for 56 weeks.", "action": {"action": "insert_offer", "data": {"lender_name": "Newport Business Capital", "offer_amount": 70000, "status": "OFFER", "factor_rate": 1.34, "term_length": 56, "term_unit": "weeks", "payment_frequency": "weekly"}, "confirm_text": "Add Newport offer: $70,000, 1.34 factor, 56 weeks, weekly?"}}
 
 2. update_offer - Update existing lender submission
 {"message": "I'll update that.", "action": {"action": "update_offer", "data": {"lender_name": "...", "offer_amount": 55000, "status": "OFFER"}, "confirm_text": "Update [Lender] to $55,000?"}}
@@ -221,14 +230,15 @@ Available actions:
 {"message": "I'll mark this as funded.", "action": {"action": "update_deal", "data": {"state": "FUNDED", "funded_amount": 50000}, "confirm_text": "Mark deal as FUNDED for $50,000?"}}
 Valid states: NEW, CONTACTED, DOCS_IN, OFFER_RECEIVED, CONTRACTED, FUNDED, DEAD, ARCHIVED
 
-4. append_note - Add a note
+4. append_note - Add a note (use ONLY for general notes, NOT for offer data)
 {"message": "I'll add that note.", "action": {"action": "append_note", "data": {"note": "Client prefers weekly payments"}, "confirm_text": "Add note: Client prefers weekly payments?"}}
 
 RULES:
-- Only propose an action if the user EXPLICITLY asks to add/update/change something
-- If a lender submission already exists, use update_offer not insert_offer
-- For normal questions, respond with plain text (no JSON)
-- The confirm_text should clearly describe what will happen
+- If user pastes offer details → use insert_offer or update_offer, NOT append_note
+- If a lender submission already exists for that lender, use update_offer
+- For general notes/reminders that aren't offer data → use append_note
+- The confirm_text should clearly show all the data being saved
+- Extract ALL available fields: amount, factor_rate, term_length, term_unit, payment_frequency
 `;
 
         // Add list of valid lenders with fuzzy matching instructions
