@@ -18,7 +18,7 @@ const STATE_OWNERSHIP = {
     'REPLIED_NUDGE_2': 'PRE_VETTER',
 
     // Handoff states
-    'PRE_VETTED': 'LOCKED',         // FCS/Strategy should be ready, human reviews
+    'PRE_VETTED': 'VETTER',         // FCS/Strategy should be ready, human reviews
     'HAIL_MARY': 'VETTER',          // Vetter throws ballpark
 
     // Locked states (no AI responds)
