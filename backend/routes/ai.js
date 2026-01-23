@@ -65,6 +65,13 @@ router.post('/chat', async (req, res) => {
                     console.log(`   💰 [AI Route] Found ${lenderResult.rows.length} Lender Offers`);
                 } catch (e) { console.log('   ⚠️ Lender fetch error', e.message); }
 
+                // Fetch valid lenders for AI to reference
+                let lendersResult = { rows: [] };
+                try {
+                    lendersResult = await db.query(`SELECT name FROM lenders ORDER BY name`);
+                    console.log(`   🏦 [AI Route] Found ${lendersResult.rows.length} lenders`);
+                } catch (e) { console.log('   ⚠️ Lenders fetch error', e.message); }
+
                 // 🟢 4. FETCH FCS / BANK ANALYSIS (NEW)
                 let fcsResult = { rows: [] };
                 try {
@@ -149,7 +156,10 @@ router.post('/chat', async (req, res) => {
                     // 🎖️ COMMANDER'S GAME PLAN (NEW)
                     game_plan: strategyResult.rows[0]?.game_plan || null,
                     lead_grade: strategyResult.rows[0]?.lead_grade || null,
-                    strategy_type: strategyResult.rows[0]?.strategy_type || null
+                    strategy_type: strategyResult.rows[0]?.strategy_type || null,
+
+                    // Valid lenders for actions
+                    valid_lenders: lendersResult.rows.map(l => l.name)
                 };
                 console.log('   📦 [AI Route] Context Package ready for Service.');
             }

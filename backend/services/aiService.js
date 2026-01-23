@@ -231,6 +231,12 @@ RULES:
 - The confirm_text should clearly describe what will happen
 `;
 
+        // Add list of valid lenders
+        if (context.valid_lenders && context.valid_lenders.length > 0) {
+            systemPrompt += `\n\nVALID LENDERS (only use these exact names):\n${context.valid_lenders.join(', ')}`;
+            systemPrompt += `\n\nIf user mentions a lender not in this list, ask them to clarify. Suggest similar names if possible.`;
+        }
+
         // 🟢 4. CHAT HISTORY (Memory)
         const messages = [{ role: "system", content: systemPrompt }];
         
