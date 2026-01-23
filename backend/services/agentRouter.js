@@ -107,11 +107,17 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
 
             case 'LOCKED':
                 // Check if this is a cold drip state - NEVER override these
-                const COLD_DRIP_STATES = ['SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'STALE'];
+                const COLD_DRIP_STATES = ['SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4'];
 
-                if (COLD_DRIP_STATES.includes(state)) {
-                    console.log('❄️ [ROUTER] Cold drip state - dispatcher handles this, not AI agents');
+                if (COLD_DRIP_STATES.includes(state) && !isManualCommand) {
+                    console.log('❄️ [ROUTER] Cold drip state - waiting for dispatcher');
                     return { shouldReply: false, agent: 'COLD_DRIP' };
+                }
+
+                if (COLD_DRIP_STATES.includes(state) && isManualCommand) {
+                    console.log('📤 [ROUTER] Dispatcher trigger - sending to Qualifier');
+                    const result = await aiAgent.processLeadWithAI(conversationId, systemInstruction);
+                    return { ...result, agent: 'DISPATCHER' };
                 }
 
                 if (isManualCommand) {

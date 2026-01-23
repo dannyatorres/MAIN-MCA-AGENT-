@@ -224,7 +224,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             'STRATEGIZED', 'HOT_LEAD', 'VETTING', 'SUBMITTED',  // Agent 2's territory
             'OFFER_RECEIVED', 'NEGOTIATING',  // Agent 3's territory
             // Cold drip - dispatcher owns these, AI stays out
-            'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'STALE'
+            'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4'
         ];
 
         // If it's a manual command (systemInstruction has value), we ignore the lock.
