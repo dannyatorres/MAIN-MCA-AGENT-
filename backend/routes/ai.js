@@ -244,20 +244,20 @@ router.post('/execute-action', async (req, res) => {
 
         switch (action) {
             case 'insert_offer': {
-                // Validate lender exists
+                // Validate lender exists (fuzzy match)
                 const lenderCheck = await db.query(
-                    `SELECT name FROM lenders WHERE LOWER(name) = LOWER($1)`,
-                    [data.lender_name]
+                    `SELECT name FROM lenders WHERE LOWER(name) LIKE LOWER($1)`,
+                    [`%${data.lender_name}%`]
                 );
 
                 if (lenderCheck.rows.length === 0) {
                     return res.status(400).json({ success: false, error: `Unknown lender: ${data.lender_name}` });
                 }
 
-                // Check for duplicate
+                // Check for duplicate (fuzzy match)
                 const dupCheck = await db.query(
-                    `SELECT id FROM lender_submissions WHERE conversation_id = $1 AND LOWER(lender_name) = LOWER($2)`,
-                    [conversationId, data.lender_name]
+                    `SELECT id FROM lender_submissions WHERE conversation_id = $1 AND LOWER(lender_name) LIKE LOWER($2)`,
+                    [conversationId, `%${data.lender_name}%`]
                 );
 
                 if (dupCheck.rows.length > 0) {
@@ -309,12 +309,12 @@ router.post('/execute-action', async (req, res) => {
                     return res.status(400).json({ success: false, error: 'No valid fields to update' });
                 }
 
-                values.push(conversationId, data.lender_name);
+                values.push(conversationId, `%${data.lender_name}%`);
 
                 const updateResult = await db.query(`
                     UPDATE lender_submissions
                     SET ${updates.join(', ')}, last_response_at = NOW()
-                    WHERE conversation_id = $${idx} AND LOWER(lender_name) = LOWER($${idx + 1})
+                    WHERE conversation_id = $${idx} AND LOWER(lender_name) LIKE LOWER($${idx + 1})
                 `, values);
 
                 if (updateResult.rowCount === 0) {
