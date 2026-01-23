@@ -24,7 +24,7 @@ function formatName(name) {
 }
 
 // 📊 TRAINING DATA TRACKER
-async function trackResponseForTraining(conversationId, leadMessage, humanResponse, responseSource) {
+async function trackResponseForTraining(conversationId, leadMessage, humanResponse, responseSource, leadName = 'Unknown') {
     const db = getDatabase();
 
     try {
@@ -57,7 +57,7 @@ async function trackResponseForTraining(conversationId, leadMessage, humanRespon
             responseSource
         ]);
 
-        console.log(`📊 Training data saved: ${responseSource}`);
+        console.log(`📊 [${leadName}] Saved: ${responseSource}`);
     } catch (err) {
         console.error('⚠️ Training tracking failed:', err.message);
     }
@@ -194,9 +194,19 @@ async function getLearnedCorrections(leadGrade, revenueRange) {
 async function processLeadWithAI(conversationId, systemInstruction) {
     systemInstruction = systemInstruction || '';
     const db = getDatabase();
-    console.log(`🧠 AI Agent Processing Lead: ${conversationId}`);
 
     try {
+        // Get lead info FIRST for logging
+        const leadRes = await db.query(`
+            SELECT first_name, business_name, state, email
+            FROM conversations WHERE id = $1
+        `, [conversationId]);
+
+        const lead = leadRes.rows[0];
+        const leadName = lead?.business_name || lead?.first_name || 'Unknown';
+
+        console.log(`🧠 [${leadName}] Processing...`);
+
         // =================================================================
         // 🚨 LAYER 0: THE MANUAL MASTER SWITCH
         // =================================================================
@@ -208,7 +218,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // If the switch is explicitly OFF, stop everything.
         if (settingsRes.rows.length > 0 && settingsRes.rows[0].ai_enabled === false) {
-            console.log(`⛔ AI MANUALLY DISABLED for Conversation ${conversationId}`);
+            console.log(`⛔ [${leadName}] AI manually disabled`);
             return { shouldReply: false };
         }
 
@@ -232,7 +242,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const isManualCommand = systemInstruction && systemInstruction.length > 5;
 
         if (RESTRICTED_STATES.includes(currentState) && !isManualCommand) {
-            console.log(`🔒 AI BLOCKED: Lead is in '${currentState}'. Waiting for human.`);
+            console.log(`🔒 [${leadName}] Blocked: Lead is in '${currentState}'. Waiting for human.`);
             return { shouldReply: false };
         }
 
@@ -254,7 +264,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                 // If HUMAN sent the last message less than 15 mins ago -> SLEEP
                 if (lastMsg.sent_by === 'user' && timeDiff < 15) {
-                    console.log(`⏱️ AI PAUSED: Human replied ${Math.round(timeDiff)} mins ago. Backing off.`);
+                    console.log(`⏱️ [${leadName}] Paused: Human replied ${Math.round(timeDiff)} mins ago.`);
                     return { shouldReply: false };
                 }
             }
@@ -279,13 +289,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         }
 
         // 1. GET LEAD DETAILS (simple - for templates)
-        const leadRes = await db.query(`
-            SELECT first_name, business_name, state, email
-            FROM conversations
-            WHERE id = $1
-        `, [conversationId]);
-
-        const lead = leadRes.rows[0];
         const rawName = lead?.first_name || lead?.business_name || "there";
         const nameToUse = formatName(rawName);
         const businessName = lead?.business_name || "Unknown Business";
@@ -325,32 +328,32 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         if (!isDripCampaign || !lastMsg || lastMsg.direction === 'outbound') {
             if (systemInstruction.includes("Underwriter Hook")) {
                 const content = `Hi ${nameToUse} my name is ${agentName} I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_HOOK');
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_HOOK', leadName);
                 return { shouldReply: true, content };
             }
             if (systemInstruction.includes("Did you get funded already?")) {
                 const content = "Did you get funded already?";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_FUNDED');
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_FUNDED', leadName);
                 return { shouldReply: true, content };
             }
             if (systemInstruction.includes("The money is expensive as is")) {
                 const content = "The money is expensive as is let me compete.";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_COMPETE');
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_COMPETE', leadName);
                 return { shouldReply: true, content };
             }
             if (systemInstruction.includes("should i close the file out?")) {
                 const content = "Hey just following up again, should i close the file out?";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE1');
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE1', leadName);
                 return { shouldReply: true, content };
             }
             if (systemInstruction.includes("any response would be appreciated")) {
                 const content = "hey any response would be appreciated here, close this out?";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE2');
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE2', leadName);
                 return { shouldReply: true, content };
             }
             if (systemInstruction.includes("closing out the file")) {
                 const content = "Hey just wanted to follow up again, will be closing out the file if i dont hear a response today, ty";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE3');
+                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE3', leadName);
                 return { shouldReply: true, content };
             }
         } else if (isDripCampaign && lastMsg && lastMsg.direction === 'inbound') {
@@ -407,7 +410,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 offerText = "hey i havent heard back — still interested or should i close the file out?";
             }
 
-            await trackResponseForTraining(conversationId, systemInstruction, offerText, 'BALLPARK_OFFER');
+            await trackResponseForTraining(conversationId, systemInstruction, offerText, 'BALLPARK_OFFER', leadName);
             return { shouldReply: true, content: offerText };
         }
 
@@ -641,6 +644,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // 6. HANDLE TOOLS & RE-THINK
         if (aiMsg.tool_calls) {
+            const toolNames = aiMsg.tool_calls.map(t => t.function.name).join(', ');
+            console.log(`🔧 [${leadName}] AI using tools: ${toolNames}`);
 
             // Add the AI's tool decision to history
             messages.push(aiMsg);
@@ -668,7 +673,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                         console.log(`⏭️ Skipping drive sync - already in state: ${currentState}`);
                         toolResult = "Documents already synced. No need to sync again.";
                     } else {
-                        console.log(`📂 AI DECISION: Syncing Drive for "${businessName}"...`);
+                        console.log(`📂 [${leadName}] Syncing Drive...`);
                         syncDriveFiles(conversationId, businessName, usageUserId);
                         toolResult = "Drive sync started in background.";
                     }
@@ -676,7 +681,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                 else if (tool.function.name === 'consult_analyst') {
                     const args = JSON.parse(tool.function.arguments);
-                    console.log(`🎓 HANDOFF: Collected all info - passing to human`);
+                    console.log(`🎓 [${leadName}] Handing off to human`);
 
                     // 🔒 LOCK: Update status to HUMAN_REVIEW so AI stops replying
                     await db.query("UPDATE conversations SET state = 'HUMAN_REVIEW' WHERE id = $1", [conversationId]);
@@ -699,7 +704,7 @@ Send this message to the lead: "${offer.pitch_message}"`;
                 }
 
                 else if (tool.function.name === 'no_response_needed') {
-                    console.log(`🤫 AI DECISION: No response needed - staying silent`);
+                    console.log(`🤫 [${leadName}] No response needed`);
                     return { shouldReply: false };
                 }
 
@@ -741,7 +746,7 @@ Send this message to the lead: "${offer.pitch_message}"`;
             `, [conversationId]);
             const userMessage = lastMsgRes.rows[0]?.content || 'N/A';
 
-            await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE');
+            await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
 
             return { shouldReply: true, content: responseContent };
         }

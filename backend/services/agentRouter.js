@@ -53,13 +53,11 @@ const STATE_OWNERSHIP = {
 // ==========================================
 async function routeMessage(conversationId, inboundMessage, systemInstruction = null) {
     const db = getDatabase();
-    
-    console.log(`\n🎯 [ROUTER] Routing message for conversation ${conversationId}`);
 
     try {
-        // Get current state
+        // Get current state AND business name for logging
         const convRes = await db.query(`
-            SELECT state, ai_enabled, has_offer 
+            SELECT state, ai_enabled, has_offer, business_name, first_name
             FROM conversations 
             WHERE id = $1
         `, [conversationId]);
@@ -69,17 +67,18 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
             return { shouldReply: false, agent: null };
         }
 
-        const { state, ai_enabled, has_offer } = convRes.rows[0];
+        const { state, ai_enabled, has_offer, business_name, first_name } = convRes.rows[0];
+        const leadName = business_name || first_name || 'Unknown';
 
         // Check if AI is globally disabled
         if (ai_enabled === false) {
-            console.log('⛔ [ROUTER] AI disabled for this conversation');
+            console.log(`⛔ [${leadName}] AI disabled`);
             return { shouldReply: false, agent: 'DISABLED' };
         }
 
         // Determine which agent owns this state
         const owner = STATE_OWNERSHIP[state] || 'LOCKED';
-        console.log(`📋 [ROUTER] State: ${state} → Owner: ${owner}`);
+        console.log(`📋 [${leadName}] ${state} → ${owner}`);
 
         // Check for state/reality mismatches and auto-correct
         const correctedOwner = await checkAndCorrectState(conversationId, state, has_offer, db);
@@ -91,18 +90,24 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
         // Route to appropriate agent
         switch (finalOwner) {
             case 'QUALIFIER':
-                console.log('👤 [ROUTER] → Qualifier Agent (Agent 1)');
                 const qualifierResult = await aiAgent.processLeadWithAI(conversationId, systemInstruction);
+                if (qualifierResult.content) {
+                    console.log(`📤 [${leadName}] Sending: "${qualifierResult.content.substring(0, 60)}..."`);
+                }
                 return { ...qualifierResult, agent: 'QUALIFIER' };
 
             case 'VETTER':
-                console.log('🔍 [ROUTER] → Vetting Agent (Agent 2)');
                 const vetterResult = await vettingAgent.processMessage(conversationId, inboundMessage, systemInstruction);
+                if (vetterResult.content) {
+                    console.log(`📤 [${leadName}] Sending: "${vetterResult.content.substring(0, 60)}..."`);
+                }
                 return { ...vetterResult, agent: 'VETTER' };
 
             case 'NEGOTIATOR':
-                console.log('💰 [ROUTER] → Negotiating Agent (Agent 3)');
                 const negotiatorResult = await negotiatingAgent.processMessage(conversationId, inboundMessage, systemInstruction);
+                if (negotiatorResult.content) {
+                    console.log(`📤 [${leadName}] Sending: "${negotiatorResult.content.substring(0, 60)}..."`);
+                }
                 return { ...negotiatorResult, agent: 'NEGOTIATOR' };
 
             case 'LOCKED':
@@ -110,13 +115,15 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
                 const COLD_DRIP_STATES = ['SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4'];
 
                 if (COLD_DRIP_STATES.includes(state) && !isManualCommand) {
-                    console.log('❄️ [ROUTER] Cold drip state - waiting for dispatcher');
+                    console.log(`❄️ [${leadName}] Waiting for dispatcher`);
                     return { shouldReply: false, agent: 'COLD_DRIP' };
                 }
 
                 if (COLD_DRIP_STATES.includes(state) && isManualCommand) {
-                    console.log('📤 [ROUTER] Dispatcher trigger - sending to Qualifier');
                     const result = await aiAgent.processLeadWithAI(conversationId, systemInstruction);
+                    if (result.content) {
+                        console.log(`📤 [${leadName}] Sending: "${result.content.substring(0, 60)}..."`);
+                    }
                     return { ...result, agent: 'DISPATCHER' };
                 }
 
@@ -127,7 +134,7 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
                     return { ...manualResult, agent: 'MANUAL_OVERRIDE' };
                 }
 
-                console.log('🔒 [ROUTER] State is locked - no AI response');
+                console.log(`🔒 [${leadName}] Locked - no response`);
                 return { shouldReply: false, agent: 'LOCKED' };
 
             default:
