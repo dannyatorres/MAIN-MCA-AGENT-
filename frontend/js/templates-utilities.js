@@ -666,15 +666,21 @@ window.downloadAllImages = async function(urls) {
 
     for (let i = 0; i < urls.length; i++) {
         try {
-            const response = await fetch(urls[i]);
+            const proxyUrl = `/api/messages/proxy-download?url=${encodeURIComponent(urls[i])}`;
+            const response = await fetch(proxyUrl, { credentials: 'include' });
+
+            if (!response.ok) throw new Error('Download failed');
+
             const blob = await response.blob();
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `image_${i + 1}.jpg`;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
 
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise(r => setTimeout(r, 500));
         } catch (e) {
             console.error('Download failed for', urls[i], e);
         }

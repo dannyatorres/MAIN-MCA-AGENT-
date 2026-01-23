@@ -493,4 +493,39 @@ router.get('/:conversationId/count', requireConversationAccess('conversationId')
     }
 });
 
+// Proxy download for external images (bypasses CORS)
+router.get('/proxy-download', requireConversationAccess(), async (req, res) => {
+    const { url } = req.query;
+
+    if (!url) {
+        return res.status(400).json({ error: 'URL required' });
+    }
+
+    try {
+        const https = require('https');
+        const http = require('http');
+        const protocol = url.startsWith('https') ? https : http;
+
+        protocol.get(url, (response) => {
+            if (response.statusCode !== 200) {
+                return res.status(response.statusCode).json({ error: 'Failed to fetch image' });
+            }
+
+            const contentType = response.headers['content-type'] || 'application/octet-stream';
+            const filename = `image_${Date.now()}.jpg`;
+
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+            response.pipe(res);
+        }).on('error', (err) => {
+            console.error('Proxy download error:', err);
+            res.status(500).json({ error: 'Download failed' });
+        });
+    } catch (error) {
+        console.error('Proxy download error:', error);
+        res.status(500).json({ error: 'Download failed' });
+    }
+});
+
 module.exports = router;
