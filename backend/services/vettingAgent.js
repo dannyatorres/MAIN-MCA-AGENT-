@@ -15,7 +15,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // ==========================================
 // STATES THIS AGENT OWNS
 // ==========================================
-const VETTING_STATES = ['STRATEGIZED', 'HOT_LEAD', 'VETTING'];
+const VETTING_STATES = ['PRE_VETTED', 'STRATEGIZED', 'HOT_LEAD', 'VETTING'];
 const STALL_STATES = ['SUBMITTED']; // Can respond but only to stall
 
 // ==========================================
