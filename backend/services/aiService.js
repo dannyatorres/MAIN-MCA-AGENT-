@@ -292,30 +292,32 @@ LENDER NAME MATCHING RULES:
             console.log(`          - Total Cost:      ${usage.total_tokens} tokens`);
         }
 
-        // Parse response - check if it's a JSON action
-        const rawResponse = completion.choices[0].message.content;
-        let response = rawResponse;
-        let action = null;
+        const responseText = completion.choices[0].message.content;
 
-        // Try to parse as JSON (for action responses)
+        // Check if response contains a JSON action
+        let parsedResponse = { success: true, response: responseText };
+
         try {
-            const trimmed = rawResponse.trim();
-            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-                const parsed = JSON.parse(trimmed);
+            // Find JSON object anywhere in the response
+            const jsonMatch = responseText.match(/\{[\s\S]*"action"[\s\S]*\}/);
+            if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
                 if (parsed.action && parsed.message) {
-                    response = parsed.message;
-                    action = parsed.action;
-                    console.log(`   🔧 [AI Service] Action detected: ${action.action}`);
+                    parsedResponse = {
+                        success: true,
+                        response: parsed.message,
+                        action: parsed.action
+                    };
+                    console.log(`   🔧 [AI Service] Action detected: ${parsed.action.action}`);
                 }
             }
         } catch (e) {
-            // Not JSON, use as plain text response
+            // Not valid JSON, treat as normal text response
+            console.log('   ⚠️ [AI Service] Could not parse action JSON:', e.message);
         }
 
         return {
-            success: true,
-            response: response,
-            action: action,
+            ...parsedResponse,
             usage: usage
         };
 
