@@ -204,6 +204,33 @@ const generateResponse = async (query, context, userId = null) => {
             }
         }
 
+        // 🔧 DATABASE ACTION INSTRUCTIONS
+        systemPrompt += `\n\n=== 🔧 DATABASE ACTIONS ===
+You can propose database actions when the user asks to add, update, or change data.
+When proposing an action, respond with ONLY valid JSON (no markdown, no backticks).
+
+Available actions:
+
+1. insert_offer - Add new lender submission
+{"message": "I'll add that offer.", "action": {"action": "insert_offer", "data": {"lender_name": "...", "offer_amount": 50000, "status": "OFFER", "factor_rate": 1.35, "term_length": 6, "term_unit": "months", "payment_frequency": "daily"}, "confirm_text": "Add $50,000 offer from [Lender]?"}}
+
+2. update_offer - Update existing lender submission
+{"message": "I'll update that.", "action": {"action": "update_offer", "data": {"lender_name": "...", "offer_amount": 55000, "status": "OFFER"}, "confirm_text": "Update [Lender] to $55,000?"}}
+
+3. update_deal - Update the conversation/deal
+{"message": "I'll mark this as funded.", "action": {"action": "update_deal", "data": {"state": "FUNDED", "funded_amount": 50000}, "confirm_text": "Mark deal as FUNDED for $50,000?"}}
+Valid states: NEW, CONTACTED, DOCS_IN, OFFER_RECEIVED, CONTRACTED, FUNDED, DEAD, ARCHIVED
+
+4. append_note - Add a note
+{"message": "I'll add that note.", "action": {"action": "append_note", "data": {"note": "Client prefers weekly payments"}, "confirm_text": "Add note: Client prefers weekly payments?"}}
+
+RULES:
+- Only propose an action if the user EXPLICITLY asks to add/update/change something
+- If a lender submission already exists, use update_offer not insert_offer
+- For normal questions, respond with plain text (no JSON)
+- The confirm_text should clearly describe what will happen
+`;
+
         // 🟢 4. CHAT HISTORY (Memory)
         const messages = [{ role: "system", content: systemPrompt }];
         
@@ -249,9 +276,30 @@ const generateResponse = async (query, context, userId = null) => {
             console.log(`          - Total Cost:      ${usage.total_tokens} tokens`);
         }
 
-        return { 
-            success: true, 
-            response: completion.choices[0].message.content,
+        // Parse response - check if it's a JSON action
+        const rawResponse = completion.choices[0].message.content;
+        let response = rawResponse;
+        let action = null;
+
+        // Try to parse as JSON (for action responses)
+        try {
+            const trimmed = rawResponse.trim();
+            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                const parsed = JSON.parse(trimmed);
+                if (parsed.action && parsed.message) {
+                    response = parsed.message;
+                    action = parsed.action;
+                    console.log(`   🔧 [AI Service] Action detected: ${action.action}`);
+                }
+            }
+        } catch (e) {
+            // Not JSON, use as plain text response
+        }
+
+        return {
+            success: true,
+            response: response,
+            action: action,
             usage: usage
         };
 
