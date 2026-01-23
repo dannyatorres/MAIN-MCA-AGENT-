@@ -212,4 +212,163 @@ router.get('/chat/:conversationId', async (req, res) => {
 
 router.post('/chat/:conversationId/messages', async (req, res) => { res.json({ success: true }); });
 
+// Execute AI-proposed database actions
+router.post('/execute-action', async (req, res) => {
+    const { action, table, data, conversationId } = req.body;
+    const db = getDatabase();
+
+    // Whitelist of allowed actions
+    const ALLOWED_ACTIONS = {
+        'insert_offer': { table: 'lender_submissions', type: 'insert' },
+        'update_offer': { table: 'lender_submissions', type: 'update' },
+        'update_deal': { table: 'conversations', type: 'update' },
+        'append_note': { table: 'conversations', type: 'append' }
+    };
+
+    if (!ALLOWED_ACTIONS[action]) {
+        return res.status(400).json({ success: false, error: 'Invalid action type' });
+    }
+
+    try {
+        let result;
+
+        switch (action) {
+            case 'insert_offer': {
+                // Validate lender exists
+                const lenderCheck = await db.query(
+                    `SELECT name FROM lenders WHERE LOWER(name) = LOWER($1)`,
+                    [data.lender_name]
+                );
+
+                if (lenderCheck.rows.length === 0) {
+                    return res.status(400).json({ success: false, error: `Unknown lender: ${data.lender_name}` });
+                }
+
+                // Check for duplicate
+                const dupCheck = await db.query(
+                    `SELECT id FROM lender_submissions WHERE conversation_id = $1 AND LOWER(lender_name) = LOWER($2)`,
+                    [conversationId, data.lender_name]
+                );
+
+                if (dupCheck.rows.length > 0) {
+                    return res.status(400).json({
+                        success: false,
+                        error: `Submission for ${data.lender_name} already exists. Use update instead.`
+                    });
+                }
+
+                const { v4: uuidv4 } = require('uuid');
+                await db.query(`
+                    INSERT INTO lender_submissions (
+                        id, conversation_id, lender_name, status,
+                        offer_amount, factor_rate, term_length, term_unit, payment_frequency,
+                        created_at, submitted_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+                `, [
+                    uuidv4(),
+                    conversationId,
+                    lenderCheck.rows[0].name, // Use canonical name
+                    data.status || 'OFFER',
+                    data.offer_amount || null,
+                    data.factor_rate || null,
+                    data.term_length || null,
+                    data.term_unit || null,
+                    data.payment_frequency || null
+                ]);
+
+                result = { message: `Added ${lenderCheck.rows[0].name} offer: $${data.offer_amount?.toLocaleString() || 0}` };
+                break;
+            }
+
+            case 'update_offer': {
+                const updates = [];
+                const values = [];
+                let idx = 1;
+
+                const allowedFields = ['offer_amount', 'factor_rate', 'term_length', 'term_unit', 'payment_frequency', 'status', 'decline_reason'];
+
+                for (const [key, value] of Object.entries(data)) {
+                    if (allowedFields.includes(key) && value !== undefined) {
+                        updates.push(`${key} = $${idx}`);
+                        values.push(value);
+                        idx++;
+                    }
+                }
+
+                if (updates.length === 0) {
+                    return res.status(400).json({ success: false, error: 'No valid fields to update' });
+                }
+
+                values.push(conversationId, data.lender_name);
+
+                const updateResult = await db.query(`
+                    UPDATE lender_submissions
+                    SET ${updates.join(', ')}, last_response_at = NOW()
+                    WHERE conversation_id = $${idx} AND LOWER(lender_name) = LOWER($${idx + 1})
+                `, values);
+
+                if (updateResult.rowCount === 0) {
+                    return res.status(404).json({ success: false, error: `No submission found for ${data.lender_name}` });
+                }
+
+                result = { message: `Updated ${data.lender_name} offer` };
+                break;
+            }
+
+            case 'update_deal': {
+                const updates = [];
+                const values = [];
+                let idx = 1;
+
+                const allowedFields = ['state', 'priority', 'funded_amount', 'funded_at', 'has_offer', 'disposition'];
+
+                for (const [key, value] of Object.entries(data)) {
+                    if (allowedFields.includes(key) && value !== undefined) {
+                        updates.push(`${key} = $${idx}`);
+                        values.push(value);
+                        idx++;
+                    }
+                }
+
+                if (updates.length === 0) {
+                    return res.status(400).json({ success: false, error: 'No valid fields to update' });
+                }
+
+                values.push(conversationId);
+
+                await db.query(`
+                    UPDATE conversations
+                    SET ${updates.join(', ')}, updated_at = NOW()
+                    WHERE id = $${idx}
+                `, values);
+
+                result = { message: `Deal updated` };
+                break;
+            }
+
+            case 'append_note': {
+                await db.query(`
+                    UPDATE conversations
+                    SET notes = COALESCE(notes, '') || E'\n' || $1, updated_at = NOW()
+                    WHERE id = $2
+                `, [data.note, conversationId]);
+
+                result = { message: `Note added` };
+                break;
+            }
+        }
+
+        // Emit refresh event
+        if (global.io) {
+            global.io.emit('refresh_lead_list', { conversationId });
+        }
+
+        res.json({ success: true, ...result });
+
+    } catch (error) {
+        console.error('Action execution error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

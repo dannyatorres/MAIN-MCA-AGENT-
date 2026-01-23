@@ -165,6 +165,11 @@ class AIAssistant {
 
                 // Save assistant response to cache
                 this.saveToCache(conversationId, 'assistant', response);
+
+                // Check for proposed action
+                if (data.action) {
+                    this.showActionConfirmation(data.action);
+                }
             } else {
                 throw new Error(data.error || 'Unknown error');
             }
@@ -209,6 +214,79 @@ class AIAssistant {
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/^• /gm, '<span class="ai-bullet-point">•</span> ');
         return formatted;
+    }
+
+    // ============================================================
+    // ACTION CONFIRMATION & EXECUTION
+    // ============================================================
+
+    showActionConfirmation(action) {
+        const container = document.getElementById('aiChatMessages');
+        if (!container) return;
+
+        const confirmDiv = document.createElement('div');
+        confirmDiv.className = 'ai-action-confirm';
+        confirmDiv.id = 'aiActionConfirm';
+        confirmDiv.innerHTML = `
+            <div class="ai-action-card">
+                <div class="ai-action-header">
+                    <i class="fas fa-database"></i> Confirm Action
+                </div>
+                <div class="ai-action-body">
+                    ${action.confirm_text || 'Execute this action?'}
+                </div>
+                <div class="ai-action-buttons">
+                    <button class="ai-action-cancel" id="aiActionCancel">Cancel</button>
+                    <button class="ai-action-confirm-btn" id="aiActionConfirmBtn">Confirm</button>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(confirmDiv);
+        container.scrollTop = container.scrollHeight;
+
+        document.getElementById('aiActionCancel').onclick = () => {
+            confirmDiv.remove();
+            this.addMessageToChat('assistant', 'Action cancelled.', false);
+        };
+
+        document.getElementById('aiActionConfirmBtn').onclick = () => {
+            confirmDiv.remove();
+            this.executeAction(action);
+        };
+    }
+
+    async executeAction(action) {
+        const conversationId = this.parent.getCurrentConversationId();
+
+        this.showTypingIndicator();
+
+        try {
+            const result = await this.parent.apiCall('/api/ai/execute-action', {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: action.action,
+                    data: action.data,
+                    conversationId: conversationId
+                })
+            });
+
+            this.hideTypingIndicator();
+
+            if (result.success) {
+                this.addMessageToChat('assistant', `✅ ${result.message}`, false);
+
+                // Refresh the UI
+                if (this.parent.loadConversationDetails) {
+                    this.parent.loadConversationDetails(conversationId);
+                }
+            } else {
+                this.addMessageToChat('assistant', `❌ ${result.error}`, false);
+            }
+        } catch (error) {
+            this.hideTypingIndicator();
+            this.addMessageToChat('assistant', `❌ Failed: ${error.message}`, false);
+        }
     }
 
     showTypingIndicator() {

@@ -382,3 +382,60 @@
     font-size: 12px;
     color: #8b949e;
 }
+
+/* ==========================================================================
+   AI Action Confirmation Card
+   ========================================================================== */
+
+.ai-action-confirm {
+    padding: 8px 12px;
+}
+
+.ai-action-card {
+    background: #1e293b;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ai-action-header {
+    background: #3b82f6;
+    color: white;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.ai-action-body {
+    padding: 12px;
+    color: #e2e8f0;
+    font-size: 14px;
+}
+
+.ai-action-buttons {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px 12px;
+    justify-content: flex-end;
+}
+
+.ai-action-cancel {
+    padding: 6px 16px;
+    border-radius: 4px;
+    border: 1px solid #475569;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.ai-action-confirm-btn {
+    padding: 6px 16px;
+    border-radius: 4px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+}
+
+.ai-action-cancel:hover { background: #334155; }
+.ai-action-confirm-btn:hover { background: #2563eb; }
