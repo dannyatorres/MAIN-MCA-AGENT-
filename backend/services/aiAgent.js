@@ -95,7 +95,7 @@ const BASE_TOOLS = [
         type: "function",
         function: {
             name: "consult_analyst",
-            description: "Call this ONLY when you have: 1. Email, 2. Funding Status, 3. Credit Score. This will notify the human underwriter.",
+            description: "Call this ONLY when you have ALL THREE: 1. Email, 2. Credit Score, 3. Confirmed NO new funding this month OR if they have new funding, they've already sent the MTD statement. NEVER call this if they said they got funded recently but haven't sent MTD yet. Always ask about new loans BEFORE asking for credit score.",
             parameters: {
                 type: "object",
                 properties: {
