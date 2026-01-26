@@ -370,6 +370,17 @@ router.post('/webhook/receive', async (req, res) => {
         if (convResult.rows.length === 0) return res.status(200).send('No conversation found');
         const conversation = convResult.rows[0];
 
+        const lockCheck = await db.query(`
+            SELECT 1 FROM conversations 
+            WHERE id = $1 AND ai_processing = true
+        `, [conversation.id]);
+
+        if (lockCheck.rows.length > 0) {
+            console.log(`🔒 [${conversation.business_name}] AI already processing - skipping`);
+            res.set('Content-Type', 'text/xml');
+            return res.send('<Response></Response>');
+        }
+
         const mediaUrlValue = mediaUrls.length > 1 ? JSON.stringify(mediaUrls) : (mediaUrls[0] || null);
 
         const msgResult = await db.query(`
@@ -426,15 +437,42 @@ router.post('/webhook/receive', async (req, res) => {
         if (routeMessage) {
             (async () => {
                 try {
-                    console.log(`🤖 AI thinking for ${conversation.business_name}...`);
+                    // Set lock before AI processing
+                    await db.query(`UPDATE conversations SET ai_processing = true WHERE id = $1`, [conversation.id]);
+
+                    // Check if last message was already from us - don't double-send
+                    const lastMsgCheck = await db.query(`
+                        SELECT direction FROM messages 
+                        WHERE conversation_id = $1 
+                        ORDER BY timestamp DESC LIMIT 1
+                    `, [conversation.id]);
+
+                    if (lastMsgCheck.rows[0]?.direction === 'outbound') {
+                        console.log(`⏭️ [${conversation.business_name}] Last msg was outbound - skipping`);
+                        return;
+                    }
+
+                    // Random delay 30-60 seconds
+                    const delay = Math.floor(Math.random() * 30000) + 30000;
+                    console.log(`🤖 [${conversation.business_name}] Waiting ${Math.round(delay / 1000)}s...`);
+                    await new Promise(r => setTimeout(r, delay));
+
+                    console.log(`🤖 AI responding to ${conversation.business_name}...`);
                     const aiResult = await routeMessage(conversation.id, 'The user just replied. Read the history and respond naturally.');
 
                     if (aiResult.shouldReply && aiResult.content) {
+                        // If AI returned multiple messages (split by double newline), only send first
+                        let messageToSend = aiResult.content;
+                        if (messageToSend.includes('\n\n')) {
+                            messageToSend = messageToSend.split('\n\n')[0].trim();
+                            console.log(`✂️ [${conversation.business_name}] Trimmed multi-message to first only`);
+                        }
+
                         const aiMsgResult = await db.query(`
                             INSERT INTO messages (conversation_id, content, direction, message_type, sent_by, status, timestamp)
                             VALUES ($1, $2, 'outbound', 'sms', 'ai', 'pending', NOW())
                             RETURNING *
-                        `, [conversation.id, aiResult.content]);
+                        `, [conversation.id, messageToSend]);
 
                         const aiMessage = aiMsgResult.rows[0];
 
@@ -442,14 +480,14 @@ router.post('/webhook/receive', async (req, res) => {
                         const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
                         const sentMsg = await client.messages.create({
-                            body: aiResult.content,
+                            body: messageToSend,
                             from: process.env.TWILIO_PHONE_NUMBER,
                             to: From
                         });
 
                         await db.query('UPDATE messages SET status = \'sent\', twilio_sid = $1 WHERE id = $2', [sentMsg.sid, aiMessage.id]);
 
-                        const aiSegmentCount = Math.max(1, Math.ceil((aiResult.content || '').length / 160));
+                        const aiSegmentCount = Math.max(1, Math.ceil((messageToSend || '').length / 160));
                         await trackUsage({
                             userId: conversation.assigned_user_id,
                             conversationId: conversation.id,
@@ -469,6 +507,8 @@ router.post('/webhook/receive', async (req, res) => {
                     }
                 } catch (err) {
                     console.error('❌ AI Auto-Reply Failed:', err);
+                } finally {
+                    await db.query(`UPDATE conversations SET ai_processing = false WHERE id = $1`, [conversation.id]);
                 }
             })();
         }
