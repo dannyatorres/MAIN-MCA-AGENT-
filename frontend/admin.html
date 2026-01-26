@@ -366,6 +366,12 @@
             <div id="driveTestResult" style="margin-top: 10px; font-size: 12px;"></div>
           </div>
 
+          <div class="form-group">
+            <label>Campaign Hook Message</label>
+            <textarea id="userCampaignHook" rows="3" style="width:100%;padding:10px 12px;background:var(--bg-primary,#111827);border:1px solid var(--border-color,#374151);border-radius:8px;color:var(--text-primary,#fff);font-size:14px;resize:vertical;" placeholder="Hey {{LEAD_NAME}}, I'm an underwriter - saw you took funding recently..."></textarea>
+            <small style="color: var(--text-secondary)">First message sent to new leads. Leave blank for default.</small>
+          </div>
+
             <div class="services-grid">
               <label class="toggle-item">
                 <input type="checkbox" id="svc_aiAgent" checked>
@@ -1037,6 +1043,7 @@
         if (res.ok) {
           const settings = await res.json();
           document.getElementById('userDriveFolderId').value = settings.drive_folder_id || '';
+          document.getElementById('userCampaignHook').value = settings.campaign_hook || '';
           document.getElementById('svc_aiAgent').checked = settings.services?.aiAgent !== false;
           document.getElementById('svc_driveSync').checked = settings.services?.driveSync !== false;
           document.getElementById('svc_fcs').checked = settings.services?.fcs !== false;
@@ -1086,6 +1093,7 @@
         // If editing, also save service settings
         if (id) {
           const serviceSettings = {
+            campaign_hook: document.getElementById('userCampaignHook').value.trim() || null,
             drive_folder_id: document.getElementById('userDriveFolderId').value.trim() || null,
             services: {
               aiAgent: document.getElementById('svc_aiAgent').checked,

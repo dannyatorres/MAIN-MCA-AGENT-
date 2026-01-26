@@ -228,7 +228,9 @@ router.get('/:id/settings', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(result.rows[0].service_settings || getDefaultSettings());
+    const settings = result.rows[0].service_settings || getDefaultSettings();
+    settings.campaign_hook = settings.campaign_hook || '';
+    res.json(settings);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -237,10 +239,11 @@ router.get('/:id/settings', async (req, res) => {
 // PUT /api/users/:id/settings - Update user service settings
 router.put('/:id/settings', async (req, res) => {
   try {
-    const { drive_folder_id, services } = req.body;
+    const { drive_folder_id, services, campaign_hook } = req.body;
     const db = getDatabase();
 
     const settings = {
+      campaign_hook: campaign_hook || null,
       drive_folder_id: drive_folder_id || null,
       services: {
         aiAgent: services?.aiAgent !== false,

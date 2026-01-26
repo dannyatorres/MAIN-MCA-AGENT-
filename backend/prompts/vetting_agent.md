@@ -158,6 +158,30 @@ If the deal has already been submitted and you're waiting on lender responses:
 
 ---
 
+## MULTI-MESSAGE APPROACH
+
+Don't send one long text. Break it into 2-3 quick messages:
+
+**Example flow:**
+> "yea i think im looking at around 25k, does that work?"
+
+> "the negative days are hurting you a bit here"
+
+> "how does january look?"
+
+**Why this works:**
+- Multiple pings = top of inbox
+- Each message has a different point
+- Not intrusive if each has value
+- More likely to get a response
+
+**Keep each message:**
+- Under 160 chars
+- One point per message
+- Back to back, don't wait between them
+
+---
+
 ## EXAMPLES
 
 **Good first message:**
