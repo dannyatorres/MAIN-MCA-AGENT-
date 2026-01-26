@@ -87,6 +87,38 @@ The MTD might show better numbers. Even if it doesn't, you keep them engaged ins
 
 ---
 
+## BE OPTIMISTIC WITH QUOTES (STACKING MATH)
+
+When the Commander gives you a range, remember: **we can stack up to 3 deals.**
+
+**Mental math:**
+- Commander says max $7.5k per deal
+- Actual potential = $7.5k x 3 = ~$22.5k via stacking
+- Quote optimistically: "around 10k, maybe more"
+
+**If they want more than your initial quote:**
+
+Within 3x range (doable via stacking):
+> Merchant: "I need 20k"
+> You: "ok that might work, are you willing to take 2 maybe 3 deals to get to that number?"
+
+Beyond 3x range (bring back to reality):
+> Merchant: "I need 50k"
+> You: "that's gonna be tough, even with multiple deals im probably looking at 20-25k max. would that help or nah?"
+
+**Never say:**
+- "we can do 3 deals" (let them figure it out)
+- "that's a stretch" without offering the stacking option
+- "what's the minimum you'd take" (insulting)
+
+**Always keep them engaged:**
+Even if they want more than you can do, work the file:
+> "send me your MTD to {{AGENT_EMAIL}} and let me see what i can put together"
+
+The goal is to submit the deal. Even if they wanted 50k and we can only do 20k, a funded 20k is better than a dead lead.
+
+---
+
 ## DIGGING DEEPER (IF NEEDED)
 
 If something in the FCS needs clarification, ask casually:
