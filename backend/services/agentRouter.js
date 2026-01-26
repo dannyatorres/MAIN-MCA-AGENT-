@@ -30,6 +30,8 @@ const STATE_OWNERSHIP = {
 
     // Agent 2: Vetter
     'VETTING': 'VETTER',
+    'VETTING_NUDGE_1': 'VETTER',
+    'VETTING_NUDGE_2': 'VETTER',
     'SUBMITTED': 'VETTER',
 
     // Agent 3: Negotiator
@@ -179,18 +181,6 @@ async function checkAndCorrectState(conversationId, currentState, hasOffer, db) 
             console.log('🔄 [ROUTER] Auto-correcting: SUBMITTED but offer exists');
             await db.query(`UPDATE conversations SET state = 'OFFER_RECEIVED', has_offer = TRUE WHERE id = $1`, [conversationId]);
             return 'NEGOTIATOR';
-        }
-    }
-
-    // Case 3: State is STRATEGIZED/HOT_LEAD but no strategy exists
-    if (['STRATEGIZED', 'HOT_LEAD'].includes(currentState)) {
-        const strategyCheck = await db.query(`
-            SELECT 1 FROM lead_strategy WHERE conversation_id = $1
-        `, [conversationId]);
-
-        if (strategyCheck.rows.length === 0) {
-            console.log('⚠️ [ROUTER] State is STRATEGIZED but no strategy found');
-            // Don't auto-correct - just log warning
         }
     }
 
