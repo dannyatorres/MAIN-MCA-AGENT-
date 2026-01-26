@@ -8,14 +8,22 @@ const twilio = require('twilio');
 // POST /api/agent/trigger
 // The Dispatcher calls this URL
 router.post('/trigger', async (req, res) => {
-    const { conversation_id, system_instruction } = req.body;
+    const { conversation_id, system_instruction, direct_message } = req.body;
 
     if (!conversation_id) return res.status(400).json({ error: "Missing conversation_id" });
 
     console.log(`📨 Received Dispatcher Trigger for ${conversation_id}`);
 
-    // 1. Run the AI Logic via Router
-    const result = await routeMessage(conversation_id, null, system_instruction);
+    let result;
+
+    // Direct message = skip AI entirely
+    if (direct_message) {
+        console.log(`📨 Direct message (no AI) for ${conversation_id}`);
+        result = { shouldReply: true, content: direct_message };
+    } else {
+        // 1. Run the AI Logic via Router
+        result = await routeMessage(conversation_id, null, system_instruction);
+    }
 
     if (result.error) return res.status(500).json(result);
 
