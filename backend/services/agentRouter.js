@@ -16,7 +16,6 @@ const STATE_OWNERSHIP = {
     'REPLIED': 'PRE_VETTER',
     'REPLIED_NUDGE_1': 'PRE_VETTER',
     'REPLIED_NUDGE_2': 'PRE_VETTER',
-    'HAIL_MARY': 'PRE_VETTER',
 
     // Waiting for FCS/strategy (dispatcher handles)
     'PRE_VETTED': 'LOCKED',
@@ -29,6 +28,7 @@ const STATE_OWNERSHIP = {
     'SENT_FU_4': 'LOCKED',
 
     // Agent 2: Vetter
+    'HAIL_MARY': 'VETTER',
     'VETTING': 'VETTER',
     'VETTING_NUDGE_1': 'VETTER',
     'VETTING_NUDGE_2': 'VETTER',
