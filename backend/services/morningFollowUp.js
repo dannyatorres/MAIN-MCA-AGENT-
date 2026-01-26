@@ -110,18 +110,43 @@ async function runMorningFollowUp() {
 
         const leads = result.rows;
 
-        if (leads.length === 0) {
+        // Also get HAIL_MARY_FU_2 leads waiting for morning follow-up
+        const hailMaryResult = await db.query(`
+            SELECT 
+                c.id as conversation_id,
+                c.business_name,
+                c.lead_phone,
+                c.assigned_user_id,
+                last_msg.timestamp as last_msg_time
+            FROM conversations c
+            LEFT JOIN LATERAL (
+                SELECT timestamp
+                FROM messages m 
+                WHERE m.conversation_id = c.id 
+                ORDER BY m.timestamp DESC 
+                LIMIT 1
+            ) last_msg ON true
+            WHERE 
+                c.state = 'HAIL_MARY_FU_2'
+                AND c.lead_phone IS NOT NULL
+            LIMIT 20
+        `);
+
+        // Combine both lists
+        const allLeads = [...leads, ...hailMaryResult.rows.map(l => ({ ...l, isHailMary: true }))];
+
+        if (allLeads.length === 0) {
             console.log('🌅 [Morning Follow-Up] No leads need follow-up today.');
             return { sent: 0, skipped: 0, noSend: 0 };
         }
 
-        console.log(`🌅 [Morning Follow-Up] Found ${leads.length} leads to check.`);
+        console.log(`🌅 [Morning Follow-Up] Found ${allLeads.length} leads to check.`);
 
         let sent = 0;
         let skipped = 0;
         let noSend = 0;
 
-        for (const lead of leads) {
+        for (const lead of allLeads) {
             try {
                 // Get conversation history for context
                 const historyRes = await db.query(`
@@ -171,6 +196,13 @@ async function runMorningFollowUp() {
                 await db.query(`
                     UPDATE conversations SET last_activity = NOW() WHERE id = $1
                 `, [lead.conversation_id]);
+
+                // After saving message, check if this is a HAIL_MARY lead
+                if (lead.isHailMary) {
+                    await db.query(`
+                        UPDATE conversations SET state = 'HAIL_MARY_FINAL' WHERE id = $1
+                    `, [lead.conversation_id]);
+                }
 
                 // Track SMS usage
                 const segmentCount = Math.ceil(message.length / 160);

@@ -29,6 +29,9 @@ const STATE_OWNERSHIP = {
 
     // Agent 2: Vetter
     'HAIL_MARY': 'VETTER',
+    'HAIL_MARY_FU_1': 'VETTER',
+    'HAIL_MARY_FU_2': 'LOCKED',
+    'HAIL_MARY_FINAL': 'LOCKED',
     'VETTING': 'VETTER',
     'VETTING_NUDGE_1': 'VETTER',
     'VETTING_NUDGE_2': 'VETTER',
