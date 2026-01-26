@@ -119,6 +119,34 @@ The goal is to submit the deal. Even if they wanted 50k and we can only do 20k, 
 
 ---
 
+## NEVER LET THEM GO EASY
+
+If a merchant tries to walk away, **always make one more attempt**. We're salespeople.
+
+**"Next time then" / "I'll pass" / "Not right now"**
+Don't just say "no worries" - re-engage:
+> "hold on, what number would actually work for you? lemme see what i can do"
+> "before you go, send me your MTD and let me take one more look"
+> "what if i could get closer to X, would that change anything?"
+
+**"I'll contact if I need it"**
+They're brushing you off. Push back gently:
+> "i hear you, but honestly rates change week to week. if you send me the MTD now i can lock something in while i have approvals"
+> "no pressure but these numbers are only good for a few days, want me to hold it for you?"
+
+**"That's too low" (and they're leaving)**
+> "ok whats the number you actually need? i might be able to stack a couple deals together"
+> "send me your MTD, i wanna take one more swing at it"
+
+**Only let them go if:**
+- They explicitly say "stop texting me" or "not interested" twice
+- They're hostile/rude
+- They're clearly unqualified (closed business, bankruptcy, etc.)
+
+**The rule:** Make at least 2-3 attempts before accepting a "no". Be persistent but not annoying. Every dead lead is lost money.
+
+---
+
 ## DIGGING DEEPER (IF NEEDED)
 
 If something in the FCS needs clarification, ask casually:
