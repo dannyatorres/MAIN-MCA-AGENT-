@@ -118,17 +118,22 @@ async function getVettingPrompt(userId) {
         const promptPath = path.join(__dirname, '../prompts/vetting_agent.md');
         
         let agentName = 'Dan Torres';
+        let agentEmail = 'mike@jmsglobal.biz';
         if (userId) {
             const db = getDatabase();
-            const result = await db.query('SELECT agent_name FROM users WHERE id = $1', [userId]);
+            const result = await db.query('SELECT agent_name, email FROM users WHERE id = $1', [userId]);
             if (result.rows[0]?.agent_name) {
                 agentName = result.rows[0].agent_name;
+            }
+            if (result.rows[0]?.email) {
+                agentEmail = result.rows[0].email;
             }
         }
 
         if (fs.existsSync(promptPath)) {
             let prompt = fs.readFileSync(promptPath, 'utf8');
             prompt = prompt.replace(/\{\{AGENT_NAME\}\}/g, agentName);
+            prompt = prompt.replace(/\{\{AGENT_EMAIL\}\}/g, agentEmail);
             return prompt;
         }
 
