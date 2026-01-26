@@ -464,13 +464,6 @@ async function analyzeAndStrategize(conversationId) {
             console.log(`✅ Saved ${data.scenarios.length} scenarios`);
         }
 
-        // 10. Update Conversation State
-        let newState = 'STRATEGIZED';
-        if (gamePlan.strategy_type === 'DEAD') newState = 'DEAD';
-        if (gamePlan.strategy_type === 'PURSUE_HARD') newState = 'HOT_LEAD';
-
-        await db.query(`UPDATE conversations SET state = $1 WHERE id = $2`, [newState, conversationId]);
-
         return gamePlan;
 
     } catch (err) {

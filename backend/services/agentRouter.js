@@ -11,40 +11,32 @@ const negotiatingAgent = require('./negotiatingAgent'); // Agent 3: Negotiator
 // STATE OWNERSHIP MAP
 // ==========================================
 const STATE_OWNERSHIP = {
-    // Agent 1: Pre-Vetter (gathering info: email, credit, loans)
+    // Agent 1: Pre-Vetter
     'NEW': 'PRE_VETTER',
     'REPLIED': 'PRE_VETTER',
     'REPLIED_NUDGE_1': 'PRE_VETTER',
     'REPLIED_NUDGE_2': 'PRE_VETTER',
+    'HAIL_MARY': 'PRE_VETTER',
 
-    // Handoff states
-    'PRE_VETTED': 'VETTER',         // FCS/Strategy should be ready, human reviews
-    'HAIL_MARY': 'VETTER',          // Vetter throws ballpark
+    // Waiting for FCS/strategy (dispatcher handles)
+    'PRE_VETTED': 'LOCKED',
 
-    // Locked states (no AI responds)
-    'HUMAN_REVIEW': 'LOCKED',
-    'FCS_RUNNING': 'LOCKED',
-    'FCS_COMPLETE': 'LOCKED',
-
-    // Agent 2: Vetter (post-strategy)
-    'STRATEGIZED': 'VETTER',
-    'HOT_LEAD': 'VETTER',
-    'VETTING': 'VETTER',
-    'SUBMITTED': 'VETTER',
-
-    // Agent 3: Negotiator (post-offer)
-    'OFFER_RECEIVED': 'NEGOTIATOR',
-    'NEGOTIATING': 'NEGOTIATOR',
-
-    // Cold drip states - dispatcher owns
+    // Cold drip (dispatcher handles)
     'SENT_HOOK': 'LOCKED',
     'SENT_FU_1': 'LOCKED',
     'SENT_FU_2': 'LOCKED',
     'SENT_FU_3': 'LOCKED',
     'SENT_FU_4': 'LOCKED',
-    'STALE': 'LOCKED',
 
-    // Terminal states
+    // Agent 2: Vetter
+    'VETTING': 'VETTER',
+    'SUBMITTED': 'VETTER',
+
+    // Agent 3: Negotiator
+    'OFFER_RECEIVED': 'NEGOTIATOR',
+    'NEGOTIATING': 'NEGOTIATOR',
+
+    // Terminal
     'VERBAL_ACCEPT': 'LOCKED',
     'CLOSED_WON': 'LOCKED',
     'CLOSED_LOST': 'LOCKED',
