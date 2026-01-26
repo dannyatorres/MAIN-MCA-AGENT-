@@ -1,6 +1,6 @@
 // backend/services/vettingAgent.js
 // 🔍 AGENT 2: VETTING AGENT
-// Handles: STRATEGIZED, HOT_LEAD, VETTING states
+// Handles: PRE_VETTED, VETTING, SUBMITTED states
 // Goal: Clarify deal details, validate merchant expectations, auto-submit when ready
 
 const { OpenAI } = require('openai');
@@ -15,7 +15,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // ==========================================
 // STATES THIS AGENT OWNS
 // ==========================================
-const VETTING_STATES = ['PRE_VETTED', 'STRATEGIZED', 'HOT_LEAD', 'VETTING'];
+const VETTING_STATES = ['PRE_VETTED', 'VETTING'];
 const STALL_STATES = ['SUBMITTED']; // Can respond but only to stall
 
 // ==========================================

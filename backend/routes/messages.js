@@ -402,7 +402,7 @@ router.post('/webhook/receive', async (req, res) => {
         await db.query(`
             UPDATE conversations
             SET state = CASE 
-                    WHEN state IN ('NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'STALE') 
+                    WHEN state IN ('NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4') 
                     THEN 'REPLIED'
                     ELSE state
                 END,
