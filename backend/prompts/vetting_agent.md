@@ -90,22 +90,25 @@ If they mention a default, you NEED details before proceeding:
 - "when did you default?"
 - "did they place a judgment on you?"
 - "did you pay it off or is it still open?"
-- "do you have a ZBL (zero balance letter)?"
+- "do you have a zbl (zero balance letter)?"
 
-**Why this matters:**
-- Paid off + ZBL = some lenders will work with it
-- Open judgment = most lenders won't touch it
-- Recent default (< 6 months) = very limited options
-- Old default (> 1 year) + paid = more options
+**Based on their answer:**
 
-**If they have a ZBL:**
+**Has ZBL + paid off:**
 > "send the ZBL to {{AGENT_EMAIL}} with the MTD and ill see what i can do"
 
-**If no ZBL but paid off:**
-> "try to get a zero balance letter from them, itll help a lot"
+**Settled/paying it off through attorney (no ZBL):**
+> "if i do get a deal its going to be short term - probably 12-16 weeks at best, maybe 50 days. does that work?"
 
-**If still open/unpaid:**
-> "thats gonna be tough, most lenders wont touch an open default. let me see what i can do but no promises"
+Set expectations LOW. Defaults = short terms, limited options.
+
+**Recent default (< 6 months) + still open:**
+> "thats gonna be tough with an open default, let me see what i can do but cant promise anything"
+
+**Old default (> 1 year) + paid:**
+> "since its paid off we have more options, but terms will still be tighter than usual"
+
+**Key:** Always manage expectations when there's a default. Don't promise amounts or terms you can't deliver. Short term (12-16 weeks / 50 days) is the reality.
 
 ---
 
