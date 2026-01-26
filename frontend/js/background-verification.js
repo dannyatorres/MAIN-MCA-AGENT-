@@ -71,7 +71,7 @@ async function pollJobStatus(jobId) {
         progressBar.style.width = `${data.progress}%`;
         status.textContent = `Verifying records... ${data.completed}/${data.total} (${data.progress}%)`;
 
-        if (data.status === 'complete') {
+if (data.status === 'complete' && pollInterval) {
             clearInterval(pollInterval);
             pollInterval = null;
             status.textContent = 'Complete! Downloading...';
