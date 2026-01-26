@@ -63,6 +63,8 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
     let importId = null;
     const errors = [];
     let importedCount = 0;
+    let skippedNoPhone = 0;
+    let skippedDuplicate = 0;
 
     try {
         if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
@@ -116,7 +118,11 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
 
                 // FIXED: Strictly require a phone number.
                 // If phone is missing, skip this row immediately to prevent crashing.
-                if (!phone) return;
+                if (!phone) {
+                    skippedNoPhone++;
+                    console.log(`⏭️ Row ${index + 1}: Skipped - no phone number`);
+                    return;
+                }
 
                 // Clean Dates
                 const rawDob = getFuzzyValue(row, ['DOB', 'Date of Birth']);
@@ -176,6 +182,15 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 errors.push({ row: index + 1, error: err.message });
             }
         });
+
+        console.log(`📊 Mapping Summary:`);
+        console.log(`   - Total rows in CSV: ${rows.length}`);
+        console.log(`   - Valid leads mapped: ${validLeads.length}`);
+        console.log(`   - Skipped (no phone): ${skippedNoPhone}`);
+        console.log(`   - Mapping errors: ${errors.length}`);
+        if (errors.length > 0) {
+            console.log(`   - Error details:`, errors);
+        }
 
         // 4. Bulk Insert
         const BATCH_SIZE = 500;
@@ -269,8 +284,12 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                         last_activity = NOW()
                 `;
 
-                await db.query(query, convValues);
+                const result = await db.query(query + ' RETURNING (xmax = 0) AS inserted', convValues);
+                const inserted = result.rows.filter(r => r.inserted).length;
+                const updated = result.rows.length - inserted;
                 importedCount += batch.length;
+                skippedDuplicate += updated;
+                console.log(`📥 Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${inserted} new, ${updated} updated (duplicates)`);
             }
         }
 
@@ -279,7 +298,22 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
 
         await db.query(`UPDATE csv_imports SET status = 'completed', imported_rows = $1 WHERE id = $2`, [importedCount, importId]);
 
-        res.json({ success: true, import_id: importId, imported_count: importedCount, errors });
+        console.log(`✅ Import Complete:`);
+        console.log(`   - CSV rows: ${rows.length}`);
+        console.log(`   - Skipped (no phone): ${skippedNoPhone}`);
+        console.log(`   - Skipped (duplicates): ${skippedDuplicate}`);
+        console.log(`   - New records created: ${importedCount - skippedDuplicate}`);
+        console.log(`   - Records updated: ${skippedDuplicate}`);
+
+        res.json({
+            success: true,
+            import_id: importId,
+            imported_count: importedCount,
+            skipped_no_phone: skippedNoPhone,
+            duplicates_updated: skippedDuplicate,
+            new_records: importedCount - skippedDuplicate,
+            errors
+        });
 
     } catch (error) {
         console.error('❌ Import Error:', error);
