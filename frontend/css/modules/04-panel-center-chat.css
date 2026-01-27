@@ -878,13 +878,6 @@
     flex-direction: row-reverse; /* Trash left, Time right (optional, or keep standard) */
 }
 
-.message.ai-sent .message-wrapper {
-    border-left: 2px solid #8b5cf6; /* purple accent for AI */
-}
-
-.message.user-sent .message-wrapper {
-    border-left: 2px solid #10b981; /* green accent for human */
-}
 
 /* MMS / Image Messages */
 .message-media {
