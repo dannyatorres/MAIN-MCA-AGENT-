@@ -818,6 +818,11 @@
     transition: all 0.2s ease-in-out;
 }
 
+.sender-badge {
+    font-size: 12px;
+    margin-right: 4px;
+}
+
 /* Reveal smoothly on hover */
 .message-wrapper:hover .message-meta {
     opacity: 1;
@@ -871,6 +876,14 @@
 .message.inbound .message-meta {
     justify-content: flex-start; /* Align left for their messages */
     flex-direction: row-reverse; /* Trash left, Time right (optional, or keep standard) */
+}
+
+.message.ai-sent .message-wrapper {
+    border-left: 2px solid #8b5cf6; /* purple accent for AI */
+}
+
+.message.user-sent .message-wrapper {
+    border-left: 2px solid #10b981; /* green accent for human */
 }
 
 /* MMS / Image Messages */

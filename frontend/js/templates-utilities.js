@@ -494,12 +494,17 @@ class Templates {
         }
 
         // 3. Return combined HTML (no ghost bubble for image-only messages)
+        const isAI = !isInbound && ['ai', 'morning_agent', 'system'].includes(message.sent_by);
+        const isHuman = !isInbound && message.sent_by === 'user';
+        const senderLabel = isInbound ? '' : (isAI ? '🤖' : (isHuman ? '👤' : '⚙️'));
+        
         return `
-            <div class="message ${isInbound ? 'inbound' : 'outbound'}" data-message-id="${message.id}">
+            <div class="message ${isInbound ? 'inbound' : 'outbound'} ${isAI ? 'ai-sent' : ''}" data-message-id="${message.id}">
                 <div class="message-wrapper">
                     ${mediaHtml}
                     ${contentHtml}
                     <div class="message-meta">
+                        ${senderLabel ? `<span class="sender-badge">${senderLabel}</span>` : ''}
                         <span class="timestamp">${timestamp}</span>
                         <button class="delete-message-btn"
                                 data-message-id="${message.id}"

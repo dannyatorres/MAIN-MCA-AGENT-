@@ -331,6 +331,17 @@
     padding: 0 4px;
 }
 
+.message-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sender-badge {
+    font-size: 12px;
+    margin-right: 4px;
+}
+
 /* Inbound (Gray) */
 .message.inbound {
     align-items: flex-start;
@@ -361,6 +372,14 @@
     color: white;
     border-radius: 18px 18px 4px 18px;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.message.ai-sent .message-wrapper {
+    border-left: 2px solid #8b5cf6; /* purple accent for AI */
+}
+
+.message.user-sent .message-wrapper {
+    border-left: 2px solid #10b981; /* green accent for human */
 }
 
 /* Pending (Sending) */
