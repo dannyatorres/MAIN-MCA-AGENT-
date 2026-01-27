@@ -533,8 +533,56 @@ class LenderAdmin {
 
     async deleteLender(id, name) {
         if (!confirm(`Delete ${name}?`)) return;
-        await this.system.apiCall(`/api/lenders/${id}`, { method: 'DELETE' });
-        this.loadLendersList();
+
+        // Find the row and animate out immediately (optimistic)
+        const row = document.querySelector(`[onclick*="deleteLender('${id}'"]`)?.closest('.selection-item, .lender-list-row');
+        if (row) {
+            row.style.transition = 'all 0.3s ease';
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(20px)';
+            row.style.maxHeight = row.offsetHeight + 'px';
+            setTimeout(() => {
+                row.style.maxHeight = '0';
+                row.style.padding = '0';
+                row.style.margin = '0';
+                row.style.borderWidth = '0';
+            }, 150);
+        }
+
+        // Also remove from local cache
+        const originalLenders = this.allLenders ? [...this.allLenders] : null;
+        if (this.allLenders) {
+            this.allLenders = this.allLenders.filter(l => l.id !== id);
+        }
+
+        try {
+            await this.system.apiCall(`/api/lenders/${id}`, { method: 'DELETE' });
+
+            // Fully remove after animation completes
+            setTimeout(() => row?.remove(), 300);
+
+            this.system.utils.showNotification(`${name} deleted`, 'success');
+        } catch (error) {
+            console.error('Delete error:', error);
+
+            // Restore on failure
+            if (originalLenders) {
+                this.allLenders = originalLenders;
+            }
+
+            // Restore row visibility
+            if (row) {
+                row.style.transition = 'all 0.2s ease';
+                row.style.opacity = '1';
+                row.style.transform = 'translateX(0)';
+                row.style.maxHeight = '';
+                row.style.padding = '';
+                row.style.margin = '';
+                row.style.borderWidth = '';
+            }
+
+            this.system.utils.showNotification('Failed to delete: ' + error.message, 'error');
+        }
     }
 
     async editLender(lenderId) {
