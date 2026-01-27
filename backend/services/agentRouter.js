@@ -35,7 +35,9 @@ const STATE_OWNERSHIP = {
     'VETTING': 'VETTER',
     'VETTING_NUDGE_1': 'VETTER',
     'VETTING_NUDGE_2': 'VETTER',
-    'SUBMITTED': 'VETTER',
+
+    // Waiting for lender response (no AI)
+    'SUBMITTED': 'LOCKED',
 
     // Agent 3: Negotiator
     'OFFER_RECEIVED': 'NEGOTIATOR',
