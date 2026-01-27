@@ -678,3 +678,26 @@
     display: flex;
     gap: 12px;
 }
+
+/* Force scrollbar styling for Network Directory */
+#networkDirectoryModal .admin-list {
+    scrollbar-width: thin;
+    scrollbar-color: #30363d transparent;
+}
+
+#networkDirectoryModal .admin-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#networkDirectoryModal .admin-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#networkDirectoryModal .admin-list::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+#networkDirectoryModal .admin-list::-webkit-scrollbar-thumb:hover {
+    background: #3b82f6;
+}
