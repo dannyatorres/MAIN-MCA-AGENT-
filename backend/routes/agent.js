@@ -18,13 +18,22 @@ router.post('/trigger', async (req, res) => {
 
     // Check lock to prevent double-sends
     const lockCheck = await db.query(
-        `SELECT ai_processing FROM conversations WHERE id = $1`,
+        `SELECT ai_processing, last_activity FROM conversations WHERE id = $1`,
         [conversation_id]
     );
 
     if (lockCheck.rows[0]?.ai_processing === true) {
-        console.log(`🔒 [${conversation_id}] Already processing - skipping`);
-        return res.json({ success: false, skipped: true, reason: 'ai_processing lock' });
+        // Check if lock is stale (older than 2 minutes)
+        const lastActivity = new Date(lockCheck.rows[0].last_activity);
+        const minutesAgo = (Date.now() - lastActivity) / 60000;
+        
+        if (minutesAgo > 2) {
+            console.log(`🔓 [${conversation_id}] Force releasing stale lock (${minutesAgo.toFixed(1)}m old)`);
+            // Continue processing - lock was stuck
+        } else {
+            console.log(`🔒 [${conversation_id}] Already processing - skipping`);
+            return res.json({ success: false, skipped: true, reason: 'ai_processing lock' });
+        }
     }
 
     // Set lock
