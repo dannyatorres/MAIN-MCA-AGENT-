@@ -66,16 +66,22 @@ class ConversationAnimator {
         if (!item) return;
 
         const nameEl = item.querySelector('.business-name');
-        if (!nameEl) return;
+        const target = nameEl || item;
+        if (!target) return;
 
         // Check if badge already exists
-        if (nameEl.querySelector(`.badge-${type}`)) return;
+        if (item.querySelector(`.badge-${type}`) || item.querySelector('.badge-offer-icon')) return;
 
         const badge = document.createElement('span');
-        badge.className = `badge-inline badge-${type} badge-animate-in`;
-        badge.textContent = type.replace(/-/g, ' ').toUpperCase();
+        if (type === 'offer') {
+            badge.className = 'badge-offer-icon badge-animate-in';
+            badge.textContent = '💰';
+        } else {
+            badge.className = `badge-inline badge-${type} badge-animate-in`;
+            badge.textContent = type.replace(/-/g, ' ').toUpperCase();
+        }
 
-        nameEl.appendChild(badge);
+        target.appendChild(badge);
         item.classList.add(`has-${type}`);
 
         // Trigger animation
@@ -89,7 +95,9 @@ class ConversationAnimator {
         const item = this.getContainer()?.querySelector(`[data-conversation-id="${conversationId}"]`);
         if (!item) return;
 
-        const badge = item.querySelector(`.badge-${type}`);
+        const badge = type === 'offer'
+            ? item.querySelector('.badge-offer-icon')
+            : item.querySelector(`.badge-${type}`);
         if (!badge) return;
 
         badge.classList.remove('badge-visible');
@@ -118,9 +126,7 @@ class ConversationAnimator {
             bubble.textContent = count;
             item.classList.add('unread');
 
-            // Pulse animation on update
-            bubble.classList.add('badge-pulse');
-            setTimeout(() => bubble.classList.remove('badge-pulse'), 300);
+            // No pulse animation in simplified badge style
         } else {
             if (bubble) {
                 bubble.classList.add('badge-animate-out');

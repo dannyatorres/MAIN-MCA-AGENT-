@@ -23,45 +23,21 @@ class BadgeManager {
         return this.toBool(conv.has_offer);
     }
 
-    hasNewBank(conv) {
-        return this.toBool(conv.has_new_bank);
-    }
-
-    getBadges(conv) {
-        return {
-            unread: this.getUnreadCount(conv),
-            offer: this.hasOffer(conv),
-            newBank: this.hasNewBank(conv)
-        };
-    }
-
     getRowClasses(conv, isSelected = false) {
-        const badges = this.getBadges(conv);
         const classes = [];
         if (isSelected) classes.push('active');
-        if (badges.unread > 0) classes.push('unread');
-        if (badges.offer) classes.push('has-offer');
-        if (badges.newBank) classes.push('has-new-bank');
+        if (this.getUnreadCount(conv) > 0) classes.push('unread');
+        if (this.hasOffer(conv)) classes.push('has-offer');
         return classes.join(' ');
-    }
-
-    renderInlineBadges(conv) {
-        const badges = this.getBadges(conv);
-        let html = '';
-        if (badges.offer) {
-            html += `<span class="badge-inline badge-offer badge-visible">OFFER</span>`;
-        }
-        if (badges.newBank) {
-            html += `<span class="badge-inline badge-new-bank badge-visible">NEW BANK</span>`;
-        }
-        return html;
     }
 
     renderUnreadBubble(conv) {
         const count = this.getUnreadCount(conv);
-        return count > 0
-            ? `<div class="conversation-badge badge-visible">${count}</div>`
-            : '';
+        return count > 0 ? `<div class="conversation-badge">${count}</div>` : '';
+    }
+
+    renderOfferIcon(conv) {
+        return this.hasOffer(conv) ? `<span class="badge-offer-icon">💰</span>` : '';
     }
 
     // OPTIMISTIC: Update immediately, animate, then sync with server

@@ -151,10 +151,7 @@ class WebSocketManager {
                     }
                     break;
                 case 'new_bank':
-                    conv.has_new_bank = true;
-                    if (this.app.conversationUI.animator) {
-                        this.app.conversationUI.animator.addBadge(convoId, 'new-bank');
-                    }
+                    // intentionally ignored for now
                     break;
             }
         });

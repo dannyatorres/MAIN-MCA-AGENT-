@@ -595,100 +595,51 @@ body.delete-mode .conversation-item:hover {
     background: var(--primary-700, #2563eb);
 }
 
-/* Conversation Badge (Unread Count) */
+/* ==========================================================================
+   BADGES - Simplified
+   ========================================================================== */
+
+/* --- UNREAD COUNT (Red, top right) --- */
 .conversation-badge {
     position: absolute;
-    right: 40px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #3b82f6;
+    top: 12px;
+    right: 50px;
+    background: #ef4444;
     color: white;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     min-width: 20px;
     height: 20px;
+    padding: 0 6px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 6px;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
-/* Badge animations */
-.badge-inline,
-.conversation-badge {
-    opacity: 0;
-    transform: scale(0.5);
-    transition: opacity 200ms ease, transform 200ms ease;
+/* --- OFFER (Money bag, bottom right) --- */
+.badge-offer-icon {
+    position: absolute;
+    bottom: 12px;
+    right: 16px;
+    font-size: 14px;
+    opacity: 0.85;
 }
 
-.badge-visible {
-    opacity: 1;
-    transform: scale(1);
-}
-
-.badge-animate-out {
-    opacity: 0;
-    transform: scale(0.5);
-}
-
-.badge-pulse {
-    animation: pulse 300ms ease;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-}
-
-/* Row highlight flash */
-.conversation-item.highlight-flash {
-    animation: flash 1000ms ease;
-}
-
-@keyframes flash {
-    0% { background-color: rgba(34, 197, 94, 0.3); }
-    100% { background-color: transparent; }
-}
-
-/* Inline badges (next to business name) */
-.badge-inline {
-    display: inline-block;
-    font-size: 9px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 3px;
-    margin-left: 6px;
-    text-transform: uppercase;
-    vertical-align: middle;
-}
-
-.badge-offer {
-    background: #22c55e;
-    color: white;
-}
-
-.badge-new-bank {
-    background: #f59e0b;
-    color: white;
-}
-
-/* Row states */
+/* Green left border when has offer */
 .conversation-item.has-offer {
-    border-left: 3px solid #22c55e;
+    border-left: 3px solid #22c55e !important;
 }
 
-.conversation-item.has-new-bank {
-    border-left: 3px solid #f59e0b;
+/* --- ANIMATIONS --- */
+.conversation-item.highlight-flash {
+    animation: row-flash 1000ms ease;
 }
 
-.conversation-item.unread {
-    background: rgba(59, 130, 246, 0.05);
-}
-
-.conversation-badge.badge-visible {
-    transform: translateY(-50%) scale(1);
+@keyframes row-flash {
+    0% { background-color: rgba(34, 197, 94, 0.25); }
+    100% { background-color: transparent; }
 }
 
 /* Snappy, responsive conversation items */

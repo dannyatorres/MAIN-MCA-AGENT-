@@ -395,8 +395,8 @@ class ConversationCore {
         // Badge system - single source of truth
         const isSelected = String(this.currentConversationId) === String(conv.id);
         const rowClasses = this.badges.getRowClasses(conv, isSelected);
-        const inlineBadges = this.badges.renderInlineBadges(conv);
         const unreadBubble = this.badges.renderUnreadBubble(conv);
+        const offerIcon = this.badges.renderOfferIcon(conv);
 
         return `
             <div class="conversation-item ${rowClasses}"
@@ -404,7 +404,7 @@ class ConversationCore {
                 <div class="conversation-avatar"><div class="avatar-circle">${safeInitials}</div></div>
                 <div class="conversation-content">
                     <div class="conversation-header">
-                        <div class="business-name">${safeName}${inlineBadges}</div>
+                        <div class="business-name">${safeName}</div>
                         <div class="conversation-time">${timeSince(conv.last_activity)}</div>
                     </div>
                     <div class="message-preview-row">
@@ -423,6 +423,7 @@ class ConversationCore {
                     <input type="checkbox" class="delete-checkbox" data-conversation-id="${safeId}" ${isChecked}>
                 </div>
                 ${unreadBubble}
+                ${offerIcon}
             </div>
         `;
     }
