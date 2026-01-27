@@ -232,7 +232,9 @@ router.post('/execute-action', async (req, res) => {
         'insert_offer': { table: 'lender_submissions', type: 'insert' },
         'update_offer': { table: 'lender_submissions', type: 'update' },
         'update_deal': { table: 'conversations', type: 'update' },
-        'append_note': { table: 'conversations', type: 'append' }
+        'append_note': { table: 'conversations', type: 'append' },
+        'insert_bank_rule': { table: 'bank_rules', type: 'insert' },
+        'update_bank_rule': { table: 'bank_rules', type: 'update' }
     };
 
     if (!ALLOWED_ACTIONS[action]) {
@@ -364,6 +366,89 @@ router.post('/execute-action', async (req, res) => {
                 `, [data.note, conversationId]);
 
                 result = { message: `Note added` };
+                break;
+            }
+
+            case 'insert_bank_rule': {
+                // Check if bank already exists
+                const existingBank = await db.query(
+                    `SELECT id FROM bank_rules WHERE LOWER(bank_name) = LOWER($1)`,
+                    [data.bank_name]
+                );
+
+                if (existingBank.rows.length > 0) {
+                    return res.status(400).json({
+                        success: false,
+                        error: `Bank rule for ${data.bank_name} already exists. Use update instead.`
+                    });
+                }
+
+                await db.query(`
+                    INSERT INTO bank_rules (
+                        bank_name, aliases, neg_days_source, neg_days_location, 
+                        neg_days_extract_rule, intraday_warning, revenue_source, 
+                        revenue_location, token_cost, notes, created_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+                `, [
+                    data.bank_name,
+                    data.aliases || [data.bank_name.toUpperCase()],
+                    data.neg_days_source || 'transaction_list',
+                    data.neg_days_location || null,
+                    data.neg_days_extract_rule || null,
+                    data.intraday_warning || false,
+                    data.revenue_source || 'transaction_list',
+                    data.revenue_location || null,
+                    data.token_cost || 'medium',
+                    data.notes || null
+                ]);
+
+                // Remove from pending if it was there
+                await db.query(
+                    `UPDATE pending_bank_rules SET status = 'added' WHERE LOWER(bank_name) = LOWER($1)`,
+                    [data.bank_name]
+                );
+
+                result = { message: `Bank rule added for ${data.bank_name}` };
+                break;
+            }
+
+            case 'update_bank_rule': {
+                const updates = [];
+                const values = [];
+                let idx = 1;
+
+                const allowedFields = [
+                    'aliases', 'neg_days_source', 'neg_days_location',
+                    'neg_days_extract_rule', 'intraday_warning', 'revenue_source',
+                    'revenue_location', 'token_cost', 'notes'
+                ];
+
+                for (const [key, value] of Object.entries(data)) {
+                    if (allowedFields.includes(key) && value !== undefined) {
+                        updates.push(`${key} = $${idx}`);
+                        values.push(value);
+                        idx++;
+                    }
+                }
+
+                if (updates.length === 0) {
+                    return res.status(400).json({ success: false, error: 'No valid fields to update' });
+                }
+
+                updates.push(`updated_at = NOW()`);
+                values.push(data.bank_name);
+
+                const updateResult = await db.query(`
+                    UPDATE bank_rules
+                    SET ${updates.join(', ')}
+                    WHERE LOWER(bank_name) = LOWER($${idx})
+                `, values);
+
+                if (updateResult.rowCount === 0) {
+                    return res.status(404).json({ success: false, error: `No bank rule found for ${data.bank_name}` });
+                }
+
+                result = { message: `Bank rule updated for ${data.bank_name}` };
                 break;
             }
         }

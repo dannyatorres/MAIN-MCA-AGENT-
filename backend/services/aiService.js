@@ -233,6 +233,23 @@ Valid states: NEW, CONTACTED, DOCS_IN, OFFER_RECEIVED, CONTRACTED, FUNDED, DEAD,
 4. append_note - Add a note (use ONLY for general notes, NOT for offer data)
 {"message": "I'll add that note.", "action": {"action": "append_note", "data": {"note": "Client prefers weekly payments"}, "confirm_text": "Add note: Client prefers weekly payments?"}}
 
+5. insert_bank_rule - Add new bank parsing rules
+{"message": "I'll add rules for Chase.", "action": {"action": "insert_bank_rule", "data": {"bank_name": "Chase", "aliases": ["CHASE", "JPMORGAN CHASE"], "neg_days_source": "daily_balance_table", "neg_days_location": "bottom of statement", "neg_days_extract_rule": "Extract Daily Ending Balance table only", "intraday_warning": false, "token_cost": "low", "notes": "Clean format"}, "confirm_text": "Add bank rule for Chase?\\n- Neg days: daily balance table (bottom)\\n- Token cost: low"}}
+
+6. update_bank_rule - Modify existing bank rules  
+{"message": "I'll update the Chase rules.", "action": {"action": "update_bank_rule", "data": {"bank_name": "Chase", "neg_days_location": "page 2"}, "confirm_text": "Update Chase: neg days location to page 2?"}}
+
+BANK RULE FIELDS:
+- bank_name: Required, the display name
+- aliases: Array of strings to match in OCR text ["CHASE", "JPMORGAN"]
+- neg_days_source: "daily_balance_table" | "transaction_list" | "balance_summary"
+- neg_days_location: Where to find it ("bottom of statement", "first page", etc.)
+- neg_days_extract_rule: Instructions for what to extract
+- intraday_warning: true if bank shows intraday negatives that may recover
+- revenue_source: Usually "transaction_list"
+- token_cost: "low" | "medium" | "high" based on how much text needed
+- notes: Any special handling instructions
+
 RULES:
 - If user pastes offer details → use insert_offer or update_offer, NOT append_note
 - If a lender submission already exists for that lender, use update_offer

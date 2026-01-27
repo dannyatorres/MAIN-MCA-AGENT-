@@ -13,6 +13,7 @@ class ConversationCore {
         this.currentConversationId = null;
         this.selectedConversation = null;
         this.selectedForDeletion = new Set();
+        this.badges = window.badgeManager || new BadgeManager();
 
         // Server handles badges now - no localStorage
 
@@ -48,19 +49,27 @@ class ConversationCore {
         }
 
         // Update UI immediately
-        this.updateBadgeUI(id, conv?.unread_count || 1);
+        const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
+        if (item) {
+            item.classList.add('unread');
+            const count = this.badges.getUnreadCount(conv);
+            let badge = item.querySelector('.conversation-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'conversation-badge';
+                item.appendChild(badge);
+            }
+            badge.textContent = count;
+        }
     }
 
     // Call this when user clicks a conversation
     async clearBadge(conversationId) {
         const id = String(conversationId);
-
-        // Update local cache
         const conv = this.conversations.get(id);
-        if (conv) {
-            conv.unread_count = 0;
-            this.conversations.set(id, conv);
-        }
+
+        // Update local state
+        this.badges.clearUnread(conv);
 
         // Update UI
         const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
@@ -70,7 +79,7 @@ class ConversationCore {
             if (badge) badge.remove();
         }
 
-        // Tell server (fire and forget)
+        // Tell server
         try {
             await this.parent.apiCall(`/api/conversations/${id}/mark-read`, { method: 'POST' });
         } catch (e) {
@@ -80,39 +89,27 @@ class ConversationCore {
 
     async clearOfferBadge(conversationId) {
         const id = String(conversationId);
-
         const conv = this.conversations.get(id);
-        if (conv && conv.has_offer) {
-            conv.has_offer = false;
-            this.conversations.set(id, conv);
 
-            const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
-            if (item) {
-                item.classList.remove('has-offer');
-                const badge = item.querySelector('.offer-badge-small');
-                if (badge) badge.remove();
-            }
+        if (!conv || !this.badges.hasOffer(conv)) return;
 
-            try {
-                await this.parent.apiCall(`/api/conversations/${id}/clear-offer`, { method: 'POST' });
-            } catch (e) {
-                console.error('Failed to clear offer:', e);
-            }
+        // Update local state
+        this.badges.clearOffer(conv);
+
+        // Update UI
+        const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
+        if (item) {
+            item.classList.remove('has-offer');
+            const badge = item.querySelector('.badge-offer');
+            if (badge) badge.remove();
         }
-    }
 
-    updateBadgeUI(conversationId, count) {
-        const item = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
-        if (!item) return;
-
-        item.classList.add('unread');
-        let badge = item.querySelector('.conversation-badge');
-        if (!badge) {
-            badge = document.createElement('div');
-            badge.className = 'conversation-badge';
-            item.appendChild(badge);
+        // Tell server
+        try {
+            await this.parent.apiCall(`/api/conversations/${id}/clear-offer`, { method: 'POST' });
+        } catch (e) {
+            console.error('Failed to clear offer:', e);
         }
-        badge.textContent = count;
     }
 
     // ============================================================
@@ -432,30 +429,29 @@ class ConversationCore {
             return match ? `(${match[1]}) ${match[2]}-${match[3]}` : phone;
         };
 
-        // 1. DATA PREPARATION (Defense in Depth)
-        const rawInitials = (conv.business_name || 'U').substring(0,2).toUpperCase();
+        // Data prep
+        const rawInitials = (conv.business_name || 'U').substring(0, 2).toUpperCase();
         const safeInitials = this.escapeHtml(rawInitials);
-
         const safeName = this.escapeHtml(conv.business_name || 'Unknown');
         const safeMessage = this.escapeHtml(conv.last_message || 'No messages yet');
         const safePhone = this.escapeHtml(formatPhone(conv.lead_phone));
-
         const safeId = this.escapeHtml(conv.id);
         const safeCid = this.escapeHtml(conv.display_id || String(conv.id).slice(-6));
-
-        const isSelected = String(this.currentConversationId) === String(conv.id) ? 'active' : '';
         const isChecked = this.selectedForDeletion.has(String(conv.id)) ? 'checked' : '';
-        const unread = conv.unread_count || 0;
 
-        let offerBadge = conv.has_offer ? `<span class="offer-badge-small">OFFER</span>` : '';
+        // Badge system - single source of truth
+        const isSelected = String(this.currentConversationId) === String(conv.id);
+        const rowClasses = this.badges.getRowClasses(conv, isSelected);
+        const inlineBadges = this.badges.renderInlineBadges(conv);
+        const unreadBubble = this.badges.renderUnreadBubble(conv);
 
         return `
-            <div class="conversation-item ${isSelected} ${unread > 0 ? 'unread' : ''} ${conv.has_offer ? 'has-offer' : ''}"
+            <div class="conversation-item ${rowClasses}"
                  data-conversation-id="${safeId}">
                 <div class="conversation-avatar"><div class="avatar-circle">${safeInitials}</div></div>
                 <div class="conversation-content">
                     <div class="conversation-header">
-                        <div class="business-name">${safeName}${offerBadge}</div>
+                        <div class="business-name">${safeName}${inlineBadges}</div>
                         <div class="conversation-time">${timeSince(conv.last_activity)}</div>
                     </div>
                     <div class="message-preview-row">
@@ -473,7 +469,7 @@ class ConversationCore {
                 <div class="conversation-checkbox">
                     <input type="checkbox" class="delete-checkbox" data-conversation-id="${safeId}" ${isChecked}>
                 </div>
-                ${unread > 0 ? `<div class="conversation-badge">${unread}</div>` : ''}
+                ${unreadBubble}
             </div>
         `;
     }

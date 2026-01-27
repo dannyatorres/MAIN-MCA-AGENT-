@@ -36,6 +36,7 @@ Timestamp: ${new Date().toISOString()}
 }
 const { DocumentProcessorServiceClient } = require('@google-cloud/documentai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { learnFromStatement } = require('./bankRuleLearner');
 
 // Load environment variables
 require('dotenv').config();
@@ -216,6 +217,13 @@ class FCSService {
             }
 
             if (extractedData.length === 0) throw new Error('No text extracted from any documents');
+
+            // Shadow learner (non-blocking, won't affect FCS)
+            extractedData.forEach(d => {
+                learnFromStatement(d.text, conversationId).catch(err => {
+                    console.log('[Shadow] Bank learner error (ignored):', err.message);
+                });
+            });
 
             // 4. Generate Analysis (GEMINI ONLY)
             const fcsAnalysisRaw = await this.generateFCSAnalysis(extractedData, businessName);
