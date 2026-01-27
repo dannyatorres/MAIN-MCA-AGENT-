@@ -19,7 +19,7 @@ const STATE_OWNERSHIP = {
     'REPLIED_NUDGE_2': 'PRE_VETTER',
 
     // Waiting for FCS/strategy (dispatcher handles)
-    'PRE_VETTED': 'LOCKED',
+    'PRE_VETTED': 'VETTER',
 
     // Cold drip (dispatcher handles)
     'SENT_HOOK': 'LOCKED',

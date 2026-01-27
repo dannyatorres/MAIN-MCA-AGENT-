@@ -77,7 +77,7 @@ const BASE_TOOLS = [
                 properties: {
                     status: {
                         type: "string",
-                        enum: ["INTERESTED", "QUALIFIED", "FCS_RUNNING", "NEGOTIATING", "DEAD", "ARCHIVED", "HUMAN_REVIEW"],
+                        enum: ["DEAD", "HUMAN_REVIEW"],
                         description: "The new status."
                     }
                 },

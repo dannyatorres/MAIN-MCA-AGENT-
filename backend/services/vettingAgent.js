@@ -16,8 +16,13 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // ==========================================
 // STATES THIS AGENT OWNS
 // ==========================================
-const VETTING_STATES = ['PRE_VETTED', 'VETTING'];
+const VETTING_STATES = ['PRE_VETTED', 'VETTING', 'HAIL_MARY', 'HAIL_MARY_FU_1'];
 const STALL_STATES = ['SUBMITTED']; // Can respond but only to stall
+const PRE_VETTED_STALL_MESSAGES = [
+    "running numbers now, will text shortly",
+    "give me a few mins, pulling numbers",
+    "one sec, checking the numbers"
+];
 
 // ==========================================
 // TOOLS FOR VETTING AGENT
@@ -224,6 +229,14 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                 gamePlan = JSON.parse(gamePlan);
             }
             console.log(`🎖️ Strategy Loaded: Grade ${strategyMeta.lead_grade} | ${strategyMeta.strategy_type}`);
+        }
+        if (!strategyRes.rows[0] && currentState === 'PRE_VETTED' && !isManualCommand) {
+            console.log('⏳ [VETTING AGENT] Strategy not ready - stalling response');
+            const stallMessage = PRE_VETTED_STALL_MESSAGES[Math.floor(Math.random() * PRE_VETTED_STALL_MESSAGES.length)];
+            return {
+                shouldReply: true,
+                content: stallMessage
+            };
         }
 
         // =================================================================
