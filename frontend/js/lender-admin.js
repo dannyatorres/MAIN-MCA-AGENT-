@@ -3,8 +3,6 @@
 
 class LenderAdmin {
     constructor() {
-        // Inject the "Clicky" feel CSS immediately
-        this.injectStyles();
     }
 
     // --- HELPER: Get Live System ---
@@ -16,132 +14,44 @@ class LenderAdmin {
         throw new Error("System not ready");
     }
 
-    // --- STYLE INJECTION (Makes buttons feel alive) ---
-    injectStyles() {
-        const styleId = 'lender-admin-styles';
-        if (document.getElementById(styleId)) return;
-
-        const css = `
-            /* Make buttons feel tactile */
-            .btn, .action-link, .modal-close {
-                transition: transform 0.08s ease-out, filter 0.1s ease, background-color 0.2s !important;
-                cursor: pointer;
-                user-select: none;
-            }
-
-            /* The "Click" Effect */
-            .btn:active, .action-link:active, .modal-close:active {
-                transform: scale(0.95) !important;
-                filter: brightness(0.85) !important;
-            }
-
-            /* Hover effects for text links */
-            .action-link:hover {
-                text-decoration: underline;
-                filter: brightness(1.2);
-            }
-
-            /* Loading spinner improvement */
-            .loading-spinner {
-                border: 3px solid rgba(255, 255, 255, 0.1);
-                border-radius: 50%;
-                border-top: 3px solid #3b82f6;
-                width: 24px;
-                height: 24px;
-                animation: spin 0.8s linear infinite;
-                margin: 0 auto 10px;
-            }
-
-            .lender-menu-options {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .lender-menu-item {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                padding: 16px 20px;
-                cursor: pointer;
-                border-bottom: 1px solid #30363d;
-                transition: background 0.15s;
-            }
-
-            .lender-menu-item:last-child {
-                border-bottom: none;
-            }
-
-            .lender-menu-item:hover {
-                background: #21262d;
-            }
-
-            .lender-menu-item i:first-child {
-                font-size: 20px;
-                width: 24px;
-                text-align: center;
-            }
-
-            .menu-item-title {
-                font-size: 14px;
-                font-weight: 500;
-                color: #e6edf3;
-            }
-
-            .menu-item-desc {
-                font-size: 12px;
-                color: #8b949e;
-                margin-top: 2px;
-            }
-
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        `;
-
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.type = 'text/css';
-        style.appendChild(document.createTextNode(css));
-        document.head.appendChild(style);
-    }
-
     // --- Entry Point ---
     openManagementModal() {
         console.log('🏛️ Opening Lender Menu...');
 
-        let modal = document.getElementById('lenderMenuModal');
-        if (modal) modal.remove();
+        document.getElementById('lenderMenuModal')?.remove();
 
         const modalHTML = `
-            <div id="lenderMenuModal" class="modal" style="display:flex; z-index: 2000;">
-                <div class="modal-content" style="max-width: 400px; background: #161b22; border-radius: 12px;">
-                    <div class="modal-header" style="border-bottom: 1px solid #30363d;">
+            <div id="lenderMenuModal" class="modal lender-admin-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
                         <h3>Lender Management</h3>
                         <button class="modal-close" onclick="document.getElementById('lenderMenuModal').remove()">×</button>
                     </div>
-                    <div class="modal-body" style="padding: 0;">
+                    <div class="modal-body">
                         <div class="lender-menu-options">
                             <div class="lender-menu-item" onclick="window.commandCenter.lenderAdmin.openNetworkDirectory()">
-                                <i class="fas fa-building" style="color: #3b82f6;"></i>
-                                <div>
+                                <i class="fas fa-building icon-blue"></i>
+                                <div class="menu-item-content">
                                     <div class="menu-item-title">Network Directory</div>
                                     <div class="menu-item-desc">Add, edit, or remove lenders</div>
                                 </div>
-                                <i class="fas fa-chevron-right" style="opacity: 0.5;"></i>
+                                <i class="fas fa-chevron-right chevron"></i>
                             </div>
                             <div class="lender-menu-item" onclick="window.commandCenter.lenderAdmin.openRuleSuggestions()">
-                                <i class="fas fa-brain" style="color: #8b5cf6;"></i>
-                                <div>
+                                <i class="fas fa-brain icon-purple"></i>
+                                <div class="menu-item-content">
                                     <div class="menu-item-title">AI Rule Suggestions</div>
                                     <div class="menu-item-desc">Review AI-detected patterns</div>
                                 </div>
-                                <i class="fas fa-chevron-right" style="opacity: 0.5;"></i>
+                                <i class="fas fa-chevron-right chevron"></i>
                             </div>
                             <div class="lender-menu-item" onclick="window.commandCenter.lenderAdmin.openNeedsReview()">
-                                <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
-                                <div>
+                                <i class="fas fa-exclamation-triangle icon-amber"></i>
+                                <div class="menu-item-content">
                                     <div class="menu-item-title">Needs Review</div>
                                     <div class="menu-item-desc">Declines requiring manual action</div>
                                 </div>
-                                <i class="fas fa-chevron-right" style="opacity: 0.5;"></i>
+                                <i class="fas fa-chevron-right chevron"></i>
                             </div>
                         </div>
                     </div>
@@ -153,15 +63,13 @@ class LenderAdmin {
 
     openNetworkDirectory() {
         document.getElementById('lenderMenuModal')?.remove();
-
-        let modal = document.getElementById('networkDirectoryModal');
-        if (modal) modal.remove();
+        document.getElementById('networkDirectoryModal')?.remove();
 
         const modalHTML = `
-            <div id="networkDirectoryModal" class="modal" style="display:flex; z-index: 2000;">
-                <div class="modal-content admin-modal">
+            <div id="networkDirectoryModal" class="modal lender-admin-modal">
+                <div class="modal-content modal-lg">
                     <div class="modal-header">
-                        <h3><i class="fas fa-building" style="margin-right: 8px; color: #3b82f6;"></i>Network Directory</h3>
+                        <h3><i class="fas fa-building icon-blue"></i> Network Directory</h3>
                         <button class="modal-close" onclick="document.getElementById('networkDirectoryModal').remove()">×</button>
                     </div>
                     <div class="modal-body">
@@ -176,7 +84,7 @@ class LenderAdmin {
                             </div>
                         </div>
                         <div id="networkDirectoryContainer" class="admin-list">
-                            <div class="loading-state"><div class="loading-spinner"></div> Loading...</div>
+                            <div class="admin-loading"><div class="loading-spinner"></div> Loading...</div>
                         </div>
                     </div>
                 </div>
@@ -214,19 +122,22 @@ class LenderAdmin {
     renderLendersList(lenders, container) {
         if (!container) container = document.getElementById('networkDirectoryContainer');
         if (!lenders || lenders.length === 0) {
-            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #8b949e;">No lenders found</div>';
+            container.innerHTML = '<div class="admin-empty">No lenders found</div>';
             return;
         }
 
         container.innerHTML = lenders.map(l => `
-            <div class="selection-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;">
-                <div>
-                    <div style="font-weight: 500; color: #e6edf3;">${l.name}</div>
-                    <div style="font-size: 11px; color: #8b949e;">${l.email || 'No email'} • Tier ${l.tier || '?'}</div>
+            <div class="lender-row" data-lender-id="${l.id}">
+                <div class="lender-row-info">
+                    <div class="lender-avatar">${l.name.charAt(0).toUpperCase()}</div>
+                    <div class="lender-details">
+                        <span class="lender-name">${l.name}</span>
+                        <span class="lender-meta">${l.email || 'No email'} • Tier ${l.tier || '?'}</span>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button onclick="window.commandCenter.lenderAdmin.editLender('${l.id}')" class="action-link" style="font-size: 11px;">Edit</button>
-                    <button onclick="window.commandCenter.lenderAdmin.deleteLender('${l.id}', '${l.name}')" class="action-link" style="font-size: 11px; color: #ef4444;">Delete</button>
+                <div class="lender-actions">
+                    <button onclick="window.commandCenter.lenderAdmin.editLender('${l.id}')" class="action-link">Edit</button>
+                    <button onclick="window.commandCenter.lenderAdmin.deleteLender('${l.id}', '${l.name}')" class="action-link danger">Delete</button>
                 </div>
             </div>
         `).join('');
@@ -534,53 +445,28 @@ class LenderAdmin {
     async deleteLender(id, name) {
         if (!confirm(`Delete ${name}?`)) return;
 
-        // Find the row and animate out immediately (optimistic)
-        const row = document.querySelector(`[onclick*="deleteLender('${id}'"]`)?.closest('.selection-item, .lender-list-row');
-        if (row) {
-            row.style.transition = 'all 0.3s ease';
-            row.style.opacity = '0';
-            row.style.transform = 'translateX(20px)';
-            row.style.maxHeight = row.offsetHeight + 'px';
-            setTimeout(() => {
-                row.style.maxHeight = '0';
-                row.style.padding = '0';
-                row.style.margin = '0';
-                row.style.borderWidth = '0';
-            }, 150);
-        }
-
-        // Also remove from local cache
+        const row = document.querySelector(`[data-lender-id="${id}"]`);
         const originalLenders = this.allLenders ? [...this.allLenders] : null;
+
+        if (row) {
+            row.classList.add('lender-deleting');
+            setTimeout(() => row.classList.add('lender-deleting-collapse'), 150);
+        }
         if (this.allLenders) {
             this.allLenders = this.allLenders.filter(l => l.id !== id);
         }
 
         try {
             await this.system.apiCall(`/api/lenders/${id}`, { method: 'DELETE' });
-
-            // Fully remove after animation completes
             setTimeout(() => row?.remove(), 300);
-
             this.system.utils.showNotification(`${name} deleted`, 'success');
         } catch (error) {
             console.error('Delete error:', error);
-
-            // Restore on failure
-            if (originalLenders) {
-                this.allLenders = originalLenders;
-            }
-
-            // Restore row visibility
+            if (originalLenders) this.allLenders = originalLenders;
             if (row) {
-                row.style.transition = 'all 0.2s ease';
-                row.style.opacity = '1';
-                row.style.transform = 'translateX(0)';
-                row.style.maxHeight = '';
-                row.style.padding = '';
-                row.style.margin = '';
-                row.style.borderWidth = '';
+                row.classList.remove('lender-deleting', 'lender-deleting-collapse');
+                row.classList.add('lender-restore');
             }
-
             this.system.utils.showNotification('Failed to delete: ' + error.message, 'error');
         }
     }
