@@ -4,6 +4,7 @@
 const GmailInboxService = require('./gmailInboxService');
 const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
+const { updateState } = require('./stateManager');
 const { OpenAI } = require('openai');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -140,16 +141,14 @@ async function runCheck() {
     global.isProcessorRunning = true;
 
     const db = getDatabase();
-    console.log(`\n🔍 [Processor] Checking inbox at ${new Date().toLocaleTimeString()}...`);
 
     try {
         const recentEmails = await gmail.fetchEmails({ limit: 15 });
 
         if (!recentEmails || recentEmails.length === 0) {
-            console.log('   📭 No emails found in inbox.');
+            // Silent when empty
         } else {
             const newEmails = [];
-            console.log(`   📬 Fetched ${recentEmails.length} emails. Checking against DB...`);
 
             for (const email of recentEmails) {
                 const exists = await db.query('SELECT 1 FROM processed_emails WHERE message_id = $1 OR thread_id = $2', [email.id, email.threadId]);
@@ -165,13 +164,10 @@ async function runCheck() {
                 for (const email of newEmails) {
                     await processEmail(email, db);
                 }
-            } else {
-                console.log(`   ✅ All ${recentEmails.length} emails already processed. No AI calls needed.`);
             }
         }
 
         global.isProcessorRunning = false;
-        console.log(`   💤 Next check in ${CHECK_INTERVAL / 1000 / 60} minutes.\n`);
         setTimeout(runCheck, CHECK_INTERVAL);
 
     } catch (err) {
@@ -369,7 +365,8 @@ async function processEmail(email, db) {
     }
 
     if (data.category === 'OFFER') {
-        await db.query(`UPDATE conversations SET has_offer = TRUE, state = 'OFFER_RECEIVED', last_activity = NOW() WHERE id = $1`, [bestMatchId]);
+        await db.query(`UPDATE conversations SET has_offer = TRUE, last_activity = NOW() WHERE id = $1`, [bestMatchId]);
+        await updateState(bestMatchId, 'OFFER_RECEIVED', 'email_processor');
 
         // Record offer comparison for ML training
         try {
@@ -427,7 +424,6 @@ async function processEmail(email, db) {
         }
 
         if (global.io) {
-            console.log('🔴 BACKEND EMIT: refresh_lead_list', { conversation_id: bestMatchId });
             global.io.emit('refresh_lead_list', { conversationId: bestMatchId });
         }
     }
