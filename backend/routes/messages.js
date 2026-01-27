@@ -392,6 +392,7 @@ router.post('/webhook/receive', async (req, res) => {
                 sent_by, twilio_sid, media_url, timestamp, status
             )
             VALUES ($1, $2, 'inbound', $3, 'lead', $4, $5, NOW(), 'delivered')
+            ON CONFLICT (twilio_sid) DO NOTHING
             RETURNING *
         `, [
             conversation.id,
@@ -401,47 +402,68 @@ router.post('/webhook/receive', async (req, res) => {
             mediaUrlValue
         ]);
 
-        const newMessage = msgResult.rows[0];
-
-        // Track inbound SMS usage
-        const segmentCount = Math.ceil((Body || '').length / 160);
-        await trackUsage({
-            userId: conversation.assigned_user_id,
-            conversationId: conversation.id,
-            type: 'sms_inbound',
-            service: 'twilio',
-            segments: segmentCount
-        });
-
-        await db.query(`
-            UPDATE conversations
-            SET state = CASE 
-                    WHEN state IN ('NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'DEAD') 
-                    THEN 'REPLIED'
-                    ELSE state
-                END,
-                last_activity = NOW()
-            WHERE id = $1
-        `, [conversation.id]);
-
-        console.log('🔴 BACKEND EMIT: new_message (inbound)', { conversation_id: conversation.id, message_id: newMessage.id });
-        if (global.io) {
-            global.io.emit('new_message', {
-                conversation_id: conversation.id,
-                message: newMessage,
-                business_name: conversation.business_name
-            });
+        // If duplicate, skip everything
+        if (msgResult.rows.length === 0) {
+            console.log(`⏭️ Duplicate webhook ignored: ${MessageSid}`);
+            res.set('Content-Type', 'text/xml');
+            return res.send('<Response></Response>');
         }
 
+        const newMessage = msgResult.rows[0];
+
+        // RESPOND TO TWILIO IMMEDIATELY
         res.set('Content-Type', 'text/xml');
         res.send('<Response></Response>');
 
-        // AI Logic - Route through agentRouter
-        if (routeMessage) {
-            (async () => {
-                try {
+        // Everything else runs AFTER response is sent
+        setImmediate(async () => {
+            let lockSet = false;
+            try {
+                // Track inbound SMS usage
+                const segmentCount = Math.ceil((Body || '').length / 160);
+                await trackUsage({
+                    userId: conversation.assigned_user_id,
+                    conversationId: conversation.id,
+                    type: 'sms_inbound',
+                    service: 'twilio',
+                    segments: segmentCount
+                });
+
+                await db.query(`
+                    UPDATE conversations
+                    SET state = CASE 
+                            WHEN state IN ('NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'DEAD') 
+                            THEN 'REPLIED'
+                            ELSE state
+                        END,
+                        last_activity = NOW()
+                    WHERE id = $1
+                `, [conversation.id]);
+
+                console.log('🔴 BACKEND EMIT: new_message (inbound)', { conversation_id: conversation.id, message_id: newMessage.id });
+                if (global.io) {
+                    global.io.emit('new_message', {
+                        conversation_id: conversation.id,
+                        message: newMessage,
+                        business_name: conversation.business_name
+                    });
+                }
+
+                // AI Logic - Route through agentRouter
+                if (routeMessage) {
+                    const lockCheck = await db.query(`
+                        SELECT 1 FROM conversations 
+                        WHERE id = $1 AND ai_processing = true
+                    `, [conversation.id]);
+
+                    if (lockCheck.rows.length > 0) {
+                        console.log(`🔒 [${conversation.business_name}] AI already processing - skipping`);
+                        return;
+                    }
+
                     // Set lock before AI processing
                     await db.query(`UPDATE conversations SET ai_processing = true WHERE id = $1`, [conversation.id]);
+                    lockSet = true;
 
                     // Check if last message was already from us - don't double-send
                     const lastMsgCheck = await db.query(`
@@ -508,13 +530,15 @@ router.post('/webhook/receive', async (req, res) => {
                             });
                         }
                     }
-                } catch (err) {
-                    console.error('❌ AI Auto-Reply Failed:', err);
-                } finally {
+                }
+            } catch (err) {
+                console.error('❌ Post-webhook error:', err);
+            } finally {
+                if (lockSet) {
                     await db.query(`UPDATE conversations SET ai_processing = false WHERE id = $1`, [conversation.id]);
                 }
-            })();
-        }
+            }
+        });
 
     } catch (error) {
         console.error('Webhook Error:', error);
