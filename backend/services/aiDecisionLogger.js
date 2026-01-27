@@ -11,11 +11,21 @@ async function logAIDecision({
     responseSent = null,
     stateBefore = null,
     stateAfter = null,
-    tokensUsed = null
+    tokensUsed = null,
+    businessName = null,
+    instruction = null,
+    blockReason = null,
+    toolsCalled = null,
+    aiResponse = null
 }) {
     const db = getDatabase();
     
     try {
+        const finalLeadMessage = leadMessage ?? businessName ?? null;
+        const finalReasoning = reasoning ?? instruction ?? blockReason ?? null;
+        const finalToolsUsed = toolsUsed?.length ? toolsUsed : (toolsCalled || []);
+        const finalResponseSent = responseSent ?? aiResponse ?? null;
+
         await db.query(`
             INSERT INTO ai_decisions (
                 conversation_id, agent, lead_message, ai_reasoning,
@@ -25,11 +35,11 @@ async function logAIDecision({
         `, [
             conversationId,
             agent,
-            leadMessage,
-            reasoning,
-            toolsUsed,
+            finalLeadMessage,
+            finalReasoning,
+            finalToolsUsed,
             actionTaken,
-            responseSent,
+            finalResponseSent,
             stateBefore,
             stateAfter,
             tokensUsed

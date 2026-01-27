@@ -1,7 +1,7 @@
 // services/stateManager.js
 const { getDatabase } = require('./database');
 
-async function updateState(conversationId, newState, changedBy) {
+async function updateState(conversationId, newState, changedBy, reason = null) {
     const db = getDatabase();
 
     const current = await db.query(
@@ -13,7 +13,10 @@ async function updateState(conversationId, newState, changedBy) {
     const businessName = current.rows[0]?.business_name || 'Unknown';
 
     // Don't log if state isn't changing
-    if (oldState === newState) return;
+    if (oldState === newState) {
+        console.log(`📊 [${businessName}] State unchanged: ${oldState} (${changedBy})`);
+        return;
+    }
 
     await db.query(
         'INSERT INTO state_history (conversation_id, old_state, new_state, changed_by) VALUES ($1, $2, $3, $4)',
@@ -25,7 +28,7 @@ async function updateState(conversationId, newState, changedBy) {
         [newState, conversationId]
     );
 
-    console.log(`📊 [${businessName}] ${oldState} → ${newState} (${changedBy})`);
+    console.log(`📊 [${businessName}] ${oldState} → ${newState} (${changedBy})${reason ? ` | ${reason}` : ''}`);
 }
 
 module.exports = { updateState };

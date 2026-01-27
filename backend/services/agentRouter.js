@@ -74,44 +74,60 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
         const { state, ai_enabled, has_offer, business_name, first_name } = convRes.rows[0];
         const leadName = business_name || first_name || 'Unknown';
 
-        // Check if AI is globally disabled
-        if (ai_enabled === false) {
-            console.log(`⛔ [${leadName}] AI disabled`);
-            return { shouldReply: false, agent: 'DISABLED' };
-        }
-
         // Determine which agent owns this state
         const owner = STATE_OWNERSHIP[state] || 'LOCKED';
-        console.log(`📋 [${leadName}] ${state} → ${owner}`);
-
-        // Check for state/reality mismatches and auto-correct
-        const correctedOwner = await checkAndCorrectState(conversationId, state, has_offer, db);
-        const finalOwner = correctedOwner || owner;
 
         // Manual override - if systemInstruction provided, allow response
         const isManualCommand = systemInstruction && systemInstruction.length > 5;
 
+        console.log(`\n========== ROUTER: ${leadName} ==========`);
+        console.log(`📋 State: ${state} | Owner: ${owner} | AI Enabled: ${ai_enabled}`);
+        console.log(`📋 Has Offer: ${has_offer} | Manual Command: ${isManualCommand}`);
+
+        // Check if AI is globally disabled
+        if (ai_enabled === false) {
+            console.log(`⛔ [${leadName}] AI disabled`);
+            console.log(`========== END ROUTER ==========\n`);
+            return { shouldReply: false, agent: 'DISABLED' };
+        }
+
+        // Check for state/reality mismatches and auto-correct
+        const correctedOwner = await checkAndCorrectState(conversationId, state, has_offer, db);
+        const finalOwner = correctedOwner || owner;
+        if (correctedOwner) {
+            console.log(`🔄 Auto-corrected: ${owner} → ${correctedOwner}`);
+        }
+
         // Route to appropriate agent
         switch (finalOwner) {
             case 'PRE_VETTER':
+                console.log(`🎯 Routing to: PRE_VETTER`);
                 const preVetterResult = await aiAgent.processLeadWithAI(conversationId, systemInstruction);
                 if (preVetterResult.content) {
                     console.log(`📤 [${leadName}] Sending: "${preVetterResult.content.substring(0, 60)}..."`);
                 }
+                console.log(`📤 Result: shouldReply=${preVetterResult.shouldReply}, hasContent=${!!preVetterResult.content}`);
+                console.log(`========== END ROUTER ==========\n`);
                 return { ...preVetterResult, agent: 'PRE_VETTER' };
 
             case 'VETTER':
+                console.log(`🎯 Routing to: VETTER`);
                 const vetterResult = await vettingAgent.processMessage(conversationId, inboundMessage, systemInstruction);
                 if (vetterResult.content) {
                     console.log(`📤 [${leadName}] Sending: "${vetterResult.content.substring(0, 60)}..."`);
                 }
+                console.log(`📤 Result: shouldReply=${vetterResult.shouldReply}, hasContent=${!!vetterResult.content}`);
+                console.log(`========== END ROUTER ==========\n`);
                 return { ...vetterResult, agent: 'VETTER' };
 
             case 'NEGOTIATOR':
+                console.log(`🎯 Routing to: NEGOTIATOR`);
                 const negotiatorResult = await negotiatingAgent.processMessage(conversationId, inboundMessage, systemInstruction);
                 if (negotiatorResult.content) {
                     console.log(`📤 [${leadName}] Sending: "${negotiatorResult.content.substring(0, 60)}..."`);
                 }
+                console.log(`📤 Result: shouldReply=${negotiatorResult.shouldReply}, hasContent=${!!negotiatorResult.content}`);
+                console.log(`========== END ROUTER ==========\n`);
                 return { ...negotiatorResult, agent: 'NEGOTIATOR' };
 
             case 'LOCKED':
@@ -120,6 +136,7 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
 
                 if (COLD_DRIP_STATES.includes(state) && !isManualCommand) {
                     console.log(`❄️ [${leadName}] Waiting for dispatcher`);
+                    console.log(`========== END ROUTER ==========\n`);
                     return { shouldReply: false, agent: 'COLD_DRIP' };
                 }
 
@@ -128,6 +145,8 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
                     if (result.content) {
                         console.log(`📤 [${leadName}] Sending: "${result.content.substring(0, 60)}..."`);
                     }
+                    console.log(`📤 Result: shouldReply=${result.shouldReply}, hasContent=${!!result.content}`);
+                    console.log(`========== END ROUTER ==========\n`);
                     return { ...result, agent: 'PRE_VETTER' };
                 }
 
@@ -135,14 +154,18 @@ async function routeMessage(conversationId, inboundMessage, systemInstruction = 
                     // Manual command override - only for non-cold-drip locked states
                     console.log('🔓 [ROUTER] Manual override on locked state');
                     const manualResult = await vettingAgent.processMessage(conversationId, inboundMessage, systemInstruction);
+                    console.log(`📤 Result: shouldReply=${manualResult.shouldReply}, hasContent=${!!manualResult.content}`);
+                    console.log(`========== END ROUTER ==========\n`);
                     return { ...manualResult, agent: 'MANUAL_OVERRIDE' };
                 }
 
                 console.log(`🔒 [${leadName}] Locked - no response`);
+                console.log(`========== END ROUTER ==========\n`);
                 return { shouldReply: false, agent: 'LOCKED' };
 
             default:
                 console.log(`⚠️ [ROUTER] Unknown state owner: ${finalOwner}`);
+                console.log(`========== END ROUTER ==========\n`);
                 return { shouldReply: false, agent: 'UNKNOWN' };
         }
 

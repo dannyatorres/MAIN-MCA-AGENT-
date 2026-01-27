@@ -207,8 +207,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const lead = leadRes.rows[0];
         const leadName = lead?.business_name || lead?.first_name || 'Unknown';
 
-        console.log(`🧠 [${leadName}] Processing...`);
-
         // =================================================================
         // 🚨 LAYER 0: THE MANUAL MASTER SWITCH
         // =================================================================
@@ -229,6 +227,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // If the lead is already in a "Human" stage, DO NOT REPLY.
         // =================================================================
         const currentState = settingsRes.rows[0]?.state;
+        console.log(`\n========== AI AGENT: ${leadName} ==========`); 
+        console.log(`📥 Instruction: "${(systemInstruction || 'none').substring(0, 80)}..."`);
+        console.log(`📋 Current State: ${currentState}`);
 
         // Add any statuses here where you want the AI to be completely dead
         const RESTRICTED_STATES = [
@@ -244,7 +245,17 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const isManualCommand = systemInstruction && systemInstruction.length > 5;
 
         if (RESTRICTED_STATES.includes(currentState) && !isManualCommand) {
-            console.log(`🔒 [${leadName}] Blocked: Lead is in '${currentState}'. Waiting for human.`);
+            console.log(`🔒 BLOCKED: State ${currentState} is restricted`);
+            await logAIDecision({
+                conversationId,
+                businessName: leadName,
+                agent: 'pre_vetter',
+                instruction: systemInstruction,
+                stateBefore: currentState,
+                actionTaken: 'blocked',
+                blockReason: `State ${currentState} is restricted`
+            });
+            console.log(`========== END AI AGENT ==========\n`);
             return { shouldReply: false };
         }
 
@@ -266,7 +277,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                 // If HUMAN sent the last message less than 15 mins ago -> SLEEP
                 if (lastMsg.sent_by === 'user' && timeDiff < 15) {
-                    console.log(`⏱️ [${leadName}] Paused: Human replied ${Math.round(timeDiff)} mins ago.`);
+                    console.log(`⏱️ PAUSED: Human active ${Math.round(timeDiff)}m ago`);
+                    console.log(`========== END AI AGENT ==========\n`);
                     return { shouldReply: false };
                 }
             }
@@ -621,6 +633,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         });
 
         // --- FIRST PASS (Decide what to do) ---
+        console.log(`🧠 Calling OpenAI with ${messages.length} messages...`);
+        console.log(`🛠️ Tools available: ${availableTools.map(t => t.function.name).join(', ')}`);
         const completion = await openai.chat.completions.create({
             model: "gpt-5-mini",
             messages: messages,
@@ -643,6 +657,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         const aiMsg = completion.choices[0].message;
         let responseContent = aiMsg.content;
+        const toolsCalled = aiMsg.tool_calls?.map(t => t.function.name) || [];
+        let stateAfter = currentState;
 
         const lastMsgRes = await db.query(`
             SELECT content FROM messages
@@ -653,16 +669,18 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // 6. HANDLE TOOLS & RE-THINK
         if (aiMsg.tool_calls) {
-            const toolsUsed = aiMsg.tool_calls.map(t => t.function.name);
-            const toolNames = toolsUsed.join(', ');
-            console.log(`🔧 [${leadName}] AI using tools: ${toolNames}`);
+            const toolNames = toolsCalled.join(', ');
+            console.log(`🔧 TOOL CALLS: ${toolNames}`);
+            for (const tool of aiMsg.tool_calls) {
+                console.log(`   └─ ${tool.function.name}: ${tool.function.arguments}`);
+            }
 
             const stateBeforeRes = await db.query(
                 'SELECT state FROM conversations WHERE id = $1',
                 [conversationId]
             );
             const stateBefore = stateBeforeRes.rows[0]?.state || null;
-            let stateAfter = stateBefore;
+            stateAfter = stateBefore || currentState;
 
             // Add the AI's tool decision to history
             messages.push(aiMsg);
@@ -753,27 +771,43 @@ Send this message to the lead: "${offer.pitch_message}"`;
             }
 
             responseContent = secondPass.choices[0].message.content;
-
-            await logAIDecision({
-                conversationId,
-                agent: 'pre_vetter',
-                leadMessage: userMessage,
-                reasoning: aiMsg.content || `AI selected tools: ${toolNames}`,
-                toolsUsed,
-                actionTaken: 'tool_call',
-                responseSent: responseContent,
-                stateBefore,
-                stateAfter,
-                tokensUsed: completion.usage?.total_tokens || null
-            });
         }
 
         if (responseContent) {
+            console.log(`✅ AI Response: "${responseContent.substring(0, 80)}..."`);
+            console.log(`========== END AI AGENT ==========\n`);
             // 📊 TRACK AI MODE RESPONSE
             await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
 
+            await logAIDecision({
+                conversationId,
+                businessName: leadName,
+                agent: 'pre_vetter',
+                instruction: systemInstruction,
+                stateBefore: currentState,
+                stateAfter,
+                toolsCalled,
+                aiResponse: responseContent,
+                actionTaken: 'responded',
+                tokensUsed: completion.usage?.total_tokens
+            });
+
             return { shouldReply: true, content: responseContent };
         }
+        console.log(`⏭️ AI decided: No response needed`);
+        console.log(`========== END AI AGENT ==========\n`);
+        await logAIDecision({
+            conversationId,
+            businessName: leadName,
+            agent: 'pre_vetter',
+            instruction: systemInstruction,
+            stateBefore: currentState,
+            stateAfter,
+            toolsCalled,
+            aiResponse: null,
+            actionTaken: 'no_response',
+            tokensUsed: completion.usage?.total_tokens
+        });
         return { shouldReply: false };
 
     } catch (err) {
