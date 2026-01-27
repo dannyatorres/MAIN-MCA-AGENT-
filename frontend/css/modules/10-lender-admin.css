@@ -1,0 +1,607 @@
+/* ==========================================================================
+   [MODULE: LENDER ADMIN]
+   Lender Management Modals - Network Directory, Rules, Review
+   ========================================================================== */
+
+/* ==========================================================================
+   1. BASE MODAL OVERRIDES
+   ========================================================================== */
+
+.lender-admin-modal {
+    display: flex;
+    z-index: 2000;
+}
+
+.lender-admin-modal .modal-content {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 90%;
+}
+
+.lender-admin-modal .modal-content.modal-md {
+    max-width: 500px;
+}
+
+.lender-admin-modal .modal-content.modal-lg {
+    max-width: 600px;
+}
+
+.lender-admin-modal .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lender-admin-modal .modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e6edf3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lender-admin-modal .modal-body {
+    padding: 0;
+}
+
+.lender-admin-modal .modal-body.padded {
+    padding: 20px;
+}
+
+.lender-admin-modal .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #30363d;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Higher z-index for stacked modals (edit on top of directory) */
+.lender-admin-modal.modal-stacked {
+    z-index: 2100;
+}
+
+.lender-admin-modal.modal-top {
+    z-index: 2200;
+}
+
+/* ==========================================================================
+   2. MENU MODAL (Entry Point)
+   ========================================================================== */
+
+.lender-menu-options {
+    display: flex;
+    flex-direction: column;
+}
+
+.lender-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 16px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #30363d;
+    transition: background 0.15s;
+}
+
+.lender-menu-item:last-child {
+    border-bottom: none;
+}
+
+.lender-menu-item:hover {
+    background: #21262d;
+}
+
+.lender-menu-item i:first-child {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+.lender-menu-item .menu-item-content {
+    flex: 1;
+}
+
+.lender-menu-item .menu-item-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e6edf3;
+}
+
+.lender-menu-item .menu-item-desc {
+    font-size: 12px;
+    color: #8b949e;
+    margin-top: 2px;
+}
+
+.lender-menu-item .chevron {
+    opacity: 0.5;
+    color: #8b949e;
+}
+
+/* ==========================================================================
+   3. ICON COLORS
+   ========================================================================== */
+
+.icon-blue { color: #3b82f6; }
+.icon-purple { color: #8b5cf6; }
+.icon-amber { color: #f59e0b; }
+.icon-green { color: #10b981; }
+.icon-red { color: #ef4444; }
+.icon-teal { color: #2dd4bf; }
+
+/* ==========================================================================
+   4. NETWORK DIRECTORY MODAL
+   ========================================================================== */
+
+/* Search Bar */
+.admin-search {
+    padding: 12px 16px;
+    border-bottom: 1px solid #30363d;
+    background: #161b22;
+}
+
+.admin-search .form-input {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: #e6edf3;
+    font-size: 13px;
+}
+
+.admin-search .form-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.admin-search .form-input::placeholder {
+    color: #6e7681;
+}
+
+/* List Header */
+.admin-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #21262d;
+    border-bottom: 1px solid #30363d;
+    font-size: 12px;
+    font-weight: 600;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.admin-list-header .header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* List Container */
+.admin-list {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #0d1117;
+}
+
+.admin-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.admin-list::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+
+.admin-list::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+.admin-list::-webkit-scrollbar-thumb:hover {
+    background: #3b82f6;
+}
+
+/* ==========================================================================
+   5. LENDER LIST ITEMS
+   ========================================================================== */
+
+.lender-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #21262d;
+    transition: background 0.15s;
+}
+
+.lender-row:hover {
+    background: #161b22;
+}
+
+.lender-row:last-child {
+    border-bottom: none;
+}
+
+.lender-row-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.lender-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #21262d;
+    border: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #8b949e;
+    flex-shrink: 0;
+}
+
+.lender-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.lender-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e6edf3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lender-meta {
+    font-size: 11px;
+    color: #6e7681;
+    margin-top: 2px;
+}
+
+.lender-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   6. ACTION LINKS
+   ========================================================================== */
+
+.action-link {
+    background: none;
+    border: none;
+    color: #8b949e;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.action-link:hover {
+    color: #e6edf3;
+    background: #21262d;
+}
+
+.action-link.danger {
+    color: #f87171;
+}
+
+.action-link.danger:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* ==========================================================================
+   7. FORM STYLES
+   ========================================================================== */
+
+.lender-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.lender-form-grid.single-col {
+    grid-template-columns: 1fr;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.field-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #8b949e;
+    margin-bottom: 6px;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: #e6edf3;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: #6e7681;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-row {
+    display: flex;
+    gap: 8px;
+}
+
+.form-row .form-input,
+.form-row .form-select {
+    flex: 1;
+}
+
+.form-input.input-sm {
+    width: 100px;
+    flex: none;
+}
+
+.form-select.select-sm {
+    width: 80px;
+    flex: none;
+}
+
+/* ==========================================================================
+   8. RULE SUGGESTIONS & NEEDS REVIEW
+   ========================================================================== */
+
+.review-item {
+    padding: 16px;
+    border-bottom: 1px solid #30363d;
+}
+
+.review-item:last-child {
+    border-bottom: none;
+}
+
+.review-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.review-item-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e6edf3;
+}
+
+.review-item-subtitle {
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 8px;
+}
+
+.review-item-meta {
+    font-size: 11px;
+    color: #6e7681;
+    margin-bottom: 12px;
+}
+
+.review-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ==========================================================================
+   9. BADGES
+   ========================================================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-industry { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.badge-state { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.badge-minimum { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+.badge-position { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+.badge-other { background: rgba(107, 114, 128, 0.15); color: #9ca3af; }
+.badge-low-confidence { background: rgba(107, 114, 128, 0.15); color: #9ca3af; }
+
+/* ==========================================================================
+   10. SMALL ACTION BUTTONS
+   ========================================================================== */
+
+.btn-action {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-action.approve {
+    background: #238636;
+    color: white;
+}
+
+.btn-action.approve:hover {
+    background: #2ea043;
+}
+
+.btn-action.reject {
+    background: #da3633;
+    color: white;
+}
+
+.btn-action.reject:hover {
+    background: #f85149;
+}
+
+.btn-action.create {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-action.create:hover {
+    background: #2563eb;
+}
+
+.btn-action.dismiss {
+    background: #374151;
+    color: white;
+}
+
+.btn-action.dismiss:hover {
+    background: #4b5563;
+}
+
+/* ==========================================================================
+   11. INFO BOX (for context display)
+   ========================================================================== */
+
+.info-box {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.info-box-label {
+    font-size: 11px;
+    color: #6e7681;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.info-box-value {
+    font-size: 14px;
+    color: #e6edf3;
+}
+
+/* ==========================================================================
+   12. EMPTY & LOADING STATES
+   ========================================================================== */
+
+.admin-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #8b949e;
+    font-size: 13px;
+}
+
+.admin-loading {
+    padding: 30px 20px;
+    text-align: center;
+    color: #8b949e;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-error {
+    padding: 20px;
+    text-align: center;
+    color: #ef4444;
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   13. DELETE ANIMATION
+   ========================================================================== */
+
+.lender-deleting {
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+.lender-deleting-collapse {
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden;
+}
+
+.lender-restore {
+    transition: all 0.2s ease;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ==========================================================================
+   14. RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 600px) {
+    .lender-admin-modal .modal-content {
+        max-width: 95%;
+        margin: 10px;
+    }
+    
+    .lender-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .admin-list {
+        max-height: 300px;
+    }
+}
