@@ -14,7 +14,7 @@ const anthropic = new Anthropic({
 const ANALYSIS_INTERVAL = 30 * 60 * 1000;
 
 async function startRuleLearner() {
-    console.log('[RuleLearner] 🧠 Service starting...');
+    console.log('[RuleLearner] 🧠 Service started (runs every 30m)');
 
     // Run immediately on startup
     await analyzeDeclines();
@@ -27,8 +27,6 @@ async function analyzeDeclines() {
     const db = getDatabase();
 
     try {
-        console.log('[RuleLearner] 🔍 Checking for unanalyzed declines...');
-
         // Get declines that haven't been analyzed yet
         const declines = await db.query(`
             SELECT
@@ -54,11 +52,10 @@ async function analyzeDeclines() {
         `);
 
         if (declines.rows.length === 0) {
-            console.log('[RuleLearner] ✅ No new declines to analyze');
-            return;
+            return; // Silent when nothing to do
         }
 
-        console.log(`[RuleLearner] 📋 Found ${declines.rows.length} declines to analyze`);
+        console.log(`[RuleLearner] 📋 Analyzing ${declines.rows.length} new declines`);
 
         for (const decline of declines.rows) {
             await analyzeDecline(db, decline);
@@ -70,8 +67,6 @@ async function analyzeDeclines() {
 }
 
 async function analyzeDecline(db, decline) {
-    console.log(`[RuleLearner] 🤖 Analyzing decline from ${decline.lender_name}...`);
-
     try {
         // Check if we already have a similar rule
         const existingRule = await db.query(`
@@ -139,7 +134,6 @@ If the decline seems like a one-off or you can't determine a clear pattern, set 
         }
 
         const responseText = response.content[0].text.trim();
-        console.log(`[RuleLearner] 📝 AI Response: ${responseText.substring(0, 200)}...`);
 
         // Parse JSON response
         let analysis;
@@ -153,18 +147,13 @@ If the decline seems like a one-off or you can't determine a clear pattern, set 
             return;
         }
 
-        console.log(`[RuleLearner] 🎯 AI Analysis:`, {
-            should_create: analysis.should_create_rule,
-            confidence: analysis.confidence,
-            type: analysis.rule_type,
-            reasoning: analysis.reasoning?.substring(0, 100)
-        });
+        console.log(`[RuleLearner] 🤖 ${decline.lender_name}: ${analysis.rule_type || 'no-rule'} (${Math.round((analysis.confidence || 0) * 100)}%)`);
 
         // Only create rule if confident
         if (analysis.should_create_rule && analysis.confidence >= 0.7) {
             await createSuggestedRule(db, decline, analysis);
         } else {
-            console.log(`[RuleLearner] ⏭️ Skipping - confidence too low or no rule needed`);
+            console.log(`[RuleLearner] ⏭️ Skipped: ${analysis.reasoning?.substring(0, 60) || 'low confidence'}`);
         }
 
         // Mark as analyzed
@@ -194,7 +183,7 @@ async function createSuggestedRule(db, decline, analysis) {
         ]);
 
         if (duplicate.rows.length > 0) {
-            console.log(`[RuleLearner] ⚠️ Similar rule already exists, skipping`);
+            console.log(`[RuleLearner] ⚠️ ${decline.lender_name}: Duplicate rule exists`);
             return;
         }
 
@@ -227,8 +216,7 @@ async function createSuggestedRule(db, decline, analysis) {
             analysis.decline_message
         ]);
 
-        console.log(`[RuleLearner] ✅ Created suggested rule: ${decline.lender_name} - ${analysis.rule_type}`);
-        console.log(`[RuleLearner] 💡 Reason: ${analysis.decline_message}`);
+        console.log(`[RuleLearner] ✅ New rule: ${decline.lender_name} → ${analysis.decline_message}`);
 
     } catch (err) {
         console.error(`[RuleLearner] ❌ Error creating rule:`, err.message);
