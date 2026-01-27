@@ -348,6 +348,17 @@ router.post('/webhook/receive', async (req, res) => {
 
         console.log('📥 Webhook Inbound:', { From, Body, NumMedia });
 
+        // DEDUP: Check if we already processed this message
+        const dupCheck = await db.query(
+            `SELECT 1 FROM messages WHERE twilio_sid = $1`,
+            [MessageSid]
+        );
+        if (dupCheck.rows.length > 0) {
+            console.log(`⏭️ Duplicate webhook ignored: ${MessageSid}`);
+            res.set('Content-Type', 'text/xml');
+            return res.send('<Response></Response>');
+        }
+
         const mediaUrls = [];
         const numMedia = parseInt(NumMedia) || 0;
         for (let i = 0; i < numMedia; i++) {
@@ -370,16 +381,8 @@ router.post('/webhook/receive', async (req, res) => {
         if (convResult.rows.length === 0) return res.status(200).send('No conversation found');
         const conversation = convResult.rows[0];
 
-        const lockCheck = await db.query(`
-            SELECT 1 FROM conversations 
-            WHERE id = $1 AND ai_processing = true
-        `, [conversation.id]);
-
-        if (lockCheck.rows.length > 0) {
-            console.log(`🔒 [${conversation.business_name}] AI already processing - skipping`);
-            res.set('Content-Type', 'text/xml');
-            return res.send('<Response></Response>');
-        }
+        // Check lock AFTER getting conversation, but BEFORE AI logic (not here)
+        // Lock check moved to AI logic block below
 
         const mediaUrlValue = mediaUrls.length > 1 ? JSON.stringify(mediaUrls) : (mediaUrls[0] || null);
 
