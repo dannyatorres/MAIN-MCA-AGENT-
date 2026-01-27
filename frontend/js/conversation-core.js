@@ -13,7 +13,9 @@ class ConversationCore {
         this.currentConversationId = null;
         this.selectedConversation = null;
         this.selectedForDeletion = new Set();
-        this.badges = window.badgeManager || new BadgeManager();
+        this.badges = new BadgeManager(this);
+        this.animator = new ConversationAnimator(this);
+        this.badges.setAnimator(this.animator);
 
         // Server handles badges now - no localStorage
 
@@ -49,67 +51,18 @@ class ConversationCore {
         }
 
         // Update UI immediately
-        const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
-        if (item) {
-            item.classList.add('unread');
-            const count = this.badges.getUnreadCount(conv);
-            let badge = item.querySelector('.conversation-badge');
-            if (!badge) {
-                badge = document.createElement('div');
-                badge.className = 'conversation-badge';
-                item.appendChild(badge);
-            }
-            badge.textContent = count;
-        }
+        this.badges.incrementUnread(id);
     }
 
     // Call this when user clicks a conversation
     async clearBadge(conversationId) {
         const id = String(conversationId);
-        const conv = this.conversations.get(id);
-
-        // Update local state
-        this.badges.clearUnread(conv);
-
-        // Update UI
-        const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
-        if (item) {
-            item.classList.remove('unread');
-            const badge = item.querySelector('.conversation-badge');
-            if (badge) badge.remove();
-        }
-
-        // Tell server
-        try {
-            await this.parent.apiCall(`/api/conversations/${id}/mark-read`, { method: 'POST' });
-        } catch (e) {
-            console.error('Failed to mark read:', e);
-        }
+        await this.badges.clearUnread(id);
     }
 
     async clearOfferBadge(conversationId) {
         const id = String(conversationId);
-        const conv = this.conversations.get(id);
-
-        if (!conv || !this.badges.hasOffer(conv)) return;
-
-        // Update local state
-        this.badges.clearOffer(conv);
-
-        // Update UI
-        const item = document.querySelector(`.conversation-item[data-conversation-id="${id}"]`);
-        if (item) {
-            item.classList.remove('has-offer');
-            const badge = item.querySelector('.badge-offer');
-            if (badge) badge.remove();
-        }
-
-        // Tell server
-        try {
-            await this.parent.apiCall(`/api/conversations/${id}/clear-offer`, { method: 'POST' });
-        } catch (e) {
-            console.error('Failed to clear offer:', e);
-        }
+        await this.badges.clearOffer(id);
     }
 
     // ============================================================

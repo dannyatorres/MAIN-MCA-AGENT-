@@ -424,7 +424,13 @@ async function processEmail(email, db) {
         }
 
         if (global.io) {
-            global.io.emit('refresh_lead_list', { conversationId: bestMatchId });
+            global.io.emit('conversation_badge_update', {
+                conversationId: bestMatchId,
+                type: 'offer',
+                has_offer: true,
+                last_activity: new Date().toISOString(),
+                preview: `New offer from ${validatedLender}`
+            });
         }
     }
 

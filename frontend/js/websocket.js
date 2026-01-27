@@ -119,12 +119,52 @@ class WebSocketManager {
             }
         });
 
-        // 3. New Lead / Offer / Refresh List
+        // 3. New granular badge update (optimistic)
+        this.socket.on('conversation_badge_update', (data) => {
+            const convoId = data.conversationId || data.conversation_id;
+            console.log('⚡ WS: badge_update', data.type, convoId);
+
+            if (!this.app.conversationUI?.badges) return;
+
+            const conv = this.app.conversationUI.conversations.get(String(convoId));
+
+            // If we don't have this conversation locally, fetch it
+            if (!conv) {
+                this.app.conversationUI.handleConversationUpdate(convoId);
+                return;
+            }
+
+            // Update preview if provided
+            if (data.preview && this.app.conversationUI.animator) {
+                this.app.conversationUI.animator.updatePreview(convoId, data.preview, 'Just now');
+            }
+
+            // Handle by type
+            switch (data.type) {
+                case 'offer':
+                    this.app.conversationUI.badges.setOffer(convoId, true);
+                    break;
+                case 'message':
+                    // Only increment if not currently viewing
+                    if (String(this.app.currentConversationId) !== String(convoId)) {
+                        this.app.conversationUI.badges.incrementUnread(convoId);
+                    }
+                    break;
+                case 'new_bank':
+                    conv.has_new_bank = true;
+                    if (this.app.conversationUI.animator) {
+                        this.app.conversationUI.animator.addBadge(convoId, 'new-bank');
+                    }
+                    break;
+            }
+        });
+
+        // 4. New Lead / Offer / Refresh List (fallback)
         // FIX: Delegate strictly to ConversationUI to prevent duplicates
         // No more direct DOM manipulation here - single source of truth
         this.socket.on('refresh_lead_list', async (data) => {
             const convoId = data.conversation_id || data.conversationId;
-            console.log('⚡ WS EVENT: refresh_lead_list', convoId);
+            console.log('⚡ WS: refresh_lead_list (fallback)', convoId);
 
             if (!this.app.conversationUI) return;
 
