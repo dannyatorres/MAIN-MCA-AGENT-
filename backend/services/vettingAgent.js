@@ -6,6 +6,7 @@
 const { OpenAI } = require('openai');
 const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
+const { updateState } = require('./stateManager');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -243,7 +244,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
         if (hasOffers && !isManualCommand) {
             console.log('📨 Offers exist - should be handled by Negotiating Agent');
             // Update state to trigger negotiating agent
-            await db.query(`UPDATE conversations SET state = 'OFFER_RECEIVED' WHERE id = $1`, [conversationId]);
+            await updateState(conversationId, 'OFFER_RECEIVED', 'vetter');
             return { shouldReply: false };
         }
 
@@ -401,9 +402,9 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                     console.log(`📝 Vetting status: ${args.status} - ${args.reason || ''}`);
                     
                     if (args.status === 'VETTING') {
-                        await db.query(`UPDATE conversations SET state = 'VETTING' WHERE id = $1`, [conversationId]);
+                        await updateState(conversationId, 'VETTING', 'vetter');
                     } else if (args.status === 'DEAD') {
-                        await db.query(`UPDATE conversations SET state = 'DEAD' WHERE id = $1`, [conversationId]);
+                        await updateState(conversationId, 'DEAD', 'vetter');
                     }
                 }
 
@@ -412,7 +413,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                     console.log(`🚀 Ready to submit! Amount: $${args.confirmed_amount}`);
                     
                     // Update state to SUBMITTED
-                    await db.query(`UPDATE conversations SET state = 'SUBMITTED' WHERE id = $1`, [conversationId]);
+                    await updateState(conversationId, 'SUBMITTED', 'vetter');
                     
                     // TODO: Trigger actual submission via submissions.js route
                     // For now, just log it - you'll wire this up to your submission flow
@@ -422,7 +423,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                 if (tool.function.name === 'escalate_to_human') {
                     const args = JSON.parse(tool.function.arguments);
                     console.log(`🚨 Escalating to human: ${args.reason}`);
-                    await db.query(`UPDATE conversations SET state = 'HUMAN_REVIEW' WHERE id = $1`, [conversationId]);
+                    await updateState(conversationId, 'HUMAN_REVIEW', 'vetter');
                     return {
                         shouldReply: true,
                         content: "let me have my manager take a look at this, one sec"

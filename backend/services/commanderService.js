@@ -2,6 +2,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
+const { updateState } = require('./stateManager');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -558,7 +559,7 @@ async function generateOffer(conversationId) {
             WHERE conversation_id = $3
         `, [offer.offer_amount, JSON.stringify({ offer_details: offer }), conversationId]);
 
-        await db.query(`UPDATE conversations SET state = 'OFFER_READY' WHERE id = $1`, [conversationId]);
+        await updateState(conversationId, 'OFFER_READY', 'commander');
 
         return offer;
 

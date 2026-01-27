@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { getConversationAccessClause, requireModifyPermission } = require('../middleware/dataAccess');
+const { updateState } = require('../services/stateManager');
 
 // States that indicate "ghosted after SMS" - adjust these as needed
 const DIALER_ELIGIBLE_STATES = [
@@ -120,9 +121,7 @@ router.post('/disposition', requireModifyPermission, async (req, res) => {
         }
 
         if (newState) {
-            await db.query(`
-                UPDATE conversations SET state = $1 WHERE id = $2
-            `, [newState, conversationId]);
+            await updateState(conversationId, newState, 'dialer');
         }
 
         res.json({ success: true, disposition, newState });

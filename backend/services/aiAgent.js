@@ -5,6 +5,7 @@ const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
 const { syncDriveFiles } = require('./driveService');
 const commanderService = require('./commanderService');
+const { updateState } = require('./stateManager');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -484,7 +485,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         if (weAskedToClose && theySaidYes) {
             console.log('📁 Lead confirmed file close - marking as dead');
-            await db.query("UPDATE conversations SET state = 'DEAD' WHERE id = $1", [conversationId]);
+            await updateState(conversationId, 'DEAD', 'ai_agent');
             return {
                 shouldReply: true,
                 content: "understood, ill close it out. if anything changes down the line feel free to reach back out"
@@ -655,7 +656,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                 if (tool.function.name === 'update_lead_status') {
                     const args = JSON.parse(tool.function.arguments);
-                    await db.query("UPDATE conversations SET state = $1 WHERE id = $2", [args.status, conversationId]);
+                    await updateState(conversationId, args.status, 'ai_agent');
                     toolResult = `Status updated to ${args.status}.`;
                 }
 
@@ -683,7 +684,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     console.log(`🎓 [${leadName}] Handing off to human`);
 
                     // ✅ HANDOFF: Move to PRE_VETTED (FCS should be ready by now)
-                    await db.query("UPDATE conversations SET state = 'PRE_VETTED' WHERE id = $1", [conversationId]);
+                    await updateState(conversationId, 'PRE_VETTED', 'ai_agent');
                     console.log(`✅ [${leadName}] Qualified → PRE_VETTED`);
 
                     // Simple handoff message - NO offer, NO numbers

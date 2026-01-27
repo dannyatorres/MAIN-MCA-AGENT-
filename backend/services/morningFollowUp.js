@@ -5,6 +5,7 @@ const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
 const { OpenAI } = require('openai');
 const twilio = require('twilio');
+const { updateState } = require('./stateManager');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -199,9 +200,7 @@ async function runMorningFollowUp() {
 
                 // After saving message, check if this is a HAIL_MARY lead
                 if (lead.isHailMary) {
-                    await db.query(`
-                        UPDATE conversations SET state = 'HAIL_MARY_FINAL' WHERE id = $1
-                    `, [lead.conversation_id]);
+                    await updateState(lead.conversation_id, 'HAIL_MARY_FINAL', 'morning_followup');
                 }
 
                 // Track SMS usage

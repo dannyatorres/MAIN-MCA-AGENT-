@@ -4,6 +4,7 @@ const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { trackResponseForTraining } = require('../services/aiAgent');
 const { routeMessage } = require('../services/agentRouter');
+const { updateState } = require('../services/stateManager');
 const { trackUsage } = require('../services/usageTracker');
 const multer = require('multer');
 const AWS = require('aws-sdk');
@@ -372,7 +373,7 @@ router.post('/webhook/receive', async (req, res) => {
             : cleanPhone;
 
         const convResult = await db.query(
-            `SELECT id, business_name, assigned_user_id FROM conversations
+            `SELECT id, business_name, assigned_user_id, state FROM conversations
              WHERE regexp_replace(lead_phone, '\\D', '', 'g') LIKE '%' || $1
              ORDER BY last_activity DESC LIMIT 1`,
             [searchPhone]
@@ -429,16 +430,15 @@ router.post('/webhook/receive', async (req, res) => {
                     segments: segmentCount
                 });
 
-                await db.query(`
-                    UPDATE conversations
-                    SET state = CASE 
-                            WHEN state IN ('NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'DEAD') 
-                            THEN 'REPLIED'
-                            ELSE state
-                        END,
-                        last_activity = NOW()
-                    WHERE id = $1
-                `, [conversation.id]);
+                const currentState = conversation.state;
+                const RESURRECTION_STATES = ['NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'DEAD'];
+
+                if (RESURRECTION_STATES.includes(currentState)) {
+                    await updateState(conversation.id, 'REPLIED', 'webhook');
+                } else {
+                    // Just update last_activity, no state change
+                    await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversation.id]);
+                }
 
                 console.log('🔴 BACKEND EMIT: new_message (inbound)', { conversation_id: conversation.id, message_id: newMessage.id });
                 if (global.io) {

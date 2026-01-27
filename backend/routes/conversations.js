@@ -9,6 +9,7 @@ const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
 const { getConversationAccessClause, requireConversationAccess, requireModifyPermission } = require('../middleware/dataAccess');
 const { requireRole } = require('../middleware/auth');
+const { updateState } = require('../services/stateManager');
 
 const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -781,10 +782,10 @@ router.post('/:id/reset-ai', requireConversationAccess('id'), requireModifyPermi
         // 1. Reset state to 'NEW'
         // 2. Set last_activity to 20 mins ago (so the 5-min buffer passes)
         // 3. Ensure priority is high so it's grabbed first
+        await updateState(id, 'NEW', 'manual');
         const result = await db.query(`
             UPDATE conversations
-            SET state = 'NEW',
-                current_step = 'initial_contact',
+            SET current_step = 'initial_contact',
                 last_activity = NOW() - INTERVAL '20 minutes',
                 priority = 1
             WHERE id = $1
@@ -816,10 +817,10 @@ router.post('/:id/mark-funded', requireConversationAccess('id'), requireModifyPe
 
         console.log(`🎉 Marking deal ${id} as FUNDED for $${amount}`);
 
+        await updateState(id, 'FUNDED', 'manual');
         const result = await db.query(`
             UPDATE conversations
-            SET state = 'FUNDED',
-                funded_amount = $2,
+            SET funded_amount = $2,
                 funded_at = NOW(),
                 has_offer = TRUE,
                 last_activity = NOW()

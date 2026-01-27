@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const EmailService = require('../services/emailService');
+const { updateState } = require('../services/stateManager');
 const successPredictor = require('../services/successPredictor');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
@@ -168,7 +169,7 @@ router.post('/:id/send', async (req, res) => {
 
         // Update state to SUBMITTED after successful batch send
         if (successful.length > 0) {
-            await db.query(`UPDATE conversations SET state = 'SUBMITTED', last_activity = NOW() WHERE id = $1`, [conversationId]);
+            await updateState(conversationId, 'SUBMITTED', 'submissions');
             console.log(`📝 State updated to SUBMITTED for conversation ${conversationId}`);
         }
 

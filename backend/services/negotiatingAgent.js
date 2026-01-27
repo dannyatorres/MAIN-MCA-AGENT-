@@ -6,6 +6,7 @@
 const { OpenAI } = require('openai');
 const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
+const { updateState } = require('./stateManager');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -430,7 +431,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                     console.log(`💵 Presenting offer: $${args.offer_amount}`);
                     
                     // Update state to NEGOTIATING if not already
-                    await db.query(`UPDATE conversations SET state = 'NEGOTIATING' WHERE id = $1`, [conversationId]);
+                    await updateState(conversationId, 'NEGOTIATING', 'negotiator');
                 }
 
                 if (tool.function.name === 'update_negotiation_status') {
@@ -446,7 +447,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                     };
                     
                     const newState = stateMap[args.status] || 'NEGOTIATING';
-                    await db.query(`UPDATE conversations SET state = $1 WHERE id = $2`, [newState, conversationId]);
+                    await updateState(conversationId, newState, 'negotiator');
                 }
 
                 if (tool.function.name === 'request_counter_offer') {
@@ -464,7 +465,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                     const args = JSON.parse(tool.function.arguments);
                     console.log(`📄 Sending contract to ${args.email}`);
                     
-                    await db.query(`UPDATE conversations SET state = 'VERBAL_ACCEPT' WHERE id = $1`, [conversationId]);
+                    await updateState(conversationId, 'VERBAL_ACCEPT', 'negotiator');
                     
                     // TODO: Trigger actual contract send
                     console.log(`📤 [TODO] Trigger contract generation and send`);
@@ -473,7 +474,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                 if (tool.function.name === 'escalate_to_human') {
                     const args = JSON.parse(tool.function.arguments);
                     console.log(`🚨 Escalating: ${args.reason}`);
-                    await db.query(`UPDATE conversations SET state = 'HUMAN_REVIEW' WHERE id = $1`, [conversationId]);
+                    await updateState(conversationId, 'HUMAN_REVIEW', 'negotiator');
                     return { 
                         shouldReply: true, 
                         content: "let me get my manager to take a look at this for you, one sec" 

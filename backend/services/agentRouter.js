@@ -6,6 +6,7 @@ const { getDatabase } = require('./database');
 const aiAgent = require('./aiAgent');           // Agent 1: Pre-Vetter
 const vettingAgent = require('./vettingAgent'); // Agent 2: Vetter
 const negotiatingAgent = require('./negotiatingAgent'); // Agent 3: Negotiator
+const { updateState } = require('./stateManager');
 
 // ==========================================
 // STATE OWNERSHIP MAP
@@ -167,12 +168,12 @@ async function checkAndCorrectState(conversationId, currentState, hasOffer, db) 
             LIMIT 1
         `, [conversationId]);
 
-        if (offerCheck.rows.length > 0) {
-            console.log('🔄 [ROUTER] Auto-correcting state: has_offer but state was ' + currentState);
-            await db.query(`UPDATE conversations SET state = 'OFFER_RECEIVED' WHERE id = $1`, [conversationId]);
-            return 'NEGOTIATOR';
+            if (offerCheck.rows.length > 0) {
+                console.log('🔄 [ROUTER] Auto-correcting state: has_offer but state was ' + currentState);
+                await updateState(conversationId, 'OFFER_RECEIVED', 'router_autocorrect');
+                return 'NEGOTIATOR';
+            }
         }
-    }
 
     // Case 2: State is SUBMITTED but no pending submissions
     if (currentState === 'SUBMITTED') {
@@ -184,7 +185,8 @@ async function checkAndCorrectState(conversationId, currentState, hasOffer, db) 
         const hasOffer = submissionCheck.rows.some(r => r.status === 'OFFER');
         if (hasOffer) {
             console.log('🔄 [ROUTER] Auto-correcting: SUBMITTED but offer exists');
-            await db.query(`UPDATE conversations SET state = 'OFFER_RECEIVED', has_offer = TRUE WHERE id = $1`, [conversationId]);
+            await updateState(conversationId, 'OFFER_RECEIVED', 'router_autocorrect');
+            await db.query('UPDATE conversations SET has_offer = TRUE WHERE id = $1', [conversationId]);
             return 'NEGOTIATOR';
         }
     }
