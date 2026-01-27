@@ -14,16 +14,32 @@ router.post('/trigger', async (req, res) => {
 
     console.log(`📨 Received Dispatcher Trigger for ${conversation_id}`);
 
-    let result;
+    const db = getDatabase();
 
-    // Direct message = skip AI entirely
-    if (direct_message) {
-        console.log(`📨 Direct message (no AI) for ${conversation_id}`);
-        result = { shouldReply: true, content: direct_message };
-    } else {
-        // 1. Run the AI Logic via Router
-        result = await routeMessage(conversation_id, null, system_instruction);
+    // Check lock to prevent double-sends
+    const lockCheck = await db.query(
+        `SELECT ai_processing FROM conversations WHERE id = $1`,
+        [conversation_id]
+    );
+
+    if (lockCheck.rows[0]?.ai_processing === true) {
+        console.log(`🔒 [${conversation_id}] Already processing - skipping`);
+        return res.json({ success: false, skipped: true, reason: 'ai_processing lock' });
     }
+
+    // Set lock
+    await db.query(`UPDATE conversations SET ai_processing = true WHERE id = $1`, [conversation_id]);
+
+    let result;
+    try {
+        // Direct message = skip AI entirely
+        if (direct_message) {
+            console.log(`📨 Direct message (no AI) for ${conversation_id}`);
+            result = { shouldReply: true, content: direct_message };
+        } else {
+            // 1. Run the AI Logic via Router
+            result = await routeMessage(conversation_id, null, system_instruction);
+        }
 
     if (result.error) return res.status(500).json(result);
 
@@ -87,6 +103,9 @@ router.post('/trigger', async (req, res) => {
         action: result.shouldReply ? "sent_message" : "status_update_only",
         ai_reply: result.content || "No reply generated (Status update or silence)"
     });
+    } finally {
+        await db.query(`UPDATE conversations SET ai_processing = false WHERE id = $1`, [conversation_id]);
+    }
 });
 
 // POST /api/agent/morning-followup
