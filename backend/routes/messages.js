@@ -123,8 +123,6 @@ router.post('/send', requireModifyPermission, async (req, res) => {
 
         const db = getDatabase();
 
-        console.log('📤 Sending message:', { conversation_id, content, media_url, direction });
-
         const actualConversationId = await resolveConversationId(conversation_id, db);
 
         if (!actualConversationId) {
@@ -146,7 +144,8 @@ router.post('/send', requireModifyPermission, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Conversation not found' });
         }
 
-        const { lead_phone } = convResult.rows[0];
+        const { lead_phone, business_name } = convResult.rows[0];
+        console.log(`📤 [${business_name}] ${sent_by || 'user'}: "${(content || '').substring(0, 50)}..."`);
         const type = media_url ? 'mms' : (message_type || 'sms');
 
         // Insert message into database FIRST (with user tracking)
@@ -190,7 +189,7 @@ router.post('/send', requireModifyPermission, async (req, res) => {
                 }
 
                 const twilioMessage = await twilioClient.messages.create(msgOptions);
-                console.log(`✅ Twilio Sent! SID: ${twilioMessage.sid}`);
+                console.log(`✅ [${business_name}] Sent (${sent_by || 'user'})`);
 
                 await db.query(
                     'UPDATE messages SET status = $1, twilio_sid = $2 WHERE id = $3',
@@ -440,7 +439,6 @@ router.post('/webhook/receive', async (req, res) => {
                     await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversation.id]);
                 }
 
-                console.log('🔴 BACKEND EMIT: new_message (inbound)', { conversation_id: conversation.id, message_id: newMessage.id });
                 if (global.io) {
                     global.io.emit('new_message', {
                         conversation_id: conversation.id,
@@ -479,10 +477,9 @@ router.post('/webhook/receive', async (req, res) => {
 
                     // Random delay 30-60 seconds
                     const delay = Math.floor(Math.random() * 30000) + 30000;
-                    console.log(`🤖 [${conversation.business_name}] Waiting ${Math.round(delay / 1000)}s...`);
+                    console.log(`🤖 [${conversation.business_name}] AI processing (${Math.round(delay / 1000)}s delay)...`);
                     await new Promise(r => setTimeout(r, delay));
 
-                    console.log(`🤖 AI responding to ${conversation.business_name}...`);
                     const aiResult = await routeMessage(conversation.id, 'The user just replied. Read the history and respond naturally.');
 
                     if (aiResult.shouldReply && aiResult.content) {
@@ -522,7 +519,7 @@ router.post('/webhook/receive', async (req, res) => {
                             metadata: { source: 'ai_auto_reply' }
                         });
 
-                        console.log('🔴 BACKEND EMIT: new_message (ai)', { conversation_id: conversation.id, message_id: aiMessage.id });
+                        console.log(`✅ [${conversation.business_name}] AI sent: "${messageToSend.substring(0, 50)}..."`);
                         if (global.io) {
                             global.io.emit('new_message', {
                                 conversation_id: conversation.id,
