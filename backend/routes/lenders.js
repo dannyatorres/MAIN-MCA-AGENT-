@@ -392,6 +392,9 @@ router.delete('/:id', requireRole('admin'), async (req, res) => {
         const { id } = req.params;
         const db = getDatabase();
 
+        // Delete related records first to avoid FK constraint
+        await db.query('DELETE FROM lender_rules WHERE lender_id = $1', [id]);
+
         const result = await db.query(`
             DELETE FROM lenders WHERE id = $1 RETURNING name
         `, [id]);
