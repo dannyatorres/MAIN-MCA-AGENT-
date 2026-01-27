@@ -232,8 +232,7 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
         }
 
         if (uploadedCount > 0) {
-            await db.query("UPDATE conversations SET state = 'FCS_READY' WHERE id = $1", [conversationId]);
-            console.log(`🎉 Success! Synced ${uploadedCount} documents. Lead is FCS_READY.`);
+            console.log(`🎉 Synced ${uploadedCount} docs. Triggering background analysis (State remains unchanged).`);
 
             // --- ⚡ AUTO-TRIGGER FCS ANALYSIS ---
             if (await isServiceEnabled(userId, 'fcs')) {

@@ -34,6 +34,12 @@ router.get('/', async (req, res) => {
                 ${includeAssignedUser ? `u.name as assigned_user_name, u.agent_name as assigned_agent_name, u.role as assigned_user_role,` : ''}
 
                 COALESCE((
+                    SELECT status FROM fcs_analyses f
+                    WHERE f.conversation_id = c.id
+                    ORDER BY f.created_at DESC LIMIT 1
+                ), 'none') as fcs_status,
+
+                COALESCE((
                     SELECT COUNT(*) FROM messages m
                     WHERE m.conversation_id = c.id
                       AND m.direction = 'inbound'
@@ -126,6 +132,13 @@ router.get('/', async (req, res) => {
             }
             else if (filter === 'UNREAD') {
                 query += ` AND (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound' AND m.timestamp > COALESCE(c.last_read_at, '1970-01-01')) > 0`;
+            }
+            else if (filter === 'FCS_READY') {
+                query += ` AND EXISTS (
+                    SELECT 1 FROM fcs_analyses f
+                    WHERE f.conversation_id = c.id
+                    AND f.status = 'completed'
+                )`;
             }
             else {
                 query += ` AND c.state = $${paramIndex++}`;
