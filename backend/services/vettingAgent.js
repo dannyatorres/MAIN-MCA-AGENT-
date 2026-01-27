@@ -199,18 +199,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
         }
 
         // =================================================================
-        // 2. GATHER CONTEXT: FCS DATA
-        // =================================================================
-        const fcsRes = await db.query(`
-            SELECT * FROM fcs_analyses
-            WHERE conversation_id = $1
-            ORDER BY created_at DESC LIMIT 1
-        `, [conversationId]);
-
-        const fcsData = fcsRes.rows[0] || null;
-
-        // =================================================================
-        // 3. GATHER CONTEXT: COMMANDER STRATEGY
+        // 2. GATHER CONTEXT: COMMANDER STRATEGY
         // =================================================================
         const strategyRes = await db.query(`
             SELECT game_plan, lead_grade, strategy_type, recommended_funding_max,
@@ -302,18 +291,6 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
         // Add current date context
         systemPrompt += `\n## CURRENT DATE\n`;
         systemPrompt += `- **Today:** ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
-
-        // Add FCS context if available
-        if (fcsData) {
-            systemPrompt += `\n## FINANCIAL ANALYSIS (FCS)\n`;
-            systemPrompt += `- **Avg Monthly Revenue:** $${(fcsData.average_revenue || 0).toLocaleString()}\n`;
-            systemPrompt += `- **Avg Daily Balance:** $${(fcsData.average_daily_balance || 0).toLocaleString()}\n`;
-            systemPrompt += `- **Negative Days:** ${fcsData.total_negative_days || 0}\n`;
-            systemPrompt += `- **Current Withholding:** ${fcsData.withholding_percentage || 'Unknown'}%\n`;
-            if (fcsData.fcs_report) {
-                systemPrompt += `\n**FCS Summary:**\n${fcsData.fcs_report.substring(0, 1500)}\n`;
-            }
-        }
 
         // Add strategy context if available
         if (gamePlan) {
