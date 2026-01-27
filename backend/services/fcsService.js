@@ -172,7 +172,7 @@ class FCSService {
     async generateAndSaveFCS(conversationId, businessName, db, documentIds = null) {
         let analysisId = null;
         try {
-            console.log(`\n🔵 Starting FCS generation for: ${businessName}`);
+            console.log(`📊 [${businessName}] FCS analysis starting...`);
 
             const createResult = await db.query(`
                 INSERT INTO fcs_analyses (conversation_id, status, created_at)
@@ -200,6 +200,7 @@ class FCSService {
 
             if (docsResult.rows.length === 0) throw new Error('No documents found');
             const documents = docsResult.rows.map(d => ({ ...d, filename: d.original_filename }));
+            console.log(`📊 [${businessName}] Processing ${documents.length} statements`);
 
             const extractedData = [];
             for (const doc of documents) {
@@ -219,21 +220,11 @@ class FCSService {
             // 4. Generate Analysis (GEMINI ONLY)
             const fcsAnalysisRaw = await this.generateFCSAnalysis(extractedData, businessName);
 
-            // 📝 LOG TO CONSOLE (Railway logs)
-            console.log('\n========== RAW GEMINI OUTPUT ==========');
-            console.log(fcsAnalysisRaw);
-            console.log('========== END RAW OUTPUT ==========\n');
-
             // 📝 LOG: Raw Gemini output (to file)
             logFCSReport(conversationId, fcsAnalysisRaw, '1-raw-gemini');
 
             // 🧹 CLEANER: Remove markdown artifacts and echo lines
             const fcsAnalysis = this.cleanGeminiOutput(fcsAnalysisRaw);
-
-            // 📝 LOG CLEANED VERSION (Railway logs)
-            console.log('\n========== CLEANED FCS REPORT ==========');
-            console.log(fcsAnalysis);
-            console.log('========== END CLEANED REPORT ==========\n');
 
             // 📝 LOG: After cleaning (to file)
             logFCSReport(conversationId, fcsAnalysis, '2-cleaned');
@@ -306,7 +297,7 @@ Withholding %: ${withholdingPct}
                 avgBalance, depositCount, tibText, lastMca, withholdingPct, analysisId
             ]);
 
-            console.log(`✅ FCS Complete! Analysis ID: ${analysisId}`);
+            console.log(`✅ [${businessName}] FCS complete: $${averageRevenue}/mo, ${negDays} neg days`);
             return { success: true, analysisId };
 
         } catch (error) {

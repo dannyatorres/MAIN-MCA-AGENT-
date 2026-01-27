@@ -6,6 +6,7 @@ const { trackUsage } = require('./usageTracker');
 const { syncDriveFiles } = require('./driveService');
 const commanderService = require('./commanderService');
 const { updateState } = require('./stateManager');
+const { logAIDecision } = require('./aiDecisionLogger');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -643,10 +644,25 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const aiMsg = completion.choices[0].message;
         let responseContent = aiMsg.content;
 
+        const lastMsgRes = await db.query(`
+            SELECT content FROM messages
+            WHERE conversation_id = $1 AND direction = 'inbound'
+            ORDER BY timestamp DESC LIMIT 1
+        `, [conversationId]);
+        const userMessage = lastMsgRes.rows[0]?.content || 'N/A';
+
         // 6. HANDLE TOOLS & RE-THINK
         if (aiMsg.tool_calls) {
-            const toolNames = aiMsg.tool_calls.map(t => t.function.name).join(', ');
+            const toolsUsed = aiMsg.tool_calls.map(t => t.function.name);
+            const toolNames = toolsUsed.join(', ');
             console.log(`🔧 [${leadName}] AI using tools: ${toolNames}`);
+
+            const stateBeforeRes = await db.query(
+                'SELECT state FROM conversations WHERE id = $1',
+                [conversationId]
+            );
+            const stateBefore = stateBeforeRes.rows[0]?.state || null;
+            let stateAfter = stateBefore;
 
             // Add the AI's tool decision to history
             messages.push(aiMsg);
@@ -657,6 +673,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 if (tool.function.name === 'update_lead_status') {
                     const args = JSON.parse(tool.function.arguments);
                     await updateState(conversationId, args.status, 'ai_agent');
+                    stateAfter = args.status;
                     toolResult = `Status updated to ${args.status}.`;
                 }
 
@@ -685,6 +702,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                     // ✅ HANDOFF: Move to PRE_VETTED (FCS should be ready by now)
                     await updateState(conversationId, 'PRE_VETTED', 'ai_agent');
+                    stateAfter = 'PRE_VETTED';
                     console.log(`✅ [${leadName}] Qualified → PRE_VETTED`);
 
                     // Simple handoff message - NO offer, NO numbers
@@ -735,17 +753,23 @@ Send this message to the lead: "${offer.pitch_message}"`;
             }
 
             responseContent = secondPass.choices[0].message.content;
+
+            await logAIDecision({
+                conversationId,
+                agent: 'pre_vetter',
+                leadMessage: userMessage,
+                reasoning: aiMsg.content || `AI selected tools: ${toolNames}`,
+                toolsUsed,
+                actionTaken: 'tool_call',
+                responseSent: responseContent,
+                stateBefore,
+                stateAfter,
+                tokensUsed: completion.usage?.total_tokens || null
+            });
         }
 
         if (responseContent) {
             // 📊 TRACK AI MODE RESPONSE
-            const lastMsgRes = await db.query(`
-                SELECT content FROM messages
-                WHERE conversation_id = $1 AND direction = 'inbound'
-                ORDER BY timestamp DESC LIMIT 1
-            `, [conversationId]);
-            const userMessage = lastMsgRes.rows[0]?.content || 'N/A';
-
             await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
 
             return { shouldReply: true, content: responseContent };

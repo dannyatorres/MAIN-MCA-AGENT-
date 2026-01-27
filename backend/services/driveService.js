@@ -54,10 +54,8 @@ async function syncDriveFiles(conversationId, businessName, userId = null) {
     }
 
     // Get user-specific folder ID (or fall back to env var)
-    console.log(`📂 [DEBUG] syncDriveFiles called with userId: ${userId}`);
     const FOLDER_ID = await getDriveFolderId(userId);
-    console.log(`📂 [DEBUG] getDriveFolderId returned: ${FOLDER_ID}`);
-    console.log(`📂 Starting Drive Sync for: "${businessName}" (Folder: ${FOLDER_ID})...`);
+    console.log(`📂 [${businessName}] Drive sync starting...`);
 
     function extractFolderId(input) {
         if (!input) return null;
@@ -90,7 +88,7 @@ async function syncDriveFiles(conversationId, businessName, userId = null) {
             return { success: false, error: "Master folder appears empty" };
         }
 
-        console.log(`📚 Found ${folders.length} candidate folders. Asking AI to match "${businessName}"...`);
+        console.log(`📂 [${businessName}] Searching ${folders.length} folders...`);
 
         // B. AI MATCHING WITH GEMINI
         const prompt = `
@@ -116,8 +114,6 @@ USE YOUR BEST JUDGMENT. If the core business name is recognizable, it's a match.
 Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No explanation, no quotes, just the folder name.
 `;
 
-        console.log(`🧠 [DEBUG] Gemini Input Prompt:\n${prompt}`);
-
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
         const result = await model.generateContent(prompt);
         const response = await result.response;
@@ -138,21 +134,13 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
             });
         }
 
-        console.log(`🧠 [DEBUG] Gemini Raw Response: "${matchedName}"`);
-
-        // Token usage (if available)
-        if (result.response.usageMetadata) {
-            const usage = result.response.usageMetadata;
-            console.log(`🎟️ [TOKENS] Input: ${usage.promptTokenCount} | Output: ${usage.candidatesTokenCount} | Total: ${usage.totalTokenCount}`);
-        }
-
         if (matchedName === "NO_MATCH") {
-            console.log(`⚠️ AI could not link "${businessName}" to any folder.`);
+            console.log(`⚠️ [${businessName}] No folder match found`);
             return { success: false, error: "No matching folder found" };
         }
 
         const targetFolder = folders.find(f => f.name === matchedName);
-        console.log(`✅ AI Match: "${businessName}" -> Folder: "${matchedName}" (${targetFolder.id})`);
+        console.log(`✅ [${businessName}] Matched → "${matchedName}"`);
 
         // C. PEEK INSIDE
         const fileRes = await drive.files.list({
@@ -171,7 +159,7 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
             return { success: true, count: 0, message: "Folder empty" };
         }
 
-        console.log(`👀 Peek successful: Found ${usefulFiles.length} files. Downloading...`);
+        console.log(`📄 [${businessName}] Found ${usefulFiles.length} PDFs, downloading...`);
 
         // D. DOWNLOAD & SAVE
         let uploadedCount = 0;
@@ -224,7 +212,6 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
                 `, [conversationId, s3Key, file.name, file.mimeType, fileSize]);
 
                 uploadedCount++;
-                console.log(`✅ Saved: ${file.name}`);
 
             } catch (err) {
                 console.error(`❌ Failed to save ${file.name}:`, err.message);
@@ -232,22 +219,21 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
         }
 
         if (uploadedCount > 0) {
-            console.log(`🎉 Synced ${uploadedCount} docs. Triggering background analysis (State remains unchanged).`);
+            console.log(`✅ [${businessName}] Synced ${uploadedCount} docs`);
 
             // --- ⚡ AUTO-TRIGGER FCS ANALYSIS ---
             if (await isServiceEnabled(userId, 'fcs')) {
-                console.log("⚡ Auto-Triggering Financial Analysis (FCS)...");
+                console.log(`⚡ [${businessName}] Running FCS...`);
                 try {
                     await fcsService.generateAndSaveFCS(conversationId, businessName, db);
-                    console.log("✅ Auto-FCS Completed Successfully.");
+                    console.log(`✅ [${businessName}] FCS complete`);
 
                     // --- 🧠 AUTO-TRIGGER COMMANDER ---
                     if (await isServiceEnabled(userId, 'commander')) {
                         const commanderService = require('./commanderService');
-                        console.log("🧠 Triggering Commander Strategy Analysis...");
                         const gamePlan = await commanderService.analyzeAndStrategize(conversationId);
                         if (gamePlan) {
-                            console.log(`🎖️ Commander Verdict: Grade ${gamePlan.lead_grade} | ${gamePlan.strategy_type}`);
+                            console.log(`🎖️ [${businessName}] Strategy: Grade ${gamePlan.lead_grade} | ${gamePlan.strategy_type}`);
                         }
                     }
                 } catch (fcsErr) {
