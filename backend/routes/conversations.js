@@ -743,6 +743,101 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
             console.error('❌ Error deleting usage_logs:', err.message);
         }
 
+        // Delete state history
+        try {
+            await db.query(
+                `DELETE FROM state_history WHERE conversation_id IN (${placeholders})`,
+                allowedIds
+            );
+            console.log('✅ State history deleted');
+        } catch (err) {
+            console.error('❌ Error deleting state_history:', err.message);
+        }
+
+        // Delete lead strategy
+        try {
+            await db.query(`DELETE FROM lead_strategy WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Lead strategy deleted');
+        } catch (err) { console.error('❌ Error deleting lead_strategy:', err.message); }
+
+        // Delete response training
+        try {
+            await db.query(`DELETE FROM response_training WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Response training deleted');
+        } catch (err) { console.error('❌ Error deleting response_training:', err.message); }
+
+        // Delete ai decisions
+        try {
+            await db.query(`DELETE FROM ai_decisions WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ AI decisions deleted');
+        } catch (err) { console.error('❌ Error deleting ai_decisions:', err.message); }
+
+        // Delete fcs analyses
+        try {
+            await db.query(`DELETE FROM fcs_analyses WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ FCS analyses deleted');
+        } catch (err) { console.error('❌ Error deleting fcs_analyses:', err.message); }
+
+        // Delete lead details
+        try {
+            await db.query(`DELETE FROM lead_details WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Lead details deleted');
+        } catch (err) { console.error('❌ Error deleting lead_details:', err.message); }
+
+        // Delete business owners
+        try {
+            await db.query(`DELETE FROM business_owners WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Business owners deleted');
+        } catch (err) { console.error('❌ Error deleting business_owners:', err.message); }
+
+        // Delete offers
+        try {
+            await db.query(`DELETE FROM offers WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Offers deleted');
+        } catch (err) { console.error('❌ Error deleting offers:', err.message); }
+
+        // Delete call logs
+        try {
+            await db.query(`DELETE FROM call_logs WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Call logs deleted');
+        } catch (err) { console.error('❌ Error deleting call_logs:', err.message); }
+
+        // Delete documents
+        try {
+            await db.query(`DELETE FROM documents WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Documents deleted');
+        } catch (err) { console.error('❌ Error deleting documents:', err.message); }
+
+        // Delete document analysis
+        try {
+            await db.query(`DELETE FROM document_analysis WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Document analysis deleted');
+        } catch (err) { console.error('❌ Error deleting document_analysis:', err.message); }
+
+        // Delete document processing queue
+        try {
+            await db.query(`DELETE FROM document_processing_queue WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Document processing queue deleted');
+        } catch (err) { console.error('❌ Error deleting document_processing_queue:', err.message); }
+
+        // Delete fcs queue
+        try {
+            await db.query(`DELETE FROM fcs_queue WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ FCS queue deleted');
+        } catch (err) { console.error('❌ Error deleting fcs_queue:', err.message); }
+
+        // Delete conversation context
+        try {
+            await db.query(`DELETE FROM conversation_context WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Conversation context deleted');
+        } catch (err) { console.error('❌ Error deleting conversation_context:', err.message); }
+
+        // Delete job queue
+        try {
+            await db.query(`DELETE FROM job_queue WHERE conversation_id IN (${placeholders})`, allowedIds);
+            console.log('✅ Job queue deleted');
+        } catch (err) { console.error('❌ Error deleting job_queue:', err.message); }
+
         // Finally delete conversations
         const result = await db.query(
             `DELETE FROM conversations WHERE id IN (${placeholders}) RETURNING id`,
