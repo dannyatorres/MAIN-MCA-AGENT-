@@ -8,7 +8,7 @@ const twilio = require('twilio');
 // POST /api/agent/trigger
 // The Dispatcher calls this URL
 router.post('/trigger', async (req, res) => {
-    const { conversation_id, system_instruction, direct_message } = req.body;
+    const { conversation_id, system_instruction, direct_message, next_state } = req.body;
 
     if (!conversation_id) return res.status(400).json({ error: "Missing conversation_id" });
 
@@ -63,11 +63,12 @@ router.post('/trigger', async (req, res) => {
             const phone = lead.rows[0].lead_phone;
 
             // B. Insert into DB (So we see it in the chat window)
+            const sentBy = direct_message ? 'drip' : 'ai';
             const insert = await db.query(`
-                INSERT INTO messages (conversation_id, content, direction, message_type, status, timestamp)
-                VALUES ($1, $2, 'outbound', 'sms', 'pending', NOW())
+                INSERT INTO messages (conversation_id, content, direction, message_type, status, timestamp, sent_by)
+                VALUES ($1, $2, 'outbound', 'sms', 'pending', NOW(), $3)
                 RETURNING id
-            `, [conversation_id, result.content]);
+            `, [conversation_id, result.content, sentBy]);
 
             const messageId = insert.rows[0].id;
 
@@ -82,6 +83,12 @@ router.post('/trigger', async (req, res) => {
             // D. Mark Sent
             await db.query("UPDATE messages SET status = 'sent' WHERE id = $1", [messageId]);
             await db.query("UPDATE conversations SET last_activity = NOW() WHERE id = $1", [conversation_id]);
+
+            // E. Update state if dispatcher specified next_state
+            if (next_state) {
+                const { updateState } = require('../services/stateManager');
+                await updateState(conversation_id, next_state, 'drip');
+            }
 
             // 🔔 Notify frontend of AI message
             if (global.io) {

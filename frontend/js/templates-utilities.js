@@ -494,8 +494,8 @@ class Templates {
         }
 
         // 3. Return combined HTML (no ghost bubble for image-only messages)
-        const isAI = !isInbound && ['ai', 'morning_agent', 'system'].includes(message.sent_by);
-        const isHuman = !isInbound && message.sent_by === 'user';
+        const isHuman = !isInbound && (message.sent_by_user_id || message.sent_by === 'user');
+        const isAI = !isInbound && !isHuman && ['ai', 'morning_agent', 'system'].includes(message.sent_by);
         const senderLabel = isInbound ? '' : (isAI ? '🤖' : (isHuman ? '👤' : '⚙️'));
         
         return `
