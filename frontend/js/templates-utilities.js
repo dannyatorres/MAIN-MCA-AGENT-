@@ -358,7 +358,7 @@ class Templates {
     }
 
     conversationItem(conversation) {
-        const lastActivity = new Date(conversation.last_activity);
+        const lastActivity = new Date(conversation.last_message_at || conversation.created_at);
         const timeAgo = this.utils.formatDate(lastActivity, 'ago');
         const isSelected = this.parent.currentConversationId === conversation.id;
         const isChecked = this.parent.selectedForDeletion?.has(conversation.id);
