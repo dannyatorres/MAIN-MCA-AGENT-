@@ -625,6 +625,12 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             systemPrompt += `\n**Negotiation:** You can adjust terms within reason. If they push back, offer longer term or lower amount. Goal is to close the deal.\n`;
         }
 
+        // Inject current state so AI knows how to behave
+        systemPrompt += `\n\n---\n\n## 📋 CURRENT STATE: ${currentState}\n`;
+        if (systemInstruction) {
+            systemPrompt += `**Instruction:** ${systemInstruction}\n`;
+        }
+
         // Build the Message Chain
         let messages = [{ role: "system", content: systemPrompt }];
 
