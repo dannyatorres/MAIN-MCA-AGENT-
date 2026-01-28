@@ -270,26 +270,29 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         }
 
         // =================================================================
-        // 🚨 LAYER 2: HUMAN INTERRUPTION CHECK (The 15-Minute Timer)
-        // If a HUMAN sent a message recently, do not disturb.
+        // 🚨 LAYER 2: HUMAN INTERRUPTION CHECK
+        // If a HUMAN sent a message recently AND lead hasn't replied yet, do not disturb.
         // =================================================================
         if (!isManualCommand) {
-            const lastOutbound = await db.query(`
-                SELECT timestamp, sent_by
+            const lastMessages = await db.query(`
+                SELECT timestamp, sent_by, direction
                 FROM messages
-                WHERE conversation_id = $1 AND direction = 'outbound'
-                ORDER BY timestamp DESC LIMIT 1
+                WHERE conversation_id = $1
+                ORDER BY timestamp DESC LIMIT 2
             `, [conversationId]);
 
-            if (lastOutbound.rows.length > 0) {
-                const lastMsg = lastOutbound.rows[0];
-                const timeDiff = (new Date() - new Date(lastMsg.timestamp)) / 1000 / 60; // Minutes
+            if (lastMessages.rows.length >= 2) {
+                const lastMsg = lastMessages.rows[0];      // Most recent
+                const prevMsg = lastMessages.rows[1];      // Second most recent
 
-                // If HUMAN sent the last message less than 15 mins ago -> SLEEP
-                if (lastMsg.sent_by === 'user' && timeDiff < 15) {
-                    console.log(`⏱️ PAUSED: Human active ${Math.round(timeDiff)}m ago`);
-                    console.log(`========== END AI AGENT ==========\n`);
-                    return { shouldReply: false };
+                // Only pause if: human sent last outbound AND lead hasn't replied yet
+                if (prevMsg.sent_by === 'user' && prevMsg.direction === 'outbound' && lastMsg.direction === 'outbound') {
+                    const timeDiff = (new Date() - new Date(prevMsg.timestamp)) / 1000 / 60;
+                    if (timeDiff < 15) {
+                        console.log(`⏱️ PAUSED: Human active ${Math.round(timeDiff)}m ago, waiting for lead reply`);
+                        console.log(`========== END AI AGENT ==========\n`);
+                        return { shouldReply: false };
+                    }
                 }
             }
         }
