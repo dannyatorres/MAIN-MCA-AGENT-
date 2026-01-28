@@ -431,8 +431,14 @@ router.post('/webhook/receive', async (req, res) => {
 
                 const currentState = conversation.state;
                 const RESURRECTION_STATES = ['NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'DEAD'];
+                const VETTING_NUDGE_STATES = ['VETTING_NUDGE_1', 'VETTING_NUDGE_2'];
+                const REPLIED_NUDGE_STATES = ['REPLIED_NUDGE_1', 'REPLIED_NUDGE_2'];
 
                 if (RESURRECTION_STATES.includes(currentState)) {
+                    await updateState(conversation.id, 'REPLIED', 'webhook');
+                } else if (VETTING_NUDGE_STATES.includes(currentState)) {
+                    await updateState(conversation.id, 'VETTING', 'webhook');
+                } else if (REPLIED_NUDGE_STATES.includes(currentState)) {
                     await updateState(conversation.id, 'REPLIED', 'webhook');
                 } else {
                     // Just update last_activity, no state change

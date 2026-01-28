@@ -26,7 +26,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // ==========================================
 // STATES THIS AGENT OWNS
 // ==========================================
-const VETTING_STATES = ['PRE_VETTED', 'VETTING', 'HAIL_MARY', 'HAIL_MARY_FU_1'];
+const VETTING_STATES = ['PRE_VETTED', 'VETTING', 'VETTING_NUDGE_1', 'VETTING_NUDGE_2', 'HAIL_MARY', 'HAIL_MARY_FU_1'];
 const STALL_STATES = ['SUBMITTED']; // Can respond but only to stall
 const PRE_VETTED_STALL_MESSAGES = [
     "running numbers now, will text shortly",
