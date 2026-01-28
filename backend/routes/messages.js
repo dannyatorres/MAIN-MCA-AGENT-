@@ -483,8 +483,26 @@ router.post('/webhook/receive', async (req, res) => {
                     const aiResult = await routeMessage(conversation.id, 'The user just replied. Read the history and respond naturally.');
 
                     if (aiResult.shouldReply && aiResult.content) {
-                        // If AI returned multiple messages (split by double newline), only send first
                         let messageToSend = aiResult.content;
+
+                        // --- FILTER OUT INTERNAL TOOL LEAKS ---
+                        // Remove anything that looks like tool calls
+                        messageToSend = messageToSend
+                            .replace(/\(Calling\s+\w+.*?\)/gi, '')
+                            .replace(/\w+_\w+\s+tool\s+invoked\.?/gi, '')
+                            .replace(/\{"status".*?\}/gi, '')
+                            .replace(/consult_analyst.*?(?=\n|$)/gi, '')
+                            .replace(/\n{2,}/g, '\n')
+                            .trim();
+
+                        // Don't send if nothing left after filtering
+                        if (!messageToSend || messageToSend.length < 5) {
+                            console.log(`⏭️ [${conversation.business_name}] Filtered message was empty - skipping`);
+                            return;
+                        }
+                        // --- END FILTER ---
+
+                        // If AI returned multiple messages (split by double newline), only send first
                         if (messageToSend.includes('\n\n')) {
                             messageToSend = messageToSend.split('\n\n')[0].trim();
                             console.log(`✂️ [${conversation.business_name}] Trimmed multi-message to first only`);
