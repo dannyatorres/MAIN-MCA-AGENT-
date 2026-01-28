@@ -54,7 +54,13 @@ router.get('/', async (req, res) => {
 
                 (SELECT content FROM messages m
                  WHERE m.conversation_id = c.id
-                 ORDER BY m.timestamp DESC LIMIT 1) as last_message
+                 ORDER BY m.timestamp DESC LIMIT 1) as last_message,
+
+                CASE 
+                    WHEN c.state IN ('REPLIED', 'REPLIED_NUDGE_1', 'REPLIED_NUDGE_2', 'VETTING', 'VETTING_NUDGE_1', 'VETTING_NUDGE_2', 'PRE_VETTED', 'HAIL_MARY', 'HAIL_MARY_FINAL', 'FCS_QUEUE', 'FUNDED')
+                    THEN COALESCE((SELECT MAX(m.timestamp) FROM messages m WHERE m.conversation_id = c.id), c.created_at)
+                    ELSE COALESCE((SELECT MAX(m.timestamp) FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound'), c.created_at)
+                END as last_message_at
 
             FROM conversations c
             ${includeAssignedUser ? 'LEFT JOIN users u ON c.assigned_user_id = u.id' : ''}
@@ -152,10 +158,12 @@ router.get('/', async (req, res) => {
         // If no messages exist (brand new lead), we fall back to created_at.
         // This ignores "admin edits" so leads don't jump around when you just change a note.
         query += `
-            ORDER BY COALESCE(
-                (SELECT MAX(m.timestamp) FROM messages m WHERE m.conversation_id = c.id),
-                c.created_at
-            ) DESC
+            ORDER BY 
+                CASE 
+                    WHEN c.state IN ('REPLIED', 'REPLIED_NUDGE_1', 'REPLIED_NUDGE_2', 'VETTING', 'VETTING_NUDGE_1', 'VETTING_NUDGE_2', 'PRE_VETTED', 'HAIL_MARY', 'HAIL_MARY_FINAL', 'FCS_QUEUE', 'FUNDED')
+                    THEN COALESCE((SELECT MAX(m.timestamp) FROM messages m WHERE m.conversation_id = c.id), c.created_at)
+                    ELSE COALESCE((SELECT MAX(m.timestamp) FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound'), c.created_at)
+                END DESC
             LIMIT $${paramIndex++} OFFSET $${paramIndex}
         `;
         values.push(parseInt(limit), parseInt(offset));

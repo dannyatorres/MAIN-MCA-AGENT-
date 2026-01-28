@@ -11,6 +11,16 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+function cleanToolLeaks(content) {
+    if (!content) return content;
+    return content
+        .replace(/\(Calling\s+\w+[^)]*\)/gi, '')
+        .replace(/\w+_\w+\s+(tool\s+)?invoked\.?/gi, '')
+        .replace(/\{"status"\s*:\s*"[^"]*"[^}]*\}/gi, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ==========================================
@@ -464,7 +474,7 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
         // =================================================================
         // 11. RETURN RESPONSE
         // =================================================================
-        const content = choice.message?.content;
+        const content = cleanToolLeaks(choice.message?.content);
 
         if (!content || content.trim() === '') {
             console.log('⚠️ Empty response from OpenAI');

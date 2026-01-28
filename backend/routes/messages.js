@@ -485,22 +485,17 @@ router.post('/webhook/receive', async (req, res) => {
                     if (aiResult.shouldReply && aiResult.content) {
                         let messageToSend = aiResult.content;
 
-                        // --- FILTER OUT INTERNAL TOOL LEAKS ---
-                        // Remove anything that looks like tool calls
+                        // Safety filter - remove any leaked tool text
                         messageToSend = messageToSend
-                            .replace(/\(Calling\s+\w+.*?\)/gi, '')
-                            .replace(/\w+_\w+\s+tool\s+invoked\.?/gi, '')
-                            .replace(/\{"status".*?\}/gi, '')
-                            .replace(/consult_analyst.*?(?=\n|$)/gi, '')
-                            .replace(/\n{2,}/g, '\n')
+                            .replace(/\(Calling\s+\w+[^)]*\)/gi, '')
+                            .replace(/\w+_\w+\s+(tool\s+)?invoked\.?/gi, '')
+                            .replace(/\{"status"\s*:\s*"[^"]*"[^}]*\}/gi, '')
                             .trim();
 
-                        // Don't send if nothing left after filtering
-                        if (!messageToSend || messageToSend.length < 5) {
-                            console.log(`⏭️ [${conversation.business_name}] Filtered message was empty - skipping`);
+                        if (!messageToSend || messageToSend.length < 3) {
+                            console.log(`⏭️ [${conversation.business_name}] Filtered to empty - skipping`);
                             return;
                         }
-                        // --- END FILTER ---
 
                         // If AI returned multiple messages (split by double newline), only send first
                         if (messageToSend.includes('\n\n')) {

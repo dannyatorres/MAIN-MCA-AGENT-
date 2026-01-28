@@ -15,6 +15,16 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
+function cleanToolLeaks(content) {
+    if (!content) return content;
+    return content
+        .replace(/\(Calling\s+\w+[^)]*\)/gi, '')
+        .replace(/\w+_\w+\s+(tool\s+)?invoked\.?/gi, '')
+        .replace(/\{"status"\s*:\s*"[^"]*"[^}]*\}/gi, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 // Format name to Title Case (SABRINA → Sabrina)
 function formatName(name) {
     if (!name) return '';
@@ -774,6 +784,12 @@ Send this message to the lead: "${offer.pitch_message}"`;
         }
 
         if (responseContent) {
+            responseContent = cleanToolLeaks(responseContent);
+            if (!responseContent || responseContent.trim() === '') {
+                console.log('⚠️ Empty response after cleaning');
+                console.log(`========== END AI AGENT ==========\n`);
+                return { shouldReply: false };
+            }
             console.log(`✅ AI Response: "${responseContent.substring(0, 80)}..."`);
             console.log(`========== END AI AGENT ==========\n`);
             // 📊 TRACK AI MODE RESPONSE
