@@ -141,12 +141,6 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
 
         const targetFolder = folders.find(f => f.name === matchedName);
 
-        // DEBUG START
-        console.log(`🔍 DEBUG: matchedName = "${matchedName}"`);
-        console.log(`🔍 DEBUG: folders =`, JSON.stringify(folders, null, 2));
-        console.log(`🔍 DEBUG: targetFolder =`, JSON.stringify(targetFolder, null, 2));
-        // DEBUG END
-
         console.log(`✅ [${businessName}] Matched → "${matchedName}"`);
 
         // C. PEEK INSIDE
