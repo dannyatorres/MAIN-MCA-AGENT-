@@ -61,6 +61,12 @@ router.post('/trigger', async (req, res) => {
             const lead = await db.query("SELECT lead_phone FROM conversations WHERE id = $1", [conversation_id]);
             if (lead.rows.length === 0) throw new Error("Lead not found");
             const phone = lead.rows[0].lead_phone;
+            // Validate phone before sending
+            const cleanPhone = (phone || '').replace(/\D/g, '');
+            if (!cleanPhone || cleanPhone.length < 10) {
+                console.log(`⚠️ [${conversation_id}] Invalid phone: "${phone}" - skipping SMS`);
+                return res.json({ success: true, action: 'skipped', reason: 'invalid_phone' });
+            }
 
             // B. Insert into DB (So we see it in the chat window)
             const sentBy = direct_message ? 'drip' : 'ai';
