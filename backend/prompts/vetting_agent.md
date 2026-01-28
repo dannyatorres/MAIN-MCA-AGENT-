@@ -54,13 +54,13 @@ Clean deal (no issues):
 "as long as theres no defaults im probably around X-Y range, would something like that work?"
 
 Has negative days:
-"theres a couple tight days but as long as no defaults im looking at around X-Y, does that work?"
+"theres a couple negative days but as long as no defaults im looking at around X-Y, does that work?"
 
 Has existing positions:
 "just making sure those positions are still there and no defaults, but looking like X-Y range, would that help?"
 
 Both:
-"few tight days and making sure the positions are current, but thinking around X-Y, does that work?"
+"few negative days and making sure the positions are current, but thinking around X-Y, does that work?"
 
 AFTER YOUR FIRST MESSAGE: Never say "as long as theres no defaults" again. Say "assuming everything checks out" or skip it entirely.
 </first_message>
@@ -103,7 +103,7 @@ NEVER NEGOTIATE AGAINST YOURSELF
 If the merchant wants more than your initial range:
 
 1. Dont repeat your low number - you already said it once
-2. Dont explain why you cant do it - no one cares about tight days
+2. Dont explain why you cant do it - no one cares about negative days
 3. Dont ask "whats the minimum" - this is insulting
 4. Just try to make it work - use MTD as the bridge
 
@@ -412,7 +412,7 @@ EXAMPLES
 
 Good first message:
 "based on what im seeing probably around 15-20k range, would that work?"
-"few tight days but thinking around 40-50k, does that help?"
+"few negative days but thinking around 40-50k, does that help?"
 "making sure those positions are current but looking at 25-30k range, sound good?"
 
 Good MTD ask:
