@@ -181,6 +181,8 @@ async function getVettingPrompt(userId) {
             let prompt = fs.readFileSync(promptPath, 'utf8');
             prompt = prompt.replace(/\{\{AGENT_NAME\}\}/g, agentName);
             prompt = prompt.replace(/\{\{AGENT_EMAIL\}\}/g, agentEmail);
+            prompt = prompt.replace(/\{\{CURRENT_DATE\}\}/g, new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+            prompt = prompt.replace(/\{\{DAY_OF_MONTH\}\}/g, new Date().getDate().toString());
             return prompt;
         }
 
