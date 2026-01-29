@@ -25,6 +25,33 @@ function cleanToolLeaks(content) {
         .trim();
 }
 
+function generateReasoning(toolsCalled, leadMessage, currentState, stateAfter) {
+    const reasons = [];
+    
+    if (toolsCalled.includes('trigger_drive_sync')) {
+        reasons.push('Email received - triggering Drive sync');
+    }
+    if (toolsCalled.includes('consult_analyst')) {
+        reasons.push('All qualifying info collected (email, credit score, funding status) - handing off to analyst');
+    }
+    if (toolsCalled.includes('update_lead_status')) {
+        reasons.push('Lead requested opt-out or marked for review - updating status');
+    }
+    if (toolsCalled.includes('no_response_needed')) {
+        reasons.push('Lead sent acknowledgment message - no response needed');
+    }
+    
+    if (currentState !== stateAfter) {
+        reasons.push(`State changed: ${currentState} → ${stateAfter}`);
+    }
+    
+    if (toolsCalled.length === 0) {
+        reasons.push('Continuing qualification conversation');
+    }
+    
+    return reasons.join('. ') || 'Standard response';
+}
+
 // Format name to Title Case (SABRINA → Sabrina)
 function formatName(name) {
     if (!name) return '';
@@ -804,11 +831,13 @@ Send this message to the lead: "${offer.pitch_message}"`;
             // 📊 TRACK AI MODE RESPONSE
             await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
 
+            const reasoning = systemInstruction || generateReasoning(toolsCalled, userMessage, currentState, stateAfter);
             await logAIDecision({
                 conversationId,
                 businessName: leadName,
                 agent: 'pre_vetter',
-                instruction: systemInstruction,
+                leadMessage: userMessage,
+                instruction: reasoning,
                 stateBefore: currentState,
                 stateAfter,
                 toolsCalled,
@@ -821,11 +850,13 @@ Send this message to the lead: "${offer.pitch_message}"`;
         }
         console.log(`⏭️ AI decided: No response needed`);
         console.log(`========== END AI AGENT ==========\n`);
+        const reasoning = systemInstruction || generateReasoning(toolsCalled, userMessage, currentState, stateAfter);
         await logAIDecision({
             conversationId,
             businessName: leadName,
             agent: 'pre_vetter',
-            instruction: systemInstruction,
+            leadMessage: userMessage,
+            instruction: reasoning,
             stateBefore: currentState,
             stateAfter,
             toolsCalled,

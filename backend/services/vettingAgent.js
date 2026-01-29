@@ -7,6 +7,7 @@ const { OpenAI } = require('openai');
 const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
 const { updateState } = require('./stateManager');
+const { logAIDecision } = require('./aiDecisionLogger');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -19,6 +20,36 @@ function cleanToolLeaks(content) {
         .replace(/\{"status"\s*:\s*"[^"]*"[^}]*\}/gi, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
+}
+
+function generateVettingReasoning(toolsCalled, currentState, stateAfter, toolArgs = {}) {
+    const reasons = [];
+    
+    if (toolsCalled.includes('no_response_needed')) {
+        reasons.push('Lead sent acknowledgment - no response needed');
+    }
+    if (toolsCalled.includes('update_vetting_status')) {
+        reasons.push(`Vetting status update: ${toolArgs.status} - ${toolArgs.reason || 'no reason given'}`);
+    }
+    if (toolsCalled.includes('submit_to_lenders')) {
+        reasons.push(`Deal ready - submitting $${toolArgs.confirmed_amount?.toLocaleString()} to lenders`);
+    }
+    if (toolsCalled.includes('escalate_to_human')) {
+        reasons.push(`Escalating to human: ${toolArgs.reason}`);
+    }
+    if (toolsCalled.includes('request_documents')) {
+        reasons.push(`Missing docs - requesting: ${toolArgs.documents_needed?.join(', ')}`);
+    }
+    
+    if (currentState !== stateAfter) {
+        reasons.push(`State: ${currentState} → ${stateAfter}`);
+    }
+    
+    if (reasons.length === 0) {
+        reasons.push('Continuing vetting conversation');
+    }
+    
+    return reasons.join('. ');
 }
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -402,7 +433,11 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
                     console.log(`📝 Vetting status: ${args.status} - ${args.reason || ''}`);
                     
                     if (args.status === 'VETTING') {
-                        await updateState(conversationId, 'VETTING', 'vetter');
+                        // Don't reset to VETTING if already in a nudge state
+                        // Nudge states should only reset when customer actually responds (inbound)
+                        if (!currentState.startsWith('VETTING_NUDGE') && !currentState.startsWith('HAIL_MARY')) {
+                            await updateState(conversationId, 'VETTING', 'vetter');
+                        }
                     } else if (args.status === 'DEAD') {
                         await updateState(conversationId, 'DEAD', 'vetter');
                     }
@@ -467,6 +502,25 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
 
             const finalContent = followUp.choices[0]?.message?.content;
             if (finalContent) {
+                const toolNames = choice.message.tool_calls.map(t => t.function.name);
+                const toolArgs = choice.message.tool_calls[0]
+                    ? JSON.parse(choice.message.tool_calls[0].function.arguments)
+                    : {};
+                
+                await logAIDecision({
+                    conversationId,
+                    businessName: conv.business_name || conv.first_name,
+                    agent: 'vetting_agent',
+                    leadMessage: inboundMessage,
+                    instruction: generateVettingReasoning(toolNames, currentState, currentState, toolArgs),
+                    stateBefore: currentState,
+                    stateAfter: currentState,
+                    toolsCalled: toolNames,
+                    aiResponse: finalContent,
+                    actionTaken: 'responded',
+                    tokensUsed: response.usage?.total_tokens
+                });
+                
                 return { shouldReply: true, content: finalContent };
             }
         }
@@ -482,6 +536,21 @@ async function processMessage(conversationId, inboundMessage, systemInstruction 
         }
 
         console.log(`✅ [VETTING AGENT] Response: "${content.substring(0, 100)}..."`);
+        
+        await logAIDecision({
+            conversationId,
+            businessName: conv.business_name || conv.first_name,
+            agent: 'vetting_agent',
+            leadMessage: inboundMessage,
+            instruction: systemInstruction || 'Continuing vetting conversation',
+            stateBefore: currentState,
+            stateAfter: currentState,
+            toolsCalled: [],
+            aiResponse: content,
+            actionTaken: 'responded',
+            tokensUsed: response.usage?.total_tokens
+        });
+        
         return { shouldReply: true, content: content };
 
     } catch (err) {

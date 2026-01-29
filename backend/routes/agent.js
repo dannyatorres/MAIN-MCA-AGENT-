@@ -90,10 +90,24 @@ router.post('/trigger', async (req, res) => {
             await db.query("UPDATE messages SET status = 'sent' WHERE id = $1", [messageId]);
             await db.query("UPDATE conversations SET last_activity = NOW() WHERE id = $1", [conversation_id]);
 
-            // E. Update state if dispatcher specified next_state
+            // E. Apply next_state only if safe
             if (next_state) {
-                const { updateState } = require('../services/stateManager');
-                await updateState(conversation_id, next_state, 'drip');
+                const currentCheck = await db.query('SELECT state FROM conversations WHERE id = $1', [conversation_id]);
+                const currentState = currentCheck.rows[0]?.state;
+                
+                // Protected states that dispatcher shouldn't overwrite
+                const protectedStates = ['DEAD', 'FUNDED', 'SUBMITTED', 'HUMAN_REVIEW', 'ARCHIVED'];
+                
+                if (protectedStates.includes(currentState)) {
+                    console.log(`🛡️ [${conversation_id}] State ${currentState} is protected - ignoring next_state: ${next_state}`);
+                } else {
+                    await db.query(`
+                        INSERT INTO state_history (conversation_id, old_state, new_state, changed_by)
+                        VALUES ($1, $2, $3, 'drip')
+                    `, [conversation_id, currentState, next_state]);
+                    await db.query(`UPDATE conversations SET state = $1 WHERE id = $2`, [next_state, conversation_id]);
+                    console.log(`📊 [${conversation_id}] ${currentState} → ${next_state} (drip)`);
+                }
             }
 
             // 🔔 Notify frontend of AI message
