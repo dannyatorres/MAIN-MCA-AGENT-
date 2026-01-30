@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { routeMessage } = require('../services/agentRouter'); // ✅ Routes to correct agent based on state
+const { processLeadWithAI } = require('../services/aiAgent');
 const { getDatabase } = require('../services/database');
 const { runMorningFollowUp } = require('../services/morningFollowUp');
 const twilio = require('twilio');
@@ -47,7 +47,7 @@ router.post('/trigger', async (req, res) => {
             result = { shouldReply: true, content: direct_message };
         } else {
             // 1. Run the AI Logic via Router
-            result = await routeMessage(conversation_id, null, system_instruction);
+            result = await processLeadWithAI(conversation_id, system_instruction);
         }
 
     if (result.error) return res.status(500).json(result);

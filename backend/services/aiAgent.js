@@ -190,6 +190,52 @@ async function getGlobalPrompt(userId) {
     }
 }
 
+async function getUnifiedPrompt(userId, currentState) {
+    const promptPath = path.join(__dirname, '../prompts/unified_agent.md');
+
+    // Map state to phase
+    const PHASE_MAP = {
+        'DRIP': 'DRIP',
+        'ACTIVE': 'ACTIVE',
+        'QUALIFIED': 'QUALIFIED',
+        'CLOSING': 'CLOSING'
+    };
+
+    const phase = PHASE_MAP[currentState] || 'ACTIVE';
+
+    let prompt = fs.readFileSync(promptPath, 'utf8');
+
+    // Inject phase + instructions
+    const PHASE_INSTRUCTIONS = {
+        DRIP: "Lead hasnt replied yet. This is a cold follow-up.",
+        ACTIVE: "Lead is engaged. Collect: email, credit score, recent funding. When you have all 3, call consult_analyst.",
+        QUALIFIED: "Lead is qualified. FCS data is ready. Pitch the offer based on the strategy.",
+        CLOSING: "Youve pitched. Handle objections and get verbal commitment."
+    };
+
+    prompt = prompt.replace(/\{\{PHASE\}\}/g, phase);
+    prompt = prompt.replace(/\{\{PHASE_INSTRUCTIONS\}\}/g, PHASE_INSTRUCTIONS[phase] || '');
+
+    // Inject agent name/email
+    let agentName = 'Dan Torres';
+    let agentEmail = 'mike@jmsglobal.biz';
+    if (userId) {
+        const db = getDatabase();
+        const result = await db.query('SELECT agent_name, email FROM users WHERE id = $1', [userId]);
+        if (result.rows[0]?.agent_name) {
+            agentName = result.rows[0].agent_name;
+        }
+        if (result.rows[0]?.email) {
+            agentEmail = result.rows[0].email;
+        }
+    }
+
+    prompt = prompt.replace(/\{\{AGENT_NAME\}\}/g, agentName);
+    prompt = prompt.replace(/\{\{AGENT_EMAIL\}\}/g, agentEmail);
+
+    return prompt;
+}
+
 // 📖 HELPER: Load Rebuttals
 async function getRebuttalsPrompt() {
     try {
@@ -546,16 +592,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         }
 
         // 5. BUILD SYSTEM PROMPT
-        let systemPrompt = await getGlobalPrompt(usageUserId);
+        let systemPrompt = await getUnifiedPrompt(usageUserId, currentState);
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
-        // Add phase context
-        const phaseInstructions = {
-            'DRIP': 'Lead hasnt replied yet. This is a cold follow-up.',
-            'ACTIVE': 'Lead is engaged. Collect: email, credit score, recent funding. When you have all 3, call consult_analyst.',
-            'QUALIFIED': 'Lead is qualified. FCS data is ready. Pitch the offer based on the strategy.',
-            'CLOSING': 'Youve pitched. Handle objections and get verbal commitment.'
-        };
-        systemPrompt += `\n\nCURRENT PHASE: ${currentState}\n${phaseInstructions[currentState] || ''}\n`;
 
         // Load rebuttals playbook
         const rebuttals = await getRebuttalsPrompt();
