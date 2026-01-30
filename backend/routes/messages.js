@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { trackResponseForTraining } = require('../services/aiAgent');
-const { routeMessage } = require('../services/agentRouter');
+const { processLeadWithAI } = require('../services/aiAgent');
 const { updateState } = require('../services/stateManager');
 const { trackUsage } = require('../services/usageTracker');
 const multer = require('multer');
@@ -430,20 +430,23 @@ router.post('/webhook/receive', async (req, res) => {
                 });
 
                 const currentState = conversation.state;
-                const RESURRECTION_STATES = ['NEW', 'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4', 'DEAD'];
-                const VETTING_NUDGE_STATES = ['VETTING_NUDGE_1', 'VETTING_NUDGE_2'];
-                const REPLIED_NUDGE_STATES = ['REPLIED_NUDGE_1', 'REPLIED_NUDGE_2'];
 
-                if (RESURRECTION_STATES.includes(currentState)) {
-                    await updateState(conversation.id, 'REPLIED', 'webhook');
-                } else if (VETTING_NUDGE_STATES.includes(currentState)) {
-                    await updateState(conversation.id, 'VETTING', 'webhook');
-                } else if (REPLIED_NUDGE_STATES.includes(currentState)) {
-                    await updateState(conversation.id, 'REPLIED', 'webhook');
-                } else {
-                    // Just update last_activity, no state change
-                    await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversation.id]);
+                // Reset nudge count and update activity on ANY inbound message
+                await db.query(`
+                    UPDATE conversations 
+                    SET last_activity = NOW(), nudge_count = 0 
+                    WHERE id = $1
+                `, [conversation.id]);
+
+                // Move DRIP leads to ACTIVE when they reply
+                if (currentState === 'DRIP' || currentState === 'NEW') {
+                    await updateState(conversation.id, 'ACTIVE', 'webhook');
                 }
+                // DEAD leads get resurrected to ACTIVE
+                else if (currentState === 'DEAD') {
+                    await updateState(conversation.id, 'ACTIVE', 'webhook');
+                }
+                // All other states (ACTIVE, QUALIFIED, CLOSING) stay as-is
 
                 if (global.io) {
                     global.io.emit('new_message', {
@@ -453,8 +456,8 @@ router.post('/webhook/receive', async (req, res) => {
                     });
                 }
 
-                // AI Logic - Route through agentRouter
-                if (routeMessage) {
+                // AI Logic - Directly call aiAgent
+                if (processLeadWithAI) {
                     const lockCheck = await db.query(`
                         SELECT 1 FROM conversations 
                         WHERE id = $1 AND ai_processing = true
@@ -486,7 +489,7 @@ router.post('/webhook/receive', async (req, res) => {
                     console.log(`🤖 [${conversation.business_name}] AI processing (${Math.round(delay / 1000)}s delay)...`);
                     await new Promise(r => setTimeout(r, delay));
 
-                    const aiResult = await routeMessage(conversation.id, 'The user just replied. Read the history and respond naturally.');
+                    const aiResult = await processLeadWithAI(conversation.id, null);
 
                     if (aiResult.shouldReply && aiResult.content) {
                         let messageToSend = aiResult.content;

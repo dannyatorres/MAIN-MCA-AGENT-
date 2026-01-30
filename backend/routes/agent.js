@@ -88,7 +88,16 @@ router.post('/trigger', async (req, res) => {
 
             // D. Mark Sent
             await db.query("UPDATE messages SET status = 'sent' WHERE id = $1", [messageId]);
-            await db.query("UPDATE conversations SET last_activity = NOW() WHERE id = $1", [conversation_id]);
+            // Update last_activity and nudge_count
+            if (req.body.is_nudge) {
+                await db.query(`
+                    UPDATE conversations 
+                    SET last_activity = NOW(), nudge_count = COALESCE(nudge_count, 0) + 1 
+                    WHERE id = $1
+                `, [conversation_id]);
+            } else {
+                await db.query("UPDATE conversations SET last_activity = NOW() WHERE id = $1", [conversation_id]);
+            }
 
             // E. Apply next_state only if safe
             if (next_state) {

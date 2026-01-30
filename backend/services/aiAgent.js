@@ -548,6 +548,14 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = await getGlobalPrompt(usageUserId);
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
+        // Add phase context
+        const phaseInstructions = {
+            'DRIP': 'Lead hasnt replied yet. This is a cold follow-up.',
+            'ACTIVE': 'Lead is engaged. Collect: email, credit score, recent funding. When you have all 3, call consult_analyst.',
+            'QUALIFIED': 'Lead is qualified. FCS data is ready. Pitch the offer based on the strategy.',
+            'CLOSING': 'Youve pitched. Handle objections and get verbal commitment.'
+        };
+        systemPrompt += `\n\nCURRENT PHASE: ${currentState}\n${phaseInstructions[currentState] || ''}\n`;
 
         // Load rebuttals playbook
         const rebuttals = await getRebuttalsPrompt();
