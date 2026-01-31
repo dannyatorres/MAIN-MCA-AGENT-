@@ -716,7 +716,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         console.log(`🧠 Calling OpenAI with ${messages.length} messages...`);
         console.log(`🛠️ Tools available: ${availableTools.map(t => t.function.name).join(', ')}`);
         const completion = await openai.chat.completions.create({
-            model: "gpt-5-mini",
+            model: "gpt-5.2",
             messages: messages,
             tools: availableTools, // Use filtered tools list (Layer 3)
             tool_choice: "auto"
@@ -728,7 +728,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 conversationId,
                 type: 'llm_call',
                 service: 'openai',
-                model: completion.model || 'gpt-5-mini',
+                model: completion.model || 'gpt-5.2',
                 inputTokens: completion.usage.prompt_tokens,
                 outputTokens: completion.usage.completion_tokens,
                 metadata: { pass: 'first' }
@@ -860,7 +860,7 @@ Send this message to the lead: "${offer.pitch_message}"`;
 
             // --- SECOND PASS (Generate the Final Reply with Context) ---
             const secondPass = await openai.chat.completions.create({
-                model: "gpt-5-mini",
+                model: "gpt-5.2",
                 messages: messages
             });
 
@@ -870,7 +870,7 @@ Send this message to the lead: "${offer.pitch_message}"`;
                     conversationId,
                     type: 'llm_call',
                     service: 'openai',
-                    model: secondPass.model || 'gpt-5-mini',
+                    model: secondPass.model || 'gpt-5.2',
                     inputTokens: secondPass.usage.prompt_tokens,
                     outputTokens: secondPass.usage.completion_tokens,
                     metadata: { pass: 'second' }
