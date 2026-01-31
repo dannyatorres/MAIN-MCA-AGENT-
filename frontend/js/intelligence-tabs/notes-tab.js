@@ -20,7 +20,7 @@ export class NotesTab {
             <div class="notes-tab-container">
                 <div class="notes-toolbar">
                     <span class="notes-title">Notes</span>
-                    <button id="refreshNotesBtn" class="btn-email-tool" title="Refresh">
+                    <button id="refreshNotesBtn" class="btn-notes-tool" title="Refresh">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -33,7 +33,7 @@ export class NotesTab {
                 </div>
 
                 <div id="notesList" class="notes-list">
-                    <div style="padding:40px; text-align:center; color:#6b7280;">Loading...</div>
+                    <div class="notes-loading"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading...</div>
                 </div>
             </div>
         `;
@@ -89,7 +89,12 @@ export class NotesTab {
         if (!list) return;
 
         if (!this.notes.length) {
-            list.innerHTML = `<div style="padding:40px; text-align:center; color:#8b949e;">📝 No notes yet</div>`;
+            list.innerHTML = `
+                <div class="notes-empty-state">
+                    <i class="fas fa-sticky-note"></i>
+                    <p>No notes yet</p>
+                </div>
+            `;
             return;
         }
 
