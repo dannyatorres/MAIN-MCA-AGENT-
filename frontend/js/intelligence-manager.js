@@ -22,6 +22,11 @@ export class IntelligenceManager {
             'strategy': new DealIntelligenceTab(parent)
         };
 
+        this.notesTab = this.tabs['notes'];
+        if (this.notesTab) {
+            this.notesTab.onBadgeUpdate = (count) => this.updateNotesBadge(count);
+        }
+
         this.init();
     }
 
@@ -100,12 +105,30 @@ export class IntelligenceManager {
             tabModule = this.tabs[tabName];
         }
 
+        if (tabName === 'notes') {
+            this.notesTab?.activate();
+        } else {
+            this.notesTab?.deactivate();
+        }
+
         // RENDER
         if (tabModule && typeof tabModule.render === 'function') {
             const convId = this.parent.getCurrentConversationId ? this.parent.getCurrentConversationId() : null;
             tabModule.render(container, convId);
         } else {
             container.innerHTML = `<div class="error-state">Tab '${tabName}' not found.</div>`;
+        }
+    }
+
+    updateNotesBadge(count) {
+        const badge = document.getElementById('notesTabBadge');
+        if (!badge) return;
+
+        if (count > 0) {
+            badge.textContent = count > 9 ? '9+' : count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
         }
     }
 

@@ -9,9 +9,13 @@ router.get('/:conversationId', async (req, res) => {
         const { conversationId } = req.params;
 
         const result = await db.query(`
-            SELECT * FROM notes
-            WHERE conversation_id = $1
-            ORDER BY created_at DESC
+            SELECT 
+                n.*,
+                COALESCE(u.name, 'Lola') as created_by_name
+            FROM notes n
+            LEFT JOIN users u ON u.id = n.created_by
+            WHERE n.conversation_id = $1
+            ORDER BY n.created_at DESC
         `, [conversationId]);
 
         res.json({ success: true, notes: result.rows });

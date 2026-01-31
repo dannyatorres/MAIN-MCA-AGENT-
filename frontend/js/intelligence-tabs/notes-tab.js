@@ -5,11 +5,21 @@ export class NotesTab {
         this.parent = parent;
         this.notes = [];
         this.conversationId = null;
+        this.isActive = false;
+        this.lastSeenCount = 0;
+        this.pollInterval = null;
+        this.onBadgeUpdate = null; // Callback for parent to update tab badge
     }
 
     render(container, conversationId) {
         this.container = container;
         this.conversationId = conversationId;
+        this.isActive = true;
+
+        // Clear badge when viewing
+        this.lastSeenCount = this.notes.length;
+        if (this.onBadgeUpdate) this.onBadgeUpdate(0);
+
         // Ensure container is relative for absolute positioning of input deck
         this.container.style.position = 'relative';
         this.container.style.overflow = 'hidden'; // Stop double scrollbars
@@ -17,6 +27,7 @@ export class NotesTab {
         this.container.innerHTML = this.getLayoutHTML();
         this.attachEventListeners();
         this.fetchNotes();
+        this.startPolling();
     }
 
     getLayoutHTML() {
@@ -72,7 +83,6 @@ export class NotesTab {
     async fetchNotes() {
         if (!this.conversationId) return;
 
-        // Don't wipe the list if we are just switching tabs, only if empty
         const list = document.getElementById('notesListContainer');
         if (list && list.children.length === 0) {
             list.innerHTML = `<div class="notes-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>`;
@@ -84,6 +94,7 @@ export class NotesTab {
 
             if (data.success) {
                 this.notes = data.notes || [];
+                this.lastSeenCount = this.notes.length;
                 this.renderNotesList();
             }
         } catch (err) {
@@ -105,7 +116,6 @@ export class NotesTab {
             return;
         }
 
-        // Render notes
         list.innerHTML = this.notes.map(n => this.getNoteItemHTML(n)).join('');
 
         // Auto-scroll to bottom like chat
@@ -116,22 +126,20 @@ export class NotesTab {
         const saveBtn = document.getElementById('saveNoteBtn');
         const input = document.getElementById('newNoteInput');
 
-        // Click Handler
         if (saveBtn) {
             saveBtn.onclick = () => this.saveNote();
         }
 
-        // Enter Key Handler (Chat Style)
         if (input) {
             input.onkeydown = (e) => {
                 // Enter sends, Shift+Enter adds new line
                 if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault(); // Stop new line
+                    e.preventDefault();
                     this.saveNote();
                 }
             };
 
-            // Optional: Auto-grow textarea like chat
+            // Auto-grow textarea like chat
             input.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
@@ -140,17 +148,90 @@ export class NotesTab {
         }
     }
 
+    // Call this when switching away from notes tab
+    deactivate() {
+        this.isActive = false;
+    }
+
+    // Call this when switching back to notes tab
+    activate() {
+        this.isActive = true;
+        this.lastSeenCount = this.notes.length;
+        if (this.onBadgeUpdate) this.onBadgeUpdate(0);
+    }
+
+    startPolling() {
+        if (this.pollInterval) clearInterval(this.pollInterval);
+
+        this.pollInterval = setInterval(() => {
+            this.checkForNewNotes();
+        }, 30000);
+    }
+
+    stopPolling() {
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+        }
+    }
+
+    async checkForNewNotes() {
+        if (!this.conversationId) return;
+
+        try {
+            const res = await fetch(`/api/notes/${this.conversationId}`);
+            const data = await res.json();
+
+            if (data.success && data.notes) {
+                const newCount = data.notes.length;
+                const unseenCount = newCount - this.lastSeenCount;
+
+                if (unseenCount > 0) {
+                    this.notes = data.notes;
+
+                    if (this.isActive) {
+                        this.renderNotesList();
+                        this.lastSeenCount = newCount;
+                        if (this.onBadgeUpdate) this.onBadgeUpdate(0);
+                    } else {
+                        if (this.onBadgeUpdate) this.onBadgeUpdate(unseenCount);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Failed to check for new notes:', err);
+        }
+    }
+
+    // Clean up when conversation changes
+    destroy() {
+        this.stopPolling();
+        this.notes = [];
+        this.lastSeenCount = 0;
+    }
+
     async saveNote() {
         const input = document.getElementById('newNoteInput');
         const content = input.value.trim();
 
         if (!content) return;
 
-        // Visual feedback
-        const saveBtn = document.getElementById('saveNoteBtn');
-        const originalIcon = saveBtn.innerHTML;
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        // Clear input immediately (chat-style UX)
+        input.value = '';
+        input.style.height = 'auto';
+
+        // Create optimistic note
+        const tempId = 'temp-' + Date.now();
+        const optimisticNote = {
+            id: tempId,
+            content,
+            created_at: new Date().toISOString(),
+            created_by_name: window.currentUser?.name || 'You'
+        };
+
+        // Add to UI immediately
+        this.notes.push(optimisticNote);
+        this.renderNotesList();
 
         try {
             const res = await fetch(`/api/notes/${this.conversationId}`, {
@@ -162,23 +243,30 @@ export class NotesTab {
             const data = await res.json();
 
             if (data.success) {
-                input.value = '';
-                input.style.height = 'auto'; // Reset height
-
-                // Chat style: newest at bottom
-                this.notes.push(data.note);
-                this.renderNotesList();
+                const idx = this.notes.findIndex(n => n.id === tempId);
+                if (idx !== -1) {
+                    this.notes[idx] = data.note;
+                }
+                if (this.isActive) {
+                    this.lastSeenCount = this.notes.length;
+                    if (this.onBadgeUpdate) this.onBadgeUpdate(0);
+                }
             } else {
-                alert('Failed to save note: ' + data.error);
+                throw new Error(data.error);
             }
         } catch (err) {
             console.error('Failed to save note:', err);
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalIcon;
 
-            // Refocus input for rapid entry
-            input.focus();
+            // Remove failed note and restore input
+            this.notes = this.notes.filter(n => n.id !== tempId);
+            this.renderNotesList();
+            input.value = content;
+
+            // Brief error indicator
+            input.classList.add('input-error');
+            setTimeout(() => input.classList.remove('input-error'), 1500);
         }
+
+        input.focus();
     }
 }

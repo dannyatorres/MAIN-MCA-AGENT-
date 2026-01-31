@@ -119,6 +119,11 @@
     color: #6e7681;
 }
 
+.notes-textarea.input-error {
+    border-color: #ef4444;
+    animation: shake 0.3s ease-in-out;
+}
+
 /* Send Button (Paper Plane Style) */
 .btn-send-note {
     width: 36px;
@@ -166,4 +171,10 @@
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
 }
