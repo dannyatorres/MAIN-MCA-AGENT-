@@ -88,6 +88,7 @@ router.post('/trigger', async (req, res) => {
 
             // D. Mark Sent
             await db.query("UPDATE messages SET status = 'sent' WHERE id = $1", [messageId]);
+            console.log(`📊 Updating activity: is_nudge=${req.body.is_nudge}, conversation_id=${conversation_id}`);
             // Update last_activity and nudge_count
             if (req.body.is_nudge) {
                 await db.query(`
