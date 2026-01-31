@@ -112,24 +112,40 @@ class StatsModule {
             userName = user.name?.split(' ')[0] || 'Boss';
         }
 
-        const greetings = [
-            `Peace, ${userName}!`,
-            `What's good, ${userName}?`,
-            `Yo, what's the word, ${userName}?`,
-            `What up, ${userName}!`,
-            `Salute, ${userName}!`,
-            `What's really good, ${userName}?`,
-            `Yo, what's poppin, ${userName}?`,
-            `Peace, king!`,
-            `What's the science?`,
-            `Blessings, ${userName}!`,
-            `Talk to me, ${userName}!`,
-            `Word up, let's work!`,
-            `It's only right, ${userName}!`,
-            `Yo, we here!`,
-            `You already know, ${userName}!`,
-            `Let's build, ${userName}!`
-        ];
+        let greetings;
+
+        if (userName === 'Lola') {
+            greetings = [
+                `¡Quiubo, Lola!`,
+                `¿Qué más, Lola?`,
+                `¡Hola parcera!`,
+                `¿Bien o qué, Lola?`,
+                `¡Quiubo pues!`,
+                `¡A darle, Lola!`,
+                `¡Con toda, parcera!`,
+                `¡Vamos con todo, Lola!`,
+                `¡Pilas, Lola!`,
+                `¡Éxitos hoy, Lola!`,
+                `¡Buenos días, reina!`,
+                `¿Cómo amaneció, Lola?`,
+                `¡Qué alegría verte, Lola!`
+            ];
+        } else {
+            greetings = [
+                `Peace, ${userName}!`,
+                `What's good, ${userName}?`,
+                `Yo, what's the word, ${userName}?`,
+                `What up, ${userName}!`,
+                `Salute, ${userName}!`,
+                `What's really good, ${userName}?`,
+                `Yo, what's poppin, ${userName}?`,
+                `Blessings, ${userName}!`,
+                `Talk to me, ${userName}!`,
+                `It's only right, ${userName}!`,
+                `You already know, ${userName}!`,
+                `Let's build, ${userName}!`
+            ];
+        }
         const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
         const quotes = [
