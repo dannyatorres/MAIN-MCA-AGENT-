@@ -11,7 +11,11 @@ router.get('/:conversationId', async (req, res) => {
         const result = await db.query(`
             SELECT 
                 n.*,
-                COALESCE(u.name, 'Lola') as created_by_name
+                CASE 
+                    WHEN n.source = 'email_processor' THEN 'Inbox Bot'
+                    WHEN n.created_by IS NULL THEN 'Lola'
+                    ELSE u.name
+                END as created_by_name
             FROM notes n
             LEFT JOIN users u ON u.id = n.created_by
             WHERE n.conversation_id = $1

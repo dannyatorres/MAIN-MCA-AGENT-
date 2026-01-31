@@ -74,6 +74,29 @@
     word-break: break-word;
 }
 
+/* User notes - default blue */
+.note-card .note-author {
+    color: #58a6ff;
+}
+
+/* Lola (system AI) - purple */
+.note-card.note-source-lola .note-author {
+    color: #a78bfa;
+}
+
+/* Email Processor - green */
+.note-card.note-source-email_processor .note-author {
+    color: #34d399;
+}
+
+.note-card.note-source-email_processor {
+    border-left: 3px solid #34d399;
+}
+
+.note-card.note-source-lola {
+    border-left: 3px solid #a78bfa;
+}
+
 /* 4. THE FLOATING INPUT DECK (Matches Chat) */
 .notes-input-wrapper {
     position: absolute;

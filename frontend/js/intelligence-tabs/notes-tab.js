@@ -79,9 +79,10 @@ export class NotesTab {
         const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         // Fallback to 'System' only if truly missing
         const author = note.created_by_name || 'System';
+        const source = note.source || 'user';
 
         return `
-            <div class="note-card ${isPending ? 'note-pending' : ''}" id="note-${note.id}" data-note-id="${note.id}">
+            <div class="note-card ${isPending ? 'note-pending' : ''} note-source-${source}" id="note-${note.id}" data-note-id="${note.id}">
                 <div class="note-meta">
                     <span class="note-author">${this.escapeHtml(author)}</span>
                     <span class="note-timestamp">${isPending ? '<i class="fas fa-circle-notch fa-spin"></i>' : `${dateStr} ${timeStr}`}</span>

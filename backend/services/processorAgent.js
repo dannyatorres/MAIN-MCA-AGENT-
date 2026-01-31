@@ -461,8 +461,8 @@ async function processEmail(email, db) {
     // 🟢 Also write to notes table
     try {
         await db.query(`
-            INSERT INTO notes (conversation_id, content, created_by)
-            VALUES ($1, $2, NULL)
+            INSERT INTO notes (conversation_id, content, created_by, source)
+            VALUES ($1, $2, NULL, 'email_processor')
         `, [bestMatchId, systemNote]);
     } catch (err) {
         console.error('      ⚠️ Failed to create note:', err.message);
