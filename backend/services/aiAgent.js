@@ -567,11 +567,15 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const offers = offersRes.rows;
 
         // 4. BUILD CONVERSATION HISTORY
-        const history = await db.query(`
+        // 4. BUILD CONVERSATION HISTORY - Get LATEST 20, then reverse for chronological order
+        const historyRes = await db.query(`
             SELECT direction, content FROM messages
             WHERE conversation_id = $1
-            ORDER BY timestamp ASC LIMIT 20
+            ORDER BY timestamp DESC LIMIT 20
         `, [conversationId]);
+
+        // Reverse to get chronological order (oldest first)
+        const history = { rows: historyRes.rows.reverse() };
 
         // 4b. CHECK FOR HANDOFF ACKNOWLEDGMENT - Stay silent
         // Use the full history (last 20) to find the absolute last outbound/inbound
@@ -581,14 +585,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const lastOutbound = lastOutbounds.slice(-1)[0]?.content?.toLowerCase() || '';
         const lastInbound = lastInbounds.slice(-1)[0]?.content?.toLowerCase().trim() || '';
         const userMessageForMemory = lastInbounds.slice(-1)[0]?.content || '';
-
-        // Store inbound message in vector memory
-        if (userMessageForMemory) {
-            storeMessage(conversationId, userMessageForMemory, {
-                direction: 'inbound',
-                state: currentState
-            }).catch(err => console.error('⚠️ Memory store failed (inbound):', err.message));
-        }
 
         const handoffPhrases = ['give me a few minutes', 'text you back shortly', 'get back to you', 'finalize the numbers', 'run the numbers'];
         const acknowledgments = ['thanks', 'thank you', 'ty', 'ok', 'okay', 'k', 'got it', 'sounds good', 'cool', 'great', 'perfect', 'awesome', 'sent', 'done', '👍', '👌'];
