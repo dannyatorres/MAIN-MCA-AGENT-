@@ -152,6 +152,36 @@ const BASE_TOOLS = [
             description: "Call this when the lead's message doesn't need a response. Use when they say: 'ok', 'sounds good', 'cool', 'thanks', 'got it', 'k', 'okay', 'alright', 'perfect', 'great', 'sure', 'yep', 'yes', 'no problem'. DO NOT respond to these - just stay silent and wait.",
             parameters: { type: "object", properties: {} }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "remember_fact",
+            description: "Store a fact about this lead. Call this IMMEDIATELY when you learn: email, credit_score, funding_status, requested_amount, or any other key info. This persists across messages.",
+            parameters: {
+                type: "object",
+                properties: {
+                    fact_key: {
+                        type: "string",
+                        enum: ["email", "credit_score", "funding_status", "requested_amount", "has_mtd_statement", "objection", "timeline"],
+                        description: "The type of fact"
+                    },
+                    fact_value: {
+                        type: "string",
+                        description: "The value (e.g., '650', 'still_looking', 'needs_50k')"
+                    }
+                },
+                required: ["fact_key", "fact_value"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "get_lead_facts",
+            description: "Retrieve all stored facts about this lead. Call this at the START of your response to see what you already know.",
+            parameters: { type: "object", properties: {} }
+        }
     }
 ];
 
@@ -571,6 +601,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = await getPromptForPhase(usageUserId, currentState);
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
+        systemPrompt += `\n## 🧠 MEMORY TOOLS\nYou have persistent memory. Use it:\n1. Call **get_lead_facts** FIRST to see what you already know\n2. Call **remember_fact** IMMEDIATELY when you learn something new\n3. NEVER re-ask for information that's already in your facts\n\nIf get_lead_facts shows credit_score: 650, DO NOT ask for credit score again.\n`;
 
         // Load rebuttals playbook
         const rebuttals = await getRebuttalsPrompt();
@@ -774,6 +805,33 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
                     // Simple handoff message - NO offer, NO numbers
                     toolResult = "Tell the lead: 'give me a few minutes to run the numbers and ill text you back shortly'";
+                }
+
+                else if (tool.function.name === 'remember_fact') {
+                    const args = JSON.parse(tool.function.arguments);
+                    await db.query(`
+                        INSERT INTO lead_facts (conversation_id, fact_key, fact_value)
+                        VALUES ($1, $2, $3)
+                        ON CONFLICT (conversation_id, fact_key) 
+                        DO UPDATE SET fact_value = $3, collected_at = NOW()
+                    `, [conversationId, args.fact_key, args.fact_value]);
+                    console.log(`🧠 [${leadName}] Stored: ${args.fact_key} = ${args.fact_value}`);
+                    toolResult = `Stored: ${args.fact_key} = ${args.fact_value}`;
+                }
+
+                else if (tool.function.name === 'get_lead_facts') {
+                    const facts = await db.query(`
+                        SELECT fact_key, fact_value FROM lead_facts 
+                        WHERE conversation_id = $1
+                    `, [conversationId]);
+
+                    if (facts.rows.length > 0) {
+                        const factList = facts.rows.map(f => `- ${f.fact_key}: ${f.fact_value}`).join('\n');
+                        toolResult = `Known facts about this lead:\n${factList}`;
+                    } else {
+                        toolResult = "No facts stored yet. Collect: email, credit_score, funding_status.";
+                    }
+                    console.log(`🧠 [${leadName}] Retrieved ${facts.rows.length} facts`);
                 }
 
                 else if (tool.function.name === 'generate_offer') {

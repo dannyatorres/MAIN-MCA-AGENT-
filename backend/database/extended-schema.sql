@@ -185,3 +185,15 @@ UPDATE conversations SET state = 'SUBMITTED' WHERE state = 'SUBMITTED';
 UPDATE conversations
 SET state = 'QUALIFIED'
 WHERE state = 'HUMAN_REVIEW';
+
+-- Lead facts memory
+CREATE TABLE IF NOT EXISTS lead_facts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    fact_key VARCHAR(50) NOT NULL,
+    fact_value TEXT NOT NULL,
+    collected_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(conversation_id, fact_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lead_facts_conversation ON lead_facts(conversation_id);
