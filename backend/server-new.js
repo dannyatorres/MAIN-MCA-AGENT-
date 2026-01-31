@@ -10,6 +10,7 @@ const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
 const emailRoutes = require('./routes/emailRoutes');
 const usageRoutes = require('./routes/usage');
+const notesRoutes = require('./routes/notes');
 require('dotenv').config();
 
 // Migration imports
@@ -150,6 +151,7 @@ app.use('/api/n8n', require('./routes/n8n-integration'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/calling', require('./routes/calling'));
 app.use('/api/email', emailRoutes);
+app.use('/api/notes', notesRoutes);
 app.use('/api/agent', require('./routes/agent'));
 app.use('/api/cleaner', require('./routes/cleaner'));
 app.use('/api/rules', require('./routes/rule-suggestions'));

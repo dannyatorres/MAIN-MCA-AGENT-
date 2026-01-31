@@ -5,7 +5,7 @@ import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
 // AI Tab Import REMOVED - We use the global AIAssistant now
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
 import { FCSTab } from './intelligence-tabs/fcs-tab.js';
-import { EmailTab } from './intelligence-tabs/email-tab.js';
+import { NotesTab } from './intelligence-tabs/notes-tab.js';
 import { DealIntelligenceTab } from './intelligence-tabs/deal-intelligence-tab.js';
 
 export class IntelligenceManager {
@@ -18,7 +18,7 @@ export class IntelligenceManager {
             // 'ai-assistant': REMOVED (Handled dynamically)
             'lenders': new LendersTab(parent),
             'fcs': new FCSTab(parent),
-            'email': new EmailTab(parent),
+            'notes': new NotesTab(parent),
             'strategy': new DealIntelligenceTab(parent)
         };
 
@@ -102,7 +102,8 @@ export class IntelligenceManager {
 
         // RENDER
         if (tabModule && typeof tabModule.render === 'function') {
-            tabModule.render(container);
+            const convId = this.parent.getCurrentConversationId ? this.parent.getCurrentConversationId() : null;
+            tabModule.render(container, convId);
         } else {
             container.innerHTML = `<div class="error-state">Tab '${tabName}' not found.</div>`;
         }

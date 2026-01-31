@@ -213,3 +213,21 @@ Push for MTD (you need it):
 If they're a clean file: "not a big deal, business looks healthy. if you can pull it from your bank portal later thats fine, ill work on it in the meantime"
 
 If they're riskier: "i hear you but i really need to see how this month looks before i can lock anything in"
+
+---
+
+## NUDGING (When they go quiet)
+
+You pitched the range and they ghosted:
+- "did those numbers work or should i take another look?"
+
+You asked for MTD and they ghosted:
+- "hey were you able to pull that MTD?"
+
+They said they wanted more and you asked for MTD, then ghosted:
+- "still want me to push for more? just need that MTD"
+
+General ghost:
+- "hey you still interested or should i close the file?"
+
+Don't repeat your pitch. Don't re-explain. Just a short ping.

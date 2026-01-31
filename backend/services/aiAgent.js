@@ -754,7 +754,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     const currentState = stateCheck.rows[0]?.state;
 
                     // Don't re-sync if already past this stage
-                    if (['FCS_READY', 'FCS_COMPLETE', 'STRATEGIZED', 'HOT_LEAD', 'OFFER_READY'].includes(currentState)) {
+                    if (['QUALIFIED', 'SUBMITTED', 'CLOSING', 'FUNDED'].includes(currentState)) {
                         console.log(`⏭️ Skipping drive sync - already in state: ${currentState}`);
                         toolResult = "Documents already synced. No need to sync again.";
                     } else {
@@ -767,10 +767,10 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 else if (tool.function.name === 'consult_analyst') {
                     console.log(`🎓 [${leadName}] Handing off to human`);
 
-                    // ✅ HANDOFF: Move to PRE_VETTED (FCS should be ready by now)
-                    await updateState(conversationId, 'PRE_VETTED', 'ai_agent');
-                    stateAfter = 'PRE_VETTED';
-                    console.log(`✅ [${leadName}] Qualified → PRE_VETTED`);
+                    // ✅ HANDOFF: Move to QUALIFIED (FCS should be ready by now)
+                    await updateState(conversationId, 'QUALIFIED', 'ai_agent');
+                    stateAfter = 'QUALIFIED';
+                    console.log(`✅ [${leadName}] Qualified → QUALIFIED`);
 
                     // Simple handoff message - NO offer, NO numbers
                     toolResult = "Tell the lead: 'give me a few minutes to run the numbers and ill text you back shortly'";
