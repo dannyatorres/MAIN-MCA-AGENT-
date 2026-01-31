@@ -19,6 +19,7 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@google-cloud/documentai": "^9.4.0",
     "@google/generative-ai": "^0.24.1",
+    "@pinecone-database/pinecone": "^2.0.0",
     "@supabase/supabase-js": "^2.38.4",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.6.2",

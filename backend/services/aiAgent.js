@@ -7,6 +7,7 @@ const { syncDriveFiles } = require('./driveService');
 const commanderService = require('./commanderService');
 const { updateState } = require('./stateManager');
 const { logAIDecision } = require('./aiDecisionLogger');
+const { storeMessage, getConversationContext, getSimilarPatterns } = require('./memoryService');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -540,6 +541,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             WHERE conversation_id = $1
         `, [conversationId]);
 
+        const leadGrade = strategyRes.rows[0]?.lead_grade || null;
         if (strategyRes.rows[0]) {
             gamePlan = strategyRes.rows[0].game_plan;
             if (typeof gamePlan === 'string') {
@@ -578,6 +580,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         const lastOutbound = lastOutbounds.slice(-1)[0]?.content?.toLowerCase() || '';
         const lastInbound = lastInbounds.slice(-1)[0]?.content?.toLowerCase().trim() || '';
+        const userMessageForMemory = lastInbounds.slice(-1)[0]?.content || '';
 
         const handoffPhrases = ['give me a few minutes', 'text you back shortly', 'get back to you', 'finalize the numbers', 'run the numbers'];
         const acknowledgments = ['thanks', 'thank you', 'ty', 'ok', 'okay', 'k', 'got it', 'sounds good', 'cool', 'great', 'perfect', 'awesome', 'sent', 'done', '👍', '👌'];
@@ -611,6 +614,28 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
         systemPrompt += `\n## 🧠 MEMORY TOOLS\nYou have persistent memory. Use it:\n1. Call **get_lead_facts** FIRST to see what you already know\n2. Call **remember_fact** IMMEDIATELY when you learn something new\n3. NEVER re-ask for information that's already in your facts\n\nIf get_lead_facts shows credit_score: 650, DO NOT ask for credit score again.\n`;
         systemPrompt += `\n## 🧠 MEMORY RULES\nWhen lead answers a question, IMMEDIATELY call remember_fact:\n- \"Weekly\" / \"Daily\" → remember_fact(\"payment_preference\", \"weekly\")\n- \"$500/day is fine\" → remember_fact(\"comfortable_payment\", \"500/day\")\n- Any amount → remember_fact(\"requested_amount\", \"60000\")\n\nNEVER re-ask a question they already answered.\n`;
+
+        // Long-term memory (conversation + global patterns)
+        const longTermContext = userMessageForMemory
+            ? await getConversationContext(conversationId, userMessageForMemory, 5)
+            : [];
+        const winningPatterns = userMessageForMemory
+            ? await getSimilarPatterns(userMessageForMemory, { outcome: 'funded', direction: 'outbound' }, 3)
+            : [];
+
+        if (longTermContext.length > 0) {
+            systemPrompt += `\n\n## 🧠 EARLIER IN THIS CONVERSATION\n`;
+            longTermContext.forEach(c => {
+                systemPrompt += `- [${c.direction}]: ${c.content.substring(0, 100)}...\n`;
+            });
+        }
+
+        if (winningPatterns.length > 0) {
+            systemPrompt += `\n\n## 🏆 WHAT WORKED WITH SIMILAR LEADS\n`;
+            winningPatterns.forEach(p => {
+                systemPrompt += `- ${p.content.substring(0, 150)}...\n`;
+            });
+        }
 
         // Load rebuttals playbook
         const rebuttals = await getRebuttalsPrompt();
@@ -921,6 +946,17 @@ Send this message to the lead: "${offer.pitch_message}"`;
                 actionTaken: 'responded',
                 tokensUsed: completion.usage?.total_tokens
             });
+
+            // Store outbound message in vector memory
+            try {
+                await storeMessage(conversationId, responseContent, {
+                    direction: 'outbound',
+                    state: currentState,
+                    lead_grade: leadGrade
+                });
+            } catch (err) {
+                console.error('⚠️ Memory store failed (outbound):', err.message);
+            }
 
             return { shouldReply: true, content: responseContent };
         }

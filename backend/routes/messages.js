@@ -4,6 +4,7 @@ const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { trackResponseForTraining } = require('../services/aiAgent');
 const { processLeadWithAI } = require('../services/aiAgent');
+const { storeMessage } = require('../services/memoryService');
 const { updateState } = require('../services/stateManager');
 const { trackUsage } = require('../services/usageTracker');
 const multer = require('multer');
@@ -428,6 +429,16 @@ router.post('/webhook/receive', async (req, res) => {
                     service: 'twilio',
                     segments: segmentCount
                 });
+
+                // Store inbound message in vector memory
+                try {
+                    await storeMessage(conversation.id, Body || '', {
+                        direction: 'inbound',
+                        state: conversation.state
+                    });
+                } catch (err) {
+                    console.error('⚠️ Memory store failed (inbound):', err.message);
+                }
 
                 const currentState = conversation.state;
 
