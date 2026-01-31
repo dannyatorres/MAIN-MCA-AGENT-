@@ -434,7 +434,31 @@ async function processEmail(email, db) {
         }
     }
 
-    const systemNote = `📩 **INBOX UPDATE (${validatedLender}):** ${data.summary}`;
+    // Build detailed note content
+    let noteContent = `📩 **${validatedLender}** — ${data.category}\n`;
+
+    if (data.summary) {
+        noteContent += `\n${data.summary}\n`;
+    }
+
+    if (data.category === 'OFFER') {
+        if (data.offer_amount) noteContent += `\n💰 Amount: $${Number(data.offer_amount).toLocaleString()}`;
+        if (data.factor_rate) noteContent += `\n📊 Factor: ${data.factor_rate}`;
+        if (data.term_length) noteContent += `\n📅 Term: ${data.term_length} ${data.term_unit || 'months'}`;
+        if (data.payment_frequency) noteContent += `\n💳 Frequency: ${data.payment_frequency}`;
+    }
+
+    if (data.category === 'DECLINE' && data.decline_reason) {
+        noteContent += `\n❌ Reason: ${data.decline_reason}`;
+    }
+
+    // Include snippet of actual email (trimmed)
+    const snippet = (email.snippet || '').substring(0, 300).trim();
+    if (snippet) {
+        noteContent += `\n\n---\n_"${snippet}${snippet.length >= 300 ? '...' : ''}"_`;
+    }
+
+    const systemNote = noteContent;
 
     // 🟢 Write to AI Chat - check for EXACT duplicate (same lender + same summary)
     try {
