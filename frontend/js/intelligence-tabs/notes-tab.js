@@ -51,6 +51,7 @@ export class NotesTab {
     }
 
     getNoteItemHTML(note) {
+        const isPending = String(note.id).startsWith('temp-');
         const date = new Date(note.created_at);
         const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
         const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -58,10 +59,10 @@ export class NotesTab {
         const author = note.created_by_name || 'System';
 
         return `
-            <div class="note-card" id="note-${note.id}" data-note-id="${note.id}">
+            <div class="note-card ${isPending ? 'note-pending' : ''}" id="note-${note.id}" data-note-id="${note.id}">
                 <div class="note-meta">
                     <span class="note-author">${this.escapeHtml(author)}</span>
-                    <span class="note-timestamp">${dateStr} ${timeStr}</span>
+                    <span class="note-timestamp">${isPending ? '<i class="fas fa-circle-notch fa-spin"></i>' : `${dateStr} ${timeStr}`}</span>
                 </div>
                 <div class="note-body">${this.escapeHtml(note.content)}</div>
             </div>
@@ -156,6 +157,7 @@ export class NotesTab {
 
     activate() {
         this.isActive = true;
+        this.renderNotesList(false); // Render any notes that arrived while away
         this.updateBadgeState();
         // Scroll to bottom on activation
         const list = document.getElementById('notesListContainer');

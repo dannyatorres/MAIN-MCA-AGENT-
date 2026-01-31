@@ -46,6 +46,10 @@
     border-color: #58a6ff;
 }
 
+.note-card.note-pending {
+    opacity: 0.7;
+}
+
 .note-meta {
     display: flex;
     justify-content: space-between;
