@@ -1,6 +1,6 @@
 /* ==========================================================================
    [MODULE: NOTES TAB]
-   Clean note-taking interface matching app design system
+   Sleek note-taking interface matching "Deep Onyx" system
    ========================================================================== */
 
 /* Container */
@@ -8,8 +8,9 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 20px;
+    padding: 0 4px; /* Reduced padding to align with panel edges */
     gap: 16px;
+    overflow: hidden;
 }
 
 /* Toolbar */
@@ -17,102 +18,116 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Subtle separator */
+    margin-bottom: 4px;
 }
 
 .notes-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--text-primary);
-    letter-spacing: -0.02em;
+    color: var(--text-primary); /* Slate 50 */
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
 }
 
 .btn-notes-tool {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid transparent; /* Hidden by default */
     background: transparent;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 13px;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 .btn-notes-tool:hover {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.05);
 }
 
 .btn-notes-tool i.fa-spin {
     color: var(--blue-accent);
 }
 
-/* Input Area */
+/* Input Area - The "Composer" */
 .notes-input-area {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .notes-textarea {
     width: 100%;
     min-height: 100px;
-    padding: 14px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
+    padding: 16px;
+
+    /* Matches the "Inner Light" theme */
+    background: rgba(0, 0, 0, 0.2); 
+    border: 1px solid var(--border-color); 
+    border-radius: 12px;
+
     color: var(--text-primary);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
     resize: vertical;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: all 0.2s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); /* Inner shadow for depth */
 }
 
 .notes-textarea::placeholder {
     color: var(--text-muted);
+    opacity: 0.7;
 }
 
 .notes-textarea:focus {
     outline: none;
     border-color: var(--blue-accent);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 1px var(--blue-accent), inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .btn-save-note {
     align-self: flex-end;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 18px;
+    gap: 8px;
+    padding: 8px 16px;
+
     background: var(--blue-accent);
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
+
     color: #fff;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .btn-save-note:hover:not(:disabled) {
     background: #2563eb;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); /* Glow effect */
 }
 
 .btn-save-note:disabled {
-    opacity: 0.6;
+    background: var(--border-color);
+    color: var(--text-muted);
+    opacity: 0.5;
     cursor: not-allowed;
-}
-
-.btn-save-note i {
-    font-size: 11px;
+    box-shadow: none;
 }
 
 /* Notes List */
@@ -121,13 +136,14 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding-right: 4px;
+    gap: 12px;
+    padding-right: 6px; /* Space for scrollbar */
+    padding-bottom: 12px;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Matches Dark Theme */
 .notes-list::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 .notes-list::-webkit-scrollbar-track {
@@ -135,45 +151,51 @@
 }
 
 .notes-list::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
 }
 
 .notes-list::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.2);
 }
 
-/* Note Item */
+/* Note Item - The "Cards" */
 .note-item {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border-color);
+    /* Subtle surface on top of the dark panel */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 10px;
-    padding: 14px;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    padding: 16px;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 .note-item:hover {
+    background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .note-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .note-date {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .note-delete-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
     border: none;
     background: transparent;
     color: var(--text-muted);
@@ -182,8 +204,8 @@
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    transition: all 0.15s ease;
-    opacity: 0;
+    transition: all 0.2s ease;
+    opacity: 0; /* Hidden until hover */
 }
 
 .note-item:hover .note-delete-btn {
@@ -191,13 +213,13 @@
 }
 
 .note-delete-btn:hover {
-    background: rgba(248, 81, 73, 0.1);
-    color: #f85149;
+    background: rgba(239, 68, 68, 0.15); /* Red tint */
+    color: #ef4444; /* Red text */
 }
 
 .note-content {
-    color: var(--text-secondary);
-    font-size: 14px;
+    color: var(--text-secondary); /* Slate 400 */
+    font-size: 13px;
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
@@ -209,19 +231,20 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 48px 24px;
+    padding: 60px 24px;
     color: var(--text-muted);
     text-align: center;
+    opacity: 0.6;
 }
 
 .notes-empty-state i {
-    font-size: 32px;
-    margin-bottom: 12px;
-    opacity: 0.5;
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
 }
 
 .notes-empty-state p {
-    font-size: 14px;
+    font-size: 13px;
     margin: 0;
 }
 
@@ -232,5 +255,6 @@
     justify-content: center;
     padding: 48px;
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 13px;
+    font-style: italic;
 }

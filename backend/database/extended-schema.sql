@@ -180,3 +180,8 @@ GRANT SELECT ON conversation_summary TO PUBLIC;
 GRANT EXECUTE ON FUNCTION get_encrypted_field(UUID, VARCHAR, VARCHAR) TO PUBLIC;
 -- Confirm SUBMITTED state exists (no-op)
 UPDATE conversations SET state = 'SUBMITTED' WHERE state = 'SUBMITTED';
+
+-- Clean up any conversations stuck in HUMAN_REVIEW
+UPDATE conversations
+SET state = 'QUALIFIED'
+WHERE state = 'HUMAN_REVIEW';
