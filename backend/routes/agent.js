@@ -16,28 +16,21 @@ router.post('/trigger', async (req, res) => {
 
     const db = getDatabase();
 
-    // Check lock to prevent double-sends
-    const lockCheck = await db.query(
-        `SELECT ai_processing, last_activity FROM conversations WHERE id = $1`,
-        [conversation_id]
-    );
+    // Atomic lock acquisition - prevents race condition
+    const lockResult = await db.query(`
+        UPDATE conversations 
+        SET ai_processing = true, last_activity = NOW()
+        WHERE id = $1 
+          AND (ai_processing = false OR ai_processing IS NULL OR last_activity < NOW() - INTERVAL '2 minutes')
+        RETURNING id
+    `, [conversation_id]);
 
-    if (lockCheck.rows[0]?.ai_processing === true) {
-        // Check if lock is stale (older than 2 minutes)
-        const lastActivity = new Date(lockCheck.rows[0].last_activity);
-        const minutesAgo = (Date.now() - lastActivity) / 60000;
-        
-        if (minutesAgo > 2) {
-            console.log(`🔓 [${conversation_id}] Force releasing stale lock (${minutesAgo.toFixed(1)}m old)`);
-            // Continue processing - lock was stuck
-        } else {
-            console.log(`🔒 [${conversation_id}] Already processing - skipping`);
-            return res.json({ success: false, skipped: true, reason: 'ai_processing lock' });
-        }
+    if (lockResult.rowCount === 0) {
+        console.log(`🔒 [${conversation_id}] Already processing - skipping`);
+        return res.json({ success: false, skipped: true, reason: 'ai_processing lock' });
     }
 
-    // Set lock
-    await db.query(`UPDATE conversations SET ai_processing = true WHERE id = $1`, [conversation_id]);
+    console.log(`🔓 [${conversation_id}] Lock acquired`);
 
     let result;
     try {

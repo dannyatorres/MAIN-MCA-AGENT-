@@ -157,14 +157,6 @@ const BASE_TOOLS = [
     {
         type: "function",
         function: {
-            name: "no_response_needed",
-            description: "ONLY for simple acknowledgments: 'ok', 'thanks', 'got it', 'sounds good', 'perfect', 'cool', 'k'. NEVER call this if lead expresses confusion ('what?', 'huh?', 'I don't understand', 'what are you talking about') or frustration ('why are you repeating yourself'). Confusion and frustration ALWAYS require a response.",
-            parameters: { type: "object", properties: {} }
-        }
-    },
-    {
-        type: "function",
-        function: {
             name: "remember_fact",
             description: "Store a fact about this lead. Call this IMMEDIATELY when you learn: email, credit_score, funding_status, requested_amount, or any other key info. This persists across messages.",
             parameters: {
@@ -883,11 +875,6 @@ Send this message to the lead: "${offer.pitch_message}"`;
                     } else {
                         toolResult = "Offer generation failed. Tell the lead you're finalizing numbers and will text back in a few minutes.";
                     }
-                }
-
-                else if (tool.function.name === 'no_response_needed') {
-                    console.log(`🤫 [${leadName}] No response needed`);
-                    return { shouldReply: false };
                 }
 
                 messages.push({
