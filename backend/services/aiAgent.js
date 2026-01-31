@@ -163,7 +163,7 @@ const BASE_TOOLS = [
                 properties: {
                     fact_key: {
                         type: "string",
-                        enum: ["email", "credit_score", "funding_status", "requested_amount", "has_mtd_statement", "objection", "timeline"],
+                        enum: ["email", "credit_score", "funding_status", "requested_amount", "has_mtd_statement", "objection", "timeline", "payment_preference", "comfortable_payment"],
                         description: "The type of fact"
                     },
                     fact_value: {
@@ -602,6 +602,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         let systemPrompt = await getPromptForPhase(usageUserId, currentState);
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
         systemPrompt += `\n## 🧠 MEMORY TOOLS\nYou have persistent memory. Use it:\n1. Call **get_lead_facts** FIRST to see what you already know\n2. Call **remember_fact** IMMEDIATELY when you learn something new\n3. NEVER re-ask for information that's already in your facts\n\nIf get_lead_facts shows credit_score: 650, DO NOT ask for credit score again.\n`;
+        systemPrompt += `\n## 🧠 MEMORY RULES\nWhen lead answers a question, IMMEDIATELY call remember_fact:\n- \"Weekly\" / \"Daily\" → remember_fact(\"payment_preference\", \"weekly\")\n- \"$500/day is fine\" → remember_fact(\"comfortable_payment\", \"500/day\")\n- Any amount → remember_fact(\"requested_amount\", \"60000\")\n\nNEVER re-ask a question they already answered.\n`;
 
         // Load rebuttals playbook
         const rebuttals = await getRebuttalsPrompt();
