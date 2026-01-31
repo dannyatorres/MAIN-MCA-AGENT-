@@ -281,14 +281,12 @@ export class NotesTab {
             if (data.success) {
                 const idx = this.notes.findIndex(n => n.id === tempId);
                 if (idx !== -1) {
-                    // Update the temp note with real data
                     this.notes[idx] = data.note;
 
-                    // Update the DOM element ID without full re-render
+                    // Re-render just that element to remove pending state
                     const tempEl = document.querySelector(`[data-note-id="${tempId}"]`);
                     if (tempEl) {
-                        tempEl.setAttribute('data-note-id', data.note.id);
-                        tempEl.id = `note-${data.note.id}`;
+                        tempEl.outerHTML = this.getNoteItemHTML(data.note);
                     }
                 }
                 this.updateBadgeState();
