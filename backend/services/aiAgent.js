@@ -882,6 +882,12 @@ Send this message to the lead: "${offer.pitch_message}"`;
 
         if (responseContent) {
             responseContent = cleanToolLeaks(responseContent);
+            // Reject if it looks like failed tool calls
+            if (!responseContent || responseContent.trim() === '' || responseContent.includes('recipient_name')) {
+                console.log('⚠️ Invalid response format, skipping');
+                console.log(`========== END AI AGENT ==========\n`);
+                return { shouldReply: false };
+            }
             if (!responseContent || responseContent.trim() === '') {
                 console.log('⚠️ Empty response after cleaning');
                 console.log(`========== END AI AGENT ==========\n`);
