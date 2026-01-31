@@ -139,7 +139,7 @@ router.post('/:id/send', async (req, res) => {
 
                 // Send Email
                 const emailResult = await emailService.sendLenderSubmission(
-                    lenderName, lenderEmail, businessData, fileAttachments, lenderCC
+                    lenderName, lenderEmail, businessData, fileAttachments, lenderCC, conversationId
                 );
 
                 if (emailResult.success) {

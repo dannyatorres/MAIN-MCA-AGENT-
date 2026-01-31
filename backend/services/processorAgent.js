@@ -458,6 +458,16 @@ async function processEmail(email, db) {
         console.error('      ⚠️ [AI] Failed to log to assistant history:', err.message);
     }
 
+    // 🟢 Also write to notes table
+    try {
+        await db.query(`
+            INSERT INTO notes (conversation_id, content, created_by)
+            VALUES ($1, $2, NULL)
+        `, [bestMatchId, systemNote]);
+    } catch (err) {
+        console.error('      ⚠️ Failed to create note:', err.message);
+    }
+
     console.log(`      ✅ [Database] Saved results for: "${email.subject}"`);
 }
 

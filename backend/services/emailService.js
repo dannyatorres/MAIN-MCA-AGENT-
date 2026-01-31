@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const path = require('path');
+const { getDatabase } = require('./database');
 
 // Try to find .env file in project root
 const rootPath = path.resolve(__dirname, '../../.env');
@@ -96,7 +97,7 @@ class EmailService {
     }
 
     // ✅ UPDATE: Accepts 'lenderName', sends wider "Report Style" email
-    async sendLenderSubmission(lenderName, lenderEmail, businessData, documents = [], ccEmail = null) {
+    async sendLenderSubmission(lenderName, lenderEmail, businessData, documents = [], ccEmail = null, conversationId = null) {
         if (!this.transporter) {
             throw new Error('Email service not configured or failed to initialize');
         }
@@ -138,6 +139,20 @@ class EmailService {
         try {
             const result = await this.transporter.sendMail(mailOptions);
             console.log(`Email sent successfully to ${lenderName} (${lenderEmail})`);
+
+            if (conversationId) {
+                try {
+                    const db = getDatabase();
+                    const noteContent = `📤 **SENT TO ${lenderName}:** Submission email sent to ${lenderEmail}`;
+                    await db.query(`
+                        INSERT INTO notes (conversation_id, content, created_by)
+                        VALUES ($1, $2, NULL)
+                    `, [conversationId, noteContent]);
+                } catch (noteErr) {
+                    console.error('Failed to create note for sent email:', noteErr.message);
+                }
+            }
+
             return { success: true, messageId: result.messageId };
         } catch (error) {
             console.error(`Failed to send email to ${lenderName}:`, error);
@@ -303,7 +318,8 @@ JMS GLOBAL
                     lender.email,
                     businessData,
                     documents,
-                    lender.cc_email
+                    lender.cc_email,
+                    businessData?.conversationId || null
                 );
 
                 results.push({
