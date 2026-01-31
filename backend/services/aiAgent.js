@@ -582,6 +582,14 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const lastInbound = lastInbounds.slice(-1)[0]?.content?.toLowerCase().trim() || '';
         const userMessageForMemory = lastInbounds.slice(-1)[0]?.content || '';
 
+        // Store inbound message in vector memory
+        if (userMessageForMemory) {
+            storeMessage(conversationId, userMessageForMemory, {
+                direction: 'inbound',
+                state: currentState
+            }).catch(err => console.error('⚠️ Memory store failed (inbound):', err.message));
+        }
+
         const handoffPhrases = ['give me a few minutes', 'text you back shortly', 'get back to you', 'finalize the numbers', 'run the numbers'];
         const acknowledgments = ['thanks', 'thank you', 'ty', 'ok', 'okay', 'k', 'got it', 'sounds good', 'cool', 'great', 'perfect', 'awesome', 'sent', 'done', '👍', '👌'];
 
