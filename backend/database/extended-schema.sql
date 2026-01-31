@@ -178,3 +178,5 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Grant permissions
 GRANT SELECT ON conversation_summary TO PUBLIC;
 GRANT EXECUTE ON FUNCTION get_encrypted_field(UUID, VARCHAR, VARCHAR) TO PUBLIC;
+-- Confirm SUBMITTED state exists (no-op)
+UPDATE conversations SET state = 'SUBMITTED' WHERE state = 'SUBMITTED';
