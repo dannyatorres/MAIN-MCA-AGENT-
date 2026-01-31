@@ -1,89 +1,24 @@
 /* ==========================================================================
    [MODULE: NOTES TAB]
-   Sleek, Glassmorphism Design
+   Chat-Style Interface (Floating Deck + Bubbles)
    ========================================================================== */
 
-/* 1. The Container - Fills the Intelligence Panel */
+/* 1. Container - Relative for absolute positioning of input */
 .notes-tab-container {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 0; /* Let children handle padding */
-    overflow: hidden; /* Prevent double scrollbars */
+    position: relative;
     background: transparent;
+    overflow: hidden;
 }
 
-/* 2. The Input Area (Fixed at Top) */
-.notes-input-wrapper {
-    flex-shrink: 0;
-    padding: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.notes-textarea {
-    width: 100%;
-    min-height: 80px;
-    padding: 12px 14px;
-    box-sizing: border-box; /* Critical for alignment */
-    
-    /* Dark Glass Theme */
-    background: #0d1117; 
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    
-    color: #e6edf3;
-    font-family: 'Inter', -apple-system, sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
-    resize: none; /* User shouldn't drag this, it breaks layout */
-    transition: all 0.2s ease;
-}
-
-.notes-textarea:focus {
-    outline: none;
-    border-color: #3b82f6; /* Blue accent */
-    background: #161b22;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.notes-textarea::placeholder {
-    color: #6e7681;
-}
-
-.notes-actions {
-    display: flex;
-    justify-content: flex-end;
-}
-
-.btn-add-note {
-    background: #3b82f6;
-    color: white;
-    border: none;
-    padding: 6px 16px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-add-note:hover {
-    background: #2563eb;
-    transform: translateY(-1px);
-}
-
-/* 3. The List Area (Scrollable) */
+/* 2. The List - Scrolls BEHIND the input deck */
 .notes-list {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
+    padding-bottom: 90px; /* Extra padding so last note isn't hidden by input */
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -94,41 +29,36 @@
 .notes-list::-webkit-scrollbar-track { background: transparent; }
 .notes-list::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 
-/* 4. The Note Card */
+/* 3. The Note "Bubble" */
 .note-card {
     background: #161b22;
     border: 1px solid #30363d;
-    border-radius: 8px;
-    padding: 14px;
+    border-radius: 12px;
+    padding: 12px 16px;
     position: relative;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: all 0.2s ease;
-    animation: slideIn 0.2s ease-out;
+    animation: fadeIn 0.2s ease-out;
 }
 
 .note-card:hover {
+    background: #1c2128;
     border-color: #58a6ff;
-    transform: translateX(2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .note-meta {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 6px;
+    font-size: 11px;
 }
 
 .note-author {
-    font-size: 11px;
     font-weight: 700;
-    color: #3b82f6; /* Blue */
-    text-transform: uppercase;
+    color: #58a6ff; /* Blue accent like chat names */
 }
 
 .note-timestamp {
-    font-size: 10px;
     color: #6e7681;
 }
 
@@ -136,24 +66,104 @@
     font-size: 13px;
     color: #e6edf3;
     line-height: 1.5;
-    white-space: pre-wrap; /* Preserves line breaks */
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
-/* 5. Empty State */
+/* 4. THE FLOATING INPUT DECK (Matches Chat) */
+.notes-input-wrapper {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+
+    /* Glass Effect */
+    background: rgba(22, 27, 34, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+    padding: 10px;
+    display: flex;
+    align-items: flex-end; /* Align textarea and button to bottom */
+    gap: 10px;
+    z-index: 10;
+}
+
+.notes-textarea {
+    flex: 1;
+    background: #0d1117;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px;
+    color: #e6edf3;
+    resize: none;
+    max-height: 100px;
+    min-height: 40px; /* Height of a single line input */
+    transition: all 0.2s;
+}
+
+.notes-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #161b22;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.notes-textarea::placeholder {
+    color: #6e7681;
+}
+
+/* Send Button (Paper Plane Style) */
+.btn-send-note {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.btn-send-note:hover {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.btn-send-note:disabled {
+    background: #30363d;
+    color: #8b949e;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Empty State */
 .notes-empty {
     text-align: center;
     padding: 40px 20px;
     color: #8b949e;
+    margin-top: 20px;
 }
 
 .notes-empty i {
     font-size: 24px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     opacity: 0.5;
     display: block;
 }
 
-@keyframes slideIn {
+@keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
 }

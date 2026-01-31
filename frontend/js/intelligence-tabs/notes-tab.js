@@ -10,33 +10,36 @@ export class NotesTab {
     render(container, conversationId) {
         this.container = container;
         this.conversationId = conversationId;
-        this.container.style.overflowY = 'hidden';
+        // Ensure container is relative for absolute positioning of input deck
+        this.container.style.position = 'relative';
+        this.container.style.overflow = 'hidden'; // Stop double scrollbars
+
         this.container.innerHTML = this.getLayoutHTML();
         this.attachEventListeners();
         this.fetchNotes();
     }
 
     getLayoutHTML() {
+        // Chat-style layout: List on top, Floating Input Deck at bottom
         return `
             <div class="notes-tab-container">
+                <div id="notesListContainer" class="notes-list">
+                    <div class="notes-empty">
+                        <i class="far fa-sticky-note"></i>
+                        <p>No notes yet.</p>
+                    </div>
+                </div>
+
                 <div class="notes-input-wrapper">
                     <textarea 
                         id="newNoteInput" 
                         class="notes-textarea" 
-                        placeholder="Type a new note here..."
+                        placeholder="Type a note... (Enter to send)"
+                        rows="1"
                     ></textarea>
-                    <div class="notes-actions">
-                        <button id="saveNoteBtn" class="btn-add-note">
-                            <i class="fas fa-plus"></i> Add Note
-                        </button>
-                    </div>
-                </div>
-
-                <div id="notesListContainer" class="notes-list">
-                    <div class="notes-empty">
-                        <i class="far fa-sticky-note"></i>
-                        <p>No notes yet. Add one above!</p>
-                    </div>
+                    <button id="saveNoteBtn" class="btn-send-note" title="Save Note">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </div>
             </div>
         `;
@@ -60,6 +63,7 @@ export class NotesTab {
     }
 
     escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML.replace(/\n/g, '<br>');
@@ -67,9 +71,11 @@ export class NotesTab {
 
     async fetchNotes() {
         if (!this.conversationId) return;
+
+        // Don't wipe the list if we are just switching tabs, only if empty
         const list = document.getElementById('notesListContainer');
-        if (list) {
-            list.innerHTML = `<div class="notes-empty"><i class="far fa-sticky-note"></i><p>Loading...</p></div>`;
+        if (list && list.children.length === 0) {
+            list.innerHTML = `<div class="notes-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>`;
         }
 
         try {
@@ -93,26 +99,44 @@ export class NotesTab {
             list.innerHTML = `
                 <div class="notes-empty">
                     <i class="far fa-sticky-note"></i>
-                    <p>No notes yet. Add one above!</p>
+                    <p>No notes yet.</p>
                 </div>
             `;
             return;
         }
 
+        // Render notes
         list.innerHTML = this.notes.map(n => this.getNoteItemHTML(n)).join('');
+
+        // Auto-scroll to bottom like chat
+        list.scrollTop = list.scrollHeight;
     }
 
     attachEventListeners() {
         const saveBtn = document.getElementById('saveNoteBtn');
-        if (saveBtn) saveBtn.onclick = () => this.saveNote();
-
         const input = document.getElementById('newNoteInput');
+
+        // Click Handler
+        if (saveBtn) {
+            saveBtn.onclick = () => this.saveNote();
+        }
+
+        // Enter Key Handler (Chat Style)
         if (input) {
             input.onkeydown = (e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                // Enter sends, Shift+Enter adds new line
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault(); // Stop new line
                     this.saveNote();
                 }
             };
+
+            // Optional: Auto-grow textarea like chat
+            input.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                if (this.value === '') this.style.height = 'auto';
+            });
         }
     }
 
@@ -122,9 +146,11 @@ export class NotesTab {
 
         if (!content) return;
 
+        // Visual feedback
         const saveBtn = document.getElementById('saveNoteBtn');
+        const originalIcon = saveBtn.innerHTML;
         saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         try {
             const res = await fetch(`/api/notes/${this.conversationId}`, {
@@ -137,17 +163,22 @@ export class NotesTab {
 
             if (data.success) {
                 input.value = '';
-                this.notes.unshift(data.note);
+                input.style.height = 'auto'; // Reset height
+
+                // Chat style: newest at bottom
+                this.notes.push(data.note);
                 this.renderNotesList();
             } else {
                 alert('Failed to save note: ' + data.error);
             }
         } catch (err) {
             console.error('Failed to save note:', err);
-            alert('Network error saving note.');
         } finally {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fas fa-plus"></i> Add Note';
+            saveBtn.innerHTML = originalIcon;
+
+            // Refocus input for rapid entry
+            input.focus();
         }
     }
 }
