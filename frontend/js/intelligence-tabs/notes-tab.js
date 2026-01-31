@@ -10,6 +10,7 @@ export class NotesTab {
     render(container, conversationId) {
         this.container = container;
         this.conversationId = conversationId;
+        this.container.style.overflowY = 'hidden';
         this.container.innerHTML = this.getLayoutHTML();
         this.attachEventListeners();
         this.fetchNotes();
@@ -18,22 +19,24 @@ export class NotesTab {
     getLayoutHTML() {
         return `
             <div class="notes-tab-container">
-                <div class="notes-toolbar">
-                    <span class="notes-title">Notes</span>
-                    <button id="refreshNotesBtn" class="btn-notes-tool" title="Refresh">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
+                <div class="notes-input-wrapper">
+                    <textarea 
+                        id="newNoteInput" 
+                        class="notes-textarea" 
+                        placeholder="Type a new note here..."
+                    ></textarea>
+                    <div class="notes-actions">
+                        <button id="saveNoteBtn" class="btn-add-note">
+                            <i class="fas fa-plus"></i> Add Note
+                        </button>
+                    </div>
                 </div>
 
-                <div class="notes-input-area">
-                    <textarea id="newNoteInput" class="notes-textarea" placeholder="Add a note..."></textarea>
-                    <button id="saveNoteBtn" class="btn-save-note">
-                        <i class="fas fa-plus"></i> Add Note
-                    </button>
-                </div>
-
-                <div id="notesList" class="notes-list">
-                    <div class="notes-loading"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading...</div>
+                <div id="notesListContainer" class="notes-list">
+                    <div class="notes-empty">
+                        <i class="far fa-sticky-note"></i>
+                        <p>No notes yet. Add one above!</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -43,16 +46,15 @@ export class NotesTab {
         const date = new Date(note.created_at);
         const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
         const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const author = note.created_by_name || 'System';
 
         return `
-            <div class="note-item" data-note-id="${note.id}">
-                <div class="note-header">
-                    <span class="note-date">${dateStr} at ${timeStr}</span>
-                    <button class="note-delete-btn" data-note-id="${note.id}" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
+            <div class="note-card" data-note-id="${note.id}">
+                <div class="note-meta">
+                    <span class="note-author">${this.escapeHtml(author)}</span>
+                    <span class="note-timestamp">${dateStr} ${timeStr}</span>
                 </div>
-                <div class="note-content">${this.escapeHtml(note.content)}</div>
+                <div class="note-body">${this.escapeHtml(note.content)}</div>
             </div>
         `;
     }
@@ -65,9 +67,10 @@ export class NotesTab {
 
     async fetchNotes() {
         if (!this.conversationId) return;
-
-        const refreshBtn = document.getElementById('refreshNotesBtn');
-        if (refreshBtn) refreshBtn.querySelector('i').classList.add('fa-spin');
+        const list = document.getElementById('notesListContainer');
+        if (list) {
+            list.innerHTML = `<div class="notes-empty"><i class="far fa-sticky-note"></i><p>Loading...</p></div>`;
+        }
 
         try {
             const res = await fetch(`/api/notes/${this.conversationId}`);
@@ -79,33 +82,27 @@ export class NotesTab {
             }
         } catch (err) {
             console.error('Failed to fetch notes:', err);
-        } finally {
-            if (refreshBtn) refreshBtn.querySelector('i').classList.remove('fa-spin');
         }
     }
 
     renderNotesList() {
-        const list = document.getElementById('notesList');
+        const list = document.getElementById('notesListContainer');
         if (!list) return;
 
         if (!this.notes.length) {
             list.innerHTML = `
-                <div class="notes-empty-state">
-                    <i class="fas fa-sticky-note"></i>
-                    <p>No notes yet</p>
+                <div class="notes-empty">
+                    <i class="far fa-sticky-note"></i>
+                    <p>No notes yet. Add one above!</p>
                 </div>
             `;
             return;
         }
 
         list.innerHTML = this.notes.map(n => this.getNoteItemHTML(n)).join('');
-        this.attachNoteItemListeners();
     }
 
     attachEventListeners() {
-        const refreshBtn = document.getElementById('refreshNotesBtn');
-        if (refreshBtn) refreshBtn.onclick = () => this.fetchNotes();
-
         const saveBtn = document.getElementById('saveNoteBtn');
         if (saveBtn) saveBtn.onclick = () => this.saveNote();
 
@@ -117,15 +114,6 @@ export class NotesTab {
                 }
             };
         }
-    }
-
-    attachNoteItemListeners() {
-        document.querySelectorAll('.note-delete-btn').forEach(btn => {
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                this.deleteNote(btn.dataset.noteId);
-            };
-        });
     }
 
     async saveNote() {
@@ -160,18 +148,6 @@ export class NotesTab {
         } finally {
             saveBtn.disabled = false;
             saveBtn.innerHTML = '<i class="fas fa-plus"></i> Add Note';
-        }
-    }
-
-    async deleteNote(noteId) {
-        if (!confirm('Delete this note?')) return;
-
-        try {
-            await fetch(`/api/notes/${noteId}`, { method: 'DELETE' });
-            this.notes = this.notes.filter(n => n.id !== noteId);
-            this.renderNotesList();
-        } catch (err) {
-            console.error('Failed to delete note:', err);
         }
     }
 }
