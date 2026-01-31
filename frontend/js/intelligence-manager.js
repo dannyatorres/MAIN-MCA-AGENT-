@@ -105,16 +105,17 @@ export class IntelligenceManager {
             tabModule = this.tabs[tabName];
         }
 
-        if (tabName === 'notes') {
-            this.notesTab?.activate();
-        } else {
-            this.notesTab?.deactivate();
-        }
-
         // RENDER
         if (tabModule && typeof tabModule.render === 'function') {
             const convId = this.parent.getCurrentConversationId ? this.parent.getCurrentConversationId() : null;
             tabModule.render(container, convId);
+
+            // Activate notes AFTER render
+            if (tabName === 'notes') {
+                this.notesTab?.activate();
+            } else {
+                this.notesTab?.deactivate();
+            }
         } else {
             container.innerHTML = `<div class="error-state">Tab '${tabName}' not found.</div>`;
         }

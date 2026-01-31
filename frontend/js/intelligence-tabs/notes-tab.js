@@ -9,19 +9,41 @@ export class NotesTab {
         this.lastSeenCount = 0;
         this.pollInterval = null;
         this.onBadgeUpdate = null;
+        this.isFetching = false;
+        this.isRendered = false;
     }
 
     render(container, conversationId) {
+        const isSameConversation = this.conversationId === conversationId;
+        const alreadyRendered = this.isRendered && isSameConversation;
+
         this.container = container;
-        this.conversationId = conversationId;
         this.isActive = true;
 
-        // Ensure container handles absolute positioning
+        // Skip full rebuild if same conversation
+        if (alreadyRendered && this.container.querySelector('.notes-tab-container')) {
+            this.renderNotesList(false);
+            this.startPolling();
+            return;
+        }
+
+        // New conversation or first render
+        this.conversationId = conversationId;
+        this.notes = [];
+        this.isRendered = true;
+
         this.container.style.position = 'relative';
         this.container.style.overflow = 'hidden';
 
         this.container.innerHTML = this.getLayoutHTML();
         this.attachEventListeners();
+
+        // Show loading state
+        const list = document.getElementById('notesListContainer');
+        if (list) {
+            list.innerHTML = `<div class="notes-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading notes...</p></div>`;
+        }
+
         this.fetchNotes();
         this.startPolling();
     }
@@ -77,7 +99,8 @@ export class NotesTab {
     }
 
     async fetchNotes() {
-        if (!this.conversationId) return;
+        if (!this.conversationId || this.isFetching) return;
+        this.isFetching = true;
         try {
             const res = await fetch(`/api/notes/${this.conversationId}`);
             const data = await res.json();
@@ -88,6 +111,12 @@ export class NotesTab {
             }
         } catch (err) {
             console.error('Failed to fetch notes:', err);
+            const list = document.getElementById('notesListContainer');
+            if (list) {
+                list.innerHTML = `<div class="notes-empty"><i class="fas fa-exclamation-triangle"></i><p>Failed to load notes</p></div>`;
+            }
+        } finally {
+            this.isFetching = false;
         }
     }
 
@@ -157,7 +186,6 @@ export class NotesTab {
 
     activate() {
         this.isActive = true;
-        this.renderNotesList(false); // Render any notes that arrived while away
         this.updateBadgeState();
         // Scroll to bottom on activation
         const list = document.getElementById('notesListContainer');
@@ -215,6 +243,8 @@ export class NotesTab {
         this.stopPolling();
         this.notes = [];
         this.lastSeenCount = 0;
+        this.isRendered = false;
+        this.isFetching = false;
     }
 
     async saveNote() {
