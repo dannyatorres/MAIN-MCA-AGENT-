@@ -14,21 +14,25 @@ async function storeMessage(conversationId, content, metadata = {}) {
             input: content
         });
 
+        // Build metadata, excluding null/undefined values
+        const meta = {
+            conversation_id: conversationId,
+            content: content.substring(0, 1000),
+            timestamp: Date.now()
+        };
+
+        if (metadata.direction) meta.direction = metadata.direction;
+        if (metadata.state) meta.state = metadata.state;
+        if (metadata.lead_grade) meta.lead_grade = metadata.lead_grade;
+        if (metadata.outcome) meta.outcome = metadata.outcome;
+
         await index.upsert([{
             id: `${conversationId}-${Date.now()}`,
             values: embedding.data[0].embedding,
-            metadata: {
-                conversation_id: conversationId,
-                content: content.substring(0, 1000),
-                direction: metadata.direction || 'unknown',
-                state: metadata.state || null,
-                lead_grade: metadata.lead_grade || null,
-                outcome: metadata.outcome || null,
-                timestamp: Date.now()
-            }
+            metadata: meta
         }]);
 
-        console.log(`🧠 Pinecone: Stored ${metadata.direction} message (${content.substring(0, 30)}...)`);
+        console.log(`🧠 Pinecone: Stored ${metadata.direction || 'unknown'} message (${content.substring(0, 30)}...)`);
         return true;
     } catch (err) {
         console.error('⚠️ Pinecone store failed:', err.message);
