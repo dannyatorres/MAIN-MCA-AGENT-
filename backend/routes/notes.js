@@ -15,7 +15,7 @@ router.get('/:conversationId', async (req, res) => {
             FROM notes n
             LEFT JOIN users u ON u.id = n.created_by
             WHERE n.conversation_id = $1
-            ORDER BY n.created_at DESC
+            ORDER BY n.created_at ASC
         `, [conversationId]);
 
         res.json({ success: true, notes: result.rows });
@@ -32,6 +32,7 @@ router.post('/:conversationId', async (req, res) => {
         const { conversationId } = req.params;
         const { content } = req.body;
         const userId = req.user?.id || null;
+        const userName = req.user?.name || 'Lola';
 
         const result = await db.query(`
             INSERT INTO notes (conversation_id, content, created_by)
@@ -39,7 +40,10 @@ router.post('/:conversationId', async (req, res) => {
             RETURNING *
         `, [conversationId, content, userId]);
 
-        res.json({ success: true, note: result.rows[0] });
+        const note = result.rows[0];
+        note.created_by_name = userName;
+
+        res.json({ success: true, note });
     } catch (err) {
         console.error('Error saving note:', err);
         res.status(500).json({ success: false, error: err.message });

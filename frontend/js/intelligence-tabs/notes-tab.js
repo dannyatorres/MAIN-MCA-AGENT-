@@ -8,7 +8,7 @@ export class NotesTab {
         this.isActive = false;
         this.lastSeenCount = 0;
         this.pollInterval = null;
-        this.onBadgeUpdate = null; // Callback for parent to update tab badge
+        this.onBadgeUpdate = null;
     }
 
     render(container, conversationId) {
@@ -16,13 +16,9 @@ export class NotesTab {
         this.conversationId = conversationId;
         this.isActive = true;
 
-        // Clear badge when viewing
-        this.lastSeenCount = this.notes.length;
-        if (this.onBadgeUpdate) this.onBadgeUpdate(0);
-
-        // Ensure container is relative for absolute positioning of input deck
+        // Ensure container handles absolute positioning
         this.container.style.position = 'relative';
-        this.container.style.overflow = 'hidden'; // Stop double scrollbars
+        this.container.style.overflow = 'hidden';
 
         this.container.innerHTML = this.getLayoutHTML();
         this.attachEventListeners();
@@ -31,7 +27,6 @@ export class NotesTab {
     }
 
     getLayoutHTML() {
-        // Chat-style layout: List on top, Floating Input Deck at bottom
         return `
             <div class="notes-tab-container">
                 <div id="notesListContainer" class="notes-list">
@@ -40,7 +35,6 @@ export class NotesTab {
                         <p>No notes yet.</p>
                     </div>
                 </div>
-
                 <div class="notes-input-wrapper">
                     <textarea 
                         id="newNoteInput" 
@@ -60,10 +54,11 @@ export class NotesTab {
         const date = new Date(note.created_at);
         const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
         const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        // Fallback to 'System' only if truly missing
         const author = note.created_by_name || 'System';
 
         return `
-            <div class="note-card" data-note-id="${note.id}">
+            <div class="note-card" id="note-${note.id}" data-note-id="${note.id}">
                 <div class="note-meta">
                     <span class="note-author">${this.escapeHtml(author)}</span>
                     <span class="note-timestamp">${dateStr} ${timeStr}</span>
@@ -82,64 +77,71 @@ export class NotesTab {
 
     async fetchNotes() {
         if (!this.conversationId) return;
-
-        const list = document.getElementById('notesListContainer');
-        if (list && list.children.length === 0) {
-            list.innerHTML = `<div class="notes-empty"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>`;
-        }
-
         try {
             const res = await fetch(`/api/notes/${this.conversationId}`);
             const data = await res.json();
-
             if (data.success) {
                 this.notes = data.notes || [];
-                this.lastSeenCount = this.notes.length;
-                this.renderNotesList();
+                this.renderNotesList(true); // true = force full render
+                this.updateBadgeState();
             }
         } catch (err) {
             console.error('Failed to fetch notes:', err);
         }
     }
 
-    renderNotesList() {
+    // FIX: Smart rendering and scroll management
+    renderNotesList(fullRender = false) {
         const list = document.getElementById('notesListContainer');
         if (!list) return;
 
         if (!this.notes.length) {
-            list.innerHTML = `
-                <div class="notes-empty">
-                    <i class="far fa-sticky-note"></i>
-                    <p>No notes yet.</p>
-                </div>
-            `;
+            list.innerHTML = `<div class="notes-empty"><i class="far fa-sticky-note"></i><p>No notes yet.</p></div>`;
             return;
         }
 
-        list.innerHTML = this.notes.map(n => this.getNoteItemHTML(n)).join('');
+        // Check if user is near bottom BEFORE updating (tolerance 50px)
+        const wasAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 50;
 
-        // Auto-scroll to bottom like chat
-        list.scrollTop = list.scrollHeight;
+        if (fullRender || list.querySelector('.notes-empty')) {
+            // Full rebuild
+            list.innerHTML = this.notes.map(n => this.getNoteItemHTML(n)).join('');
+        } else {
+            // Append only missing notes
+            const existingIds = new Set(Array.from(list.children).map(el => el.dataset.noteId));
+            const newFragment = document.createDocumentFragment();
+            let hasNew = false;
+
+            this.notes.forEach(note => {
+                if (!existingIds.has(String(note.id))) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.getNoteItemHTML(note);
+                    newFragment.appendChild(tempDiv.firstElementChild);
+                    hasNew = true;
+                }
+            });
+
+            if (hasNew) list.appendChild(newFragment);
+        }
+
+        // Scroll to bottom only if user was already there or it's a full load
+        if (fullRender || wasAtBottom) {
+            list.scrollTop = list.scrollHeight;
+        }
     }
 
     attachEventListeners() {
         const saveBtn = document.getElementById('saveNoteBtn');
         const input = document.getElementById('newNoteInput');
 
-        if (saveBtn) {
-            saveBtn.onclick = () => this.saveNote();
-        }
-
+        if (saveBtn) saveBtn.onclick = () => this.saveNote();
         if (input) {
             input.onkeydown = (e) => {
-                // Enter sends, Shift+Enter adds new line
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     this.saveNote();
                 }
             };
-
-            // Auto-grow textarea like chat
             input.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
@@ -148,24 +150,21 @@ export class NotesTab {
         }
     }
 
-    // Call this when switching away from notes tab
     deactivate() {
         this.isActive = false;
     }
 
-    // Call this when switching back to notes tab
     activate() {
         this.isActive = true;
-        this.lastSeenCount = this.notes.length;
-        if (this.onBadgeUpdate) this.onBadgeUpdate(0);
+        this.updateBadgeState();
+        // Scroll to bottom on activation
+        const list = document.getElementById('notesListContainer');
+        if (list) list.scrollTop = list.scrollHeight;
     }
 
     startPolling() {
         if (this.pollInterval) clearInterval(this.pollInterval);
-
-        this.pollInterval = setInterval(() => {
-            this.checkForNewNotes();
-        }, 30000);
+        this.pollInterval = setInterval(() => this.checkForNewNotes(), 10000); // Reduced to 10s for responsiveness
     }
 
     stopPolling() {
@@ -183,27 +182,33 @@ export class NotesTab {
             const data = await res.json();
 
             if (data.success && data.notes) {
-                const newCount = data.notes.length;
-                const unseenCount = newCount - this.lastSeenCount;
+                const serverNotes = data.notes;
 
-                if (unseenCount > 0) {
-                    this.notes = data.notes;
+                // FIX: Better change detection (ID based)
+                const localIds = new Set(this.notes.map(n => n.id));
+                const hasNew = serverNotes.some(n => !localIds.has(n.id));
 
+                if (hasNew || serverNotes.length !== this.notes.length) {
+                    this.notes = serverNotes;
                     if (this.isActive) {
-                        this.renderNotesList();
-                        this.lastSeenCount = newCount;
-                        if (this.onBadgeUpdate) this.onBadgeUpdate(0);
+                        this.renderNotesList(false); // Smart append
+                        this.updateBadgeState();
                     } else {
-                        if (this.onBadgeUpdate) this.onBadgeUpdate(unseenCount);
+                        const unseen = this.notes.length - this.lastSeenCount;
+                        if (this.onBadgeUpdate) this.onBadgeUpdate(unseen > 0 ? unseen : 0);
                     }
                 }
             }
         } catch (err) {
-            console.error('Failed to check for new notes:', err);
+            console.error('Polling error:', err);
         }
     }
 
-    // Clean up when conversation changes
+    updateBadgeState() {
+        this.lastSeenCount = this.notes.length;
+        if (this.onBadgeUpdate) this.onBadgeUpdate(0);
+    }
+
     destroy() {
         this.stopPolling();
         this.notes = [];
@@ -213,14 +218,11 @@ export class NotesTab {
     async saveNote() {
         const input = document.getElementById('newNoteInput');
         const content = input.value.trim();
-
         if (!content) return;
 
-        // Clear input immediately (chat-style UX)
         input.value = '';
         input.style.height = 'auto';
 
-        // Create optimistic note
         const tempId = 'temp-' + Date.now();
         const optimisticNote = {
             id: tempId,
@@ -229,9 +231,11 @@ export class NotesTab {
             created_by_name: window.currentUser?.name || 'You'
         };
 
-        // Add to UI immediately
         this.notes.push(optimisticNote);
-        this.renderNotesList();
+        this.renderNotesList(false);
+        // Force scroll for own message
+        const list = document.getElementById('notesListContainer');
+        if (list) list.scrollTop = list.scrollHeight;
 
         try {
             const res = await fetch(`/api/notes/${this.conversationId}`, {
@@ -245,28 +249,28 @@ export class NotesTab {
             if (data.success) {
                 const idx = this.notes.findIndex(n => n.id === tempId);
                 if (idx !== -1) {
+                    // Update the temp note with real data
                     this.notes[idx] = data.note;
+
+                    // Update the DOM element ID without full re-render
+                    const tempEl = document.querySelector(`[data-note-id="${tempId}"]`);
+                    if (tempEl) {
+                        tempEl.setAttribute('data-note-id', data.note.id);
+                        tempEl.id = `note-${data.note.id}`;
+                    }
                 }
-                if (this.isActive) {
-                    this.lastSeenCount = this.notes.length;
-                    if (this.onBadgeUpdate) this.onBadgeUpdate(0);
-                }
+                this.updateBadgeState();
             } else {
                 throw new Error(data.error);
             }
         } catch (err) {
             console.error('Failed to save note:', err);
-
-            // Remove failed note and restore input
+            // Revert on failure
             this.notes = this.notes.filter(n => n.id !== tempId);
-            this.renderNotesList();
+            this.renderNotesList(true);
             input.value = content;
-
-            // Brief error indicator
-            input.classList.add('input-error');
-            setTimeout(() => input.classList.remove('input-error'), 1500);
+            alert("Failed to send note. Please try again.");
         }
-
         input.focus();
     }
 }
