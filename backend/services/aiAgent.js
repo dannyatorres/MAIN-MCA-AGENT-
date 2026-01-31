@@ -158,7 +158,7 @@ const BASE_TOOLS = [
         type: "function",
         function: {
             name: "no_response_needed",
-            description: "Call this when the lead's message doesn't need a response. Use when they say: 'ok', 'sounds good', 'cool', 'thanks', 'got it', 'k', 'okay', 'alright', 'perfect', 'great', 'sure', 'yep', 'yes', 'no problem'. DO NOT respond to these - just stay silent and wait.",
+            description: "ONLY for simple acknowledgments: 'ok', 'thanks', 'got it', 'sounds good', 'perfect', 'cool', 'k'. NEVER call this if lead expresses confusion ('what?', 'huh?', 'I don't understand', 'what are you talking about') or frustration ('why are you repeating yourself'). Confusion and frustration ALWAYS require a response.",
             parameters: { type: "object", properties: {} }
         }
     },
@@ -618,6 +618,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
         systemPrompt += `\n## 🧠 MEMORY TOOLS\nYou have persistent memory. Use it:\n1. Call **get_lead_facts** FIRST to see what you already know\n2. Call **remember_fact** IMMEDIATELY when you learn something new\n3. NEVER re-ask for information that's already in your facts\n\nIf get_lead_facts shows credit_score: 650, DO NOT ask for credit score again.\n`;
         systemPrompt += `\n## 🧠 MEMORY RULES\nWhen lead answers a question, IMMEDIATELY call remember_fact:\n- \"Weekly\" / \"Daily\" → remember_fact(\"payment_preference\", \"weekly\")\n- \"$500/day is fine\" → remember_fact(\"comfortable_payment\", \"500/day\")\n- Any amount → remember_fact(\"requested_amount\", \"60000\")\n\nNEVER re-ask a question they already answered.\n`;
+        systemPrompt += `\n## ⚠️ CRITICAL RULES\n- If lead says \"what?\", \"I don't understand\", \"what are you talking about\" → APOLOGIZE and explain simply\n- If lead says \"why are you repeating yourself\" → APOLOGIZE, acknowledge the issue, and change approach\n- NEVER start with \"depends on\" twice in a row\n- Before responding, mentally check: \"Did I already say this?\"\n`;
 
         // Long-term memory (conversation + global patterns)
         const longTermContext = userMessageForMemory
