@@ -171,7 +171,10 @@ class StatsModule {
         const quoteEl = document.getElementById('heroQuote');
         const dateEl = document.getElementById('heroDate');
 
-        if (greetingEl) greetingEl.textContent = greeting;
+        if (greetingEl) {
+            greetingEl.textContent = greeting;
+            greetingEl.style.visibility = 'visible';
+        }
         if (quoteEl) quoteEl.textContent = `"${randomQuote}"`;
         if (dateEl) dateEl.textContent = dateStr;
     }
