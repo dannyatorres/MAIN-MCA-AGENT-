@@ -28,9 +28,10 @@ async function storeMessage(conversationId, content, metadata = {}) {
             }
         }]);
 
+        console.log(`🧠 Pinecone: Stored ${metadata.direction} message (${content.substring(0, 30)}...)`);
         return true;
     } catch (err) {
-        console.error('⚠️ Memory store failed:', err.message);
+        console.error('⚠️ Pinecone store failed:', err.message);
         return false;
     }
 }
@@ -50,15 +51,16 @@ async function getConversationContext(conversationId, currentMessage, limit = 5)
             filter: { conversation_id: { $eq: conversationId } }
         });
 
-        return results.matches
-            .filter(m => m.score > 0.7)
-            .map(m => ({
-                content: m.metadata.content,
-                direction: m.metadata.direction,
-                score: m.score
-            }));
+        const relevant = results.matches.filter(m => m.score > 0.7);
+        console.log(`🧠 Pinecone: Retrieved ${relevant.length}/${results.matches.length} relevant messages`);
+
+        return relevant.map(m => ({
+            content: m.metadata.content,
+            direction: m.metadata.direction,
+            score: m.score
+        }));
     } catch (err) {
-        console.error('⚠️ Memory retrieval failed:', err.message);
+        console.error('⚠️ Pinecone retrieval failed:', err.message);
         return [];
     }
 }
