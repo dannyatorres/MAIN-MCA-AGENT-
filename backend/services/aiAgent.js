@@ -25,13 +25,26 @@ function cleanToolLeaks(content) {
         return null;
     }
     
-    return content
+    // Remove internal reasoning/notes that leaked
+    content = content
+        .replace(/Consult note:.*?(?=\s{2}|$)/gi, '')
+        .replace(/Internal:.*?(?=\s{2}|$)/gi, '')
+        .replace(/Note to self:.*?(?=\s{2}|$)/gi, '')
+        .replace(/Thinking:.*?(?=\s{2}|$)/gi, '')
+        .replace(/Strategy:.*?(?=\s{2}|$)/gi, '')
         .replace(/\(Calling\s+\w+[^)]*\)/gi, '')
         .replace(/\w+_\w+\s+(tool\s+)?invoked\.?/gi, '')
         .replace(/\{"status"\s*:\s*"[^"]*"[^}]*\}/gi, '')
         .replace(/\{"[^"]*"[^}]*\}/gi, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
+
+    // If mostly cleaned away, return null
+    if (!content || content.length < 10) {
+        return null;
+    }
+
+    return content;
 }
 
 function generateReasoning(toolsCalled, leadMessage, currentState, stateAfter) {
@@ -608,6 +621,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         systemPrompt += `\n## 🧠 MEMORY TOOLS\nYou have persistent memory. Use it:\n1. Call **get_lead_facts** FIRST to see what you already know\n2. Call **remember_fact** IMMEDIATELY when you learn something new\n3. NEVER re-ask for information that's already in your facts\n\nIf get_lead_facts shows credit_score: 650, DO NOT ask for credit score again.\n`;
         systemPrompt += `\n## 🧠 MEMORY RULES\nWhen lead answers a question, IMMEDIATELY call remember_fact:\n- \"Weekly\" / \"Daily\" → remember_fact(\"payment_preference\", \"weekly\")\n- \"$500/day is fine\" → remember_fact(\"comfortable_payment\", \"500/day\")\n- Any amount → remember_fact(\"requested_amount\", \"60000\")\n\nNEVER re-ask a question they already answered.\n`;
         systemPrompt += `\n## ⚠️ CRITICAL RULES\n- If lead says \"what?\", \"I don't understand\", \"what are you talking about\" → APOLOGIZE and explain simply\n- If lead says \"why are you repeating yourself\" → APOLOGIZE, acknowledge the issue, and change approach\n- NEVER start with \"depends on\" twice in a row\n- Before responding, mentally check: \"Did I already say this?\"\n`;
+        systemPrompt += `\n## 💪 FIGHT FOR THE DEAL\nWhen lead says \"going with another broker\" or \"found someone else\":\n- \"wait what are they offering? let me see if i can beat it\"\n- \"hold on - what numbers they give you? dont sign anything yet\"\n- \"who you going with? i can probably match or beat it\"\n\nWhen lead says \"not interested\":\n- \"what happened?\"\n- \"you get funded already?\"\n- \"what changed?\"\n\nWhen lead goes quiet after seeing numbers:\n- \"too high?\"\n- \"what payment works better?\"\n- \"talk to me\"\n\nRULES:\n- Short punchy texts. No fluff.\n- Never say \"no worries\" or \"feel free to reach out\" on first objection\n- Sound like a real person, not a bot\n- Match their energy\n- One question at a time\n- Lowercase is fine\n`;
+        systemPrompt += `\n## ⚠️ NEVER INCLUDE IN YOUR RESPONSE:\n- Internal notes or thinking (\"Consult note:\", \"Strategy:\", \"Note to self:\")\n- Reasoning about what to say\n- References to tools or functions\n- Anything the lead shouldn't see\n\nYour response goes DIRECTLY to the lead via SMS. Only include the actual message.\n`;
 
         // Long-term memory (conversation + global patterns)
         const longTermContext = userMessageForMemory
