@@ -18,7 +18,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 16px;
-    padding-bottom: 90px; /* Extra padding so last note isn't hidden by input */
+    padding-bottom: 120px; /* Increased from 90px */
     display: flex;
     flex-direction: column;
     gap: 12px;
