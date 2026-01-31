@@ -46,9 +46,6 @@ function generateReasoning(toolsCalled, leadMessage, currentState, stateAfter) {
     if (toolsCalled.includes('update_lead_status')) {
         reasons.push('Lead requested opt-out or marked for review - updating status');
     }
-    if (toolsCalled.includes('no_response_needed')) {
-        reasons.push('Lead sent acknowledgment message - no response needed');
-    }
     
     if (currentState !== stateAfter) {
         reasons.push(`State changed: ${currentState} → ${stateAfter}`);
@@ -908,52 +905,23 @@ Send this message to the lead: "${offer.pitch_message}"`;
 
         if (responseContent) {
             responseContent = cleanToolLeaks(responseContent);
-            // Reject if it looks like failed tool calls
             if (!responseContent || responseContent.trim() === '' || responseContent.includes('recipient_name')) {
-                console.log('⚠️ Invalid response format, skipping');
-                console.log(`========== END AI AGENT ==========\n`);
-                return { shouldReply: false };
+                console.log('⚠️ Invalid response format after cleaning');
+                responseContent = null;
             }
-            if (!responseContent || responseContent.trim() === '') {
-                console.log('⚠️ Empty response after cleaning');
-                console.log(`========== END AI AGENT ==========\n`);
-                return { shouldReply: false };
-            }
-            console.log(`✅ AI Response: "${responseContent.substring(0, 80)}..."`);
-            console.log(`========== END AI AGENT ==========\n`);
-            // 📊 TRACK AI MODE RESPONSE
-            await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
-
-            const reasoning = systemInstruction || generateReasoning(toolsCalled, userMessage, currentState, stateAfter);
-            await logAIDecision({
-                conversationId,
-                businessName: leadName,
-                agent: 'pre_vetter',
-                leadMessage: userMessage,
-                instruction: reasoning,
-                stateBefore: currentState,
-                stateAfter,
-                toolsCalled,
-                aiResponse: responseContent,
-                actionTaken: 'responded',
-                tokensUsed: completion.usage?.total_tokens
-            });
-
-            // Store outbound message in vector memory
-            try {
-                await storeMessage(conversationId, responseContent, {
-                    direction: 'outbound',
-                    state: currentState,
-                    lead_grade: leadGrade
-                });
-            } catch (err) {
-                console.error('⚠️ Memory store failed (outbound):', err.message);
-            }
-
-            return { shouldReply: true, content: responseContent };
         }
-        console.log(`⏭️ AI decided: No response needed`);
+
+        // Force a response if AI returned nothing
+        if (!responseContent || responseContent.trim() === '') {
+            console.log(`⚠️ AI returned empty - forcing fallback response`);
+            responseContent = "got it, give me one sec";
+        }
+
+        console.log(`✅ AI Response: "${responseContent.substring(0, 80)}..."`);
         console.log(`========== END AI AGENT ==========\n`);
+        // 📊 TRACK AI MODE RESPONSE
+        await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
+
         const reasoning = systemInstruction || generateReasoning(toolsCalled, userMessage, currentState, stateAfter);
         await logAIDecision({
             conversationId,
@@ -964,11 +932,23 @@ Send this message to the lead: "${offer.pitch_message}"`;
             stateBefore: currentState,
             stateAfter,
             toolsCalled,
-            aiResponse: null,
-            actionTaken: 'no_response',
+            aiResponse: responseContent,
+            actionTaken: 'responded',
             tokensUsed: completion.usage?.total_tokens
         });
-        return { shouldReply: false };
+
+        // Store outbound message in vector memory
+        try {
+            await storeMessage(conversationId, responseContent, {
+                direction: 'outbound',
+                state: currentState,
+                lead_grade: leadGrade
+            });
+        } catch (err) {
+            console.error('⚠️ Memory store failed (outbound):', err.message);
+        }
+
+        return { shouldReply: true, content: responseContent };
 
     } catch (err) {
         console.error("🔥 AI Agent Error:", err);
