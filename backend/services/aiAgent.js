@@ -17,10 +17,18 @@ const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
 function cleanToolLeaks(content) {
     if (!content) return content;
+    
+    // Reject if it's raw JSON/function calls
+    if (content.trim().startsWith('{') || content.includes('recipient_name') || content.includes('"function"')) {
+        console.log('⚠️ Response was raw JSON, rejecting');
+        return null;
+    }
+    
     return content
         .replace(/\(Calling\s+\w+[^)]*\)/gi, '')
         .replace(/\w+_\w+\s+(tool\s+)?invoked\.?/gi, '')
         .replace(/\{"status"\s*:\s*"[^"]*"[^}]*\}/gi, '')
+        .replace(/\{"[^"]*"[^}]*\}/gi, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 }
