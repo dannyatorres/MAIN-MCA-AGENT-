@@ -594,6 +594,16 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = await getPromptForPhase(usageUserId, currentState);
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
+        // After building the base systemPrompt
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { 
+            timeZone: 'America/New_York',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        systemPrompt += `\n## 📅 TODAY'S DATE\n${dateStr}\n`;
         systemPrompt += `\n## ⚠️ CRITICAL RULES\n- If lead says \"what?\", \"I don't understand\", \"what are you talking about\" → APOLOGIZE and explain simply\n- If lead says \"why are you repeating yourself\" → APOLOGIZE, acknowledge the issue, and change approach\n- NEVER start with \"depends on\" twice in a row\n- Before responding, mentally check: \"Did I already say this?\"\n`;
         systemPrompt += `\n## 💪 FIGHT FOR THE DEAL\nWhen lead says \"going with another broker\" or \"found someone else\":\n- \"wait what are they offering? let me see if i can beat it\"\n- \"hold on - what numbers they give you? dont sign anything yet\"\n- \"who you going with? i can probably match or beat it\"\n\nWhen lead says \"not interested\":\n- \"what happened?\"\n- \"you get funded already?\"\n- \"what changed?\"\n\nWhen lead goes quiet after seeing numbers:\n- \"too high?\"\n- \"what payment works better?\"\n- \"talk to me\"\n\nRULES:\n- Short punchy texts. No fluff.\n- Never say \"no worries\" or \"feel free to reach out\" on first objection\n- Sound like a real person, not a bot\n- Match their energy\n- One question at a time\n- Lowercase is fine\n`;
         systemPrompt += `\n## ⚠️ NEVER INCLUDE IN YOUR RESPONSE:\n- Internal notes or thinking (\"Consult note:\", \"Strategy:\", \"Note to self:\")\n- Reasoning about what to say\n- References to tools or functions\n- Anything the lead shouldn't see\n\nYour response goes DIRECTLY to the lead via SMS. Only include the actual message.\n`;
@@ -909,6 +919,11 @@ Send this message to the lead: "${offer.pitch_message}"`;
             });
         } catch (err) {
             console.error('⚠️ Memory store failed (outbound):', err.message);
+        }
+
+        // Increment nudge_count after responding in QUALIFIED state
+        if (currentState === 'QUALIFIED' && responseContent) {
+            await db.query('UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1', [conversationId]);
         }
 
         return { shouldReply: true, content: responseContent };
