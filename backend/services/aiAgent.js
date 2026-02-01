@@ -756,6 +756,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         let responseContent = aiMsg.content;
         const toolsCalled = aiMsg.tool_calls?.map(t => t.function.name) || [];
         let stateAfter = currentState;
+        console.log(`🔍 First pass raw:`, JSON.stringify(aiMsg));
 
         const lastMsgRes = await db.query(`
             SELECT content FROM messages
