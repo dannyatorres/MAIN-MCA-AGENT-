@@ -257,6 +257,12 @@ class ConversationCore {
                     freshConv.unread_count = 0;
                 }
 
+                // FIX: Preserve list-only fields (last_message) that detail API may not return
+                const existing = this.conversations.get(convoId);
+                if (existing && !freshConv.last_message) {
+                    freshConv.last_message = existing.last_message;
+                }
+
                 this.conversations.set(convoId, freshConv);
             }
 
