@@ -4,6 +4,7 @@ const { processLeadWithAI } = require('../services/aiAgent');
 const { getDatabase } = require('../services/database');
 const { runMorningFollowUp } = require('../services/morningFollowUp');
 const twilio = require('twilio');
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // POST /api/agent/trigger
 // The Dispatcher calls this URL
@@ -48,7 +49,6 @@ router.post('/trigger', async (req, res) => {
     // 2. Send SMS if AI generated a reply
     if (result.shouldReply && result.content) {
         try {
-            const db = getDatabase();
 
             // A. Get Phone Number
             const lead = await db.query("SELECT lead_phone FROM conversations WHERE id = $1", [conversation_id]);
@@ -72,8 +72,7 @@ router.post('/trigger', async (req, res) => {
             const messageId = insert.rows[0].id;
 
             // C. Send via Twilio
-            const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-            await client.messages.create({
+            await twilioClient.messages.create({
                 body: result.content,
                 from: process.env.TWILIO_PHONE_NUMBER,
                 to: phone
@@ -123,7 +122,7 @@ router.post('/trigger', async (req, res) => {
                         content: result.content,
                         direction: 'outbound',
                         sent_by: 'ai',
-                        is_drip: true,
+                        is_drip: !!direct_message,
                         timestamp: new Date().toISOString()
                     }
                 });
@@ -142,6 +141,11 @@ router.post('/trigger', async (req, res) => {
         action: result.shouldReply ? "sent_message" : "status_update_only",
         ai_reply: result.content || "No reply generated (Status update or silence)"
     });
+    } catch (err) {
+        console.error(`❌ Error in trigger for ${conversation_id}:`, err);
+        if (!res.headersSent) {
+            return res.status(500).json({ error: err.message });
+        }
     } finally {
         await db.query(`UPDATE conversations SET ai_processing = false WHERE id = $1`, [conversation_id]);
     }

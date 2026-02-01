@@ -40,7 +40,7 @@ function cleanToolLeaks(content) {
         .trim();
 
     // If mostly cleaned away, return null
-    if (!content || content.length < 10) {
+    if (!content || content.trim().length === 0) {
         return null;
     }
 
@@ -547,7 +547,12 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         if (strategyRes.rows[0]) {
             gamePlan = strategyRes.rows[0].game_plan;
             if (typeof gamePlan === 'string') {
-                gamePlan = JSON.parse(gamePlan);
+                try {
+                    gamePlan = JSON.parse(gamePlan);
+                } catch (e) {
+                    console.error(`⚠️ Invalid gamePlan JSON for ${conversationId}:`, e.message);
+                    gamePlan = null;
+                }
             }
             console.log(`🎖️ Commander Orders Loaded: Grade ${strategyRes.rows[0].lead_grade} | ${strategyRes.rows[0].strategy_type}`);
         } else {
@@ -881,7 +886,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     console.log(`💰 AI DECISION: Generating formal offer...`);
                     const offer = await commanderService.generateOffer(conversationId);
                     if (offer) {
-                        toolResult = `OFFER READY: ${offer.offer_amount.toLocaleString()} at ${offer.factor_rate} factor rate. Term: ${offer.term} ${offer.term_unit}. Payment: ${offer.payment_amount} ${offer.payment_frequency}.
+                        toolResult = `OFFER READY: ${(offer.offer_amount ?? 0).toLocaleString()} at ${offer.factor_rate ?? 'N/A'} factor rate. Term: ${offer.term ?? 'N/A'} ${offer.term_unit ?? ''}. Payment: ${(offer.payment_amount ?? 0).toLocaleString()} ${offer.payment_frequency ?? ''}.
 
 Send this message to the lead: "${offer.pitch_message}"`;
                     } else {
@@ -899,7 +904,9 @@ Send this message to the lead: "${offer.pitch_message}"`;
             // --- SECOND PASS (Generate the Final Reply with Context) ---
             const secondPass = await openai.chat.completions.create({
                 model: "gpt-5-mini",
-                messages: messages
+                messages: messages,
+                tools: availableTools,
+                tool_choice: "auto"
             });
 
             if (secondPass.usage) {
