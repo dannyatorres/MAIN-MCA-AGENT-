@@ -828,15 +828,16 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 }
 
                 else if (tool.function.name === 'consult_analyst') {
-                    console.log(`🎓 [${leadName}] Handing off to human`);
-
-                    // ✅ HANDOFF: Move to QUALIFIED (FCS should be ready by now)
-                    await updateState(conversationId, 'QUALIFIED', 'ai_agent');
-                    stateAfter = 'QUALIFIED';
-                    console.log(`✅ [${leadName}] Qualified → QUALIFIED`);
-
-                    // Simple handoff message - NO offer, NO numbers
-                    toolResult = "Tell the lead: 'give me a few minutes to run the numbers and ill text you back shortly'";
+                    if (currentState === 'QUALIFIED') {
+                        toolResult = "Already qualified. Check the COMMANDER'S ORDERS section for offer range and pitch directly.";
+                    } else {
+                        console.log(`🎓 [${leadName}] Handing off to human`);
+                        await updateState(conversationId, 'QUALIFIED', 'ai_agent');
+                        await db.query('UPDATE conversations SET nudge_count = 1 WHERE id = $1', [conversationId]);
+                        stateAfter = 'QUALIFIED';
+                        console.log(`✅ [${leadName}] Qualified → QUALIFIED`);
+                        toolResult = "Tell the lead: 'give me a few minutes to run the numbers and ill text you back shortly'";
+                    }
                 }
 
                 else if (tool.function.name === 'generate_offer') {
