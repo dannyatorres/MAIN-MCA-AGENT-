@@ -847,8 +847,7 @@ Send this message to the lead: "${offer.pitch_message}"`;
             // --- SECOND PASS (Generate the Final Reply with Context) ---
             const secondPass = await openai.chat.completions.create({
                 model: "gpt-5-mini",
-                messages: messages,
-                tool_choice: "none"
+                messages: messages
             });
 
             if (secondPass.usage) {
