@@ -364,6 +364,10 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // Only inject the 'generate_offer' tool if explicitly authorized
         // =================================================================
         let availableTools = [...BASE_TOOLS];
+        // Remove consult_analyst if already qualified
+        if (['QUALIFIED', 'SUBMITTED', 'CLOSING'].includes(currentState)) {
+            availableTools = availableTools.filter(t => t.function.name !== 'consult_analyst');
+        }
 
         // Only allow offer generation if YOU clicked a button that puts "Generate Offer" in the instructions
         if (systemInstruction && systemInstruction.includes("Generate Offer")) {
