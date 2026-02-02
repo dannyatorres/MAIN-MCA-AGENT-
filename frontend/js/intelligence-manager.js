@@ -5,7 +5,6 @@ import { DocumentsTab } from './intelligence-tabs/documents-tab.js';
 // AI Tab Import REMOVED - We use the global AIAssistant now
 import { LendersTab } from './intelligence-tabs/lenders-tab.js';
 import { FCSTab } from './intelligence-tabs/fcs-tab.js';
-import { NotesTab } from './intelligence-tabs/notes-tab.js';
 import { DealIntelligenceTab } from './intelligence-tabs/deal-intelligence-tab.js';
 
 export class IntelligenceManager {
@@ -18,14 +17,8 @@ export class IntelligenceManager {
             // 'ai-assistant': REMOVED (Handled dynamically)
             'lenders': new LendersTab(parent),
             'fcs': new FCSTab(parent),
-            'notes': new NotesTab(parent),
             'strategy': new DealIntelligenceTab(parent)
         };
-
-        this.notesTab = this.tabs['notes'];
-        if (this.notesTab) {
-            this.notesTab.onBadgeUpdate = (count) => this.updateNotesBadge(count);
-        }
 
         this.init();
     }
@@ -168,19 +161,9 @@ export class IntelligenceManager {
 
             this.renderIntelligenceData(data);
 
-            // FIX: Preload notes for this conversation
-            if (this.notesTab && convId) {
-                this.notesTab.conversationId = convId;
-                this.notesTab.notes = [];
-                this.notesTab.isRendered = false;
-
-                const currentTab = document.querySelector('.tab-btn.active')?.dataset.tab;
-                if (currentTab === 'notes') {
-                    const container = document.getElementById('intelligenceContent');
-                    if (container) {
-                        this.notesTab.render(container, convId);
-                    }
-                }
+            // Load notes via simple NotesPanel (not the old tab system)
+            if (window.NotesPanel && convId) {
+                window.NotesPanel.load(convId);
             }
         } catch (error) {
             console.error('❌ Failed to load details:', error);
