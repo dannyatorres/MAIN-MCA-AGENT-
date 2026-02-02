@@ -49,7 +49,7 @@ router.post('/:conversationId', async (req, res) => {
 
         const io = req.app.get('io');
         if (io) {
-            io.to(`conversation:${conversationId}`).emit('new_note', {
+            io.to(`conversation_${conversationId}`).emit('new_note', {
                 conversationId,
                 note
             });
