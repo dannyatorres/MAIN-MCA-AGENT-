@@ -316,7 +316,7 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
 
-        const sorted = [...messages].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const sorted = [...messages].sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
         const sanitized = sorted.map(msg => {
             const copy = { ...msg };
             const textFields = ['content', 'message_content', 'text', 'body'];
