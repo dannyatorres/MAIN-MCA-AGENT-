@@ -51,6 +51,7 @@ const io = new Server(server, {
     transports: ['websocket', 'polling']
 });
 global.io = io;
+app.set('io', io);
 io.on('connection', (socket) => socket.on('join_conversation', (id) => socket.join(`conversation_${id}`)));
 
 // --- 3. EXPRESS MIDDLEWARE ---
