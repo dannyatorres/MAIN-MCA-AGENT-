@@ -181,6 +181,20 @@ export class NotesTab {
         }
     }
 
+    handleIncomingNote(data) {
+        if (!data || data.conversationId !== this.conversationId) return;
+
+        const exists = this.notes.some(n =>
+            n.id === data.note.id ||
+            (String(n.id).startsWith('temp-') && n.content === data.note.content)
+        );
+
+        if (!exists) {
+            this.notes.push(data.note);
+            this.renderNotesList(false);
+        }
+    }
+
     deactivate() {
         this.isActive = false;
     }

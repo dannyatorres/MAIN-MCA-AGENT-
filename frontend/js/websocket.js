@@ -100,6 +100,14 @@ class WebSocketManager {
             }
         });
 
+        // 1b. New Note - Update Notes tab if active
+        this.socket.on('new_note', (data) => {
+            console.log('⚡ WS EVENT: new_note', data.conversationId);
+            if (this.app.notesTab) {
+                this.app.notesTab.handleIncomingNote(data);
+            }
+        });
+
         // 2. Conversation Updated (Status change, etc)
         this.socket.on('conversation_updated', (data) => {
             const convoId = data.conversation_id || data.conversationId;

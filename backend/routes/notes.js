@@ -47,6 +47,14 @@ router.post('/:conversationId', async (req, res) => {
         const note = result.rows[0];
         note.created_by_name = userName;
 
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`conversation:${conversationId}`).emit('new_note', {
+                conversationId,
+                note
+            });
+        }
+
         res.json({ success: true, note });
     } catch (err) {
         console.error('Error saving note:', err);
