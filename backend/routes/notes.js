@@ -48,11 +48,13 @@ router.post('/:conversationId', async (req, res) => {
         note.created_by_name = userName;
 
         const io = req.app.get('io');
+        console.log('📝 NOTE SAVED - io exists:', !!io, 'room:', `conversation_${conversationId}`);
         if (io) {
             io.to(`conversation_${conversationId}`).emit('new_note', {
                 conversationId,
                 note
             });
+            console.log('📝 NOTE EMITTED via socket');
         }
 
         res.json({ success: true, note });
