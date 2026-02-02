@@ -170,12 +170,22 @@ const BASE_TOOLS = [
 ];
 
 // 📖 HELPER: Load Persona + Strategy (now with dynamic agent name)
-async function getGlobalPrompt(userId) {
+async function getGlobalPrompt(userId, currentState) {
     try {
-        const promptPath = path.join(__dirname, '../prompts/dan_torres.md');
+        const basePath = path.join(__dirname, '../prompts/sales_agent/base.md');
 
-        // Get user's agent name
-        let agentName = 'Dan Torres'; // default
+        const phaseMap = {
+            'NEW': 'phase_active.md',
+            'ACTIVE': 'phase_active.md',
+            'QUALIFIED': 'phase_qualified.md',
+            'SUBMITTED': 'phase_submitted.md',
+            'CLOSING': 'phase_closing.md'
+        };
+
+        const phaseFile = phaseMap[currentState] || 'phase_active.md';
+        const phasePath = path.join(__dirname, `../prompts/sales_agent/${phaseFile}`);
+
+        let agentName = 'Dan Torres';
         if (userId) {
             const db = getDatabase();
             const result = await db.query('SELECT agent_name FROM users WHERE id = $1', [userId]);
@@ -184,23 +194,31 @@ async function getGlobalPrompt(userId) {
             }
         }
 
-        if (fs.existsSync(promptPath)) {
-            console.log(`✅ Loaded: dan_torres.md (Agent: ${agentName})`);
-            let prompt = fs.readFileSync(promptPath, 'utf8');
+        let prompt = '';
 
-            // Replace placeholders
-            prompt = prompt.replace(/\{\{AGENT_NAME\}\}/g, agentName);
-            prompt = prompt.replace(/\{\{AGENT_NAME_LOWER\}\}/g, agentName.toLowerCase());
-
-            return prompt;
+        if (fs.existsSync(basePath)) {
+            prompt = fs.readFileSync(basePath, 'utf8');
         }
 
-        console.log('⚠️ Missing: dan_torres.md');
-        return `You are ${agentName}, an underwriter at JMS Global. Keep texts short and professional.`;
+        if (fs.existsSync(phasePath)) {
+            const phasePrompt = fs.readFileSync(phasePath, 'utf8');
+            prompt += '\n\n' + phasePrompt;
+        }
 
+        if (!prompt) {
+            console.log('⚠️ Missing prompt files');
+            return `You are ${agentName}, an underwriter at JMS Global. Keep texts short and professional. NEVER narrate tool calls.`;
+        }
+
+        console.log(`✅ Loaded: base.md + ${phaseFile} (Agent: ${agentName})`);
+
+        prompt = prompt.replace(/\{\{AGENT_NAME\}\}/g, agentName);
+        prompt = prompt.replace(/\{\{PHASE\}\}/g, currentState || 'ACTIVE');
+
+        return prompt;
     } catch (err) {
         console.error('⚠️ Error loading prompt:', err.message);
-        return 'You are an underwriter. Keep texts short.';
+        return 'You are an underwriter at JMS Global. Keep texts short and professional. NEVER narrate tool calls.';
     }
 }
 
