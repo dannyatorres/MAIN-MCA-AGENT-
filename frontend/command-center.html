@@ -359,6 +359,23 @@
 
                         <div id="strategyResults" class="hidden"></div>
                     </div>
+
+                    <div id="notesPanel" class="intelligence-content hidden">
+                        <div class="notes-tab-container">
+                            <div id="notesList" class="notes-list">
+                                <div class="notes-empty">
+                                    <i class="far fa-sticky-note"></i>
+                                    <p>No notes yet.</p>
+                                </div>
+                            </div>
+                            <div class="notes-input-wrapper">
+                                <textarea id="notesInput" class="notes-textarea" placeholder="Type a note... (Enter to send)" rows="1"></textarea>
+                                <button id="notesSendBtn" class="btn-send-note" title="Save Note">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -733,6 +750,7 @@
     <script src="js/power-dialer.js"></script>
     <script src="js/ui-actions.js"></script>
 
+    <script src="js/notes-panel.js"></script>
     <script type="module" src="js/app-bootstrap.js"></script>
     <script src="js/background-verification.js"></script>
     <script src="js/user-menu.js"></script>

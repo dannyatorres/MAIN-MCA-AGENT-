@@ -204,6 +204,10 @@ class ConversationCore {
             this.parent.wsManager.joinConversation(convoId);
         }
 
+        if (window.NotesPanel) {
+            window.NotesPanel.load(convoId);
+        }
+
         // 2. Prepare UI
         const msgContainer = document.getElementById('messagesContainer');
         if (msgContainer) {

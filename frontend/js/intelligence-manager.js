@@ -85,7 +85,17 @@ export class IntelligenceManager {
         });
 
         const container = document.getElementById('intelligenceContent');
+        const notesPanel = document.getElementById('notesPanel');
         if (!container) return;
+
+        if (tabName === 'notes') {
+            if (container) container.classList.add('hidden');
+            if (notesPanel) notesPanel.classList.remove('hidden');
+            return;
+        }
+
+        if (notesPanel) notesPanel.classList.add('hidden');
+        if (container) container.classList.remove('hidden');
 
         container.innerHTML = '';
 
@@ -110,12 +120,6 @@ export class IntelligenceManager {
             const convId = this.parent.getCurrentConversationId ? this.parent.getCurrentConversationId() : null;
             tabModule.render(container, convId);
 
-            // Activate notes AFTER render
-            if (tabName === 'notes') {
-                this.notesTab?.activate();
-            } else {
-                this.notesTab?.deactivate();
-            }
         } else {
             container.innerHTML = `<div class="error-state">Tab '${tabName}' not found.</div>`;
         }
