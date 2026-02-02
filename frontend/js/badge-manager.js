@@ -23,6 +23,10 @@ class BadgeManager {
         return this.toBool(conv.has_offer);
     }
 
+    getNotesCount(conv) {
+        return parseInt(conv.notes_count, 10) || 0;
+    }
+
     getRowClasses(conv, isSelected = false) {
         const classes = [];
         if (isSelected) classes.push('active');
@@ -38,6 +42,12 @@ class BadgeManager {
 
     renderOfferIcon(conv) {
         return this.hasOffer(conv) ? `<span class="badge-offer-icon">💰</span>` : '';
+    }
+
+    renderNotesIcon(conv) {
+        const count = this.getNotesCount(conv);
+        if (count === 0) return '';
+        return `<span class="badge-notes-icon" title="${count} note${count > 1 ? 's' : ''}">📝<span class="notes-count">${count}</span></span>`;
     }
 
     // OPTIMISTIC: Update immediately, animate, then sync with server

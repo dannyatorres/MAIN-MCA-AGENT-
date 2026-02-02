@@ -215,12 +215,16 @@ export class NotesTab {
             if (data.success && data.notes) {
                 const serverNotes = data.notes;
 
+                // FIX: Preserve any pending (optimistic) notes during merge
+                const pendingNotes = this.notes.filter(n => String(n.id).startsWith('temp-'));
+
                 // FIX: Better change detection (ID based)
-                const localIds = new Set(this.notes.map(n => n.id));
+                const localIds = new Set(this.notes.filter(n => !String(n.id).startsWith('temp-')).map(n => n.id));
                 const hasNew = serverNotes.some(n => !localIds.has(n.id));
 
-                if (hasNew || serverNotes.length !== this.notes.length) {
-                    this.notes = serverNotes;
+                if (hasNew || serverNotes.length !== (this.notes.length - pendingNotes.length)) {
+                    // Merge: server notes + any still-pending local notes
+                    this.notes = [...serverNotes, ...pendingNotes];
                     if (this.isActive) {
                         this.renderNotesList(false); // Smart append
                         this.updateBadgeState();

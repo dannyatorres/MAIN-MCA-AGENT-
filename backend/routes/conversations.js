@@ -56,6 +56,9 @@ router.get('/', async (req, res) => {
                  WHERE m.conversation_id = c.id
                  ORDER BY m.timestamp DESC LIMIT 1) as last_message,
 
+                (SELECT COUNT(*) FROM notes n
+                 WHERE n.conversation_id = c.id) as notes_count,
+
                 CASE 
                     WHEN c.state IN ('REPLIED', 'REPLIED_NUDGE_1', 'REPLIED_NUDGE_2', 'VETTING', 'VETTING_NUDGE_1', 'VETTING_NUDGE_2', 'PRE_VETTED', 'HAIL_MARY', 'HAIL_MARY_FINAL', 'FCS_QUEUE', 'FUNDED')
                     THEN COALESCE((SELECT MAX(m.timestamp) FROM messages m WHERE m.conversation_id = c.id), c.created_at)

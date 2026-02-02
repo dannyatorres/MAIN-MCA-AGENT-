@@ -403,6 +403,7 @@ class ConversationCore {
         const rowClasses = this.badges.getRowClasses(conv, isSelected);
         const unreadBubble = this.badges.renderUnreadBubble(conv);
         const offerIcon = this.badges.renderOfferIcon(conv);
+        const notesIcon = this.badges.renderNotesIcon(conv);
 
         return `
             <div class="conversation-item ${rowClasses}"
@@ -430,6 +431,7 @@ class ConversationCore {
                 </div>
                 ${unreadBubble}
                 ${offerIcon}
+                ${notesIcon}
             </div>
         `;
     }
