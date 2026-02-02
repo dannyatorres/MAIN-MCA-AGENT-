@@ -33,6 +33,7 @@ function cleanToolLeaks(content) {
         .replace(/Thinking:.*?(?=\s{2}|$)/gi, '')
         .replace(/Strategy:.*?(?=\s{2}|$)/gi, '')
         .replace(/\(Calling\s+\w+[^)]*\)/gi, '')
+        .replace(/\(\s*\w+_\w+\s+tool[^)]*\)/gi, '')
         .replace(/^Calling\s+\w+.*$/gim, '')
         .replace(/Calling\s+(consult_analyst|update_lead_status|trigger_drive_sync|generate_offer)[^.]*\.?/gi, '')
         .replace(/\w+_\w+\s+(tool\s+)?invoked\.?/gi, '')

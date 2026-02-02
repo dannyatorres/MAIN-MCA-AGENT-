@@ -52,6 +52,7 @@ Use this list to identify the lender if the email sender is generic.
 - Flash Advance
 - Fora Financial
 - Fox Business Fund
+- Fox Business Funding
 - Fratello Capital
 - Fuji Funding
 - Fundcloud

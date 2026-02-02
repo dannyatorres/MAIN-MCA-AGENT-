@@ -31,6 +31,7 @@ NEVER output text like:
 - "Running this through the system"
 
 Just respond naturally. The tool call happens silently.
+If a tool is not available, DO NOT mention it. Just respond naturally without referencing tools you can't use.
 
 Example - WRONG:
 "(Calling consult_analyst with the completed vetting info) consult_analyst tool invoked. {"status":"success"} got it. running this with my analyst now"
