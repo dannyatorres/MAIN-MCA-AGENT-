@@ -287,40 +287,28 @@ class MessagingModule {
     async loadConversationMessages(conversationId) {
         const convId = String(conversationId);
         const container = document.getElementById('messagesContainer');
-        let displayedFromCache = false;
-
-        // LOCK: Block WebSocket additions during load
-        this.isLoadingMessages = true;
-
-        if (this.messageCache.has(convId)) {
-            this.renderMessages(this.messageCache.get(convId));
-            displayedFromCache = true;
-        } else if (container) {
-            container.innerHTML = '<div class="loading-spinner"></div>';
+        // Show loading state immediately - hides any glitchy renders
+        if (container) {
+            container.innerHTML = '<div class="loading-state-chat"><div class="loading-spinner"></div></div>';
         }
 
         try {
             const data = await this.parent.apiCall(`/api/messages/${convId}`);
             const freshMessages = data || [];
-            const currentCache = this.messageCache.get(convId) || [];
-            const isDataDifferent = JSON.stringify(freshMessages) !== JSON.stringify(currentCache);
 
             this.messageCache.set(convId, freshMessages);
-            // Clear pending messages for this chat on reload
             this.pendingMessages = this.pendingMessages.filter(p => p.conversationId !== convId);
             this.cleanStalePendingMessages();
 
             if (String(this.parent.getCurrentConversationId()) === convId) {
-                if (isDataDifferent || !displayedFromCache) {
-                    this.renderMessages(freshMessages);
-                }
+                this.renderMessages(freshMessages);
             }
             this.updateAIButtonState(convId);
         } catch (e) {
             console.error('Load messages error', e);
-        } finally {
-            // UNLOCK: Allow WebSocket additions again
-            this.isLoadingMessages = false;
+            if (container) {
+                container.innerHTML = '<div class="empty-state">Failed to load messages</div>';
+            }
         }
     }
 
