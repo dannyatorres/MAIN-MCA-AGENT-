@@ -14,6 +14,7 @@ class MessagingModule {
 
         this.isSending = false;
         this.lastSendTime = 0;
+        this.isLoadingMessages = false;
         this.init();
     }
 
@@ -288,6 +289,9 @@ class MessagingModule {
         const container = document.getElementById('messagesContainer');
         let displayedFromCache = false;
 
+        // LOCK: Block WebSocket additions during load
+        this.isLoadingMessages = true;
+
         if (this.messageCache.has(convId)) {
             this.renderMessages(this.messageCache.get(convId));
             displayedFromCache = true;
@@ -314,6 +318,9 @@ class MessagingModule {
             this.updateAIButtonState(convId);
         } catch (e) {
             console.error('Load messages error', e);
+        } finally {
+            // UNLOCK: Allow WebSocket additions again
+            this.isLoadingMessages = false;
         }
     }
 
@@ -349,6 +356,11 @@ class MessagingModule {
     addMessage(message) {
         const container = document.getElementById('messagesContainer');
         if (!container) return;
+
+        // BLOCK: If we're in the middle of loading, skip WebSocket additions
+        if (this.isLoadingMessages && !String(message.id).startsWith('temp-')) {
+            return;
+        }
 
         // 1. Strict ID Check: If this specific ID is already on screen, stop.
         if (container.querySelector(`.message[data-message-id="${message.id}"]`)) return;
