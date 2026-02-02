@@ -103,8 +103,9 @@ class WebSocketManager {
         // 1b. New Note - Update Notes tab if active
         this.socket.on('new_note', (data) => {
             console.log('⚡ WS EVENT: new_note', data.conversationId);
-            if (this.app.notesTab) {
-                this.app.notesTab.handleIncomingNote(data);
+            const notesTab = this.app.intelligence?.notesTab;
+            if (notesTab) {
+                notesTab.handleIncomingNote(data);
             }
         });
 
