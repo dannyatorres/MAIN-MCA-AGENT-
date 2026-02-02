@@ -168,10 +168,11 @@ export class IntelligenceManager {
 
             this.renderIntelligenceData(data);
 
-            // FIX: Explicitly reload notes if that tab is active (or preload for instant switching)
-            if (this.notesTab) {
-                this.notesTab.destroy(); // Clear old conversation's notes
-                this.notesTab.conversationId = convId; // Set new ID
+            // FIX: Preload notes for this conversation
+            if (this.notesTab && convId) {
+                this.notesTab.conversationId = convId;
+                this.notesTab.notes = [];
+                this.notesTab.isRendered = false;
 
                 const currentTab = document.querySelector('.tab-btn.active')?.dataset.tab;
                 if (currentTab === 'notes') {
