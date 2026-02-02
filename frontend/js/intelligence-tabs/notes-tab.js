@@ -27,6 +27,10 @@ export class NotesTab {
             return;
         }
 
+        // Stop polling before switching conversations to prevent race conditions
+        this.stopPolling();
+        this.isFetching = false;
+
         // New conversation or first render
         this.conversationId = conversationId;
         this.notes = [];
@@ -101,10 +105,16 @@ export class NotesTab {
 
     async fetchNotes() {
         if (!this.conversationId || this.isFetching) return;
+
+        const targetConversationId = this.conversationId;
         this.isFetching = true;
         try {
-            const res = await fetch(`/api/notes/${this.conversationId}`);
+            const res = await fetch(`/api/notes/${targetConversationId}`);
             const data = await res.json();
+            if (this.conversationId !== targetConversationId) {
+                console.log('📝 Notes fetch discarded - conversation changed');
+                return;
+            }
             if (data.success) {
                 this.notes = data.notes || [];
                 this.renderNotesList(true); // true = force full render
@@ -112,9 +122,11 @@ export class NotesTab {
             }
         } catch (err) {
             console.error('Failed to fetch notes:', err);
-            const list = document.getElementById('notesListContainer');
-            if (list) {
-                list.innerHTML = `<div class="notes-empty"><i class="fas fa-exclamation-triangle"></i><p>Failed to load notes</p></div>`;
+            if (this.conversationId === targetConversationId) {
+                const list = document.getElementById('notesListContainer');
+                if (list) {
+                    list.innerHTML = `<div class="notes-empty"><i class="fas fa-exclamation-triangle"></i><p>Failed to load notes</p></div>`;
+                }
             }
         } finally {
             this.isFetching = false;
@@ -222,9 +234,16 @@ export class NotesTab {
     async checkForNewNotes() {
         if (!this.conversationId) return;
 
+        const targetConversationId = this.conversationId;
+
         try {
-            const res = await fetch(`/api/notes/${this.conversationId}`);
+            const res = await fetch(`/api/notes/${targetConversationId}`);
             const data = await res.json();
+
+            if (this.conversationId !== targetConversationId) {
+                console.log('📝 Poll discarded - conversation changed');
+                return;
+            }
 
             if (data.success && data.notes) {
                 const serverNotes = data.notes;

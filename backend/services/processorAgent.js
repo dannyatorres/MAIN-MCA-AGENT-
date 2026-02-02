@@ -484,10 +484,22 @@ async function processEmail(email, db) {
 
     // 🟢 Also write to notes table
     try {
-        await db.query(`
+        const noteResult = await db.query(`
             INSERT INTO notes (conversation_id, content, created_by, source)
             VALUES ($1, $2, NULL, 'email_processor')
+            RETURNING *
         `, [bestMatchId, systemNote]);
+
+        // Emit websocket event so Notes tab updates in real-time
+        if (global.io && noteResult.rows[0]) {
+            const note = noteResult.rows[0];
+            note.created_by_name = 'Inbox Bot';
+            global.io.to(`conversation_${bestMatchId}`).emit('new_note', {
+                conversationId: bestMatchId,
+                note
+            });
+            console.log(`      📝 Note emitted via websocket`);
+        }
     } catch (err) {
         console.error('      ⚠️ Failed to create note:', err.message);
     }
