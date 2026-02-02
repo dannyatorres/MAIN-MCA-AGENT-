@@ -14,6 +14,7 @@ Use this list to identify the lender if the email sender is generic.
 - BCA Capital Partners
 - Bitty Advance
 - BizFund
+- BIG Funding
 - Blackbridge Investment Group
 - BMF
 - CAN Capital
@@ -105,6 +106,7 @@ Use this list to identify the lender if the email sender is generic.
 - Nebular Financing
 - New Chrome
 - Newport Business Capital
+- Newport Docs
 - Nexi
 - Ocean Funding
 - On Deck

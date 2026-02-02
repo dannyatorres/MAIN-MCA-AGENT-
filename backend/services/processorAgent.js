@@ -93,8 +93,9 @@ async function matchToRealLender(extractedLender, db) {
 
     const words = extractedLender.trim().split(/\s+/);
     const companyKeywords = /capital|funding|fund|advance|financial|lending|credit|money|cash|business|merchant|express|velocity|fast|quick/i;
+    const knownSingleWordLenders = ['sapphire', 'libertas', 'rowan', 'loot', 'nexi', 'lendr', 'credibly', 'clearline', 'capitalize', 'cashable', 'meged', 'torro'];
 
-    if (words.length <= 3 && !companyKeywords.test(extractedLender)) {
+    if (words.length <= 3 && !companyKeywords.test(extractedLender) && !knownSingleWordLenders.includes(extractedLender.toLowerCase())) {
         console.log(`      ⚠️ Rejected person name as lender: "${extractedLender}"`);
         return null;
     }
