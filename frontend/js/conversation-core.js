@@ -144,7 +144,11 @@ class ConversationCore {
                 return;
             }
 
-            if (conversations.length < this.pageSize) this.hasMoreConversations = false;
+            if (searchTerm) {
+                this.hasMoreConversations = false;
+            } else if (conversations.length < this.pageSize) {
+                this.hasMoreConversations = false;
+            }
             this.paginationOffset += conversations.length;
 
             conversations.forEach(conv => {

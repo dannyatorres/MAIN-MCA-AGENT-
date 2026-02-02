@@ -167,9 +167,13 @@ router.get('/', async (req, res) => {
                     THEN COALESCE((SELECT MAX(m.timestamp) FROM messages m WHERE m.conversation_id = c.id), c.created_at)
                     ELSE COALESCE((SELECT MAX(m.timestamp) FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound'), c.created_at)
                 END DESC
-            LIMIT $${paramIndex++} OFFSET $${paramIndex}
         `;
-        values.push(parseInt(limit), parseInt(offset));
+        if (!search) {
+            query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
+            values.push(parseInt(limit), parseInt(offset));
+        } else {
+            query += ` LIMIT 200`;
+        }
 
         const result = await db.query(query, values);
         res.json(result.rows);
