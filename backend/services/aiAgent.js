@@ -12,6 +12,31 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+// --- FIX 1: Add Context Helpers ---
+async function getLeadFacts(conversationId) {
+    const db = getDatabase();
+    const res = await db.query('SELECT fact_key, fact_value FROM lead_facts WHERE conversation_id = $1', [conversationId]);
+    const facts = {};
+    res.rows.forEach(r => facts[r.fact_key] = r.fact_value);
+    return facts;
+}
+
+async function saveExtractedFacts(conversationId, extracted) {
+    if (!extracted) return;
+    const db = getDatabase();
+    for (const [key, value] of Object.entries(extracted)) {
+        if (value && value !== 'null' && value !== 'unknown') {
+            await db.query(`
+                INSERT INTO lead_facts (conversation_id, fact_key, fact_value, collected_at)
+                VALUES ($1, $2, $3, NOW())
+                ON CONFLICT (conversation_id, fact_key) 
+                DO UPDATE SET fact_value = $3, collected_at = NOW()
+            `, [conversationId, key, value]);
+            console.log(`💾 Saved Fact [${conversationId}]: ${key} = ${value}`);
+        }
+    }
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
@@ -748,6 +773,42 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             systemPrompt += `**Instruction:** ${systemInstruction}\n`;
         }
 
+        // --- FIX 2: Inject Context Checklist & JSON Rules ---
+        const facts = await getLeadFacts(conversationId);
+
+        const needsMTD = facts.recent_funding &&
+            !['none', 'no', 'n/a', 'false'].includes(facts.recent_funding.toLowerCase()) &&
+            !facts.mtd_received;
+
+        systemPrompt += `\n\n## 📝 DATA CHECKLIST (Status: ${currentState})
+        - Email: ${facts.email ? '✅ ' + facts.email : '❌ (Ask for this)'}
+        - Credit Score: ${facts.credit_score ? '✅ ' + facts.credit_score : '❌ (Ask for this after Email)'}
+        - Recent Funding: ${facts.recent_funding ? '✅ ' + facts.recent_funding : '❌ (Ask if they took new loans)'}
+        ${needsMTD ? '- MTD Statement: ❌ (REQUIRED - they got funded, need MTD before qualifying)' : ''}
+        ${needsMTD ? '⚠️ CRITICAL: DO NOT set action to "qualify" until MTD is received.' : ''}
+        
+        ## ⚙️ OUTPUT FORMAT
+        You must return Valid JSON ONLY. No markdown, no thinking text.
+        Structure:
+        {
+           "action": "respond" | "qualify" | "mark_dead" | "sync_drive" | "no_response",
+           "message": "The exact SMS to send (lowercase, casual, <160 chars). Null if no_response.",
+           "extracted": { 
+               "email": "extract if present", 
+               "credit_score": "extract if present", 
+               "recent_funding": "extract if present" 
+           },
+           "reason": "Internal reasoning here"
+        }
+        
+        ACTIONS:
+        - "respond": Standard reply or question.
+        - "qualify": You have ALL checks (Email + Credit + Funding + MTD if needed). Move to QUALIFIED.
+        - "mark_dead": Lead said stop/remove/not interested.
+        - "sync_drive": Lead JUST provided email address.
+        - "no_response": Lead said "ok", "thanks", or acknowledged. No reply needed.
+        `;
+
         // Build the Message Chain
         let messages = [{ role: "system", content: systemPrompt }];
 
@@ -765,14 +826,13 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             messages.push({ role: role, content: msg.content });
         });
 
-        // --- FIRST PASS (Decide what to do) ---
-        console.log(`🧠 Calling OpenAI with ${messages.length} messages...`);
-        console.log(`🛠️ Tools available: ${availableTools.map(t => t.function.name).join(', ')}`);
+        // --- FIX 3: Execution Switchboard (Complete) ---
+        console.log(`🧠 Calling OpenAI (JSON Mode)...`);
+
         const completion = await openai.chat.completions.create({
-            model: "gpt-5-mini",
+            model: "gpt-4o-mini",
             messages: messages,
-            tools: availableTools, // Use filtered tools list (Layer 3)
-            tool_choice: "auto"
+            response_format: { type: "json_object" }
         });
 
         if (completion.usage) {
@@ -781,18 +841,61 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 conversationId,
                 type: 'llm_call',
                 service: 'openai',
-                model: completion.model || 'gpt-5-mini',
+                model: 'gpt-4o-mini',
                 inputTokens: completion.usage.prompt_tokens,
                 outputTokens: completion.usage.completion_tokens,
-                metadata: { pass: 'first' }
+                metadata: { mode: 'json_agent' }
             });
         }
 
-        const aiMsg = completion.choices[0].message;
-        let responseContent = aiMsg.content;
-        const toolsCalled = aiMsg.tool_calls?.map(t => t.function.name) || [];
+        let decision;
+        try {
+            decision = JSON.parse(completion.choices[0].message.content);
+        } catch (e) {
+            console.error("JSON Parse Error:", completion.choices[0].message.content);
+            decision = { action: "respond", message: "got it, give me one sec", extracted: {} };
+        }
+
+        console.log(`🤖 AI Decision: ${decision.action?.toUpperCase() || 'RESPOND'} | Reason: ${decision.reason || 'N/A'}`);
+
+        if (decision.extracted) {
+            await saveExtractedFacts(conversationId, decision.extracted);
+        }
+
+        let responseContent = decision.message;
         let stateAfter = currentState;
-        console.log(`🔍 First pass raw:`, JSON.stringify(aiMsg));
+
+        if (decision.action === 'mark_dead') {
+            await updateState(conversationId, 'DEAD', 'ai_agent');
+            stateAfter = 'DEAD';
+        }
+        else if (decision.action === 'qualify') {
+            if (!['QUALIFIED', 'SUBMITTED', 'CLOSING'].includes(currentState)) {
+                await updateState(conversationId, 'QUALIFIED', 'ai_agent');
+                await db.query('UPDATE conversations SET nudge_count = 1 WHERE id = $1', [conversationId]);
+                stateAfter = 'QUALIFIED';
+
+                responseContent = "got it. give me a few minutes to run the numbers and ill text you back shortly";
+
+                const facts = await getLeadFacts(conversationId);
+                if (facts.email) {
+                    syncDriveFiles(conversationId, businessName, usageUserId);
+                }
+            }
+        }
+        else if (decision.action === 'sync_drive' || decision.extracted?.email) {
+            if (!['QUALIFIED', 'SUBMITTED', 'CLOSING', 'FUNDED'].includes(currentState)) {
+                syncDriveFiles(conversationId, businessName, usageUserId);
+                console.log("📂 Triggered Drive Sync");
+            }
+        }
+        else if (decision.action === 'no_response') {
+            return { shouldReply: false };
+        }
+
+        if (!responseContent || responseContent === 'null') {
+            return { shouldReply: false };
+        }
 
         const lastMsgRes = await db.query(`
             SELECT content FROM messages
@@ -801,143 +904,21 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         `, [conversationId]);
         const userMessage = lastMsgRes.rows[0]?.content || 'N/A';
 
-        // 6. HANDLE TOOLS & RE-THINK
-        if (aiMsg.tool_calls) {
-            const toolNames = toolsCalled.join(', ');
-            console.log(`🔧 TOOL CALLS: ${toolNames}`);
-            for (const tool of aiMsg.tool_calls) {
-                console.log(`   └─ ${tool.function.name}: ${tool.function.arguments}`);
-            }
-
-            const stateBeforeRes = await db.query(
-                'SELECT state FROM conversations WHERE id = $1',
-                [conversationId]
-            );
-            const stateBefore = stateBeforeRes.rows[0]?.state || null;
-            stateAfter = stateBefore || currentState;
-
-            // Add the AI's tool decision to history
-            messages.push(aiMsg);
-
-            for (const tool of aiMsg.tool_calls) {
-                let toolResult = "";
-
-                if (tool.function.name === 'update_lead_status') {
-                    const args = JSON.parse(tool.function.arguments);
-                    await updateState(conversationId, args.status, 'ai_agent');
-                    stateAfter = args.status;
-                    toolResult = `Status updated to ${args.status}.`;
-                }
-
-                else if (tool.function.name === 'trigger_drive_sync') {
-                    // Check if already synced
-                    const stateCheck = await db.query(
-                        `SELECT state FROM conversations WHERE id = $1`,
-                        [conversationId]
-                    );
-
-                    const currentState = stateCheck.rows[0]?.state;
-
-                    // Don't re-sync if already past this stage
-                    if (['QUALIFIED', 'SUBMITTED', 'CLOSING', 'FUNDED'].includes(currentState)) {
-                        console.log(`⏭️ Skipping drive sync - already in state: ${currentState}`);
-                        toolResult = "Documents already synced. No need to sync again.";
-                    } else {
-                        console.log(`📂 [${leadName}] Syncing Drive...`);
-                        syncDriveFiles(conversationId, businessName, usageUserId);
-                        toolResult = "Drive sync started in background.";
-                    }
-                }
-
-                else if (tool.function.name === 'consult_analyst') {
-                    if (currentState === 'QUALIFIED') {
-                        toolResult = "Already qualified. Check the COMMANDER'S ORDERS section for offer range and pitch directly.";
-                    } else {
-                        console.log(`🎓 [${leadName}] Handing off to human`);
-                        await updateState(conversationId, 'QUALIFIED', 'ai_agent');
-                        await db.query('UPDATE conversations SET nudge_count = 1 WHERE id = $1', [conversationId]);
-                        stateAfter = 'QUALIFIED';
-                        console.log(`✅ [${leadName}] Qualified → QUALIFIED`);
-                        toolResult = "Tell the lead: 'give me a few minutes to run the numbers and ill text you back shortly'";
-                    }
-                }
-
-                else if (tool.function.name === 'generate_offer') {
-                    console.log(`💰 AI DECISION: Generating formal offer...`);
-                    const offer = await commanderService.generateOffer(conversationId);
-                    if (offer) {
-                        toolResult = `OFFER READY: ${(offer.offer_amount ?? 0).toLocaleString()} at ${offer.factor_rate ?? 'N/A'} factor rate. Term: ${offer.term ?? 'N/A'} ${offer.term_unit ?? ''}. Payment: ${(offer.payment_amount ?? 0).toLocaleString()} ${offer.payment_frequency ?? ''}.
-
-Send this message to the lead: "${offer.pitch_message}"`;
-                    } else {
-                        toolResult = "Offer generation failed. Tell the lead you're finalizing numbers and will text back in a few minutes.";
-                    }
-                }
-
-                messages.push({
-                    role: "tool",
-                    tool_call_id: tool.id,
-                    content: toolResult
-                });
-            }
-
-            // --- SECOND PASS (Generate the Final Reply with Context) ---
-            const secondPass = await openai.chat.completions.create({
-                model: "gpt-5-mini",
-                messages: messages
-            });
-
-            if (secondPass.usage) {
-                await trackUsage({
-                    userId: usageUserId,
-                    conversationId,
-                    type: 'llm_call',
-                    service: 'openai',
-                    model: secondPass.model || 'gpt-5-mini',
-                    inputTokens: secondPass.usage.prompt_tokens,
-                    outputTokens: secondPass.usage.completion_tokens,
-                    metadata: { pass: 'second' }
-                });
-            }
-
-            responseContent = secondPass.choices[0].message.content;
-        }
-
-        if (responseContent) {
-            responseContent = cleanToolLeaks(responseContent);
-            if (!responseContent || responseContent.trim() === '' || responseContent.includes('recipient_name')) {
-                console.log('⚠️ Invalid response format after cleaning');
-                responseContent = null;
-            }
-        }
-
-        // Force a response if AI returned nothing
-        if (!responseContent || responseContent.trim() === '') {
-            console.log(`⚠️ AI returned empty - forcing fallback response`);
-            responseContent = "got it, give me one sec";
-        }
-
-        console.log(`✅ AI Response: "${responseContent.substring(0, 80)}..."`);
-        console.log(`========== END AI AGENT ==========\n`);
-        // 📊 TRACK AI MODE RESPONSE
         await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
 
-        const reasoning = systemInstruction || generateReasoning(toolsCalled, userMessage, currentState, stateAfter);
         await logAIDecision({
             conversationId,
             businessName: leadName,
             agent: 'pre_vetter',
             leadMessage: userMessage,
-            instruction: reasoning,
+            instruction: systemInstruction,
             stateBefore: currentState,
             stateAfter,
-            toolsCalled,
             aiResponse: responseContent,
-            actionTaken: 'responded',
+            actionTaken: decision.action,
             tokensUsed: completion.usage?.total_tokens
         });
 
-        // Store outbound message in vector memory
         try {
             await storeMessage(conversationId, responseContent, {
                 direction: 'outbound',
@@ -945,11 +926,10 @@ Send this message to the lead: "${offer.pitch_message}"`;
                 lead_grade: leadGrade
             });
         } catch (err) {
-            console.error('⚠️ Memory store failed (outbound):', err.message);
+            console.error('⚠️ Memory store failed:', err.message);
         }
 
-        // Increment nudge_count after responding in QUALIFIED state
-        if (currentState === 'QUALIFIED' && responseContent) {
+        if (currentState === 'QUALIFIED') {
             await db.query('UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1', [conversationId]);
         }
 

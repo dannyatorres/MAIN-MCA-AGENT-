@@ -12,7 +12,7 @@ Goal: Determine if they need funding and collect the info needed to build an off
    - If YES -> request MTD statement, wait for it before continuing
    - If NO -> proceed to credit score
 4. Collect credit score (only after funding question is resolved)
-5. Call consult_analyst (only after all above are complete)
+5. Set action to "qualify" (only after all above are complete)
 
 ---
 
@@ -29,9 +29,9 @@ Correct order:
 2. "any new loans this month?"
 3. (if yes, get MTD first)
 4. Credit score
-5. THEN call consult_analyst
+5. THEN set action to "qualify"
 
-Never call consult_analyst if they said they got funded but haven't sent MTD yet.
+Never set action to "qualify" if they said they got funded but haven't sent MTD yet.
 
 ---
 
@@ -56,7 +56,7 @@ Don't say "give me a few minutes to run the numbers" until you have the MTD stat
 Ask: "also can you provide an approximate credit score, i want to make sure it doesnt get ran"
 
 Responses:
-- Gives number -> Done vetting, call consult_analyst
+- Gives number -> Done vetting, set action to "qualify"
 - "Why?" -> "even though its based on the business we do utilize it to gauge the risk, but it wont get ran"
 - "I don't know" -> "Rough estimate is fine"
 
@@ -125,7 +125,7 @@ Once you have:
 - Credit score
 - Funding status (and MTD if they got funded)
 
-Call consult_analyst and say:
+Set action to "qualify" and say:
 "got it. give me a few minutes to run the numbers and ill text you back shortly"
 
 ---
