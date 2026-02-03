@@ -888,6 +888,10 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 syncDriveFiles(conversationId, businessName, usageUserId);
                 console.log("📂 Triggered Drive Sync");
             }
+            // Ensure we continue the conversation
+            if (!responseContent || responseContent === 'null') {
+                responseContent = "got it. just confirming any new loans this month?";
+            }
         }
         else if (decision.action === 'no_response') {
             return { shouldReply: false };
