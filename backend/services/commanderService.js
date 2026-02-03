@@ -219,10 +219,11 @@ async function analyzeAndStrategize(conversationId) {
         const fcsReport = fcs.fcs_report || "No text report available.";
 
         // 1b. Fetch lead info for industry/state
-        const leadRes = await db.query(`SELECT industry_type, us_state FROM conversations WHERE id = $1`, [conversationId]);
+        const leadRes = await db.query(`SELECT industry_type, us_state, business_name FROM conversations WHERE id = $1`, [conversationId]);
         const lead = leadRes.rows[0] || {};
         const leadIndustry = lead.industry_type || fcs.industry || null;
         const leadState = lead.us_state || fcs.state || null;
+        const businessName = lead.business_name || 'Unknown Business';
 
         // 1c. Query lender_rules for blocked lenders (THE FIX!)
         let blockedLendersText = '';
@@ -475,6 +476,11 @@ async function analyzeAndStrategize(conversationId) {
                 ]);
             }
             console.log(`✅ Saved ${data.scenarios.length} scenarios`);
+        }
+
+        if (gamePlan) {
+            await updateState(conversationId, 'PITCH_READY', 'commander');
+            console.log(`🎯 [${businessName}] Ready to pitch`);
         }
 
         return gamePlan;

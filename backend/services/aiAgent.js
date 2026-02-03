@@ -205,6 +205,7 @@ async function getGlobalPrompt(userId, currentState) {
             'NEW': 'phase_active.md',
             'ACTIVE': 'phase_active.md',
             'QUALIFIED': 'phase_qualified.md',
+            'PITCH_READY': 'phase_qualified.md',
             'SUBMITTED': 'phase_submitted.md',
             'CLOSING': 'phase_closing.md'
         };
