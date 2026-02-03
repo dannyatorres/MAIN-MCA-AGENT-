@@ -615,17 +615,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const lastInbound = lastInbounds.slice(-1)[0]?.content?.toLowerCase().trim() || '';
         const userMessageForMemory = lastInbounds.slice(-1)[0]?.content || '';
 
-        const handoffPhrases = ['give me a few minutes', 'text you back shortly', 'get back to you', 'finalize the numbers', 'run the numbers'];
-        const acknowledgments = ['thanks', 'thank you', 'ty', 'ok', 'okay', 'k', 'got it', 'sounds good', 'cool', 'great', 'perfect', 'awesome', 'sent', 'done', '👍', '👌'];
-
-        const weHandedOff = handoffPhrases.some(phrase => lastOutbound.includes(phrase));
-        const theyAcknowledged = acknowledgments.some(ack => lastInbound === ack || lastInbound === ack + '!' || lastInbound === ack + '.');
-
-        if (weHandedOff && theyAcknowledged) {
-            console.log('🤝 Handoff acknowledged, staying silent for human takeover');
-            return { shouldReply: false };
-        }
-
         // =================================================================
         // 🚨 LAYER 4D: CLOSE FILE CONFIRMATION CHECK
         // If we asked to close and they said yes, stop immediately
