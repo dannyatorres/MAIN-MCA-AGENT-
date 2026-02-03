@@ -803,12 +803,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         {
            "action": "respond" | "qualify" | "mark_dead" | "sync_drive" | "no_response",
            "message": "The exact SMS to send (lowercase, casual, <160 chars). Null if no_response.",
-           "extracted": { 
-               "email": "extract if present", 
-               "credit_score": "extract if present", 
-               "recent_funding": "extract if present",
-               "mtd_requested": "true if you asked for MTD in your message"
-           },
            "reason": "Internal reasoning here"
         }
         
@@ -900,14 +894,10 @@ Collecting info. Follow the checklist - ask for missing items.
             decision = JSON.parse(completion.choices[0].message.content);
         } catch (e) {
             console.error("JSON Parse Error:", completion.choices[0].message.content);
-            decision = { action: "respond", message: "got it, give me one sec", extracted: {} };
+            decision = { action: "respond", message: "got it, give me one sec" };
         }
 
         console.log(`🤖 AI Decision: ${decision.action?.toUpperCase() || 'RESPOND'} | Reason: ${decision.reason || 'N/A'}`);
-
-        if (decision.extracted) {
-            await saveExtractedFacts(conversationId, decision.extracted);
-        }
 
         let responseContent = decision.message;
         let stateAfter = currentState;
@@ -935,7 +925,7 @@ Collecting info. Follow the checklist - ask for missing items.
                 }
             }
         }
-        else if (decision.action === 'sync_drive' || decision.extracted?.email) {
+        else if (decision.action === 'sync_drive') {
             if (!['QUALIFIED', 'SUBMITTED', 'CLOSING', 'FUNDED'].includes(currentState)) {
                 syncDriveFiles(conversationId, businessName, usageUserId);
                 console.log("📂 Triggered Drive Sync");
@@ -947,6 +937,35 @@ Collecting info. Follow the checklist - ask for missing items.
         }
 
         if (!responseContent || responseContent === 'null') {
+            return { shouldReply: false };
+        }
+
+        const recentOutbound = await db.query(`
+            SELECT content FROM messages 
+            WHERE conversation_id = $1 AND direction = 'outbound'
+            ORDER BY timestamp DESC LIMIT 5
+        `, [conversationId]);
+
+        if (currentState === 'PITCH_READY' && gamePlan?.offer_range) {
+            const min = gamePlan.offer_range.min?.toLocaleString();
+            const max = gamePlan.offer_range.max?.toLocaleString();
+
+            const alreadyPitched = recentOutbound.rows.some(m =>
+                m.content.includes('$') || m.content.includes('offer') || m.content.includes('get you')
+            );
+
+            if (!alreadyPitched) {
+                console.log(`🎯 Forcing pitch - AI keeps stalling`);
+                responseContent = `good news - based on your file i can get you around $${min}-$${max}. does that work for what you need?`;
+            }
+        }
+
+        const isDuplicate = recentOutbound.rows.some(m =>
+            m.content.toLowerCase().includes(responseContent.toLowerCase().substring(0, 30))
+        );
+
+        if (isDuplicate) {
+            console.log(`🚫 Blocked duplicate message: "${responseContent.substring(0, 40)}..."`);
             return { shouldReply: false };
         }
 
