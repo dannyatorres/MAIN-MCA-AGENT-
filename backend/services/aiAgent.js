@@ -871,7 +871,7 @@ Collecting info. Follow the checklist - ask for missing items.
         console.log(`🧠 Calling OpenAI (JSON Mode)...`);
 
         const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: "gpt-5-mini",
             messages: messages,
             response_format: { type: "json_object" }
         });
