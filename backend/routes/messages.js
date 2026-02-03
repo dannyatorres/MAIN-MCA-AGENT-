@@ -88,6 +88,83 @@ async function resolveConversationId(conversationId, db) {
     return conversationId;
 }
 
+// Proxy download for external images (bypasses CORS)
+router.get('/proxy-download', async (req, res) => {
+    const { url } = req.query;
+
+    if (!url) {
+        return res.status(400).json({ error: 'URL required' });
+    }
+
+    try {
+        const https = require('https');
+        const http = require('http');
+        const protocol = url.startsWith('https') ? https : http;
+
+        // Build request options
+        const requestOptions = {};
+
+        // Twilio URLs require Basic Auth
+        if (url.includes('api.twilio.com')) {
+            const auth = Buffer.from(
+                `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+            ).toString('base64');
+
+            const parsedUrl = new URL(url);
+            requestOptions.hostname = parsedUrl.hostname;
+            requestOptions.path = parsedUrl.pathname + parsedUrl.search;
+            requestOptions.headers = {
+                'Authorization': `Basic ${auth}`
+            };
+        }
+
+        const makeRequest = (opts) => {
+            const reqFn = url.startsWith('https') ? https.get : http.get;
+            const target = Object.keys(opts).length > 0 ? opts : url;
+
+            reqFn(target, (response) => {
+                // Handle redirects
+                if (response.statusCode === 301 || response.statusCode === 302) {
+                    const redirectUrl = response.headers.location;
+                    // Fetch the redirect (usually doesn't need auth)
+                    const redirectProtocol = redirectUrl.startsWith('https') ? https : http;
+                    redirectProtocol.get(redirectUrl, (redirectResponse) => {
+                        if (redirectResponse.statusCode !== 200) {
+                            return res.status(redirectResponse.statusCode).json({ error: 'Failed to fetch image' });
+                        }
+                        const contentType = redirectResponse.headers['content-type'] || 'application/octet-stream';
+                        res.setHeader('Content-Type', contentType);
+                        res.setHeader('Content-Disposition', `attachment; filename="image_${Date.now()}.jpg"`);
+                        redirectResponse.pipe(res);
+                    }).on('error', (err) => {
+                        console.error('Redirect download error:', err);
+                        res.status(500).json({ error: 'Download failed' });
+                    });
+                    return;
+                }
+
+                if (response.statusCode !== 200) {
+                    return res.status(response.statusCode).json({ error: 'Failed to fetch image' });
+                }
+
+                const contentType = response.headers['content-type'] || 'application/octet-stream';
+                res.setHeader('Content-Type', contentType);
+                res.setHeader('Content-Disposition', `attachment; filename="image_${Date.now()}.jpg"`);
+                response.pipe(res);
+            }).on('error', (err) => {
+                console.error('Proxy download error:', err);
+                res.status(500).json({ error: 'Download failed' });
+            });
+        };
+
+        makeRequest(requestOptions);
+
+    } catch (error) {
+        console.error('Proxy download error:', error);
+        res.status(500).json({ error: 'Download failed' });
+    }
+});
+
 // Get messages
 router.get('/:conversationId', requireConversationAccess('conversationId'), async (req, res) => {
     try {
@@ -592,83 +669,6 @@ router.get('/:conversationId/count', requireConversationAccess('conversationId')
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Proxy download for external images (bypasses CORS)
-router.get('/proxy-download', async (req, res) => {
-    const { url } = req.query;
-
-    if (!url) {
-        return res.status(400).json({ error: 'URL required' });
-    }
-
-    try {
-        const https = require('https');
-        const http = require('http');
-        const protocol = url.startsWith('https') ? https : http;
-
-        // Build request options
-        const requestOptions = {};
-
-        // Twilio URLs require Basic Auth
-        if (url.includes('api.twilio.com')) {
-            const auth = Buffer.from(
-                `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
-            ).toString('base64');
-
-            const parsedUrl = new URL(url);
-            requestOptions.hostname = parsedUrl.hostname;
-            requestOptions.path = parsedUrl.pathname + parsedUrl.search;
-            requestOptions.headers = {
-                'Authorization': `Basic ${auth}`
-            };
-        }
-
-        const makeRequest = (opts) => {
-            const reqFn = url.startsWith('https') ? https.get : http.get;
-            const target = Object.keys(opts).length > 0 ? opts : url;
-
-            reqFn(target, (response) => {
-                // Handle redirects
-                if (response.statusCode === 301 || response.statusCode === 302) {
-                    const redirectUrl = response.headers.location;
-                    // Fetch the redirect (usually doesn't need auth)
-                    const redirectProtocol = redirectUrl.startsWith('https') ? https : http;
-                    redirectProtocol.get(redirectUrl, (redirectResponse) => {
-                        if (redirectResponse.statusCode !== 200) {
-                            return res.status(redirectResponse.statusCode).json({ error: 'Failed to fetch image' });
-                        }
-                        const contentType = redirectResponse.headers['content-type'] || 'application/octet-stream';
-                        res.setHeader('Content-Type', contentType);
-                        res.setHeader('Content-Disposition', `attachment; filename="image_${Date.now()}.jpg"`);
-                        redirectResponse.pipe(res);
-                    }).on('error', (err) => {
-                        console.error('Redirect download error:', err);
-                        res.status(500).json({ error: 'Download failed' });
-                    });
-                    return;
-                }
-
-                if (response.statusCode !== 200) {
-                    return res.status(response.statusCode).json({ error: 'Failed to fetch image' });
-                }
-
-                const contentType = response.headers['content-type'] || 'application/octet-stream';
-                res.setHeader('Content-Type', contentType);
-                res.setHeader('Content-Disposition', `attachment; filename="image_${Date.now()}.jpg"`);
-                response.pipe(res);
-            }).on('error', (err) => {
-                console.error('Proxy download error:', err);
-                res.status(500).json({ error: 'Download failed' });
-            });
-        };
-
-        makeRequest(requestOptions);
-
-    } catch (error) {
-        console.error('Proxy download error:', error);
-        res.status(500).json({ error: 'Download failed' });
     }
 });
 
