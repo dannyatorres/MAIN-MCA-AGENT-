@@ -255,7 +255,7 @@ async function analyzeAndStrategize(conversationId) {
             fcs_report: fcsReport + blockedLendersText
         });
 
-        // Add date context for MTD logic
+        // Add date context for statement logic
         const today = new Date();
         const dayOfMonth = today.getDate();
         const currentMonth = today.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
@@ -263,9 +263,10 @@ async function analyzeAndStrategize(conversationId) {
         const todayDate = `${currentMonth} ${dayOfMonth}, ${currentYear}`;
 
         // Replace placeholders in prompt
-        prompt = prompt.replace('{{today_date}}', todayDate);
-        prompt = prompt.replace('{{day_of_month}}', dayOfMonth.toString());
-        prompt = prompt.replace('{{current_month}}', currentMonth);
+        prompt = prompt
+            .replace(/\{\{today_date\}\}/g, todayDate)
+            .replace(/\{\{day_of_month\}\}/g, dayOfMonth.toString())
+            .replace(/\{\{current_month\}\}/g, `${currentMonth} ${currentYear}`);
 
         // 3. Run AI
         console.log('COMMANDER: Calling Gemini API...');

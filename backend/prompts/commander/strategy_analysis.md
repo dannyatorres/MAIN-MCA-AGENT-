@@ -82,13 +82,13 @@ Return ONLY valid JSON (no markdown, no code blocks):
     }
   },
   "document_freshness": {
-    "latest_statement_month": "string (e.g., 'December 2025')",
-    "missing_months": ["any full months we're missing"],
-    "statements_are_stale": true|false
+    "latest_full_month": "string (e.g., 'December 2025')",
+    "missing_full_months": ["any full months we're missing"],
+    "need_full_statement": true|false,
+    "need_mtd": true|false,
+    "statement_ask": "the exact casual way to ask for what's missing, null if nothing needed"
   },
-  "mtd_strategy": "not_needed|nice_to_have|should_request|missing_full_month",
-  "mtd_message": "The casual way to ask if MTD is needed, null if not_needed",
-  "mtd_reasoning": "Why this MTD decision",
+  "mtd_strategy": "need_full_statement|need_mtd|need_both|not_needed",
   "scenarios": [
     {
       "tier": "conservative",
@@ -159,41 +159,73 @@ Example:
 
 ---
 
-# 📅 DOCUMENT FRESHNESS & MTD LOGIC
+---
+
+# 📅 DOCUMENT FRESHNESS & STATEMENT LOGIC
 
 **Today's Date:** {{today_date}}
 **Day of Month:** {{day_of_month}}
 **Current Month:** {{current_month}}
 
 **EVALUATE THE STATEMENTS:**
-Look at the FCS report dates. What's the latest month we have?
+Look at the FCS report dates. What's the latest FULL month statement we have?
 
-**MISSING FULL MONTH SCENARIO:**
-If we're in February but only have December statements:
-- January statement may not have been generated when file was submitted
-- mtd_strategy: "missing_full_month"
-- mtd_message: "looks like your file came in right before the month ended - we're missing [month]. has your bank generated the full statement yet?"
+---
 
-**MTD BY DAY OF MONTH (current month activity):**
-- Days 1-7: MTD rarely needed unless file is risky → "not_needed" or "nice_to_have"
-- Days 8-14: MTD is nice-to-have for cleaner files → "nice_to_have"
-- Days 15+: MTD more important, especially for risky files → "should_request"
+## DAYS 1-7 OF NEW MONTH
 
-**MTD MORE URGENT WHEN:**
-- Existing positions (need to see current payment behavior)
-- Negative days in statements (need to see if pattern continues)
-- Lead mentioned recent funding (need to see new position)
-- Downward revenue trend (need to confirm current month)
+We likely need the **previous month's full statement** (not MTD - month just started).
 
-**MTD LESS URGENT WHEN:**
-- Clean file, no positions
-- Strong upward trend
-- High bank balance cushion
-- Grade A file
+Example: Today is Feb 3rd, we have December statements
+- January statement may not have been generated yet
+- Ask: "has your bank generated the january statement yet?"
+- If yes: "cool send it over to the email - if everything looks the same ill be around [range]"
+- If no: "no worries, let me know when it drops and ill lock in numbers for you"
 
-**FRAMING (never sound like a blocker):**
-- DON'T say: "I need MTD to approve you"
-- DO say: "just want to make sure whatever deal i have for you is final - saves us both time on the front end instead of going through the whole process and the deal changing"
+DO NOT ask for MTD in days 1-7. There's barely any activity to show.
+
+---
+
+## DAYS 8-14 OF MONTH
+
+- If missing previous month → Ask for full statement first
+- If we have previous month → MTD is nice-to-have for risky files
+- Clean files can proceed without MTD
+
+---
+
+## DAYS 15+ OF MONTH
+
+MTD becomes more valuable - shows half month of current activity.
+
+- If missing previous month → Need full statement AND possibly MTD
+- If we have previous month → MTD helps for stacking, recent funding, risky files
+
+---
+
+## HOW TO ASK (KEEP THEM ENGAGED)
+
+Never make it sound like a blocker. Frame it as "locking in" better numbers.
+
+**For missing full statement:**
+- "has your bank generated the [month] statement yet?"
+- "once i see that [month] statement ill have final numbers - if everything looks the same youre probably around [range]"
+
+**For MTD (when needed):**
+- "can you pull a quick month to date? just want to make sure nothing changed"
+
+---
+
+## DECISION MATRIX
+
+| Day of Month | Have Previous Month? | What to Ask |
+|--------------|---------------------|-------------|
+| 1-7 | No | Full statement ("has it been generated?") |
+| 1-7 | Yes | Nothing needed |
+| 8-14 | No | Full statement |
+| 8-14 | Yes | MTD only if risky file |
+| 15+ | No | Full statement + MTD |
+| 15+ | Yes | MTD for risky files |
 
 ---
 

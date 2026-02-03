@@ -841,6 +841,33 @@ Collecting info. Follow the checklist - ask for missing items.
 
         systemPrompt += stateBehavior;
 
+        // Add date context and statement status from Commander
+        const today = new Date();
+        const dayOfMonth = today.getDate();
+        const currentMonth = today.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long', year: 'numeric' });
+
+        systemPrompt += `\n\n## 📅 TODAY'S DATE
+Today: ${currentMonth} ${dayOfMonth}
+Day of month: ${dayOfMonth}
+`;
+
+        // Statement status from Commander
+        if (gamePlan?.document_freshness) {
+            const df = gamePlan.document_freshness;
+            if (df.need_full_statement || df.need_mtd) {
+                systemPrompt += `\n## 📄 STATEMENT STATUS\n`;
+                if (df.need_full_statement && df.missing_full_months?.length > 0) {
+                    systemPrompt += `⚠️ Missing full month statement: ${df.missing_full_months.join(', ')}\n`;
+                }
+                if (df.need_mtd) {
+                    systemPrompt += `⚠️ Need month-to-date activity\n`;
+                }
+                if (df.statement_ask) {
+                    systemPrompt += `How to ask: "${df.statement_ask}"\n`;
+                }
+            }
+        }
+
         // Skip AI call if just waiting for MTD
         if (currentState === 'QUALIFIED') {
             const lastInbound = history.rows.filter(m => m.direction === 'inbound').slice(-1)[0]?.content?.toLowerCase() || '';
