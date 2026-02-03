@@ -177,27 +177,26 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
                     continue;
                 }
 
-                const driveStream = await drive.files.get(
+                // Download to buffer first (for classification)
+                const driveRes = await drive.files.get(
                     { fileId: file.id, alt: 'media' },
-                    { responseType: 'stream' }
+                    { responseType: 'arraybuffer' }
                 );
-
-                const pass = new stream.PassThrough();
-                driveStream.data.pipe(pass);
+                const fileBuffer = Buffer.from(driveRes.data);
 
                 const s3Key = `documents/${conversationId}/${Date.now()}_${file.name.replace(/\s/g, '_')}`;
 
-                // 1. Upload to S3
+                // Upload to S3
                 await s3.upload({
                     Bucket: process.env.S3_DOCUMENTS_BUCKET,
                     Key: s3Key,
-                    Body: pass,
+                    Body: fileBuffer,
                     ContentType: file.mimeType || 'application/pdf'
                 }).promise();
 
-                // 2. Insert into DB (with Filename!)
+                // Insert into DB with classification metadata
                 const fileSize = file.size ? parseInt(file.size) : 0;
-                
+
                 await db.query(`
                     INSERT INTO documents (
                         conversation_id, 
@@ -210,7 +209,13 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
                         created_at
                     )
                     VALUES ($1, $2, $3, $3, $4, $5, 'Bank Statement', NOW())
-                `, [conversationId, s3Key, file.name, file.mimeType, fileSize]);
+                `, [
+                    conversationId,
+                    s3Key,
+                    file.name,
+                    file.mimeType,
+                    fileSize
+                ]);
 
                 uploadedCount++;
 

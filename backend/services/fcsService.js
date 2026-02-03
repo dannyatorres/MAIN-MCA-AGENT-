@@ -210,6 +210,7 @@ class FCSService {
                     const text = await this.extractTextFromDocumentSync(doc, buffer);
                     if (!text.startsWith('PROCESSING ERROR')) {
                         extractedData.push({ filename: doc.filename, text });
+                        await classifyFromText(db, doc.id, text, doc.filename);
                     }
                 } catch (e) {
                     console.error(`Skipping doc ${doc.filename}:`, e.message);
@@ -397,6 +398,41 @@ function extractStringValue(text, label) {
     const regex = new RegExp(`${label}:\\s*(.+?)(?:\\n|$)`, 'i');
     const match = text.match(regex);
     return match ? match[1].trim() : null;
+}
+
+async function classifyFromText(db, documentId, extractedText, filename) {
+    const monthPatterns = /(?:statement\s+period|for\s+the\s+month|period\s+ending)[:\s]*(\w+\s+\d{1,2},?\s*\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i;
+    const bankPatterns = /(chase|bank of america|wells fargo|capital one|pnc|td bank|citizens|huntington|regions|fifth third|us bank)/i;
+
+    let statementMonth = null;
+    let bankName = null;
+
+    const monthMatch = extractedText.match(monthPatterns);
+    if (monthMatch) {
+        statementMonth = monthMatch[1];
+    }
+
+    const bankMatch = extractedText.match(bankPatterns);
+    if (bankMatch) {
+        bankName = bankMatch[1];
+    }
+
+    const filenameMonth = filename.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s\-_]?(\d{4}|\d{2})/i);
+    if (filenameMonth && !statementMonth) {
+        statementMonth = `${filenameMonth[1]} ${filenameMonth[2]}`;
+    }
+
+    if (statementMonth || bankName) {
+        await db.query(`
+            UPDATE documents 
+            SET statement_month = COALESCE($1, statement_month),
+                bank_name = COALESCE($2, bank_name),
+                document_type = 'bank_statement'
+            WHERE id = $3
+        `, [statementMonth, bankName, documentId]);
+
+        console.log(`📋 Classified: ${filename} → ${bankName || 'unknown bank'}, ${statementMonth || 'unknown month'}`);
+    }
 }
 
 function calculateWithholding(fcsReportText, monthlyRevenue) {

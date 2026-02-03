@@ -49,7 +49,6 @@
     "openai": "^4.104.0",
     "papaparse": "^5.5.3",
     "pdf-lib": "^1.17.1",
-    "pdf-parse": "^1.1.4",
     "pdf-to-png-converter": "^3.7.1",
     "pdf2pic": "^3.2.0",
     "pg": "^8.16.3",
