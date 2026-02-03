@@ -162,7 +162,7 @@ function checkStateRestrictions(lender, criteria) {
     if (!stateRestrictions) return null;
 
     const merchantState = normalizeState(criteria.state);
-    const restrictionsList = stateRestrictions.split(/[,;|\s]+/).map(s => s.trim()).filter(s => s.length > 0);
+    const restrictionsList = stateRestrictions.split(/[,;|]+/).map(s => s.trim()).filter(s => s.length > 0);
 
     for (const restriction of restrictionsList) {
         const restrictionNorm = normalizeState(restriction);
