@@ -814,6 +814,17 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - "no_response": Lead said "ok", "thanks", or acknowledged. No reply needed.
         `;
 
+        // Skip AI call if just waiting for MTD
+        if (currentState === 'QUALIFIED') {
+            const lastInbound = history.rows.filter(m => m.direction === 'inbound').slice(-1)[0]?.content?.toLowerCase() || '';
+            const waitingPhrases = ['later', 'will send', 'tonight', 'tomorrow', 'when i can', 'give me', 'few hours', 'after work'];
+
+            if (waitingPhrases.some(p => lastInbound.includes(p))) {
+                console.log(`⏸️ Lead said they'll send later - skipping AI call`);
+                return { shouldReply: false };
+            }
+        }
+
         // Build the Message Chain
         let messages = [{ role: "system", content: systemPrompt }];
 
