@@ -785,11 +785,15 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             !['none', 'no', 'n/a', 'false'].includes(facts.recent_funding.toLowerCase()) &&
             !facts.mtd_received;
 
+        const mtdStatusLine = needsMTD
+            ? (facts.mtd_requested ? '- MTD Statement: ❌ (Requested, waiting for merchant)' : '- MTD Statement: ❌ (REQUIRED - they got funded, need MTD before qualifying)')
+            : '';
+
         systemPrompt += `\n\n## 📝 DATA CHECKLIST (Status: ${currentState})
         - Email: ${facts.email ? '✅ ' + facts.email : '❌ (Ask for this)'}
         - Credit Score: ${facts.credit_score ? '✅ ' + facts.credit_score : '❌ (Ask for this after Email)'}
         - Recent Funding: ${facts.recent_funding ? '✅ ' + facts.recent_funding : '❌ (Ask if they took new loans)'}
-        ${needsMTD ? '- MTD Statement: ❌ (REQUIRED - they got funded, need MTD before qualifying)' : ''}
+        ${mtdStatusLine}
         ${needsMTD ? '⚠️ CRITICAL: DO NOT set action to "qualify" until MTD is received.' : ''}
         
         ## ⚙️ OUTPUT FORMAT
@@ -801,7 +805,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
            "extracted": { 
                "email": "extract if present", 
                "credit_score": "extract if present", 
-               "recent_funding": "extract if present" 
+               "recent_funding": "extract if present",
+               "mtd_requested": "true if you asked for MTD in your message"
            },
            "reason": "Internal reasoning here"
         }
