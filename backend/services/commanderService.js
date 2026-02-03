@@ -250,9 +250,21 @@ async function analyzeAndStrategize(conversationId) {
         const template = loadPrompt('strategy_analysis.md');
         if (!template) return null;
 
-        const prompt = injectVariables(template, {
+        let prompt = injectVariables(template, {
             fcs_report: fcsReport + blockedLendersText
         });
+
+        // Add date context for MTD logic
+        const today = new Date();
+        const dayOfMonth = today.getDate();
+        const currentMonth = today.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
+        const currentYear = today.getFullYear();
+        const todayDate = `${currentMonth} ${dayOfMonth}, ${currentYear}`;
+
+        // Replace placeholders in prompt
+        prompt = prompt.replace('{{today_date}}', todayDate);
+        prompt = prompt.replace('{{day_of_month}}', dayOfMonth.toString());
+        prompt = prompt.replace('{{current_month}}', currentMonth);
 
         // 3. Run AI
         console.log('COMMANDER: Calling Gemini API...');

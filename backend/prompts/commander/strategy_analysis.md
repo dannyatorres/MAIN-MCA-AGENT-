@@ -81,6 +81,14 @@ Return ONLY valid JSON (no markdown, no code blocks):
       "aggressive": {"min": number, "max": number}
     }
   },
+  "document_freshness": {
+    "latest_statement_month": "string (e.g., 'December 2025')",
+    "missing_months": ["any full months we're missing"],
+    "statements_are_stale": true|false
+  },
+  "mtd_strategy": "not_needed|nice_to_have|should_request|missing_full_month",
+  "mtd_message": "The casual way to ask if MTD is needed, null if not_needed",
+  "mtd_reasoning": "Why this MTD decision",
   "scenarios": [
     {
       "tier": "conservative",
@@ -148,6 +156,44 @@ Example:
 - PURSUE_HARD = Grade A or upward revenue trend, clean file
 - STANDARD = Grade B, normal approach
 - DEAD = Grade C with major red flags, not worth pursuing
+
+---
+
+# 📅 DOCUMENT FRESHNESS & MTD LOGIC
+
+**Today's Date:** {{today_date}}
+**Day of Month:** {{day_of_month}}
+**Current Month:** {{current_month}}
+
+**EVALUATE THE STATEMENTS:**
+Look at the FCS report dates. What's the latest month we have?
+
+**MISSING FULL MONTH SCENARIO:**
+If we're in February but only have December statements:
+- January statement may not have been generated when file was submitted
+- mtd_strategy: "missing_full_month"
+- mtd_message: "looks like your file came in right before the month ended - we're missing [month]. has your bank generated the full statement yet?"
+
+**MTD BY DAY OF MONTH (current month activity):**
+- Days 1-7: MTD rarely needed unless file is risky → "not_needed" or "nice_to_have"
+- Days 8-14: MTD is nice-to-have for cleaner files → "nice_to_have"
+- Days 15+: MTD more important, especially for risky files → "should_request"
+
+**MTD MORE URGENT WHEN:**
+- Existing positions (need to see current payment behavior)
+- Negative days in statements (need to see if pattern continues)
+- Lead mentioned recent funding (need to see new position)
+- Downward revenue trend (need to confirm current month)
+
+**MTD LESS URGENT WHEN:**
+- Clean file, no positions
+- Strong upward trend
+- High bank balance cushion
+- Grade A file
+
+**FRAMING (never sound like a blocker):**
+- DON'T say: "I need MTD to approve you"
+- DO say: "just want to make sure whatever deal i have for you is final - saves us both time on the front end instead of going through the whole process and the deal changing"
 
 ---
 

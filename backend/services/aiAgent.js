@@ -728,6 +728,22 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             if (gamePlan.lender_notes) {
                 systemPrompt += `**Lender Strategy:** ${gamePlan.lender_notes}\n`;
             }
+
+            // MTD guidance from Commander
+            if (gamePlan.mtd_strategy && gamePlan.mtd_strategy !== 'not_needed') {
+                systemPrompt += `\n\n## 📄 DOCUMENT STATUS`;
+                if (gamePlan.document_freshness?.latest_statement_month) {
+                    systemPrompt += `\nLatest Statement: ${gamePlan.document_freshness.latest_statement_month}`;
+                }
+                if (gamePlan.document_freshness?.missing_months?.length > 0) {
+                    systemPrompt += `\nMissing: ${gamePlan.document_freshness.missing_months.join(', ')}`;
+                }
+                systemPrompt += `\nMTD Strategy: ${gamePlan.mtd_strategy}`;
+                if (gamePlan.mtd_message) {
+                    systemPrompt += `\nHow to ask: "${gamePlan.mtd_message}"`;
+                }
+                systemPrompt += `\nReasoning: ${gamePlan.mtd_reasoning || 'See above'}`;
+            }
         }
 
         if (fcsData) {
@@ -854,6 +870,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         let responseContent = decision.message;
         let stateAfter = currentState;
 
+        // Check no_response FIRST
+        if (decision.action === 'no_response') {
+            return { shouldReply: false };
+        }
+
         if (decision.action === 'mark_dead') {
             await updateState(conversationId, 'DEAD', 'ai_agent');
             stateAfter = 'DEAD';
@@ -881,9 +902,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             if (!responseContent || responseContent === 'null') {
                 responseContent = "got it. just confirming any new loans this month?";
             }
-        }
-        else if (decision.action === 'no_response') {
-            return { shouldReply: false };
         }
 
         if (!responseContent || responseContent === 'null') {
