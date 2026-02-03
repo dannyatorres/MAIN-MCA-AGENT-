@@ -203,9 +203,10 @@ async function getGlobalPrompt(userId, currentState) {
 
         const phaseMap = {
             'NEW': 'phase_active.md',
+            'DRIP': 'phase_active.md',
             'ACTIVE': 'phase_active.md',
             'QUALIFIED': 'phase_qualified.md',
-            'PITCH_READY': 'phase_qualified.md',
+            'PITCH_READY': 'phase_pitch.md',
             'SUBMITTED': 'phase_submitted.md',
             'CLOSING': 'phase_closing.md'
         };
@@ -648,6 +649,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         systemPrompt += `\n## ⚠️ CRITICAL RULES\n- If lead says \"what?\", \"I don't understand\", \"what are you talking about\" → APOLOGIZE and explain simply\n- If lead says \"why are you repeating yourself\" → APOLOGIZE, acknowledge the issue, and change approach\n- NEVER start with \"depends on\" twice in a row\n- Before responding, mentally check: \"Did I already say this?\"\n`;
         systemPrompt += `\n## 💪 FIGHT FOR THE DEAL\nWhen lead says \"going with another broker\" or \"found someone else\":\n- \"wait what are they offering? let me see if i can beat it\"\n- \"hold on - what numbers they give you? dont sign anything yet\"\n- \"who you going with? i can probably match or beat it\"\n\nWhen lead says \"not interested\":\n- \"what happened?\"\n- \"you get funded already?\"\n- \"what changed?\"\n\nWhen lead goes quiet after seeing numbers:\n- \"too high?\"\n- \"what payment works better?\"\n- \"talk to me\"\n\nRULES:\n- Short punchy texts. No fluff.\n- Never say \"no worries\" or \"feel free to reach out\" on first objection\n- Sound like a real person, not a bot\n- Match their energy\n- One question at a time\n- Lowercase is fine\n`;
         systemPrompt += `\n## ⚠️ NEVER INCLUDE IN YOUR RESPONSE:\n- Internal notes or thinking (\"Consult note:\", \"Strategy:\", \"Note to self:\")\n- Reasoning about what to say\n- References to tools or functions\n- Anything the lead shouldn't see\n\nYour response goes DIRECTLY to the lead via SMS. Only include the actual message.\n`;
+        systemPrompt += `\n## FORMATTING RULES (ALWAYS FOLLOW)\n- all lowercase only\n- no emojis ever\n- no special symbols like bullets or dashes\n- no dollar signs, just say \"20k\" or \"twenty thousand\"\n- keep messages under 160 characters\n- sound like a real person texting\n`;
 
         // Long-term memory (conversation + global patterns)
         const longTermContext = userMessageForMemory
