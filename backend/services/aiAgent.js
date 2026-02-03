@@ -817,8 +817,33 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - "qualify": You have ALL checks (Email + Credit + Funding + MTD if needed). Move to QUALIFIED.
         - "mark_dead": Lead said stop/remove/not interested.
         - "sync_drive": Lead JUST provided email address.
-        - "no_response": Lead said "ok", "thanks", or acknowledged. No reply needed.
+        - "no_response": Lead said "ok", "thanks", or acknowledged. No reply needed. (NOT if state is PITCH_READY)
         `;
+
+        // State-specific behavior
+        let stateBehavior = '';
+        if (currentState === 'PITCH_READY') {
+            stateBehavior = `
+## 🎯 STATE: PITCH_READY
+You MUST present an offer. Do NOT return no_response.
+- You have the Commander strategy with offer range
+- Lead is waiting for numbers
+- Even if their last message was "ok" or acknowledgment, NOW is the time to pitch
+- Use the offer_range from Commander's orders
+`;
+        } else if (currentState === 'QUALIFIED') {
+            stateBehavior = `
+## 📋 STATE: QUALIFIED  
+Still processing. If waiting for MTD or documents, it's ok to wait.
+`;
+        } else if (currentState === 'ACTIVE') {
+            stateBehavior = `
+## 📋 STATE: ACTIVE
+Collecting info. Follow the checklist - ask for missing items.
+`;
+        }
+
+        systemPrompt += stateBehavior;
 
         // Skip AI call if just waiting for MTD
         if (currentState === 'QUALIFIED') {
