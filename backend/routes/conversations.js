@@ -301,7 +301,7 @@ router.post('/', requireModifyPermission, async (req, res) => {
         // First check by phone
         let existingCheck = await db.query(`
             SELECT c.id, c.lead_phone, c.tax_id, c.business_name, 
-                   c.assigned_user_id, c.display_id, c.exclusivity_expires_at,
+                   c.assigned_user_id, c.display_id, c.exclusivity_expires_at, c.state,
                    u.name as assigned_user_name
             FROM conversations c
             LEFT JOIN users u ON c.assigned_user_id = u.id
@@ -314,7 +314,7 @@ router.post('/', requireModifyPermission, async (req, res) => {
         if (existingCheck.rows.length === 0 && taxId) {
             existingCheck = await db.query(`
                 SELECT c.id, c.lead_phone, c.tax_id, c.business_name, 
-                       c.assigned_user_id, c.display_id, c.exclusivity_expires_at,
+                       c.assigned_user_id, c.display_id, c.exclusivity_expires_at, c.state,
                        u.name as assigned_user_name
                 FROM conversations c
                 LEFT JOIN users u ON c.assigned_user_id = u.id
@@ -329,58 +329,40 @@ router.post('/', requireModifyPermission, async (req, res) => {
         if (existingCheck.rows.length > 0) {
             const existing = existingCheck.rows[0];
             const isOwnLead = existing.assigned_user_id === req.user?.id;
-            const isExpired = !existing.exclusivity_expires_at || 
-                              new Date(existing.exclusivity_expires_at) < new Date();
-            const isUnassigned = !existing.assigned_user_id;
-
-            if (isOwnLead || isUnassigned || isExpired) {
-                newId = existing.id;
-                isUpdate = true;
-
-                const shouldClaim = !isOwnLead && (isUnassigned || isExpired);
-                console.log(`⚠️ Lead exists (${newId}). ${shouldClaim ? 'Claiming and updating.' : 'Updating.'}`);
-
-                if (shouldClaim) {
-                    await db.query(`
-                        UPDATE conversations SET
-                            assigned_user_id = $1,
-                            exclusivity_expires_at = NOW() + INTERVAL '14 days',
-                            business_name = COALESCE($2, business_name),
-                            email = COALESCE($3, email),
-                            first_name = COALESCE($4, first_name),
-                            last_name = COALESCE($5, last_name),
-                            last_activity = NOW()
-                        WHERE id = $6
-                    `, [req.user?.id, data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
-                } else {
-                    await db.query(`
-                        UPDATE conversations SET
-                            business_name = COALESCE($1, business_name),
-                            email = COALESCE($2, email),
-                            first_name = COALESCE($3, first_name),
-                            last_name = COALESCE($4, last_name),
-                            last_activity = NOW()
-                        WHERE id = $5
-                    `, [data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
-                }
-
-            } else {
-                // BLOCKED - belongs to someone else and not expired
-                const daysLeft = Math.ceil(
-                    (new Date(existing.exclusivity_expires_at) - new Date()) / (1000 * 60 * 60 * 24)
-                );
+            
+            // Only SUBMITTED/FUNDED leads have exclusivity
+            const lockedStates = ['SUBMITTED', 'FUNDED', 'OFFER_RECEIVED'];
+            
+            if (lockedStates.includes(existing.state) && !isOwnLead) {
+                // REJECT - submitted deal belongs to someone else
                 return res.status(409).json({
                     success: false,
                     error: 'duplicate_protected',
-                    message: `This lead is assigned to ${existing.assigned_user_name || 'another user'} (CID# ${existing.display_id})`,
+                    message: `Already submitted by ${existing.assigned_user_name || 'another user'} (CID# ${existing.display_id})`,
                     details: {
                         matched_by: existing.lead_phone === leadPhone ? 'phone' : 'EIN',
                         assigned_to: existing.assigned_user_name,
                         display_id: existing.display_id,
-                        expires_in_days: daysLeft
+                        state: existing.state
                     }
                 });
             }
+            
+            // Can update/claim
+            newId = existing.id;
+            isUpdate = true;
+            console.log(`⚠️ Lead exists (${newId}). ${isOwnLead ? 'Updating.' : 'Claiming.'}`);
+
+            await db.query(`
+                UPDATE conversations SET
+                    assigned_user_id = $1,
+                    business_name = COALESCE($2, business_name),
+                    email = COALESCE($3, email),
+                    first_name = COALESCE($4, first_name),
+                    last_name = COALESCE($5, last_name),
+                    last_activity = NOW()
+                WHERE id = $6
+            `, [req.user?.id, data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
         } else {
             // --- 4. INSERT ALL FIELDS (With Correct Address Mapping + User Tracking) ---
             const insertResult = await db.query(`
