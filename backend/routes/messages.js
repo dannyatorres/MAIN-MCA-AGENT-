@@ -398,7 +398,7 @@ router.post('/webhook/receive', async (req, res) => {
         const { From, Body, MessageSid, NumMedia } = req.body;
         const db = getDatabase();
 
-        console.log('📥 Webhook Inbound:', { From, Body, NumMedia });
+        console.log('📥 Webhook Inbound (raw):', { From: From?.slice(-4), NumMedia });
 
         // DEDUP: Check if we already processed this message
         const dupCheck = await db.query(
@@ -432,6 +432,7 @@ router.post('/webhook/receive', async (req, res) => {
 
         if (convResult.rows.length === 0) return res.status(200).send('No conversation found');
         const conversation = convResult.rows[0];
+        console.log(`📥 [${conversation.business_name}] Inbound: "${(Body || '').substring(0, 50)}${Body?.length > 50 ? '...' : ''}"`);
 
         // Check lock AFTER getting conversation, but BEFORE AI logic (not here)
         // Lock check moved to AI logic block below
