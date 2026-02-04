@@ -841,31 +841,37 @@ Collecting info. Follow the checklist - ask for missing items.
 
         systemPrompt += stateBehavior;
 
-        // Add date context and statement status from Commander
+        // Add date context and statement logic
         const today = new Date();
         const dayOfMonth = today.getDate();
-        const currentMonth = today.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long', year: 'numeric' });
+        const currentMonthName = today.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
+        const currentYear = today.getFullYear();
 
-        systemPrompt += `\n\n## 📅 TODAY'S DATE
-Today: ${currentMonth} ${dayOfMonth}
-Day of month: ${dayOfMonth}
+        // Calculate last month
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthName = lastMonth.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
+
+        // Calculate the month before last (for before the 7th)
+        const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+        const twoMonthsAgoName = twoMonthsAgo.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
+
+        systemPrompt += `\n\n## 📅 DATE & STATEMENT LOGIC
+Today: ${currentMonthName} ${dayOfMonth}, ${currentYear}
+
 `;
 
-        // Statement status from Commander
-        if (gamePlan?.document_freshness) {
-            const df = gamePlan.document_freshness;
-            if (df.need_full_statement || df.need_mtd) {
-                systemPrompt += `\n## 📄 STATEMENT STATUS\n`;
-                if (df.need_full_statement && df.missing_full_months?.length > 0) {
-                    systemPrompt += `⚠️ Missing full month statement: ${df.missing_full_months.join(', ')}\n`;
-                }
-                if (df.need_mtd) {
-                    systemPrompt += `⚠️ Need month-to-date activity\n`;
-                }
-                if (df.statement_ask) {
-                    systemPrompt += `How to ask: "${df.statement_ask}"\n`;
-                }
-            }
+        if (dayOfMonth < 7) {
+            // Before the 7th - last month's statement won't exist yet
+            systemPrompt += `⚠️ It's before the 7th - the ${lastMonthName} statement is NOT available yet.
+- If you need updated docs, ask for MONTH-TO-DATE (${lastMonthName} 1st through today)
+- Do NOT ask for "the ${lastMonthName} statement" - it doesn't exist yet
+`;
+        } else {
+            // After the 7th - last month's statement should be ready
+            systemPrompt += `✅ It's after the 7th - the ${lastMonthName} statement SHOULD be available.
+- Ask for "the ${lastMonthName} statement" (full month)
+- Only ask for month-to-date if you already have ${lastMonthName} and need ${currentMonthName} activity
+`;
         }
 
         // Skip AI call if just waiting for MTD
