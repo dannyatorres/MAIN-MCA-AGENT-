@@ -13,9 +13,14 @@ router.post('/trigger', async (req, res) => {
 
     if (!conversation_id) return res.status(400).json({ error: "Missing conversation_id" });
 
-    console.log(`📨 Received Dispatcher Trigger for ${conversation_id}`);
-
     const db = getDatabase();
+
+    // Fetch business name for logging
+    const nameResult = await db.query('SELECT business_name FROM conversations WHERE id = $1', [conversation_id]);
+    const bizName = nameResult.rows[0]?.business_name || 'Unknown';
+    const shortId = conversation_id.slice(0, 8);
+
+    console.log(`📨 Received Dispatcher Trigger for "${bizName}" (${shortId})`);
 
     // Atomic lock acquisition - prevents race condition
     const lockResult = await db.query(`
@@ -27,17 +32,17 @@ router.post('/trigger', async (req, res) => {
     `, [conversation_id]);
 
     if (lockResult.rowCount === 0) {
-        console.log(`🔒 [${conversation_id}] Already processing - skipping`);
+        console.log(`🔒 [${bizName}] Already processing - skipping`);
         return res.json({ success: false, skipped: true, reason: 'ai_processing lock' });
     }
 
-    console.log(`🔓 [${conversation_id}] Lock acquired`);
+    console.log(`🔓 [${bizName}] Lock acquired`);
 
     let result;
     try {
         // Direct message = skip AI entirely
         if (direct_message) {
-            console.log(`📨 Direct message (no AI) for ${conversation_id}`);
+            console.log(`📨 [${bizName}] Direct message (no AI)`);
             result = { shouldReply: true, content: direct_message };
         } else {
             // 1. Run the AI Logic via Router
@@ -57,7 +62,7 @@ router.post('/trigger', async (req, res) => {
             // Validate phone before sending
             const cleanPhone = (phone || '').replace(/\D/g, '');
             if (!cleanPhone || cleanPhone.length < 10) {
-                console.log(`⚠️ [${conversation_id}] Invalid phone: "${phone}" - skipping SMS`);
+                console.log(`⚠️ [${bizName}] Invalid phone: "${phone}" - skipping SMS`);
                 return res.json({ success: true, action: 'skipped', reason: 'invalid_phone' });
             }
 
@@ -80,7 +85,7 @@ router.post('/trigger', async (req, res) => {
 
             // D. Mark Sent
             await db.query("UPDATE messages SET status = 'sent' WHERE id = $1", [messageId]);
-            console.log(`📊 Updating activity: is_nudge=${req.body.is_nudge}, conversation_id=${conversation_id}`);
+            console.log(`📊 [${bizName}] Updating activity (is_nudge=${req.body.is_nudge})`);
             // Update last_activity and nudge_count
             if (req.body.is_nudge) {
                 await db.query(`
@@ -101,14 +106,14 @@ router.post('/trigger', async (req, res) => {
                 const protectedStates = ['DEAD', 'FUNDED', 'SUBMITTED', 'HUMAN_REVIEW', 'ARCHIVED'];
                 
                 if (protectedStates.includes(currentState)) {
-                    console.log(`🛡️ [${conversation_id}] State ${currentState} is protected - ignoring next_state: ${next_state}`);
+                    console.log(`🛡️ [${bizName}] State ${currentState} is protected - ignoring next_state: ${next_state}`);
                 } else {
                     await db.query(`
                         INSERT INTO state_history (conversation_id, old_state, new_state, changed_by)
                         VALUES ($1, $2, $3, 'drip')
                     `, [conversation_id, currentState, next_state]);
                     await db.query(`UPDATE conversations SET state = $1 WHERE id = $2`, [next_state, conversation_id]);
-                    console.log(`📊 [${conversation_id}] ${currentState} → ${next_state} (drip)`);
+                    console.log(`📊 [${bizName}] ${currentState} → ${next_state} (drip)`);
                 }
             }
 
@@ -128,7 +133,7 @@ router.post('/trigger', async (req, res) => {
                 });
             }
 
-            console.log(`✅ AI Sent Message to ${phone}`);
+            console.log(`✅ [${bizName}] AI Sent Message to ${phone}`);
         } catch (err) {
             console.error("❌ Failed to send AI SMS:", err.message);
             return res.status(500).json({ error: "AI generated text but failed to send SMS" });
@@ -142,7 +147,7 @@ router.post('/trigger', async (req, res) => {
         ai_reply: result.content || "No reply generated (Status update or silence)"
     });
     } catch (err) {
-        console.error(`❌ Error in trigger for ${conversation_id}:`, err);
+        console.error(`❌ [${bizName}] Error in trigger:`, err);
         if (!res.headersSent) {
             return res.status(500).json({ error: err.message });
         }
