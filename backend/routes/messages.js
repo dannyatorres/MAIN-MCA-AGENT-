@@ -586,11 +586,21 @@ router.post('/webhook/receive', async (req, res) => {
                         const twilio = require('twilio');
                         const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-                        const sentMsg = await client.messages.create({
-                            body: messageToSend,
-                            from: process.env.TWILIO_PHONE_NUMBER,
-                            to: From
-                        });
+                        let sentMsg;
+                        try {
+                            sentMsg = await client.messages.create({
+                                body: messageToSend,
+                                from: process.env.TWILIO_PHONE_NUMBER,
+                                to: From
+                            });
+                        } catch (twilioErr) {
+                            // Twilio 21610 = already unsubscribed - not a real error
+                            if (twilioErr && twilioErr.code === 21610) {
+                                console.log(`📵 [${conversation.business_name}] Already unsubscribed at Twilio - skipping confirmation`);
+                                return;
+                            }
+                            throw twilioErr;
+                        }
 
                         await db.query('UPDATE messages SET status = \'sent\', twilio_sid = $1 WHERE id = $2', [sentMsg.sid, aiMessage.id]);
 
