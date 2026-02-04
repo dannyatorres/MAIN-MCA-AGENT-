@@ -339,7 +339,7 @@ class ConversationCore {
         let visible = Array.from(this.conversations.values());
 
         // All filtering (UNREAD, INTERESTED, search) is now server-side
-        // Just sort locally: Offers first, then unread, then by activity
+        // Just sort locally: Offers first, then unread, then by message time
         visible.sort((a, b) => {
             if (a.has_offer && !b.has_offer) return -1;
             if (!a.has_offer && b.has_offer) return 1;
@@ -347,7 +347,10 @@ class ConversationCore {
             if ((a.unread_count > 0) && !(b.unread_count > 0)) return -1;
             if (!(a.unread_count > 0) && (b.unread_count > 0)) return 1;
 
-            return new Date(b.last_activity || 0) - new Date(a.last_activity || 0);
+            const timeA = new Date(a.last_message_at || a.last_activity || a.created_at || 0);
+            const timeB = new Date(b.last_message_at || b.last_activity || b.created_at || 0);
+
+            return timeB - timeA;
         });
 
         // --- Render ---
@@ -413,6 +416,8 @@ class ConversationCore {
         const offerIcon = this.badges.renderOfferIcon(conv);
         const notesIcon = this.badges.renderNotesIcon(conv);
 
+        const displayTime = conv.last_message_at || conv.last_activity;
+
         return `
             <div class="conversation-item ${rowClasses}"
                  data-conversation-id="${safeId}">
@@ -420,7 +425,7 @@ class ConversationCore {
                 <div class="conversation-content">
                     <div class="conversation-header">
                         <div class="business-name">${safeName}</div>
-                        <div class="conversation-time">${timeSince(conv.last_activity)}</div>
+                        <div class="conversation-time">${timeSince(displayTime)}</div>
                     </div>
                     <div class="message-preview-row">
                          <span class="message-preview">${safeMessage}</span>
