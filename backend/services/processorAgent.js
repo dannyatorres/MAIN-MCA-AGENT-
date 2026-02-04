@@ -198,7 +198,7 @@ async function runCheck() {
         const recentEmails = await gmail.fetchEmails({ limit: 15 });
 
         if (!recentEmails || recentEmails.length === 0) {
-            // Silent when empty
+            console.log('   💤 No new emails.');
         } else {
             const newEmails = [];
 
@@ -233,11 +233,19 @@ async function runCheck() {
 async function processEmail(email, db) {
     try {
         await db.query('INSERT INTO processed_emails (message_id, thread_id) VALUES ($1, $2)', [email.id, email.threadId]);
-    } catch (err) { return; }
+    } catch (err) {
+        if (err.code === '23505') {
+            return;
+        }
+        console.error(`❌ [DB] Failed to mark email processed: ${err.message}`);
+        return;
+    }
 
     console.log(`   🤖 [AI] Analyzing email: "${email.subject}"...`);
 
     const systemPrompt = getSystemPrompt();
+    const senderName = email.from?.name || 'Unknown';
+    const senderEmail = email.from?.email || 'unknown@unknown.com';
 
     // Send full email body (up to 3000 chars) instead of just snippet
     let emailBody = (email.text || email.html || email.snippet || '')
@@ -254,17 +262,23 @@ async function processEmail(email, db) {
         .substring(0, 3000)
         .trim();
 
-    const extraction = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{
-            role: "system",
-            content: systemPrompt
-        }, {
-            role: "user",
-            content: `Sender: "${email.from.name}" <${email.from.email}>\nSubject: "${email.subject}"\n\nFull Email Body:\n${emailBody}`
-        }],
-        response_format: { type: "json_object" }
-    });
+    let extraction;
+    try {
+        extraction = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{
+                role: "system",
+                content: systemPrompt
+            }, {
+                role: "user",
+                content: `Sender: "${senderName}" <${senderEmail}>\nSubject: "${email.subject}"\n\nFull Email Body:\n${emailBody}`
+            }],
+            response_format: { type: "json_object" }
+        });
+    } catch (aiErr) {
+        console.error(`❌ [OpenAI] API call failed: ${aiErr.message}`);
+        return;
+    }
 
     // Track usage (system process - no specific user)
     if (extraction.usage) {
@@ -283,7 +297,14 @@ async function processEmail(email, db) {
     const usage = extraction.usage;
     console.log(`      🎟️ [Tokens] Input: ${usage.prompt_tokens} | Output: ${usage.completion_tokens} | Total: ${usage.total_tokens}`);
 
-    const data = JSON.parse(extraction.choices[0].message.content);
+    let data;
+    try {
+        data = JSON.parse(extraction.choices[0].message.content);
+    } catch (parseErr) {
+        console.error(`❌ [AI] Failed to parse response: ${parseErr.message}`);
+        console.error(`   Raw content: ${extraction.choices[0].message.content?.substring(0, 200)}`);
+        return;
+    }
 
     // Normalize status - treat APPROVED same as OFFER
     if (data.category === 'APPROVED') {
