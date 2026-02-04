@@ -231,8 +231,24 @@ class GmailInboxService {
                 throw new Error(`Email UID ${emailUid} not found`);
             }
 
-            const rawBody = messages[0].parts.find(p => p.which === '')?.body;
-            const headerPart = messages[0].parts.find(p => p.which === 'HEADER')?.body;
+            let rawBody = messages[0].parts.find(p => p.which === '')?.body;
+            let headerPart = messages[0].parts.find(p => p.which === 'HEADER')?.body;
+
+            // Convert to string if it's a buffer or object
+            if (headerPart && typeof headerPart !== 'string') {
+                if (Buffer.isBuffer(headerPart)) {
+                    headerPart = headerPart.toString('utf8');
+                } else if (typeof headerPart === 'object') {
+                    // imap-simple returns headers as an object sometimes
+                    headerPart = Object.entries(headerPart)
+                        .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+                        .join('\r\n');
+                }
+            }
+
+            if (rawBody && Buffer.isBuffer(rawBody)) {
+                rawBody = rawBody.toString('utf8');
+            }
             
             if (!rawBody) {
                 throw new Error('Could not fetch raw email body');
