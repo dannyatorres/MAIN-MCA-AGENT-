@@ -64,8 +64,8 @@ async function forwardEmailToUser(email, userEmail, businessName, category, lend
     if (!userEmail || !email.id) return;
     
     try {
-        const categoryEmoji = { 'OFFER': '💰', 'DECLINE': '❌', 'STIP': '📋', 'OTHER': '📧' };
-        const prefix = `[${categoryEmoji[category] || '📧'} ${businessName}]`;
+        const categoryLabel = { 'OFFER': 'OFFER', 'DECLINE': 'DECLINE', 'STIP': 'STIP', 'OTHER': 'FYI' };
+        const prefix = `[${categoryLabel[category] || 'FYI'} - ${businessName}]`;
 
         await gmail.forwardEmail(email.id, userEmail, prefix);
         console.log(`      📤 Forwarded to ${userEmail}`);
