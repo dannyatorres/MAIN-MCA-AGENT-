@@ -8,6 +8,7 @@ const cors = require('cors');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
+const nodemailer = require('nodemailer');
 const emailRoutes = require('./routes/emailRoutes');
 const usageRoutes = require('./routes/usage');
 const notesRoutes = require('./routes/notes');
@@ -171,10 +172,36 @@ app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/formatter', require('./routes/lead-formatter'));
 
 // Contact Form
-app.post('/api/contact', (req, res) => {
+app.post('/api/contact', async (req, res) => {
     const { name, email, message } = req.body;
-    console.log(`🔔 NEW INQUIRY: ${name} (${email}): ${message}`);
-    res.json({ success: true, message: 'Received' });
+    
+    const transporter = nodemailer.createTransport({
+        host: 'smtp.office365.com',
+        port: 587,
+        secure: false,
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        },
+        tls: {
+            ciphers: 'SSLv3'
+        }
+    });
+
+    try {
+        await transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to: 'danny@mcagent.io',
+            replyTo: email,
+            subject: `MCAgent Contact: ${name}`,
+            text: `From: ${name} (${email})\n\n${message}`
+        });
+        console.log(`📬 Contact form sent: ${name} (${email})`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Contact form error:', err);
+        res.status(500).json({ message: 'Failed to send email' });
+    }
 });
 
 // --- MOBILE PWA ROUTE (with auto cache-busting) ---
