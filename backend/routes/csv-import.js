@@ -201,8 +201,8 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         for (const lead of validLeads) {
             // Check for existing lead by phone OR tax_id
             const existingResult = await db.query(`
-                SELECT id, lead_phone, tax_id, business_name, assigned_user_id, 
-                       display_id, exclusivity_expires_at,
+                SELECT c.id, c.lead_phone, c.tax_id, c.business_name, c.assigned_user_id, 
+                       c.display_id, c.exclusivity_expires_at,
                        u.name as assigned_user_name
                 FROM conversations c
                 LEFT JOIN users u ON c.assigned_user_id = u.id

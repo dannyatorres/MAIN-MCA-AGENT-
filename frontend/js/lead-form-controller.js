@@ -714,7 +714,18 @@ export class LeadFormController {
                 }
             } catch (err) {
                 console.error(err);
-                alert('Error: ' + err.message);
+                
+                // Check if it's a duplicate protection error
+                if (err.message && err.message.includes('duplicate_protected')) {
+                    try {
+                        const errorData = JSON.parse(err.message.replace('HTTP 409: ', ''));
+                        alert(`⚠️ Lead Already Exists\n\n${errorData.message}\n\nMatched by: ${errorData.details?.matched_by}\nExpires in: ${errorData.details?.expires_in_days} days`);
+                    } catch {
+                        alert('This lead is already assigned to another user.');
+                    }
+                } else {
+                    alert('Error: ' + err.message);
+                }
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;

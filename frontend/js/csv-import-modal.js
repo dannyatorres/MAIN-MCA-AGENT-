@@ -189,13 +189,31 @@ class CSVImportModalManager {
 
             const importStatus = document.getElementById('csvImportStatus');
             if (importStatus) {
+                let rejectionsHtml = '';
+                if (result.rejections && result.rejections.length > 0) {
+                    rejectionsHtml = `
+                        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 8px; padding: 12px; margin: 15px 0; text-align: left; max-height: 150px; overflow-y: auto;">
+                            <p style="color: #ef4444; font-weight: 600; margin-bottom: 8px;">⚠️ ${result.rejections.length} leads rejected:</p>
+                            ${result.rejections.map(r => `
+                                <div style="color: #fca5a5; font-size: 12px; margin: 4px 0;">
+                                    • ${r.business_name || r.phone}: ${r.reason}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
                 importStatus.innerHTML = `
                     <div class="import-success-card" style="text-align: center; margin-top: 20px; animation: scaleIn 0.3s ease;">
                         <div style="width: 50px; height: 50px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
                             <span style="font-size: 24px; color: white; font-weight: bold;">✓</span>
                         </div>
                         <h4 style="color: #e6edf3; margin: 10px 0; font-size: 18px;">Import Complete!</h4>
-                        <p style="color: #8b949e; margin-bottom: 20px;">Successfully imported <strong>${result.imported_count}</strong> leads.</p>
+                        <p style="color: #8b949e; margin-bottom: 10px;">
+                            <strong>${result.new_records || result.imported_count}</strong> new leads imported
+                            ${result.duplicates_updated ? `, <strong>${result.duplicates_updated}</strong> updated` : ''}
+                        </p>
+                        ${rejectionsHtml}
                         ${result.errors && result.errors.length > 0 ? `<p style="color: #ef4444; font-size: 12px; margin-bottom: 15px;">(${result.errors.length} skipped due to errors)</p>` : ''}
                         <div>
                             <button class="btn btn-primary" onclick="window.location.reload()">Done</button>
