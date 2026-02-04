@@ -295,18 +295,33 @@ router.post('/', requireModifyPermission, async (req, res) => {
             lastName = parts.slice(1).join(' ');
         }
 
-        // --- 3. CHECK FOR DUPLICATES (Phone OR EIN) ---
+        // --- 3. CHECK FOR DUPLICATES ---
         const EXCLUSIVITY_DAYS = 14;
-        const existingCheck = await db.query(`
+
+        // First check by phone
+        let existingCheck = await db.query(`
             SELECT c.id, c.lead_phone, c.tax_id, c.business_name, 
                    c.assigned_user_id, c.display_id, c.exclusivity_expires_at,
                    u.name as assigned_user_name
             FROM conversations c
             LEFT JOIN users u ON c.assigned_user_id = u.id
-            WHERE ($1 IS NOT NULL AND c.lead_phone = $1)
-               OR ($2 IS NOT NULL AND c.tax_id = $2 AND c.tax_id != '')
+            WHERE c.lead_phone = $1
             LIMIT 1
-        `, [leadPhone, data.tax_id || data.taxId || null]);
+        `, [leadPhone]);
+
+        // If no match by phone, try EIN (if provided)
+        const taxId = data.tax_id || data.taxId || null;
+        if (existingCheck.rows.length === 0 && taxId) {
+            existingCheck = await db.query(`
+                SELECT c.id, c.lead_phone, c.tax_id, c.business_name, 
+                       c.assigned_user_id, c.display_id, c.exclusivity_expires_at,
+                       u.name as assigned_user_name
+                FROM conversations c
+                LEFT JOIN users u ON c.assigned_user_id = u.id
+                WHERE c.tax_id = $1 AND c.tax_id != ''
+                LIMIT 1
+            `, [taxId]);
+        }
 
         let newId;
         let isUpdate = false;
@@ -319,26 +334,35 @@ router.post('/', requireModifyPermission, async (req, res) => {
             const isUnassigned = !existing.assigned_user_id;
 
             if (isOwnLead || isUnassigned || isExpired) {
-                // Can update - own lead, unassigned, or expired
                 newId = existing.id;
                 isUpdate = true;
 
-                const claimFields = (!isOwnLead && (isUnassigned || isExpired))
-                    ? `assigned_user_id = '${req.user?.id}', exclusivity_expires_at = NOW() + INTERVAL '${EXCLUSIVITY_DAYS} days',`
-                    : '';
+                const shouldClaim = !isOwnLead && (isUnassigned || isExpired);
+                console.log(`⚠️ Lead exists (${newId}). ${shouldClaim ? 'Claiming and updating.' : 'Updating.'}`);
 
-                console.log(`⚠️ Lead exists (${newId}). ${claimFields ? 'Claiming and updating.' : 'Updating.'}`);
-
-                await db.query(`
-                    UPDATE conversations SET
-                        ${claimFields}
-                        business_name = COALESCE($1, business_name),
-                        email = COALESCE($2, email),
-                        first_name = COALESCE($3, first_name),
-                        last_name = COALESCE($4, last_name),
-                        last_activity = NOW()
-                    WHERE id = $5
-                `, [data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
+                if (shouldClaim) {
+                    await db.query(`
+                        UPDATE conversations SET
+                            assigned_user_id = $1,
+                            exclusivity_expires_at = NOW() + INTERVAL '14 days',
+                            business_name = COALESCE($2, business_name),
+                            email = COALESCE($3, email),
+                            first_name = COALESCE($4, first_name),
+                            last_name = COALESCE($5, last_name),
+                            last_activity = NOW()
+                        WHERE id = $6
+                    `, [req.user?.id, data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
+                } else {
+                    await db.query(`
+                        UPDATE conversations SET
+                            business_name = COALESCE($1, business_name),
+                            email = COALESCE($2, email),
+                            first_name = COALESCE($3, first_name),
+                            last_name = COALESCE($4, last_name),
+                            last_activity = NOW()
+                        WHERE id = $5
+                    `, [data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
+                }
 
             } else {
                 // BLOCKED - belongs to someone else and not expired
