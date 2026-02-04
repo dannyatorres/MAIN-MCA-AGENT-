@@ -159,6 +159,154 @@ class GmailInboxService {
     }
 
     /**
+     * 📤 Send an email using Gmail API (for forwarding)
+     */
+    async sendEmail(to, subject, htmlBody) {
+        try {
+            const accessToken = await this.getAccessToken();
+            
+            const message = [
+                `To: ${to}`,
+                `Subject: ${subject}`,
+                `Content-Type: text/html; charset="UTF-8"`,
+                '',
+                htmlBody
+            ].join('\r\n');
+
+            const encodedMessage = Buffer.from(message)
+                .toString('base64')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+
+            return new Promise((resolve, reject) => {
+                const postData = JSON.stringify({ raw: encodedMessage });
+
+                const req = https.request({
+                    hostname: 'gmail.googleapis.com',
+                    path: '/gmail/v1/users/me/messages/send',
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(postData),
+                    },
+                }, (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => data += chunk);
+                    res.on('end', () => {
+                        if (res.statusCode >= 200 && res.statusCode < 300) {
+                            resolve(true);
+                        } else {
+                            reject(new Error(`Gmail Send Failed (${res.statusCode}): ${data}`));
+                        }
+                    });
+                });
+
+                req.on('error', (e) => reject(e));
+                req.write(postData);
+                req.end();
+            });
+        } catch (err) {
+            throw new Error(`Failed to send email: ${err.message}`);
+        }
+    }
+
+    /**
+     * 📤 Native forward - fetches raw message and resends to new recipient
+     */
+    async forwardEmail(emailUid, toAddress, subjectPrefix = '') {
+        try {
+            const accessToken = await this.getAccessToken();
+            
+            await this.ensureConnection();
+            await this.connection.openBox('INBOX');
+            
+            const messages = await this.connection.search(
+                [['UID', String(emailUid)]],
+                { bodies: [''], struct: true }
+            );
+            
+            if (!messages.length) {
+                throw new Error(`Email UID ${emailUid} not found`);
+            }
+
+            const rawBody = messages[0].parts.find(p => p.which === '')?.body;
+            if (!rawBody) {
+                throw new Error('Could not fetch raw email body');
+            }
+
+            // 🛡️ STRIP DANGEROUS HEADERS
+            let modifiedRaw = rawBody
+                // Remove headers that could cause unintended sends
+                .replace(/^To: .*\r?\n/gim, '')
+                .replace(/^Cc: .*\r?\n/gim, '')
+                .replace(/^Bcc: .*\r?\n/gim, '')
+                .replace(/^Reply-To: .*\r?\n/gim, '')
+                .replace(/^From: .*\r?\n/gim, '')
+                .replace(/^Delivered-To: .*\r?\n/gim, '')
+                .replace(/^Return-Path: .*\r?\n/gim, '')
+                // Remove threading headers (prevents appearing in original thread)
+                .replace(/^In-Reply-To: .*\r?\n/gim, '')
+                .replace(/^References: .*\r?\n/gim, '')
+                .replace(/^Message-ID: .*\r?\n/gim, '')
+                // Remove received headers (cleanup)
+                .replace(/^Received: [\s\S]*?\r?\n(?=\S)/gm, '');
+
+            // Update subject
+            modifiedRaw = modifiedRaw.replace(
+                /^Subject: (.*)/im, 
+                `Subject: ${subjectPrefix ? subjectPrefix + ' ' : 'Fwd: '}$1`
+            );
+
+            // 🛡️ ADD SAFE HEADERS AT THE TOP
+            const safeHeaders = [
+                `From: ${this.user}`,
+                `To: ${toAddress}`,
+            ].join('\r\n') + '\r\n';
+
+            modifiedRaw = safeHeaders + modifiedRaw;
+
+            const encodedMessage = Buffer.from(modifiedRaw)
+                .toString('base64')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+
+            return new Promise((resolve, reject) => {
+                const postData = JSON.stringify({ raw: encodedMessage });
+
+                const req = https.request({
+                    hostname: 'gmail.googleapis.com',
+                    path: '/gmail/v1/users/me/messages/send',
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(postData),
+                    },
+                }, (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => data += chunk);
+                    res.on('end', () => {
+                        if (res.statusCode >= 200 && res.statusCode < 300) {
+                            resolve(true);
+                        } else {
+                            reject(new Error(`Gmail Forward Failed (${res.statusCode}): ${data}`));
+                        }
+                    });
+                });
+
+                req.on('error', (e) => reject(e));
+                req.write(postData);
+                req.end();
+            });
+        } catch (err) {
+            throw new Error(`Forward failed: ${err.message}`);
+        }
+    }
+
+    /**
      * 🛡️ EMERGENCY SHIELDED FETCH
      */
     async fetchEmails(options = {}) {
@@ -344,7 +492,8 @@ class GmailInboxService {
             attachments: mail.attachments ? mail.attachments.map(att => ({
                 filename: att.filename,
                 contentType: att.contentType,
-                size: att.size
+                size: att.size,
+                content: att.content
             })) : [],
             isUnread: !message.attributes.flags.includes('\\Seen')
         };

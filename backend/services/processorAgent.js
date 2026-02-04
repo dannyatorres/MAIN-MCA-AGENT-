@@ -7,7 +7,6 @@ const { trackUsage } = require('./usageTracker');
 const { updateState } = require('./stateManager');
 const { OpenAI } = require('openai');
 const { v4: uuidv4 } = require('uuid');
-const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -65,46 +64,10 @@ async function forwardEmailToUser(email, userEmail, businessName, category, lend
     if (!userEmail || !email.id) return;
     
     try {
-        const oauth2Client = new google.auth.OAuth2(
-            process.env.GMAIL_CLIENT_ID,
-            process.env.GMAIL_CLIENT_SECRET
-        );
-        
-        oauth2Client.setCredentials({
-            refresh_token: process.env.GMAIL_REFRESH_TOKEN
-        });
-
-        const gmailApi = google.gmail({ version: 'v1', auth: oauth2Client });
-
         const categoryEmoji = { 'OFFER': '💰', 'DECLINE': '❌', 'STIP': '📋', 'OTHER': '📧' };
-        const newSubject = `Fwd: ${email.subject} [${categoryEmoji[category] || ''} ${businessName}]`;
-        
-        const forwardedMessage = [
-            `To: ${userEmail}`,
-            `Subject: ${newSubject}`,
-            `Content-Type: text/html; charset="UTF-8"`,
-            '',
-            `<p><strong>🔄 Auto-forwarded by CRM</strong> | Lead: ${businessName} | ${category}</p>`,
-            `<hr>`,
-            `<p><strong>---------- Forwarded message ----------</strong></p>`,
-            `<p>From: ${email.from || 'Unknown'}</p>`,
-            `<p>Date: ${email.date || ''}</p>`,
-            `<p>Subject: ${email.subject}</p>`,
-            `<hr>`,
-            email.html || email.text || email.snippet || ''
-        ].join('\r\n');
+        const prefix = `[${categoryEmoji[category] || '📧'} ${businessName}]`;
 
-        const encodedMessage = Buffer.from(forwardedMessage)
-            .toString('base64')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-
-        await gmailApi.users.messages.send({
-            userId: 'me',
-            requestBody: { raw: encodedMessage }
-        });
-
+        await gmail.forwardEmail(email.id, userEmail, prefix);
         console.log(`      📤 Forwarded to ${userEmail}`);
     } catch (err) {
         console.error(`      ⚠️ Failed to forward email: ${err.message}`);
