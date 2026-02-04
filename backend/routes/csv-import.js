@@ -199,17 +199,29 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         const toUpdate = [];
 
         for (const lead of validLeads) {
-            // Check for existing lead by phone OR tax_id
-            const existingResult = await db.query(`
+            // Check for existing lead - first by phone, then by EIN
+            let existingResult = await db.query(`
                 SELECT c.id, c.lead_phone, c.tax_id, c.business_name, c.assigned_user_id, 
                        c.display_id, c.exclusivity_expires_at, c.state,
                        u.name as assigned_user_name
                 FROM conversations c
                 LEFT JOIN users u ON c.assigned_user_id = u.id
-                WHERE ($1 IS NOT NULL AND c.lead_phone = $1)
-                   OR ($2 IS NOT NULL AND c.tax_id = $2 AND c.tax_id != '')
+                WHERE c.lead_phone = $1
                 LIMIT 1
-            `, [lead.lead_phone, lead.tax_id]);
+            `, [lead.lead_phone]);
+
+            // If no match by phone and we have a tax_id, try that
+            if (existingResult.rows.length === 0 && lead.tax_id) {
+                existingResult = await db.query(`
+                    SELECT c.id, c.lead_phone, c.tax_id, c.business_name, c.assigned_user_id, 
+                           c.display_id, c.exclusivity_expires_at, c.state,
+                           u.name as assigned_user_name
+                    FROM conversations c
+                    LEFT JOIN users u ON c.assigned_user_id = u.id
+                    WHERE c.tax_id = $1 AND c.tax_id != ''
+                    LIMIT 1
+                `, [lead.tax_id]);
+            }
 
             if (existingResult.rows.length > 0) {
                 const existing = existingResult.rows[0];
@@ -219,18 +231,28 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                 const lockedStates = ['SUBMITTED', 'FUNDED', 'OFFER_RECEIVED'];
                 
                 if (lockedStates.includes(existing.state) && !isOwnLead) {
-                    // REJECT - submitted deal belongs to someone else
-                    rejections.push({
-                        row: validLeads.indexOf(lead) + 1,
-                        phone: lead.lead_phone,
-                        business_name: lead.business_name,
-                        reason: `Already submitted by ${existing.assigned_user_name || 'another user'} (CID# ${existing.display_id})`,
-                        matched_by: existing.lead_phone === lead.lead_phone ? 'phone' : 'EIN'
-                    });
-                } else {
-                    // Can update/claim - either own lead or not yet submitted
-                    toUpdate.push({ lead, existingId: existing.id, claim: !isOwnLead });
+                    // Check if 14 day exclusivity has expired
+                    const isExpired = !existing.exclusivity_expires_at || 
+                                      new Date(existing.exclusivity_expires_at) < new Date();
+                    
+                    if (!isExpired) {
+                        // Still locked - REJECT
+                        const daysLeft = Math.ceil(
+                            (new Date(existing.exclusivity_expires_at) - new Date()) / (1000 * 60 * 60 * 24)
+                        );
+                        rejections.push({
+                            row: validLeads.indexOf(lead) + 1,
+                            phone: lead.lead_phone,
+                            business_name: lead.business_name,
+                            reason: `Submitted by ${existing.assigned_user_name || 'another user'} (CID# ${existing.display_id}, available in ${daysLeft} days)`,
+                            matched_by: existing.lead_phone === lead.lead_phone ? 'phone' : 'EIN'
+                        });
+                        continue;
+                    }
                 }
+                
+                // Can update/claim
+                toUpdate.push({ lead, existingId: existing.id, claim: !isOwnLead });
             } else {
                 // New lead
                 toInsert.push(lead);
