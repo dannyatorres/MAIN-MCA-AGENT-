@@ -224,7 +224,7 @@ class GmailInboxService {
             
             const messages = await this.connection.search(
                 [['UID', String(emailUid)]],
-                { bodies: [''], struct: true }
+                { bodies: ['HEADER', ''], struct: true }
             );
             
             if (!messages.length) {
@@ -232,42 +232,72 @@ class GmailInboxService {
             }
 
             const rawBody = messages[0].parts.find(p => p.which === '')?.body;
+            const headerPart = messages[0].parts.find(p => p.which === 'HEADER')?.body;
+            
             if (!rawBody) {
                 throw new Error('Could not fetch raw email body');
             }
 
-            // 🛡️ STRIP DANGEROUS HEADERS
+            // Extract original headers for the forwarded message block
+            const getHeader = (name) => {
+                const match = headerPart?.match(new RegExp(`^${name}: (.*)`, 'im'));
+                return match ? match[1].trim() : '';
+            };
+
+            const originalFrom = getHeader('From');
+            const originalTo = getHeader('To');
+            const originalCc = getHeader('Cc');
+            const originalDate = getHeader('Date');
+            const originalSubject = getHeader('Subject');
+            const originalReplyTo = getHeader('Reply-To') || originalFrom;
+
+            // Build the forwarded message header block
+            let forwardBlock = `---------- Forwarded message ----------\r\n`;
+            forwardBlock += `From: ${originalFrom}\r\n`;
+            forwardBlock += `Date: ${originalDate}\r\n`;
+            forwardBlock += `Subject: ${originalSubject}\r\n`;
+            forwardBlock += `To: ${originalTo}\r\n`;
+            if (originalCc) forwardBlock += `Cc: ${originalCc}\r\n`;
+            forwardBlock += `\r\n`;
+
+            // Strip ALL recipient/routing headers from raw
             let modifiedRaw = rawBody
-                // Remove headers that could cause unintended sends
                 .replace(/^To: .*\r?\n/gim, '')
                 .replace(/^Cc: .*\r?\n/gim, '')
                 .replace(/^Bcc: .*\r?\n/gim, '')
-                .replace(/^Reply-To: .*\r?\n/gim, '')
                 .replace(/^From: .*\r?\n/gim, '')
+                .replace(/^Reply-To: .*\r?\n/gim, '')
                 .replace(/^Delivered-To: .*\r?\n/gim, '')
                 .replace(/^Return-Path: .*\r?\n/gim, '')
-                // Remove threading headers (prevents appearing in original thread)
                 .replace(/^In-Reply-To: .*\r?\n/gim, '')
                 .replace(/^References: .*\r?\n/gim, '')
                 .replace(/^Message-ID: .*\r?\n/gim, '')
-                // Remove received headers (cleanup)
                 .replace(/^Received: [\s\S]*?\r?\n(?=\S)/gm, '');
 
             // Update subject
-            modifiedRaw = modifiedRaw.replace(
-                /^Subject: (.*)/im, 
-                `Subject: ${subjectPrefix ? subjectPrefix + ' ' : 'Fwd: '}$1`
-            );
+            const newSubject = subjectPrefix 
+                ? `${subjectPrefix} ${originalSubject}`
+                : `Fwd: ${originalSubject}`;
 
-            // 🛡️ ADD SAFE HEADERS AT THE TOP
+            modifiedRaw = modifiedRaw.replace(/^Subject: .*\r?\n/im, '');
+
+            // Find where headers end and body begins
+            const headerBodySplit = modifiedRaw.indexOf('\r\n\r\n');
+            let headers = modifiedRaw.substring(0, headerBodySplit);
+            let body = modifiedRaw.substring(headerBodySplit + 4);
+
+            // Build new safe headers
             const safeHeaders = [
                 `From: ${this.user}`,
                 `To: ${toAddress}`,
-            ].join('\r\n') + '\r\n';
+                `Reply-To: ${originalReplyTo}`,
+                `Subject: ${newSubject}`,
+            ].join('\r\n');
 
-            modifiedRaw = safeHeaders + modifiedRaw;
+            // Rebuild: safe headers + remaining headers + forward block + body
+            const finalMessage = safeHeaders + '\r\n' + headers + '\r\n\r\n' + forwardBlock + body;
 
-            const encodedMessage = Buffer.from(modifiedRaw)
+            const encodedMessage = Buffer.from(finalMessage)
                 .toString('base64')
                 .replace(/\+/g, '-')
                 .replace(/\//g, '_')
