@@ -295,31 +295,68 @@ router.post('/', requireModifyPermission, async (req, res) => {
             lastName = parts.slice(1).join(' ');
         }
 
-        // --- 3. CHECK FOR DUPLICATES ---
-        const existingCheck = await db.query(
-            'SELECT id FROM conversations WHERE lead_phone = $1',
-            [leadPhone]
-        );
+        // --- 3. CHECK FOR DUPLICATES (Phone OR EIN) ---
+        const EXCLUSIVITY_DAYS = 14;
+        const existingCheck = await db.query(`
+            SELECT c.id, c.lead_phone, c.tax_id, c.business_name, 
+                   c.assigned_user_id, c.display_id, c.exclusivity_expires_at,
+                   u.name as assigned_user_name
+            FROM conversations c
+            LEFT JOIN users u ON c.assigned_user_id = u.id
+            WHERE ($1 IS NOT NULL AND c.lead_phone = $1)
+               OR ($2 IS NOT NULL AND c.tax_id = $2 AND c.tax_id != '')
+            LIMIT 1
+        `, [leadPhone, data.tax_id || data.taxId || null]);
 
         let newId;
         let isUpdate = false;
 
         if (existingCheck.rows.length > 0) {
-            // DUPLICATE FOUND: Update specific fields instead of creating
-            newId = existingCheck.rows[0].id;
-            isUpdate = true;
-            console.log(`⚠️ Lead exists (${newId}). Updating basic info.`);
+            const existing = existingCheck.rows[0];
+            const isOwnLead = existing.assigned_user_id === req.user?.id;
+            const isExpired = !existing.exclusivity_expires_at || 
+                              new Date(existing.exclusivity_expires_at) < new Date();
+            const isUnassigned = !existing.assigned_user_id;
 
-            await db.query(`
-                UPDATE conversations SET
-                    business_name = COALESCE($1, business_name),
-                    email = COALESCE($2, email),
-                    first_name = COALESCE($3, first_name),
-                    last_name = COALESCE($4, last_name),
-                    last_activity = NOW()
-                WHERE id = $5
-            `, [data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
+            if (isOwnLead || isUnassigned || isExpired) {
+                // Can update - own lead, unassigned, or expired
+                newId = existing.id;
+                isUpdate = true;
 
+                const claimFields = (!isOwnLead && (isUnassigned || isExpired))
+                    ? `assigned_user_id = '${req.user?.id}', exclusivity_expires_at = NOW() + INTERVAL '${EXCLUSIVITY_DAYS} days',`
+                    : '';
+
+                console.log(`⚠️ Lead exists (${newId}). ${claimFields ? 'Claiming and updating.' : 'Updating.'}`);
+
+                await db.query(`
+                    UPDATE conversations SET
+                        ${claimFields}
+                        business_name = COALESCE($1, business_name),
+                        email = COALESCE($2, email),
+                        first_name = COALESCE($3, first_name),
+                        last_name = COALESCE($4, last_name),
+                        last_activity = NOW()
+                    WHERE id = $5
+                `, [data.business_name || data.businessName, data.email || data.businessEmail, firstName, lastName, newId]);
+
+            } else {
+                // BLOCKED - belongs to someone else and not expired
+                const daysLeft = Math.ceil(
+                    (new Date(existing.exclusivity_expires_at) - new Date()) / (1000 * 60 * 60 * 24)
+                );
+                return res.status(409).json({
+                    success: false,
+                    error: 'duplicate_protected',
+                    message: `This lead is assigned to ${existing.assigned_user_name || 'another user'} (CID# ${existing.display_id})`,
+                    details: {
+                        matched_by: existing.lead_phone === leadPhone ? 'phone' : 'EIN',
+                        assigned_to: existing.assigned_user_name,
+                        display_id: existing.display_id,
+                        expires_in_days: daysLeft
+                    }
+                });
+            }
         } else {
             // --- 4. INSERT ALL FIELDS (With Correct Address Mapping + User Tracking) ---
             const insertResult = await db.query(`
@@ -336,14 +373,14 @@ router.post('/', requireModifyPermission, async (req, res) => {
                     owner2_first_name, owner2_last_name, owner2_email, owner2_phone,
                     owner2_ssn, owner2_dob, owner2_ownership_percent,
                     owner2_address, owner2_city, owner2_state, owner2_zip,
-                    created_by_user_id, assigned_user_id
+                    created_by_user_id, assigned_user_id, exclusivity_expires_at
                 )
                 VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'initial_contact', $12,
                     $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
                     $26, $27, $28, $29, $30,
                     $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
-                    $42, $42
+                    $42, $42, NOW() + INTERVAL '14 days'
                 )
                 RETURNING id
             `, [

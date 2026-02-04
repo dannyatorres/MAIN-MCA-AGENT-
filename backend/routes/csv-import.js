@@ -192,105 +192,110 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             console.log(`   - Error details:`, errors);
         }
 
-        // 4. Bulk Insert
-        const BATCH_SIZE = 500;
+        // 4. Process Leads with Deduplication + Exclusivity
+        const EXCLUSIVITY_DAYS = 14;
+        const rejections = [];
+        const toInsert = [];
+        const toUpdate = [];
 
-        for (let i = 0; i < validLeads.length; i += BATCH_SIZE) {
-            const batch = validLeads.slice(i, i + BATCH_SIZE);
+        for (const lead of validLeads) {
+            // Check for existing lead by phone OR tax_id
+            const existingResult = await db.query(`
+                SELECT id, lead_phone, tax_id, business_name, assigned_user_id, 
+                       display_id, exclusivity_expires_at,
+                       u.name as assigned_user_name
+                FROM conversations c
+                LEFT JOIN users u ON c.assigned_user_id = u.id
+                WHERE ($1 IS NOT NULL AND c.lead_phone = $1)
+                   OR ($2 IS NOT NULL AND c.tax_id = $2 AND c.tax_id != '')
+                LIMIT 1
+            `, [lead.lead_phone, lead.tax_id]);
 
-            const convValues = [];
-            const convPlaceholders = [];
+            if (existingResult.rows.length > 0) {
+                const existing = existingResult.rows[0];
+                const isOwnLead = existing.assigned_user_id === req.user?.id;
+                const isExpired = !existing.exclusivity_expires_at || 
+                                  new Date(existing.exclusivity_expires_at) < new Date();
+                const isUnassigned = !existing.assigned_user_id;
 
-            batch.forEach((lead, idx) => {
-                // We are now inserting 23 values per row (was 21) + NOW()
-                // Make sure this placeholder count matches the number of variables pushed below
-                const offset = idx * 23;
-
-                // Generates ($1, $2, ... $23, NOW())
-                const placeholderStr = Array.from({length: 23}, (_, k) => `$${offset + k + 1}`).join(', ');
-                convPlaceholders.push(`(${placeholderStr}, NOW())`);
-
-                convValues.push(
-                    // 1-5: Basic
-                    lead.id,
-                    lead.business_name,
-                    lead.lead_phone,
-                    lead.email,
-                    lead.us_state,
-
-                    // 6-8: Business Address
-                    lead.address,
-                    lead.city,
-                    lead.zip,
-
-                    // 9-10: Owner Name
-                    lead.first_name,
-                    lead.last_name,
-
-                    // 11-14: Owner Address
-                    lead.owner_home_address || null,
-                    lead.owner_home_city || null,
-                    lead.owner_home_state || null,
-                    lead.owner_home_zip || null,
-
-                    // 15-21: CONSOLIDATED DETAILS (These were missing!)
-                    lead.annual_revenue || null,
-                    lead.business_start_date || null,
-                    lead.date_of_birth || null,
-                    lead.tax_id || null,
-                    lead.ssn || null,
-                    lead.industry || null,
-                    lead.requested_amount || null,
-
-                    // 22-23: User tracking
-                    req.user?.id || null,
-                    req.user?.id || null
-                );
-            });
-
-            if (batch.length > 0) {
-                const query = `
-                    INSERT INTO conversations (
-                        id, business_name, lead_phone, email, us_state,
-                        address, city, zip, first_name, last_name,
-                        owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
-
-                        -- Newly Added Columns:
-                        annual_revenue, business_start_date, date_of_birth,
-                        tax_id, ssn, industry_type, funding_amount,
-
-                        -- User tracking:
-                        created_by_user_id, assigned_user_id,
-
-                        created_at
-                    ) VALUES ${convPlaceholders.join(', ')}
-                    ON CONFLICT (lead_phone)
-                    DO UPDATE SET
-                        business_name = COALESCE(EXCLUDED.business_name, conversations.business_name),
-                        email = COALESCE(EXCLUDED.email, conversations.email),
-
-                        -- Update Address Info
-                        owner_home_address = COALESCE(EXCLUDED.owner_home_address, conversations.owner_home_address),
-                        owner_home_city = COALESCE(EXCLUDED.owner_home_city, conversations.owner_home_city),
-                        owner_home_state = COALESCE(EXCLUDED.owner_home_state, conversations.owner_home_state),
-                        owner_home_zip = COALESCE(EXCLUDED.owner_home_zip, conversations.owner_home_zip),
-
-                        -- Update Financials/Meta
-                        annual_revenue = COALESCE(EXCLUDED.annual_revenue, conversations.annual_revenue),
-                        tax_id = COALESCE(EXCLUDED.tax_id, conversations.tax_id),
-                        ssn = COALESCE(EXCLUDED.ssn, conversations.ssn),
-                        date_of_birth = COALESCE(EXCLUDED.date_of_birth, conversations.date_of_birth),
-
-                        last_activity = NOW()
-                `;
-
-                const result = await db.query(query + ' RETURNING (xmax = 0) AS inserted', convValues);
-                const inserted = result.rows.filter(r => r.inserted).length;
-                const updated = result.rows.length - inserted;
-                importedCount += batch.length;
-                skippedDuplicate += updated;
-                console.log(`📥 Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${inserted} new, ${updated} updated (duplicates)`);
+                if (isOwnLead) {
+                    // User's own lead - update it
+                    toUpdate.push({ lead, existingId: existing.id });
+                } else if (isUnassigned || isExpired) {
+                    // Unassigned or expired - claim it
+                    toUpdate.push({ lead, existingId: existing.id, claim: true });
+                } else {
+                    // Owned by someone else and not expired - REJECT
+                    const daysLeft = Math.ceil(
+                        (new Date(existing.exclusivity_expires_at) - new Date()) / (1000 * 60 * 60 * 24)
+                    );
+                    rejections.push({
+                        row: validLeads.indexOf(lead) + 1,
+                        phone: lead.lead_phone,
+                        business_name: lead.business_name,
+                        reason: `Duplicate - assigned to ${existing.assigned_user_name || 'another user'} (CID# ${existing.display_id}, expires in ${daysLeft} days)`,
+                        matched_by: existing.lead_phone === lead.lead_phone ? 'phone' : 'EIN'
+                    });
+                }
+            } else {
+                // New lead
+                toInsert.push(lead);
             }
+        }
+
+        // Process inserts
+        for (const lead of toInsert) {
+            await db.query(`
+                INSERT INTO conversations (
+                    id, business_name, lead_phone, email, us_state,
+                    address, city, zip, first_name, last_name,
+                    owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
+                    annual_revenue, business_start_date, date_of_birth,
+                    tax_id, ssn, industry_type, funding_amount,
+                    created_by_user_id, assigned_user_id,
+                    exclusivity_expires_at, created_at
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+                    $22, $23, NOW() + INTERVAL '${EXCLUSIVITY_DAYS} days', NOW()
+                )
+            `, [
+                lead.id, lead.business_name, lead.lead_phone, lead.email, lead.us_state,
+                lead.address, lead.city, lead.zip, lead.first_name, lead.last_name,
+                lead.owner_home_address, lead.owner_home_city, lead.owner_home_state, lead.owner_home_zip,
+                lead.annual_revenue, lead.business_start_date, lead.date_of_birth,
+                lead.tax_id, lead.ssn, lead.industry, lead.requested_amount,
+                req.user?.id, req.user?.id
+            ]);
+            importedCount++;
+        }
+
+        // Process updates
+        for (const { lead, existingId, claim } of toUpdate) {
+            const updateFields = claim 
+                ? `assigned_user_id = $2, exclusivity_expires_at = NOW() + INTERVAL '${EXCLUSIVITY_DAYS} days',`
+                : '';
+
+            await db.query(`
+                UPDATE conversations SET
+                    ${updateFields}
+                    business_name = COALESCE($3, business_name),
+                    email = COALESCE($4, email),
+                    owner_home_address = COALESCE($5, owner_home_address),
+                    owner_home_city = COALESCE($6, owner_home_city),
+                    owner_home_state = COALESCE($7, owner_home_state),
+                    owner_home_zip = COALESCE($8, owner_home_zip),
+                    annual_revenue = COALESCE($9, annual_revenue),
+                    tax_id = COALESCE($10, tax_id),
+                    last_activity = NOW()
+                WHERE id = $1
+            `, [
+                existingId, req.user?.id,
+                lead.business_name, lead.email,
+                lead.owner_home_address, lead.owner_home_city, lead.owner_home_state, lead.owner_home_zip,
+                lead.annual_revenue, lead.tax_id
+            ]);
+            skippedDuplicate++;
         }
 
         // 5. Cleanup
@@ -311,7 +316,9 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
             imported_count: importedCount,
             skipped_no_phone: skippedNoPhone,
             duplicates_updated: skippedDuplicate,
-            new_records: importedCount - skippedDuplicate,
+            new_records: toInsert.length,
+            rejected_count: rejections.length,
+            rejections: rejections,
             errors
         });
 
