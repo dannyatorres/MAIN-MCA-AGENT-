@@ -162,6 +162,8 @@ Object.assign(window.MobileApp.prototype, {
             const conv = this.conversations.get(convId);
             if (conv) {
                 conv.last_message = msg.content;
+                const messageTime = msg.timestamp || msg.created_at || new Date().toISOString();
+                conv.last_message_at = messageTime;
                 conv.last_activity = new Date().toISOString();
 
                 if (convId !== String(this.currentConversationId)) {

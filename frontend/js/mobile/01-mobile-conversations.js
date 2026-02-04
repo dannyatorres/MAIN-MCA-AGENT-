@@ -57,7 +57,7 @@ Object.assign(window.MobileApp.prototype, {
                 return;
             }
 
-            // SORT: Offers first, then unread, then by last_activity (matches desktop)
+            // SORT: Offers first, then unread, then by last_message_at (matches desktop)
             convArray.sort((a, b) => {
                 if (a.has_offer && !b.has_offer) return -1;
                 if (!a.has_offer && b.has_offer) return 1;
@@ -65,14 +65,18 @@ Object.assign(window.MobileApp.prototype, {
                 if ((a.unread_count > 0) && !(b.unread_count > 0)) return -1;
                 if (!(a.unread_count > 0) && (b.unread_count > 0)) return 1;
 
-                return new Date(b.last_activity || 0) - new Date(a.last_activity || 0);
+                const timeA = new Date(a.last_message_at || a.last_activity || a.created_at || 0);
+                const timeB = new Date(b.last_message_at || b.last_activity || b.created_at || 0);
+
+                return timeB - timeA;
             });
 
             const html = convArray.map(conv => {
                 const businessName = conv.business_name || `${conv.first_name || ''} ${conv.last_name || ''}`.trim() || 'Unknown';
                 const initials = this.getInitials(businessName);
                 const phone = this.utils.formatPhone(conv.lead_phone || conv.phone || '');
-                const time = this.utils.formatDate(conv.last_activity, 'ago');
+                const displayTime = conv.last_message_at || conv.last_activity;
+                const time = this.utils.formatDate(displayTime, 'ago');
                 const isSelected = conv.id === this.currentConversationId;
                 const unread = conv.unread_count || 0;
                 let metaBadge = '';
