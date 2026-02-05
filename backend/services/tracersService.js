@@ -2,11 +2,28 @@
 const axios = require('axios');
 const aiMatcher = require('./aiMatcher');
 const { trackUsage } = require('./usageTracker');
+const pool = require('../db');
 require('dotenv').config();
 
 const TRACERS_URL = 'https://api.galaxysearchapi.com/PersonSearch';
 const AP_NAME = process.env.TRACERS_AP_NAME;
 const AP_PASSWORD = process.env.TRACERS_AP_PASSWORD;
+
+async function getCachedResult(cacheKey) {
+    const { rows } = await pool.query(
+        `SELECT result FROM tracers_cache WHERE cache_key = $1 AND created_at > NOW() - INTERVAL '7 days'`,
+        [cacheKey]
+    );
+    return rows.length > 0 ? rows[0].result : null;
+}
+
+async function cacheResult(cacheKey, result) {
+    await pool.query(
+        `INSERT INTO tracers_cache (cache_key, result) VALUES ($1, $2)
+         ON CONFLICT (cache_key) DO UPDATE SET result = $2, created_at = NOW()`,
+        [cacheKey, JSON.stringify(result)]
+    );
+}
 
 async function searchBySsn(ssn, firstName, lastName, address = null, city = null, state = null, zip = null, userId = null) {
     try {
@@ -15,6 +32,16 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
 
         // ATTEMPT 1: SEARCH BY SSN ONLY (Force Loose Search)
         const rawSsn = ssn ? ssn.replace(/\D/g, '') : '';
+
+        // Build cache key from inputs
+        const cacheKey = `${rawSsn}|${(firstName||'').toLowerCase()}|${(lastName||'').toLowerCase()}|${(address||'').toLowerCase()}|${(state||'').toLowerCase()}`;
+
+        // Check cache first
+        const cached = await getCachedResult(cacheKey);
+        if (cached) {
+            console.log(`[Tracers] Cache hit for ${firstName} ${lastName}`);
+            return { success: true, match: cached };
+        }
 
         if (rawSsn.length === 9) {
             const payload = createPayload({
@@ -85,7 +112,9 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
 
         if (!bestMatch) return { success: false, error: `AI Mismatch: Candidates found but didn't match "${targetName}"` };
 
-        return { success: true, match: parseTracersResponse(bestMatch) };
+        const parsed = parseTracersResponse(bestMatch);
+        await cacheResult(cacheKey, parsed);
+        return { success: true, match: parsed };
 
     } catch (error) {
         return { success: false, error: error.message };
