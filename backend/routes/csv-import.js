@@ -198,45 +198,56 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
         const toInsert = [];
         const toUpdate = [];
 
-        for (const lead of validLeads) {
-            // Check for existing lead - first by phone, then by EIN
-            let existingResult = await db.query(`
+        // --- BATCH DEDUP: Fetch all existing leads in 2 queries instead of 1 per lead ---
+        const allPhones = validLeads.map(l => l.lead_phone).filter(Boolean);
+        const allTaxIds = validLeads.map(l => l.tax_id).filter(Boolean);
+
+        // Lookup by phone
+        const phoneMap = new Map();
+        if (allPhones.length > 0) {
+            const phoneResult = await db.query(`
                 SELECT c.id, c.lead_phone, c.tax_id, c.business_name, c.assigned_user_id, 
                        c.display_id, c.exclusivity_expires_at, c.state,
                        u.name as assigned_user_name
                 FROM conversations c
                 LEFT JOIN users u ON c.assigned_user_id = u.id
-                WHERE c.lead_phone = $1
-                LIMIT 1
-            `, [lead.lead_phone]);
-
-            // If no match by phone and we have a tax_id, try that
-            if (existingResult.rows.length === 0 && lead.tax_id) {
-                existingResult = await db.query(`
-                    SELECT c.id, c.lead_phone, c.tax_id, c.business_name, c.assigned_user_id, 
-                           c.display_id, c.exclusivity_expires_at, c.state,
-                           u.name as assigned_user_name
-                    FROM conversations c
-                    LEFT JOIN users u ON c.assigned_user_id = u.id
-                    WHERE c.tax_id = $1 AND c.tax_id != ''
-                    LIMIT 1
-                `, [lead.tax_id]);
+                WHERE c.lead_phone = ANY($1)
+            `, [allPhones]);
+            for (const row of phoneResult.rows) {
+                phoneMap.set(row.lead_phone, row);
             }
+        }
 
-            if (existingResult.rows.length > 0) {
-                const existing = existingResult.rows[0];
+        // Lookup by tax_id
+        const taxIdMap = new Map();
+        if (allTaxIds.length > 0) {
+            const taxResult = await db.query(`
+                SELECT c.id, c.lead_phone, c.tax_id, c.business_name, c.assigned_user_id, 
+                       c.display_id, c.exclusivity_expires_at, c.state,
+                       u.name as assigned_user_name
+                FROM conversations c
+                LEFT JOIN users u ON c.assigned_user_id = u.id
+                WHERE c.tax_id = ANY($1) AND c.tax_id != ''
+            `, [allTaxIds]);
+            for (const row of taxResult.rows) {
+                taxIdMap.set(row.tax_id, row);
+            }
+        }
+
+        // Classify leads using the maps
+        for (const lead of validLeads) {
+            const existing = phoneMap.get(lead.lead_phone) || 
+                            (lead.tax_id ? taxIdMap.get(lead.tax_id) : null);
+
+            if (existing) {
                 const isOwnLead = existing.assigned_user_id === req.user?.id;
-                
-                // Only SUBMITTED/FUNDED leads have exclusivity
                 const lockedStates = ['SUBMITTED', 'FUNDED', 'OFFER_RECEIVED'];
-                
+
                 if (lockedStates.includes(existing.state) && !isOwnLead) {
-                    // Check if 14 day exclusivity has expired
                     const isExpired = !existing.exclusivity_expires_at || 
                                       new Date(existing.exclusivity_expires_at) < new Date();
-                    
+
                     if (!isExpired) {
-                        // Still locked - REJECT
                         const daysLeft = Math.ceil(
                             (new Date(existing.exclusivity_expires_at) - new Date()) / (1000 * 60 * 60 * 24)
                         );
@@ -250,17 +261,35 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                         continue;
                     }
                 }
-                
-                // Can update/claim
+
                 toUpdate.push({ lead, existingId: existing.id, claim: !isOwnLead });
             } else {
-                // New lead
                 toInsert.push(lead);
             }
         }
 
-        // Process inserts
-        for (const lead of toInsert) {
+        // --- BATCH INSERT in chunks of 50 ---
+        const BATCH_SIZE = 50;
+        for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+            const batch = toInsert.slice(i, i + BATCH_SIZE);
+            const values = [];
+            const params = [];
+            let paramIndex = 1;
+
+            for (const lead of batch) {
+                const start = paramIndex;
+                values.push(`($${start}, $${start+1}, $${start+2}, $${start+3}, $${start+4}, $${start+5}, $${start+6}, $${start+7}, $${start+8}, $${start+9}, $${start+10}, $${start+11}, $${start+12}, $${start+13}, $${start+14}, $${start+15}, $${start+16}, $${start+17}, $${start+18}, $${start+19}, $${start+20}, $${start+21}, $${start+22}, NOW() + INTERVAL '${EXCLUSIVITY_DAYS} days', NOW())`);
+                params.push(
+                    lead.id, lead.business_name, lead.lead_phone, lead.email, lead.us_state,
+                    lead.address, lead.city, lead.zip, lead.first_name, lead.last_name,
+                    lead.owner_home_address, lead.owner_home_city, lead.owner_home_state, lead.owner_home_zip,
+                    lead.annual_revenue, lead.business_start_date, lead.date_of_birth,
+                    lead.tax_id, lead.ssn, lead.industry, lead.requested_amount,
+                    req.user?.id, req.user?.id
+                );
+                paramIndex += 23;
+            }
+
             await db.query(`
                 INSERT INTO conversations (
                     id, business_name, lead_phone, email, us_state,
@@ -270,47 +299,54 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     tax_id, ssn, industry_type, funding_amount,
                     created_by_user_id, assigned_user_id,
                     exclusivity_expires_at, created_at
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
-                    $22, $23, NOW() + INTERVAL '${EXCLUSIVITY_DAYS} days', NOW()
-                )
-            `, [
-                lead.id, lead.business_name, lead.lead_phone, lead.email, lead.us_state,
-                lead.address, lead.city, lead.zip, lead.first_name, lead.last_name,
-                lead.owner_home_address, lead.owner_home_city, lead.owner_home_state, lead.owner_home_zip,
-                lead.annual_revenue, lead.business_start_date, lead.date_of_birth,
-                lead.tax_id, lead.ssn, lead.industry, lead.requested_amount,
-                req.user?.id, req.user?.id
-            ]);
-            importedCount++;
+                ) VALUES ${values.join(', ')}
+            `, params);
+
+            importedCount += batch.length;
         }
 
         // Process updates
         for (const { lead, existingId, claim } of toUpdate) {
-            const updateFields = claim 
-                ? `assigned_user_id = $2,`
-                : '';
-
-            await db.query(`
-                UPDATE conversations SET
-                    ${updateFields}
-                    business_name = COALESCE($3, business_name),
-                    email = COALESCE($4, email),
-                    owner_home_address = COALESCE($5, owner_home_address),
-                    owner_home_city = COALESCE($6, owner_home_city),
-                    owner_home_state = COALESCE($7, owner_home_state),
-                    owner_home_zip = COALESCE($8, owner_home_zip),
-                    annual_revenue = COALESCE($9, annual_revenue),
-                    tax_id = COALESCE($10, tax_id),
-                    last_activity = NOW()
-                WHERE id = $1
-            `, [
-                existingId, req.user?.id,
-                lead.business_name, lead.email,
-                lead.owner_home_address, lead.owner_home_city, lead.owner_home_state, lead.owner_home_zip,
-                lead.annual_revenue, lead.tax_id
-            ]);
+            if (claim) {
+                await db.query(`
+                    UPDATE conversations SET
+                        assigned_user_id = $2,
+                        business_name = COALESCE($3, business_name),
+                        email = COALESCE($4, email),
+                        owner_home_address = COALESCE($5, owner_home_address),
+                        owner_home_city = COALESCE($6, owner_home_city),
+                        owner_home_state = COALESCE($7, owner_home_state),
+                        owner_home_zip = COALESCE($8, owner_home_zip),
+                        annual_revenue = COALESCE($9, annual_revenue),
+                        tax_id = COALESCE($10, tax_id),
+                        last_activity = NOW()
+                    WHERE id = $1
+                `, [
+                    existingId, req.user?.id,
+                    lead.business_name, lead.email,
+                    lead.owner_home_address, lead.owner_home_city, lead.owner_home_state, lead.owner_home_zip,
+                    lead.annual_revenue, lead.tax_id
+                ]);
+            } else {
+                await db.query(`
+                    UPDATE conversations SET
+                        business_name = COALESCE($2, business_name),
+                        email = COALESCE($3, email),
+                        owner_home_address = COALESCE($4, owner_home_address),
+                        owner_home_city = COALESCE($5, owner_home_city),
+                        owner_home_state = COALESCE($6, owner_home_state),
+                        owner_home_zip = COALESCE($7, owner_home_zip),
+                        annual_revenue = COALESCE($8, annual_revenue),
+                        tax_id = COALESCE($9, tax_id),
+                        last_activity = NOW()
+                    WHERE id = $1
+                `, [
+                    existingId,
+                    lead.business_name, lead.email,
+                    lead.owner_home_address, lead.owner_home_city, lead.owner_home_state, lead.owner_home_zip,
+                    lead.annual_revenue, lead.tax_id
+                ]);
+            }
             skippedDuplicate++;
         }
 
