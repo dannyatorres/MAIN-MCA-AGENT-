@@ -73,7 +73,7 @@ router.post('/chat', async (req, res) => {
                             state AS fcs_state, industry AS fcs_industry,
                             extracted_business_name, fcs_report, created_at
                         FROM fcs_analyses
-                        WHERE conversation_id = $1 AND status = 'complete'
+                        WHERE conversation_id = $1 AND status = 'completed'
                         ORDER BY created_at DESC LIMIT 1
                     `, [conversationId]);
                     fcs = fcsResult.rows[0] || null;
