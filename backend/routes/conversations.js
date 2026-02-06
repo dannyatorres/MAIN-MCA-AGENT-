@@ -590,7 +590,13 @@ router.put('/:id', requireConversationAccess('id'), requireModifyPermission, asy
             'priority': 'priority',
             'leadSource': 'lead_source',
             'lead_source': 'lead_source',
-            'notes': 'notes'
+            'notes': 'notes',
+            'use_of_proceeds': 'use_of_proceeds',
+            'useOfProceeds': 'use_of_proceeds',
+            'owner_title': 'owner_title',
+            'ownerTitle': 'owner_title',
+            'owner2_title': 'owner2_title',
+            'owner2Title': 'owner2_title'
         };
 
         // 3. Convert incoming data to snake_case

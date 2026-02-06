@@ -48,6 +48,7 @@ router.post('/chat', async (req, res) => {
                     c.monthly_revenue, c.annual_revenue, c.credit_score,
                     c.funding_amount, c.factor_rate, c.funding_date, c.term_months,
                     c.recent_funding, c.funding_status,
+                    c.use_of_proceeds, c.owner_title, c.owner2_title,
                     c.state, c.has_offer, c.ai_enabled, c.disposition, c.notes,
                     c.owner2_first_name, c.owner2_last_name,
                     ld.business_type AS ld_business_type,

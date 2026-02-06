@@ -58,6 +58,8 @@ const generateResponse = async (query, context, userId = null) => {
             systemPrompt += `\nOwner: ${lead.first_name || ''} ${lead.last_name || ''}`.trim();
             if (lead.owner2_first_name) systemPrompt += `\nOwner 2: ${lead.owner2_first_name} ${lead.owner2_last_name || ''}`.trim();
             systemPrompt += `\nEntity Type: ${lead.entity_type || 'Unknown'}`;
+            systemPrompt += `\nOwner Title: ${lead.owner_title || 'Unknown'}`;
+            systemPrompt += `\nUse of Proceeds: ${lead.use_of_proceeds || 'Unknown'}`;
             systemPrompt += `\nIndustry: ${lead.industry_type || lead.ld_business_type || 'Unknown'}`;
             systemPrompt += `\nState: ${lead.us_state || 'Unknown'}`;
             systemPrompt += `\nAddress: ${lead.address || lead.ld_business_address || 'N/A'}${lead.city ? ', ' + lead.city : ''}${lead.us_state ? ', ' + lead.us_state : ''} ${lead.zip || ''}`.trim();
@@ -220,6 +222,11 @@ Available actions:
 {"message": "I'll mark this as funded.", "action": {"action": "update_deal", "data": {"state": "FUNDED", "funded_amount": 50000}, "confirm_text": "Mark deal as FUNDED for $50,000?"}}
 Valid states: NEW, CONTACTED, DOCS_IN, OFFER_RECEIVED, CONTRACTED, FUNDED, DEAD, ARCHIVED
 
+CONVERSATION FIELDS (update_lead):
+- use_of_proceeds
+- owner_title
+- owner2_title
+
 4. append_note - Add a note (use ONLY for general notes, NOT for offer data)
 {"message": "I'll add that note.", "action": {"action": "append_note", "data": {"note": "Client prefers weekly payments"}, "confirm_text": "Add note: Client prefers weekly payments?"}}
 
@@ -251,6 +258,96 @@ RULES:
 WHEN USER SAYS: "submit this deal", "sub this", "send it out", "send to lenders"
 
 BEFORE proposing submit_deal, you MUST present a READINESS CHECKLIST:
+
+THERE ARE TWO SEPARATE CHECKS. Always run both when user wants to submit.
+
+📋 CHECK 1: APPLICATION READINESS (can we generate/send the app?)
+These fields must be filled in the database to produce a complete application PDF:
+
+BUSINESS INFO:
+- business_name (Legal Name)
+- dba_name (DBA — can be same as business name, "N/A" is ok)
+- address, city, us_state, zip (Business Address)
+- lead_phone (Business Phone)
+- email (Business Email)
+- tax_id (Federal Tax ID / EIN)
+- business_start_date (Date Started)
+- entity_type (LLC, Corp, Sole Prop, etc)
+- industry_type (Industry)
+- use_of_proceeds (Working Capital, Expansion, etc — default "Working Capital" if not specified)
+
+FINANCIALS:
+- annual_revenue OR monthly_revenue (if only monthly, multiply by 12)
+- funding_amount (Requested Amount)
+
+OWNER 1:
+- first_name, last_name (Owner Name)
+- owner_title (Title — default "Owner" if not specified)
+- owner_home_address, owner_home_city, owner_home_state, owner_home_zip
+- owner_email (can be same as business email)
+- ssn (Social Security Number — DO NOT display in chat, just show ✅ or ❌)
+- date_of_birth
+- owner_ownership_percent
+
+OWNER 2 (only if owner2_first_name exists):
+- owner2_first_name, owner2_last_name
+- owner2_title
+- owner2_email, owner2_phone
+- owner2_ssn (DO NOT display)
+- owner2_dob
+- owner2_ownership_percent
+- owner2_address, owner2_city, owner2_state, owner2_zip
+
+RULES FOR APP CHECK:
+- SSN and DOB: only show ✅ on file or ❌ missing. NEVER display the actual values.
+- If use_of_proceeds is empty, suggest "Working Capital" and offer to save it
+- If owner_title is empty, suggest "Owner" and offer to save it
+- If dba_name is empty, suggest using business_name and offer to save it
+- If annual_revenue is empty but monthly_revenue exists, calculate it (monthly × 12) and offer to save
+- If funding_amount is empty, ask the user
+
+📋 CHECK 2: QUALIFICATION READINESS (can we run lender matching?)
+These are needed for the qualification engine — credit_score does NOT go on the app but IS required here:
+
+- credit_score / FICO (REQUIRED — ask if missing)
+- monthly_revenue or FCS average_revenue
+- industry_type or FCS fcs_industry
+- us_state or FCS fcs_state
+- position (derive from FCS position_count)
+- depositsPerMonth (from FCS, optional but improves matching)
+- negativeDays (from FCS, optional but improves matching)
+
+WHEN USER SAYS "sub this deal" or similar:
+1. Run CHECK 1 (App Readiness) — show missing fields
+2. Run CHECK 2 (Qualification Readiness) — show missing fields
+3. If anything is missing, list it all at once so user can fill everything in one shot
+4. If everything passes, proceed to qualify_deal action
+
+EXAMPLE OUTPUT:
+"Here's where we stand on G&A General Contractors:
+
+📋 APP READINESS:
+✅ Business: G&A General Contractors LLC
+✅ Address: 123 Main St, Richmond, VA 23220
+✅ Phone: (804) 555-1234
+✅ EIN: on file
+✅ Started: 06/2019 | LLC | Construction
+❌ Use of Proceeds: missing (want me to set 'Working Capital'?)
+❌ Annual Revenue: missing (FCS shows $152K/mo → $1.83M/yr — save it?)
+❌ Requested Amount: missing — how much are they looking for?
+✅ Owner: John Smith | Owner
+✅ SSN: on file | DOB: on file
+✅ Home: 456 Oak Ave, Richmond, VA 23221
+✅ Ownership: 100%
+
+📋 QUALIFICATION READINESS:
+❌ Credit Score: missing — what's the FICO?
+✅ Revenue: $152,530/mo (FCS)
+✅ Industry: Construction (FCS)
+✅ State: VA
+✅ Position: 1st (FCS: 0 active)
+
+I need: credit score, requested amount, and I'll auto-fill use of proceeds and annual revenue. What's the FICO and how much do they want?"
 
 📋 SUBMISSION READINESS CHECK
 Use ✅ or ❌ for each. Here's WHERE to find each value:
