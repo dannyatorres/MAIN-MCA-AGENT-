@@ -228,9 +228,22 @@ Object.assign(window.MobileApp.prototype, {
 
             const refreshIndicator = document.createElement('div');
             refreshIndicator.className = 'pull-refresh-indicator';
-            refreshIndicator.innerHTML = '<div class="pull-refresh-spinner"></div>';
-            refreshIndicator.style.cssText = 'height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:height 0.2s;';
+            refreshIndicator.innerHTML = `
+                <div class="pull-progress-ring">
+                    <svg viewBox="0 0 36 36">
+                        <circle class="ring-bg" cx="18" cy="18" r="14"></circle>
+                        <circle class="ring-progress" cx="18" cy="18" r="14"></circle>
+                    </svg>
+                    <div class="pull-checkmark">↓</div>
+                </div>
+            `;
             list.prepend(refreshIndicator);
+
+            const refreshCircle = refreshIndicator.querySelector('.ring-progress');
+            const refreshCheckmark = refreshIndicator.querySelector('.pull-checkmark');
+            const refreshCircumference = 2 * Math.PI * 14;
+            refreshCircle.style.strokeDasharray = refreshCircumference;
+            refreshCircle.style.strokeDashoffset = refreshCircumference;
 
             list.addEventListener('touchstart', (e) => {
                 if (list.scrollTop <= 0 && !this.isLoadingMore) {
@@ -242,25 +255,46 @@ Object.assign(window.MobileApp.prototype, {
             list.addEventListener('touchmove', (e) => {
                 if (!isRefreshing || this.isLoadingMore) return;
                 refreshDistance = e.touches[0].clientY - refreshStartY;
+
                 if (refreshDistance > 0 && list.scrollTop <= 0) {
                     const progress = Math.min(refreshDistance / REFRESH_THRESHOLD, 1);
+
                     refreshIndicator.style.height = Math.min(refreshDistance * 0.5, 60) + 'px';
-                    refreshIndicator.style.opacity = progress;
+                    refreshIndicator.style.opacity = Math.min(progress * 2, 1);
+
+                    const offset = refreshCircumference * (1 - progress);
+                    refreshCircle.style.strokeDashoffset = offset;
+
+                    if (progress >= 1) {
+                        refreshCheckmark.textContent = '✓';
+                        refreshIndicator.classList.add('ready');
+                    } else {
+                        refreshCheckmark.textContent = '↓';
+                        refreshIndicator.classList.remove('ready');
+                    }
                 }
             }, { passive: true });
 
             list.addEventListener('touchend', async () => {
                 if (!isRefreshing) return;
+
                 if (refreshDistance >= REFRESH_THRESHOLD && !this.isLoadingMore) {
-                    refreshIndicator.style.height = '40px';
-                    refreshIndicator.innerHTML = '<div class="loading-spinner" style="width:20px;height:20px;"></div>';
+                    refreshIndicator.classList.add('loading');
+                    refreshCheckmark.textContent = '';
+
                     await this.loadConversations(this.dom.searchInput?.value || '', false);
+
+                    refreshIndicator.classList.remove('loading');
                 }
-                refreshIndicator.style.height = '0';
-                refreshIndicator.style.opacity = '0';
-                refreshIndicator.innerHTML = '<div class="pull-refresh-spinner"></div>';
+
+                // Reset
                 isRefreshing = false;
                 refreshDistance = 0;
+                refreshIndicator.style.height = '0';
+                refreshIndicator.style.opacity = '0';
+                refreshIndicator.classList.remove('ready');
+                refreshCircle.style.strokeDashoffset = refreshCircumference;
+                refreshCheckmark.textContent = '↓';
             });
         },
 
