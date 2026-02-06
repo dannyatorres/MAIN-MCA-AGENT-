@@ -236,6 +236,7 @@ router.post('/execute-action', async (req, res) => {
         'insert_offer': { table: 'lender_submissions', type: 'insert' },
         'update_offer': { table: 'lender_submissions', type: 'update' },
         'update_deal': { table: 'conversations', type: 'update' },
+        'update_lead': { table: 'conversations', type: 'update' },
         'append_note': { table: 'conversations', type: 'append' },
         'insert_bank_rule': { table: 'bank_rules', type: 'insert' },
         'update_bank_rule': { table: 'bank_rules', type: 'update' },
@@ -361,6 +362,47 @@ router.post('/execute-action', async (req, res) => {
                 `, values);
 
                 result = { message: `Deal updated` };
+                break;
+            }
+
+            case 'update_lead': {
+                if (!data || Object.keys(data).length === 0) {
+                    return res.json({ success: false, error: 'No fields to update' });
+                }
+
+                // Blocked fields — never let AI touch these
+                const blocked = ['ssn', 'tax_id', 'encryption_key_id', 'ssn_encrypted', 'tax_id_encrypted', 'owner2_ssn'];
+                for (const key of blocked) {
+                    if (data[key]) {
+                        return res.json({ success: false, error: `Cannot update sensitive field: ${key}` });
+                    }
+                }
+
+                // Call the existing PUT /api/conversations/:id endpoint
+                // It already handles field mapping, sanitization, and both tables
+                const updateUrl = `http://localhost:${process.env.PORT || 3000}/api/conversations/${conversationId}`;
+                let updateResult;
+                try {
+                    const updateRes = await fetch(updateUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': req.headers.authorization || '',
+                            'Cookie': req.headers.cookie || ''
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    updateResult = await updateRes.json();
+                } catch (fetchErr) {
+                    return res.json({ success: false, error: 'Update failed: ' + fetchErr.message });
+                }
+
+                if (!updateResult.success) {
+                    return res.json({ success: false, error: updateResult.error || 'Update failed' });
+                }
+
+                const fields = Object.keys(data).join(', ');
+                result = { message: `✅ Updated: ${fields}` };
                 break;
             }
 
