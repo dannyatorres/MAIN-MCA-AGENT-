@@ -45,179 +45,153 @@ const generateResponse = async (query, context, userId = null) => {
         let systemPrompt = getSystemPrompt();
 
         if (context) {
-            // Log what the AI Service actually sees
-            console.log('   🧠 [AI Service] Received Context:');
-            console.log(`       - Business: ${context.business_name}`);
-            console.log(`       - Has FCS? ${context.fcs ? 'YES' : 'NO'}`);
-            if (context.fcs) {
-                 console.log(`       - FCS ADB: ${context.fcs.average_daily_balance}`);
+            const lead = context.lead;
+            const fcs = context.fcs;
+            const strategy = context.strategy;
+
+            // ============================================
+            // SOURCE 1: LEAD INTAKE (user-entered, may be stale)
+            // ============================================
+            systemPrompt += `\n\n=== 📋 SOURCE: LEAD INTAKE (user-entered) ===`;
+            systemPrompt += `\nBusiness Name: ${lead.business_name || 'Unknown'}`;
+            if (lead.dba_name) systemPrompt += ` (DBA: ${lead.dba_name})`;
+            systemPrompt += `\nOwner: ${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+            if (lead.owner2_first_name) systemPrompt += `\nOwner 2: ${lead.owner2_first_name} ${lead.owner2_last_name || ''}`.trim();
+            systemPrompt += `\nEntity Type: ${lead.entity_type || 'Unknown'}`;
+            systemPrompt += `\nIndustry: ${lead.industry_type || lead.ld_business_type || 'Unknown'}`;
+            systemPrompt += `\nState: ${lead.us_state || 'Unknown'}`;
+            systemPrompt += `\nAddress: ${lead.address || lead.ld_business_address || 'N/A'}${lead.city ? ', ' + lead.city : ''}${lead.us_state ? ', ' + lead.us_state : ''} ${lead.zip || ''}`.trim();
+            if (lead.owner_home_address) {
+                systemPrompt += `\nOwner Home: ${lead.owner_home_address}, ${lead.owner_home_city || ''} ${lead.owner_home_state || ''} ${lead.owner_home_zip || ''}`.trim();
             }
+            systemPrompt += `\nCredit Score: ${lead.credit_score || 'Unknown'}`;
+            systemPrompt += `\nMonthly Revenue: ${lead.monthly_revenue || 'Unknown'}`;
+            if (lead.annual_revenue) systemPrompt += ` (Annual: ${lead.annual_revenue})`;
+            systemPrompt += `\nBusiness Start Date: ${lead.business_start_date || 'Unknown'}`;
+            systemPrompt += `\nRecent Funding: ${lead.recent_funding || 'None reported'}`;
+            if (lead.funding_amount) systemPrompt += `\nExisting Position: $${lead.funding_amount} at ${lead.factor_rate || '?'} factor, ${lead.term_months || '?'} months (funded ${lead.funding_date || 'unknown date'})`;
+            systemPrompt += `\nDeal State: ${lead.state || 'Unknown'} | Disposition: ${lead.disposition || 'None'} | Has Offer: ${lead.has_offer || false}`;
+            systemPrompt += `\nDisplay ID: ${lead.display_id || 'N/A'}`;
 
-            // 🟢 1. FULL LEAD DETAILS (Added Credit, Industry, Owner, etc.)
-            systemPrompt += `\n\n=== 🏢 BUSINESS & OWNER DETAILS ===`;
-            systemPrompt += `\nBusiness Name: ${context.business_name || 'Unknown'}`;
-            systemPrompt += `\nOwner Name: ${context.first_name || ''} ${context.last_name || ''}`.trim();
-            systemPrompt += `\nBusiness Address: ${context.address || 'N/A'}`;
-            if (context.owner_city) {
-                systemPrompt += `\nOwner Location: ${context.owner_city}, ${context.owner_state || ''} ${context.owner_zip || ''}`.trim();
-            }
-            systemPrompt += `\nIndustry: ${context.industry || 'Unknown'}`;
-            systemPrompt += `\nCredit Score: ${context.credit_range || 'N/A'}`;
-            const monthlyRevenue = context.monthly_revenue || (context.annual_revenue ? (context.annual_revenue / 12).toFixed(0) : null);
-            systemPrompt += `\nMonthly Revenue: ${monthlyRevenue || 'N/A'}`;
-            systemPrompt += `\nRequested Amount: ${context.funding_amount || 'N/A'}`;
-
-            // A. COMMANDER'S GAME PLAN (Strategy)
-            if (context.game_plan) {
-                const gp = context.game_plan;
-                systemPrompt += `\n\n=== 🎖️ COMMANDER'S STRATEGY ===`;
-                systemPrompt += `\nLead Grade: ${gp.lead_grade || 'Not graded'}`;
-                systemPrompt += `\nStrategy Type: ${gp.strategy_type || 'N/A'}`;
-                systemPrompt += `\nApproach: ${gp.approach || 'N/A'}`;
-
-                if (gp.offer_range) {
-                    systemPrompt += `\nOffer Range: ${gp.offer_range.min?.toLocaleString() || '?'} - ${gp.offer_range.max?.toLocaleString() || '?'}`;
-                }
-
-                if (gp.talking_points && gp.talking_points.length > 0) {
-                    systemPrompt += `\nTalking Points:`;
-                    gp.talking_points.forEach(point => {
-                        systemPrompt += `\n  • ${point}`;
-                    });
-                }
-
-                if (gp.objection_strategy) {
-                    systemPrompt += `\nObjection Handling: ${gp.objection_strategy}`;
-                }
-
-                if (gp.urgency_angle) {
-                    systemPrompt += `\nUrgency Angle: ${gp.urgency_angle}`;
-                }
-
-                if (gp.stacking_assessment) {
-                    systemPrompt += `\nStacking: ${gp.stacking_assessment.stacking_notes || 'N/A'}`;
-                }
-
-                if (gp.withholding_analysis) {
-                    systemPrompt += `\nCurrent Withholding: ${gp.withholding_analysis.current_withholding_pct || '?'}%`;
-                    systemPrompt += `\nRecommended Addition: ${gp.withholding_analysis.recommended_addition_pct || '?'}%`;
-                }
-
-                if (gp.next_position_guidance) {
-                    const npg = gp.next_position_guidance;
-                    systemPrompt += `\n\nNext Position Guidance:`;
-                    systemPrompt += `\n  Payment Frequency: ${npg.payment_frequency || 'N/A'}`;
-                    if (npg.amount_ranges) {
-                        systemPrompt += `\n  Conservative: ${npg.amount_ranges.conservative?.min?.toLocaleString() || '?'} - ${npg.amount_ranges.conservative?.max?.toLocaleString() || '?'}`;
-                        systemPrompt += `\n  Moderate: ${npg.amount_ranges.moderate?.min?.toLocaleString() || '?'} - ${npg.amount_ranges.moderate?.max?.toLocaleString() || '?'}`;
-                        systemPrompt += `\n  Aggressive: ${npg.amount_ranges.aggressive?.min?.toLocaleString() || '?'} - ${npg.amount_ranges.aggressive?.max?.toLocaleString() || '?'}`;
-                    }
-                }
-
-                if (gp.lender_notes) {
-                    systemPrompt += `\nLender Strategy: ${gp.lender_notes}`;
-                }
-
-                if (gp.red_flags && gp.red_flags.length > 0) {
-                    systemPrompt += `\nRed Flags:`;
-                    gp.red_flags.forEach(flag => {
-                        systemPrompt += `\n  ⚠️ ${flag}`;
-                    });
-                }
-
-                if (gp.risk_considerations && gp.risk_considerations.length > 0) {
-                    systemPrompt += `\nRisk Considerations:`;
-                    gp.risk_considerations.forEach(risk => {
-                        systemPrompt += `\n  • ${risk}`;
-                    });
-                }
-            } else {
-                systemPrompt += `\n\n(No Commander strategy available yet - FCS may not have run)`;
-            }
-
-            // B. FCS / Bank Analysis Data
-            if (context.fcs) {
-                const fcs = context.fcs;
-                systemPrompt += `\n\n=== 🏦 BANK ANALYSIS (FCS) ===`;
-                
-                // 1. Core Financials (Specific Metrics)
+            // ============================================
+            // SOURCE 2: FCS BANK ANALYSIS (verified from statements)
+            // ============================================
+            if (fcs) {
+                systemPrompt += `\n\n=== 🏦 SOURCE: FCS BANK ANALYSIS (verified from statements) ===`;
+                systemPrompt += `\n⚠️ TRUST THESE NUMBERS OVER LEAD INTAKE — they come from actual bank statements.`;
                 systemPrompt += `\nMonthly Revenue: $${fcs.average_revenue || '0'}`;
-                systemPrompt += `\nAvg Daily Balance (ADB): $${fcs.average_daily_balance || '0'}`;
-                systemPrompt += `\nAvg Deposit Count: ${fcs.average_deposit_count || '0'}`;
-                systemPrompt += `\nAvg Deposit Volume: $${fcs.average_deposits || '0'}`;
-                systemPrompt += `\nNegative Days: ${fcs.total_negative_days || '0'}`;
-                systemPrompt += `\nRecency (Statement Count): ${fcs.statement_count || '0'} Months`;
+                systemPrompt += `\nAvg Daily Balance: $${fcs.average_daily_balance || '0'}`;
+                systemPrompt += `\nAvg Deposits: ${fcs.average_deposit_count || '0'}/month ($${fcs.average_deposits || '0'} volume)`;
+                systemPrompt += `\nNegative Days: ${fcs.total_negative_days || '0'} total (${fcs.average_negative_days || '0'} avg/month)`;
+                systemPrompt += `\nStatement Count: ${fcs.statement_count || '0'} months`;
                 systemPrompt += `\nExisting Positions: ${fcs.position_count || '0'}`;
-                systemPrompt += `\nLast MCA Date: ${fcs.last_mca_deposit_date || 'None Detected'}`;
+                systemPrompt += `\nLast MCA Date: ${fcs.last_mca_deposit_date || 'None detected'}`;
                 systemPrompt += `\nTime in Business: ${fcs.time_in_business_text || 'Unknown'}`;
+                if (fcs.withholding_percentage) systemPrompt += `\nCurrent Withholding: ${fcs.withholding_percentage}%`;
+                if (fcs.fcs_industry) systemPrompt += `\nFCS Industry: ${fcs.fcs_industry}`;
+                if (fcs.fcs_state) systemPrompt += `\nFCS State: ${fcs.fcs_state}`;
 
-                // 2. 🟢 THE FULL RAW REPORT (UNLEASHED)
-                // We inject the ENTIRE text blob so the AI can read specific notes, 
-                // fraud alerts, and nuanced details from the parser.
                 if (fcs.fcs_report) {
-                    systemPrompt += `\n\n--- 📄 FULL ANALYST REPORT ---\n${fcs.fcs_report}`;
+                    systemPrompt += `\n\n--- Full Analyst Report ---\n${fcs.fcs_report}`;
                 }
-
             } else {
-                systemPrompt += `\n\n(No Bank Analysis/FCS available yet)`;
+                systemPrompt += `\n\n=== 🏦 FCS BANK ANALYSIS: NOT YET AVAILABLE ===`;
             }
 
-            // C. Lender Offers
-            if (context.lender_submissions && context.lender_submissions.length > 0) {
-                systemPrompt += `\n\n=== 💰 LENDER OFFERS ===`;
+            // ============================================
+            // SOURCE 3: COMMANDER STRATEGY (AI-generated)
+            // ============================================
+            if (strategy) {
+                const gp = strategy.game_plan || {};
+                systemPrompt += `\n\n=== 🎖️ SOURCE: COMMANDER STRATEGY (AI-generated) ===`;
+                systemPrompt += `\nLead Grade: ${strategy.lead_grade || 'Not graded'}`;
+                systemPrompt += `\nStrategy Type: ${strategy.strategy_type || 'N/A'}`;
+                systemPrompt += `\nCommander's Revenue Snapshot: $${strategy.cmd_revenue || '?'} | Balance: $${strategy.cmd_balance || '?'}`;
+                systemPrompt += `\nCommander's Position Count: ${strategy.cmd_positions ?? '?'} | Withholding: ${strategy.cmd_withholding || '?'}%`;
+                systemPrompt += `\nRecommended Funding: $${strategy.recommended_funding_min?.toLocaleString() || '?'} - $${strategy.recommended_funding_max?.toLocaleString() || '?'}`;
+                systemPrompt += `\nRecommended Payment: $${strategy.recommended_payment || '?'} ${strategy.recommended_term_unit || ''} for ${strategy.recommended_term || '?'} ${strategy.recommended_term_unit || 'months'}`;
+
+                if (gp.approach) systemPrompt += `\nApproach: ${gp.approach}`;
+                if (gp.talking_points?.length) {
+                    systemPrompt += `\nTalking Points:`;
+                    gp.talking_points.forEach(p => systemPrompt += `\n  • ${p}`);
+                }
+                if (gp.objection_strategy) systemPrompt += `\nObjection Handling: ${gp.objection_strategy}`;
+                if (gp.urgency_angle) systemPrompt += `\nUrgency: ${gp.urgency_angle}`;
+                if (gp.lender_notes) systemPrompt += `\nLender Strategy: ${gp.lender_notes}`;
+                if (gp.red_flags?.length) {
+                    systemPrompt += `\nRed Flags:`;
+                    gp.red_flags.forEach(f => systemPrompt += `\n  ⚠️ ${f}`);
+                }
+            } else {
+                systemPrompt += `\n\n=== 🎖️ COMMANDER STRATEGY: NOT YET AVAILABLE ===`;
+            }
+
+            // ============================================
+            // SOURCE 4: LENDER SUBMISSIONS
+            // ============================================
+            if (context.lender_submissions?.length > 0) {
+                systemPrompt += `\n\n=== 💰 LENDER SUBMISSIONS ===`;
                 context.lender_submissions.forEach(sub => {
-                    // 1. Basic Info
-                    systemPrompt += `\n- Lender: ${sub.lender_name}`;
-                    systemPrompt += ` | Status: ${sub.status}`;
-                    if (sub.offer_amount) systemPrompt += ` | Amount: $${sub.offer_amount}`;
-
-                    // 2. 🟢 EXTRACT DETAILS (The "Days" & "Factor" Fix)
-                    if (sub.offer_details) {
-                        const d = sub.offer_details;
-                        
-                        // Explicitly look for common terms
-                        if (d.term || d.days || d.length) systemPrompt += ` | Term: ${d.term || d.days || d.length}`;
-                        if (d.factor || d.factor_rate || d.buy_rate) systemPrompt += ` | Factor: ${d.factor || d.factor_rate || d.buy_rate}`;
-                        if (d.payment || d.daily_payment || d.weekly_payment) systemPrompt += ` | Pmt: ${d.payment || d.daily_payment || d.weekly_payment}`;
-                        if (d.position) systemPrompt += ` | Position: ${d.position}`;
-                        
-                        // Safety: If we missed anything specific, check for other keys (excluding big arrays)
-                        Object.keys(d).forEach(key => {
-                            if (!['history', 'raw_body', 'term', 'days', 'factor', 'payment'].includes(key) && typeof d[key] !== 'object') {
-                                systemPrompt += ` | ${key}: ${d[key]}`;
-                            }
-                        });
-                    }
-
-                    // 3. Raw Context (The Fallback)
-                    if (sub.raw_email_body) {
-                        systemPrompt += `\n  (Email Snippet: "${sub.raw_email_body.substring(0, 300).replace(/\s+/g, ' ')}...")`;
-                    }
-                    
-                    // 4. History (Latest Update)
-                    if (sub.offer_details && sub.offer_details.history) {
-                         const history = sub.offer_details.history;
-                         const lastLog = history[history.length - 1];
-                         if (lastLog) systemPrompt += `\n  (Latest Note: ${lastLog.summary})`;
-                    }
+                    systemPrompt += `\n- ${sub.lender_name}: ${sub.status}`;
+                    if (sub.offer_amount) systemPrompt += ` | $${sub.offer_amount}`;
+                    if (sub.factor_rate) systemPrompt += ` | ${sub.factor_rate} factor`;
+                    if (sub.term_length) systemPrompt += ` | ${sub.term_length} ${sub.term_unit || 'months'}`;
+                    if (sub.payment_frequency) systemPrompt += ` | ${sub.payment_frequency}`;
+                    if (sub.position) systemPrompt += ` | pos ${sub.position}`;
+                    if (sub.decline_reason) systemPrompt += ` | declined: ${sub.decline_reason}`;
+                    if (sub.submitted_at) systemPrompt += ` | sent ${new Date(sub.submitted_at).toLocaleDateString()}`;
                 });
             }
 
-            // D. Documents on file
-            if (context.documents && context.documents.length > 0) {
-                systemPrompt += `\n\n=== 📎 DOCUMENTS ON FILE ===`;
+            // ============================================
+            // SOURCE 5: DOCUMENTS ON FILE
+            // ============================================
+            if (context.documents?.length > 0) {
+                systemPrompt += `\n\n=== 📎 DOCUMENTS ON FILE (${context.documents.length} files) ===`;
                 context.documents.forEach(doc => {
-                    systemPrompt += `\n- ${doc.filename} (${doc.document_type || 'unknown type'})`;
+                    let desc = doc.filename;
+                    if (doc.document_type) desc += ` [${doc.document_type}]`;
+                    if (doc.bank_name) desc += ` (${doc.bank_name}`;
+                    if (doc.statement_month) desc += ` ${doc.statement_month}/${doc.statement_year || ''}`;
+                    if (doc.bank_name) desc += `)`;
+                    systemPrompt += `\n- ${desc}`;
+                });
+            } else {
+                systemPrompt += `\n\n=== 📎 DOCUMENTS: NONE UPLOADED ===`;
+            }
+
+            // ============================================
+            // SOURCE 6: RECENT SMS
+            // ============================================
+            if (context.recent_messages?.length > 0) {
+                systemPrompt += `\n\n=== 💬 RECENT SMS (last ${context.recent_messages.length}) ===`;
+                context.recent_messages.reverse().forEach(msg => {
+                    const dir = msg.direction === 'outbound' ? 'US' : 'LEAD';
+                    systemPrompt += `\n[${dir}] ${msg.content}`;
                 });
             }
 
-            // E. Already submitted to
-            if (context.existing_submissions && context.existing_submissions.length > 0) {
-                systemPrompt += `\n\n=== 📤 ALREADY SUBMITTED TO ===`;
-                context.existing_submissions.forEach(sub => {
-                    systemPrompt += `\n- ${sub.lender_name}: ${sub.status} (${sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'unknown date'})`;
-                });
-            }
+            // ============================================
+            // DATA TRUST HIERARCHY
+            // ============================================
+            systemPrompt += `\n\n=== ⚖️ DATA TRUST RULES ===
+When the same data point exists in multiple sources, use this priority:
+1. FCS Bank Analysis (highest trust — verified from actual bank statements)
+2. Commander Strategy (AI-analyzed, but based on FCS)
+3. Lead Intake (lowest trust — user-entered, often stale or rounded)
+
+SPECIFIC RULES:
+- Revenue: FCS average_revenue > lead monthly_revenue. If they differ by >20%, flag it.
+- Industry: FCS fcs_industry > lead industry_type. If FCS industry is null, use lead. If BOTH are null, ASK.
+- State: FCS fcs_state > lead us_state. Should usually match.
+- Position: FCS position_count tells you CURRENT positions. Next position = position_count + 1.
+- Negative Days: ONLY from FCS. Lead intake doesn't have this.
+- Deposits: ONLY from FCS. Lead intake doesn't have this.
+- Credit/FICO: ONLY from lead intake (credit_score). FCS doesn't have this. If missing, ASK.
+- Withholding: FCS withholding_percentage > Commander cmd_withholding. Either works.
+- Time in Business: FCS time_in_business_text > lead business_start_date (calculate months).
+`;
         }
 
         // 🔧 DATABASE ACTION INSTRUCTIONS

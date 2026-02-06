@@ -35,169 +35,137 @@ router.post('/chat', async (req, res) => {
 
         if (conversationId && includeContext) {
 
-            // 1. Basic Lead Info
-            console.log('   🔍 [AI Route] Fetching Lead Details...');
+            // === SINGLE QUERY PER SOURCE — NO CHERRY-PICKING ===
+
+            // SOURCE 1: Lead intake (conversations + lead_details)
             const convResult = await db.query(`
-                SELECT c.business_name, c.first_name, c.last_name, c.state, c.display_id,
-                       c.monthly_revenue, c.has_offer, c.ai_enabled,
-                       ld.requested_amount, ld.credit_score, ld.business_type, ld.business_address
+                SELECT 
+                    c.id, c.display_id, c.business_name, c.first_name, c.last_name,
+                    c.lead_phone, c.cell_phone, c.email, c.owner_email,
+                    c.address, c.city, c.us_state, c.zip,
+                    c.owner_home_address, c.owner_home_city, c.owner_home_state, c.owner_home_zip,
+                    c.dba_name, c.entity_type, c.industry_type, c.business_start_date,
+                    c.monthly_revenue, c.annual_revenue, c.credit_score,
+                    c.funding_amount, c.factor_rate, c.funding_date, c.term_months,
+                    c.recent_funding, c.funding_status,
+                    c.state, c.has_offer, c.ai_enabled, c.disposition, c.notes,
+                    c.owner2_first_name, c.owner2_last_name,
+                    ld.business_type AS ld_business_type,
+                    ld.business_address AS ld_business_address,
+                    ld.annual_revenue AS ld_annual_revenue
                 FROM conversations c
                 LEFT JOIN lead_details ld ON c.id = ld.conversation_id
                 WHERE c.id = $1
             `, [conversationId]);
 
             if (convResult.rows.length > 0) {
-                const conversation = convResult.rows[0];
-                console.log(`   ✅ [AI Route] Found Lead: ${conversation.business_name || 'Unknown'}`);
+                const lead = convResult.rows[0];
 
-                // 2. SMS History (Existing)
-                const smsResult = await db.query(`
-                    SELECT content, direction, timestamp, sent_by
-                    FROM messages
-                    WHERE conversation_id = $1
-                    ORDER BY timestamp DESC LIMIT 15
-                `, [conversationId]);
-
-                // 3. Lender Offers (Existing)
-                let lenderResult = { rows: [] };
+                // SOURCE 2: FCS bank analysis
+                let fcs = null;
                 try {
-                    lenderResult = await db.query(`
-                        SELECT lender_name, status, offer_amount, factor_rate, term_length, term_unit, payment_frequency, decline_reason
+                    const fcsResult = await db.query(`
+                        SELECT 
+                            average_revenue, average_daily_balance, average_deposits,
+                            average_deposit_count, total_negative_days, average_negative_days,
+                            statement_count, position_count, last_mca_deposit_date,
+                            time_in_business_text, withholding_percentage,
+                            state AS fcs_state, industry AS fcs_industry,
+                            extracted_business_name, fcs_report, created_at
+                        FROM fcs_analyses
+                        WHERE conversation_id = $1 AND status = 'complete'
+                        ORDER BY created_at DESC LIMIT 1
+                    `, [conversationId]);
+                    fcs = fcsResult.rows[0] || null;
+                } catch (e) { console.log('   ⚠️ FCS fetch error', e.message); }
+
+                // SOURCE 3: Commander strategy
+                let strategy = null;
+                try {
+                    const stratResult = await db.query(`
+                        SELECT 
+                            lead_grade, strategy_type, game_plan,
+                            avg_revenue AS cmd_revenue, avg_balance AS cmd_balance,
+                            current_positions AS cmd_positions, total_withholding AS cmd_withholding,
+                            recommended_funding_min, recommended_funding_max,
+                            recommended_payment, recommended_term, recommended_term_unit,
+                            created_at
+                        FROM lead_strategy
+                        WHERE conversation_id = $1
+                        ORDER BY created_at DESC LIMIT 1
+                    `, [conversationId]);
+                    strategy = stratResult.rows[0] || null;
+                } catch (e) { console.log('   ⚠️ Strategy fetch error', e.message); }
+
+                // SOURCE 4: SMS history
+                let messages = [];
+                try {
+                    const msgResult = await db.query(`
+                        SELECT content, direction, timestamp, sent_by
+                        FROM messages
+                        WHERE conversation_id = $1
+                        ORDER BY timestamp DESC LIMIT 15
+                    `, [conversationId]);
+                    messages = msgResult.rows;
+                } catch (e) { console.log('   ⚠️ Messages fetch error', e.message); }
+
+                // SOURCE 5: Lender submissions
+                let submissions = [];
+                try {
+                    const subResult = await db.query(`
+                        SELECT lender_name, status, offer_amount, factor_rate,
+                               term_length, term_unit, payment_frequency, decline_reason,
+                               position, submitted_at, last_response_at
                         FROM lender_submissions
                         WHERE conversation_id = $1 ORDER BY created_at DESC
                     `, [conversationId]);
-                    console.log(`   💰 [AI Route] Found ${lenderResult.rows.length} Lender Offers`);
-                } catch (e) { console.log('   ⚠️ Lender fetch error', e.message); }
+                    submissions = subResult.rows;
+                } catch (e) { console.log('   ⚠️ Submissions fetch error', e.message); }
 
-                // Fetch valid lenders for AI to reference (only if needed)
-                let lendersResult = { rows: [] };
-                const needsLenders = /lender|submit|send to|qualify|match/i.test(query);
-                if (needsLenders) {
-                    try {
-                        lendersResult = await db.query(`SELECT name FROM lenders ORDER BY name`);
-                        console.log(`   🏦 [AI Route] Found ${lendersResult.rows.length} lenders`);
-                    } catch (e) { console.log('   ⚠️ Lenders fetch error', e.message); }
-                }
-
-                // 8. Submission readiness data (only when relevant)
-                let documentsResult = { rows: [] };
-                let existingSubmissions = { rows: [] };
-                const needsSubmission = /sub|submit|send|qualify|lender/i.test(query);
-                if (needsSubmission) {
-                    try {
-                        documentsResult = await db.query(`
-                            SELECT id, original_filename AS filename, document_type, created_at
-                            FROM documents
-                            WHERE conversation_id = $1
-                            ORDER BY created_at DESC
-                        `, [conversationId]);
-                    } catch (e) { console.log('   ⚠️ Docs fetch error', e.message); }
-
-                    try {
-                        existingSubmissions = await db.query(`
-                            SELECT lender_name, status, submitted_at
-                            FROM lender_submissions
-                            WHERE conversation_id = $1
-                        `, [conversationId]);
-                    } catch (e) { console.log('   ⚠️ Existing subs fetch error', e.message); }
-                }
-
-                // 🟢 4. FETCH FCS / BANK ANALYSIS (NEW)
-                let fcsResult = { rows: [] };
+                // SOURCE 6: Documents
+                let documents = [];
                 try {
-                    fcsResult = await db.query(`
-                        SELECT average_revenue, average_daily_balance, total_negative_days,
-                               average_deposit_count, analysis_summary, created_at
-                        FROM fcs_analyses 
-                        WHERE conversation_id = $1 
-                        ORDER BY created_at DESC LIMIT 1
+                    const docResult = await db.query(`
+                        SELECT id, original_filename AS filename, document_type,
+                               document_subtype, bank_name, statement_month, statement_year
+                        FROM documents
+                        WHERE conversation_id = $1
+                        ORDER BY created_at DESC
                     `, [conversationId]);
-                    
-                    if (fcsResult.rows.length > 0) {
-                        console.log(`   🏦 [AI Route] ✅ FCS DATA FOUND:`);
-                        console.log(`       - Revenue: ${fcsResult.rows[0].average_revenue}`);
-                        console.log(`       - Neg Days: ${fcsResult.rows[0].total_negative_days}`);
-                        console.log(`       - Deposits: ${fcsResult.rows[0].average_deposit_count}`);
-                    } else {
-                        console.log(`   🏦 [AI Route] ❌ NO FCS DATA FOUND in DB.`);
-                    }
+                    documents = docResult.rows;
+                } catch (e) { console.log('   ⚠️ Docs fetch error', e.message); }
 
-                } catch (e) { console.log('   ⚠️ FCS fetch error', e.message); }
-
-                // 🟢 5. FETCH AI CHAT HISTORY (NEW)
-                let historyResult = { rows: [] };
+                // SOURCE 7: Valid lender names
+                let validLenders = [];
                 try {
-                    historyResult = await db.query(`
-                        SELECT role, content 
-                        FROM ai_chat_messages 
-                        WHERE conversation_id = $1 
+                    const lenderResult = await db.query('SELECT name FROM lenders ORDER BY name');
+                    validLenders = lenderResult.rows.map(l => l.name);
+                } catch (e) { console.log('   ⚠️ Lenders fetch error', e.message); }
+
+                // SOURCE 8: Chat history
+                let chatHistory = [];
+                try {
+                    const histResult = await db.query(`
+                        SELECT role, content
+                        FROM ai_chat_messages
+                        WHERE conversation_id = $1
                         ORDER BY created_at DESC LIMIT 10
                     `, [conversationId]);
-                } catch (e) { console.log('History fetch error', e.message); }
+                    chatHistory = histResult.rows.reverse();
+                } catch (e) { console.log('   ⚠️ History fetch error', e.message); }
 
-                // 🎖️ 7. FETCH COMMANDER'S GAME PLAN (NEW)
-                let strategyResult = { rows: [] };
-                try {
-                    strategyResult = await db.query(`
-                        SELECT game_plan, lead_grade, strategy_type
-                        FROM lead_strategy
-                        WHERE conversation_id = $1
-                    `, [conversationId]);
-
-                    if (strategyResult.rows.length > 0) {
-                        console.log(`   🎖️ [AI Route] ✅ COMMANDER STRATEGY FOUND:`);
-                        console.log(`       - Grade: ${strategyResult.rows[0].lead_grade}`);
-                        console.log(`       - Strategy: ${strategyResult.rows[0].strategy_type}`);
-                    } else {
-                        console.log(`   🎖️ [AI Route] ❌ NO COMMANDER STRATEGY YET.`);
-                    }
-                } catch (e) { console.log('   ⚠️ Strategy fetch error', e.message); }
-
-                // 6. Pack it all up
                 conversationContext = {
-                    // Standard Info
-                    display_id: conversation.display_id,
-                    business_name: conversation.business_name,
-                    monthly_revenue: conversation.monthly_revenue,
-                    funding_amount: conversation.requested_amount,
-                    
-                    // Owner Names
-                    first_name: conversation.first_name, 
-                    last_name: conversation.last_name,
-
-                    // Address mapping based on schema
-                    address: conversation.business_address || conversation.address || 'N/A',
-                    owner_address: conversation.owner_home_address,
-                    owner_city: conversation.owner_home_city,
-                    owner_state: conversation.owner_home_state,
-                    owner_zip: conversation.owner_home_zip,
-
-                    // Tax ID (encrypted)
-                    tax_id: conversation.tax_id_encrypted ? '(Encrypted)' : 'N/A', 
-
-                    // Credit & Industry
-                    credit_range: conversation.credit_score, 
-                    industry: conversation.business_type,
-
-                    // Data Arrays
-                    recent_messages: smsResult.rows,
-                    lender_submissions: lenderResult.rows,
-                    fcs: fcsResult.rows[0] || null,
-                    chat_history: historyResult.rows.reverse(),
-
-                    // 🎖️ COMMANDER'S GAME PLAN (NEW)
-                    game_plan: strategyResult.rows[0]?.game_plan || null,
-                    lead_grade: strategyResult.rows[0]?.lead_grade || null,
-                    strategy_type: strategyResult.rows[0]?.strategy_type || null,
-
-                    // Valid lenders for actions
-                    valid_lenders: needsLenders ? lendersResult.rows.map(l => l.name) : [],
-
-                    // Submission readiness
-                    documents: documentsResult.rows,
-                    existing_submissions: existingSubmissions.rows
+                    lead,
+                    fcs,
+                    strategy,
+                    recent_messages: messages,
+                    lender_submissions: submissions,
+                    documents,
+                    valid_lenders: validLenders,
+                    chat_history: chatHistory
                 };
-                console.log('   📦 [AI Route] Context Package ready for Service.');
+
+                console.log(`   📦 Context: FCS=${!!fcs} | Strategy=${!!strategy} | Msgs=${messages.length} | Subs=${submissions.length} | Docs=${documents.length}`);
             }
         }
 
