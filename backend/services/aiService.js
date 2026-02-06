@@ -202,6 +202,22 @@ const generateResponse = async (query, context, userId = null) => {
                     }
                 });
             }
+
+            // D. Documents on file
+            if (context.documents && context.documents.length > 0) {
+                systemPrompt += `\n\n=== 📎 DOCUMENTS ON FILE ===`;
+                context.documents.forEach(doc => {
+                    systemPrompt += `\n- ${doc.filename} (${doc.document_type || 'unknown type'})`;
+                });
+            }
+
+            // E. Already submitted to
+            if (context.existing_submissions && context.existing_submissions.length > 0) {
+                systemPrompt += `\n\n=== 📤 ALREADY SUBMITTED TO ===`;
+                context.existing_submissions.forEach(sub => {
+                    systemPrompt += `\n- ${sub.lender_name}: ${sub.status} (${sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'unknown date'})`;
+                });
+            }
         }
 
         // 🔧 DATABASE ACTION INSTRUCTIONS
@@ -256,6 +272,65 @@ RULES:
 - For general notes/reminders that aren't offer data → use append_note
 - The confirm_text should clearly show all the data being saved
 - Extract ALL available fields: amount, factor_rate, term_length, term_unit, payment_frequency
+
+7. submit_deal - Run qualification and submit to matching lenders
+WHEN USER SAYS: "submit this deal", "sub this", "send it out", "send to lenders"
+
+BEFORE proposing submit_deal, you MUST present a READINESS CHECKLIST:
+
+📋 SUBMISSION READINESS CHECK
+Use ✅ or ❌ for each:
+- Business Name
+- Monthly Revenue (required for qualification)
+- Credit Score / FICO (required for qualification)
+- Industry (required for qualification)
+- State (required for qualification)
+- Position (required for qualification - check FCS position_count or ask)
+- Bank Statements uploaded
+- Application uploaded
+- FCS Analysis done
+- Already submitted to (list any)
+
+RULES:
+- If ANY critical field is missing (revenue, credit, industry, state, position) → show the checklist with ❌ on missing items, tell user what you need, do NOT propose the action
+- If no documents uploaded → block submission, tell user to upload docs first
+- If FCS not done → warn that qualification may be less accurate but allow
+- If already submitted to some lenders → note them so user knows
+- If ALL checks pass → propose the action with confirm
+- NEVER skip the checklist unless user explicitly says "skip the check" or "just send it"
+
+Example with missing data (respond as plain text, NOT json):
+"Here's where we stand on submitting Joe's Pizza:
+
+✅ Business: Joe's Pizza
+✅ Revenue: $45,000/mo
+❌ Credit Score: missing
+✅ Industry: Restaurant
+✅ State: NY
+✅ Position: 2nd
+✅ Documents: 3 files uploaded
+✅ FCS: Complete
+
+I need the credit score before I can run qualification. What's the FICO?"
+
+Example when ready (respond as JSON action):
+{"message": "Joe's Pizza is ready to go:\\n\\n✅ Revenue: $45K | FICO: 680 | Restaurant | NY | 2nd pos\\n✅ 3 docs attached | FCS complete\\n\\nI'll run qualification and send to all matching lenders.", "action": {"action": "submit_deal", "data": {"criteria": {"requestedPosition": 2, "monthlyRevenue": 45000, "fico": 680, "state": "NY", "industry": "Restaurant", "depositsPerMonth": 35, "negativeDays": 2}}, "confirm_text": "Run qualification and submit to all matching lenders for Joe's Pizza?"}}
+
+If user wants specific lenders only:
+{"message": "Sending to just those 3.", "action": {"action": "submit_deal", "data": {"criteria": {"requestedPosition": 2, "monthlyRevenue": 45000, "fico": 680, "state": "NY", "industry": "Restaurant"}, "lender_names": ["Rapid Capital", "Fox Business", "Pinnacle Capital"]}, "confirm_text": "Submit to Rapid Capital, Fox Business, and Pinnacle Capital?"}}
+
+CRITERIA FIELD MAPPING (pull from context above):
+- requestedPosition → FCS position_count + 1 (next position) or ask user
+- monthlyRevenue → Monthly Revenue from business details or FCS average_revenue
+- fico → Credit Score from business details
+- state → extract from Business Address (2-letter code)
+- industry → Industry from business details
+- depositsPerMonth → FCS average_deposit_count (optional)
+- negativeDays → FCS total_negative_days (optional)
+- isSoleProp → ask if unclear (optional)
+- isNonProfit → ask if unclear (optional)
+- hasMercuryBank → from FCS if available (optional)
+- withholding → from Commander withholding_analysis if available (optional)
 `;
 
         // Add list of valid lenders with fuzzy matching instructions
@@ -293,7 +368,7 @@ LENDER NAME MATCHING RULES:
             model: "gpt-4o-mini",
             messages: messages,
             temperature: 0.3,
-            max_tokens: 500
+            max_tokens: 800
         });
 
         // Track usage

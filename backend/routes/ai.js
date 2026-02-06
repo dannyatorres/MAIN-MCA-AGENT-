@@ -5,6 +5,8 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../services/database');
 const aiService = require('../services/aiService');
+// Only needed if Node < 18. Node 18+ has global fetch.
+const fetch = global.fetch || require('node-fetch');
 
 // Handle OPTIONS preflight for CORS
 router.options('/chat', (req, res) => {
@@ -75,6 +77,29 @@ router.post('/chat', async (req, res) => {
                         lendersResult = await db.query(`SELECT name FROM lenders ORDER BY name`);
                         console.log(`   🏦 [AI Route] Found ${lendersResult.rows.length} lenders`);
                     } catch (e) { console.log('   ⚠️ Lenders fetch error', e.message); }
+                }
+
+                // 8. Submission readiness data (only when relevant)
+                let documentsResult = { rows: [] };
+                let existingSubmissions = { rows: [] };
+                const needsSubmission = /sub|submit|send|qualify|lender/i.test(query);
+                if (needsSubmission) {
+                    try {
+                        documentsResult = await db.query(`
+                            SELECT id, original_filename AS filename, document_type, created_at
+                            FROM documents
+                            WHERE conversation_id = $1
+                            ORDER BY created_at DESC
+                        `, [conversationId]);
+                    } catch (e) { console.log('   ⚠️ Docs fetch error', e.message); }
+
+                    try {
+                        existingSubmissions = await db.query(`
+                            SELECT lender_name, status, submitted_at
+                            FROM lender_submissions
+                            WHERE conversation_id = $1
+                        `, [conversationId]);
+                    } catch (e) { console.log('   ⚠️ Existing subs fetch error', e.message); }
                 }
 
                 // 🟢 4. FETCH FCS / BANK ANALYSIS (NEW)
@@ -166,7 +191,11 @@ router.post('/chat', async (req, res) => {
                     strategy_type: strategyResult.rows[0]?.strategy_type || null,
 
                     // Valid lenders for actions
-                    valid_lenders: needsLenders ? lendersResult.rows.map(l => l.name) : []
+                    valid_lenders: needsLenders ? lendersResult.rows.map(l => l.name) : [],
+
+                    // Submission readiness
+                    documents: documentsResult.rows,
+                    existing_submissions: existingSubmissions.rows
                 };
                 console.log('   📦 [AI Route] Context Package ready for Service.');
             }
@@ -241,7 +270,8 @@ router.post('/execute-action', async (req, res) => {
         'update_deal': { table: 'conversations', type: 'update' },
         'append_note': { table: 'conversations', type: 'append' },
         'insert_bank_rule': { table: 'bank_rules', type: 'insert' },
-        'update_bank_rule': { table: 'bank_rules', type: 'update' }
+        'update_bank_rule': { table: 'bank_rules', type: 'update' },
+        'submit_deal': { table: 'lender_submissions', type: 'submit' }
     };
 
     if (!ALLOWED_ACTIONS[action]) {
@@ -456,6 +486,115 @@ router.post('/execute-action', async (req, res) => {
                 }
 
                 result = { message: `Bank rule updated for ${data.bank_name}` };
+                break;
+            }
+
+            case 'submit_deal': {
+                const criteria = data.criteria;
+                if (!criteria || !criteria.requestedPosition) {
+                    return res.json({ success: false, error: 'Missing qualification criteria. Need at least: position, revenue, FICO, state, industry.' });
+                }
+
+                // Run qualification
+                const qualifyUrl = `http://localhost:${process.env.PORT || 3000}/api/qualification/qualify`;
+                let qualData;
+                try {
+                    const qualRes = await fetch(qualifyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': req.headers.authorization || '',
+                            'Cookie': req.headers.cookie || ''
+                        },
+                        body: JSON.stringify(criteria)
+                    });
+                    qualData = await qualRes.json();
+                } catch (fetchErr) {
+                    return res.json({ success: false, error: 'Qualification failed: ' + fetchErr.message });
+                }
+
+                if (!qualData.qualified || qualData.qualified.length === 0) {
+                    const topReasons = (qualData.nonQualified || []).slice(0, 5).map(l => `${l.lender}: ${l.blockingRule}`).join('\n');
+                    return res.json({
+                        success: false,
+                        error: `No lenders qualified. Top rejection reasons:\n${topReasons}`
+                    });
+                }
+
+                // Filter to specific lenders if requested
+                let targetLenders = qualData.qualified;
+                if (data.lender_names && data.lender_names.length > 0) {
+                    const requested = data.lender_names.map(n => n.toLowerCase());
+                    targetLenders = qualData.qualified.filter(l =>
+                        requested.some(r => (l.name || l['Lender Name'] || '').toLowerCase().includes(r))
+                    );
+                    if (targetLenders.length === 0) {
+                        return res.json({ success: false, error: `None of the requested lenders qualified: ${data.lender_names.join(', ')}` });
+                    }
+                }
+
+                // Get documents (submissions route only needs { id })
+                const docsRes = await db.query(
+                    'SELECT id FROM documents WHERE conversation_id = $1',
+                    [conversationId]
+                );
+
+                if (docsRes.rows.length === 0) {
+                    return res.json({ success: false, error: 'No documents uploaded. Upload bank statements and application before submitting.' });
+                }
+
+                // Get business data for email template
+                const convRes = await db.query(
+                    `SELECT business_name, monthly_revenue, credit_score, industry_type, us_state
+                     FROM conversations WHERE id = $1`,
+                    [conversationId]
+                );
+                const conv = convRes.rows[0] || {};
+
+                // Call submissions endpoint
+                const sendUrl = `http://localhost:${process.env.PORT || 3000}/api/submissions/${conversationId}/send`;
+                let sendResult;
+                try {
+                    const sendRes = await fetch(sendUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': req.headers.authorization || '',
+                            'Cookie': req.headers.cookie || ''
+                        },
+                        body: JSON.stringify({
+                            selectedLenders: targetLenders.map(l => ({
+                                name: l.name || l['Lender Name'],
+                                lender_name: l.name || l['Lender Name']
+                            })),
+                            businessData: {
+                                businessName: conv.business_name || 'Unknown',
+                                industry: conv.industry_type || '',
+                                state: conv.us_state || '',
+                                monthlyRevenue: conv.monthly_revenue || 0,
+                                fico: conv.credit_score || 0,
+                                customMessage: data.custom_message || `Please find attached the funding application and supporting documents for ${conv.business_name || 'the client'}. Please review and let me know if you need any additional information.`
+                            },
+                            documents: docsRes.rows
+                        })
+                    });
+                    sendResult = await sendRes.json();
+                } catch (sendErr) {
+                    return res.json({ success: false, error: 'Submission send failed: ' + sendErr.message });
+                }
+
+                if (!sendResult.success) {
+                    return res.json({ success: false, error: sendResult.error || 'Submission failed' });
+                }
+
+                const sent = sendResult.results?.successful?.length || 0;
+                const failed = sendResult.results?.failed || [];
+                let msg = `✅ Submitted to ${sent} lenders`;
+                if (failed.length > 0) {
+                    msg += `. ⚠️ ${failed.length} failed: ${failed.map(f => `${f.lender} (${f.error})`).join(', ')}`;
+                }
+
+                result = { message: msg };
                 break;
             }
         }
