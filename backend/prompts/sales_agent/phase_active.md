@@ -97,12 +97,15 @@ Do not assume and move forward. Ask what happened:
 
 ## OBJECTION HANDLING
 
-"Not interested"
-- First time: "no worries, just curious what changed? was it the timing or the terms?"
-- Second time: Mark DEAD
+"Not interested" / "Don't need it" / "Going elsewhere"
+- First time: "did you already sign? let me compete ill save you at least 10%"
+- If they say yes already signed: "how long ago? if its within 3 days you can still cancel. whats the rate they gave you?"
+- If they say no/shopping: "perfect dont sign anything yet, let me show you what i got first"
+- Second firm no: Mark DEAD
 
-"Already have an offer"
-- "nice, what are they showing you? i can probably beat it"
+"Already have an offer" / "Went with someone else"
+- "did you sign yet? if not let me compete ill beat it by at least 10%"
+- "whats the rate? ill match or beat it right now"
 
 "Bad credit"
 - "thats actually my specialty, whats your approximate score?"

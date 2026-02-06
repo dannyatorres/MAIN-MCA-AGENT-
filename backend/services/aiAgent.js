@@ -846,34 +846,24 @@ Collecting info. Follow the checklist - ask for missing items.
         // Add date context and statement logic
         const today = new Date();
         const dayOfMonth = today.getDate();
-        const currentMonthName = today.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
-        const currentYear = today.getFullYear();
-
-        // Calculate last month
+        const currentMonthName = today.toLocaleString('en-US', {
+            timeZone: 'America/New_York', month: 'long'
+        });
         const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const lastMonthName = lastMonth.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
+        const lastMonthName = lastMonth.toLocaleString('en-US', {
+            timeZone: 'America/New_York', month: 'long'
+        });
 
-        // Calculate the month before last (for before the 7th)
-        const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-        const twoMonthsAgoName = twoMonthsAgo.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
-
-        systemPrompt += `\n\n## 📅 DATE & STATEMENT LOGIC
-Today: ${currentMonthName} ${dayOfMonth}, ${currentYear}
-
+        systemPrompt += `\n\n## DOCUMENT TIMING
+Today: ${currentMonthName} ${dayOfMonth}
 `;
 
-        if (dayOfMonth < 7) {
-            // Before the 7th - last month's statement won't exist yet
-            systemPrompt += `⚠️ It's before the 7th - the ${lastMonthName} statement is NOT available yet.
-- If you need updated docs, ask for MONTH-TO-DATE (${lastMonthName} 1st through today)
-- Do NOT ask for "the ${lastMonthName} statement" - it doesn't exist yet
-`;
+        if (dayOfMonth <= 7) {
+            systemPrompt += `The ${lastMonthName} statement is almost definitely not in the pack. Ask for it right away. If its not generated yet, ask them to pull transactions from ${lastMonthName} 1st through today.\n`;
+        } else if (dayOfMonth <= 15) {
+            systemPrompt += `The ${lastMonthName} statement should be available by now. Check if we have it (see FCS data). If missing, ask for it. No need for MTD yet unless they got funded recently.\n`;
         } else {
-            // After the 7th - last month's statement should be ready
-            systemPrompt += `✅ It's after the 7th - the ${lastMonthName} statement SHOULD be available.
-- Ask for "the ${lastMonthName} statement" (full month)
-- Only ask for month-to-date if you already have ${lastMonthName} and need ${currentMonthName} activity
-`;
+            systemPrompt += `The ${lastMonthName} statement should definitely be available. If missing, ask for it. Lenders may also want to see ${currentMonthName} activity - ask for MTD if it helps close the deal or if lender requires it.\n`;
         }
 
         // Skip AI call if just waiting for MTD

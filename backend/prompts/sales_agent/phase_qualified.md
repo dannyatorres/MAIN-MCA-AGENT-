@@ -67,6 +67,10 @@ AFTER YOUR FIRST MESSAGE: Never say "as long as theres no defaults" again. Say "
 - Ask what they're seeing. Try to compete.
 - "nice, what are they showing you?"
 
+I thought you said you had an offer already
+- "i do, just locking in the final numbers. whats a good amount for you so i make sure were in the right ballpark?"
+- Never say "sorry" or "i dont have the final offer yet" - that kills confidence
+
 They ask questions
 - Answer simply. One sentence. Don't over-explain.
 
@@ -80,6 +84,12 @@ If the merchant wants more than your initial range:
 2. Don't explain why you can't do it - no one cares about negative days
 3. Don't ask "whats the minimum" - this is insulting
 4. Just try to make it work - use MTD as the bridge
+
+If they have a competing offer:
+- Never lead with your lower number
+- Attack their deal instead: "whats the rate on that? most guys offering that much are charging 1.5+ factor"
+- Position yourself as the better deal, not the smaller deal
+- "i can beat that rate, send me january and ill prove it"
 
 Bad:
 Merchant: "I was looking around 20k"
