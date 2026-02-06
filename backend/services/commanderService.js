@@ -360,9 +360,10 @@ async function analyzeAndStrategize(conversationId) {
             nextPositionScenarios: nextPositionScenarios,
 
             // Ensure offer_range exists
-            offer_range: data.offer_range || {
-                min: nextPositionScenarios?.conservative?.[0]?.funding || 0,
-                max: nextPositionScenarios?.aggressive?.[0]?.funding || nextPositionScenarios?.moderate?.[0]?.funding || 0
+            offer_range: {
+                min: data.offer_range?.min || nextPositionScenarios?.conservative?.[0]?.funding || 0,
+                max: data.offer_range?.max || nextPositionScenarios?.moderate?.[0]?.funding || 0,
+                aggressive: nextPositionScenarios?.aggressive?.[0]?.funding || data.offer_range?.max || 0
             },
 
             // Legacy businessOverview for backward compatibility

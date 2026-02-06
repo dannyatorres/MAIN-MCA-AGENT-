@@ -706,9 +706,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
 
             if (gamePlan.offer_range) {
-                systemPrompt += `**Offer Range:** ${gamePlan.offer_range.min.toLocaleString()} - ${gamePlan.offer_range.max.toLocaleString()}\n\n`;
-                systemPrompt += `**Target Offer:** Start around the middle. Fish first: "What amount would actually help?"\n`;
-                systemPrompt += `**If they want more:** Go up to max, but ask what they need it for.\n`;
+                const pitchAmount = gamePlan.offer_range.aggressive || gamePlan.offer_range.max;
+                const rounded = Math.round(pitchAmount / 1000) + 'k';
+                systemPrompt += `**Pitch Amount: ${rounded}**\n`;
+                systemPrompt += `Present this casually - "does ${rounded} work?" or "im looking at around ${rounded}, would that help?". You're gauging interest, not confirming an approval. Never give a range, just the single number.\n`;
+                systemPrompt += `**If they want more:** "let me see what i can do, how much did you have in mind?"\n`;
                 systemPrompt += `**If they want less:** Great, shorter term = faster close.\n\n`;
             }
 
@@ -990,8 +992,10 @@ Today: ${currentMonthName} ${dayOfMonth}, ${currentYear}
             );
 
             if (!alreadyPitched) {
-                console.log(`🎯 Forcing pitch - AI keeps stalling`);
-                responseContent = `good news - based on your file i can get you around $${min}-$${max}. does that work for what you need?`;
+                const pitchAmount = gamePlan.offer_range.aggressive || gamePlan.offer_range.max;
+                const rounded = Math.round(pitchAmount / 1000) + 'k';
+                console.log(`🎯 Forcing pitch - ${rounded}`);
+                responseContent = `does ${rounded} work?`;
             }
         }
 
