@@ -709,7 +709,15 @@ class ConversationCore {
 
         // Filters & Search
         const stateFilter = document.getElementById('stateFilter');
-        if (stateFilter) stateFilter.addEventListener('change', () => this.loadConversations(true));
+        if (stateFilter) {
+            stateFilter.addEventListener('change', (e) => {
+                const val = e.target.value;
+                e.target.classList.toggle('filter-active', !!val);
+                const wrapper = e.target.closest('.filter-wrapper');
+                if (wrapper) wrapper.classList.toggle('filter-active', !!val);
+                this.loadConversations(true);
+            });
+        }
 
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {

@@ -87,6 +87,16 @@
     cursor: pointer;
     z-index: 2;
 }
+.filter-wrapper.filter-active {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #3b82f6;
+}
+#stateFilter.filter-active {
+    color: #3b82f6;
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
 .filter-icon-indicator {
     font-size: 12px;
     pointer-events: none; /* Let clicks pass through */

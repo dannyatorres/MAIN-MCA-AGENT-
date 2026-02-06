@@ -181,6 +181,33 @@ window.MobileApp = class MobileApp {
         if (navigator.vibrate) navigator.vibrate(duration);
     }
 
+    updateFilterChip(filter) {
+        document.getElementById('activeFilterChip')?.remove();
+
+        if (!filter) return;
+
+        const chip = document.createElement('div');
+        chip.id = 'activeFilterChip';
+        chip.style.cssText = 'display:flex;align-items:center;gap:8px;margin:8px 12px 0;padding:8px 12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:8px;font-size:13px;color:#93c5fd;';
+        chip.innerHTML = `
+            <i class="fas fa-filter" style="font-size:11px;"></i>
+            <span>Showing: <strong style="color:#3b82f6;">${filter}</strong></span>
+            <button id="clearFilterBtn" style="margin-left:auto;background:none;border:none;color:#6e7681;font-size:16px;padding:0 4px;cursor:pointer;">×</button>
+        `;
+
+        this.dom.conversationList.parentNode.insertBefore(chip, this.dom.conversationList);
+
+        document.getElementById('clearFilterBtn')?.addEventListener('click', () => {
+            const select = document.getElementById('mobileStateFilter');
+            if (select) {
+                select.value = '';
+                select.classList.remove('filter-active');
+            }
+            chip.remove();
+            this.loadConversations(this.dom.searchInput?.value || '', false);
+        });
+    }
+
     // ============ EVENT LISTENERS ============
     setupEventListeners() {
         // Conversation selection
@@ -201,7 +228,10 @@ window.MobileApp = class MobileApp {
         // Mobile state filter
         const mobileStateFilter = document.getElementById('mobileStateFilter');
         if (mobileStateFilter) {
-            mobileStateFilter.addEventListener('change', () => {
+            mobileStateFilter.addEventListener('change', (e) => {
+                const val = e.target.value;
+                e.target.classList.toggle('filter-active', !!val);
+                this.updateFilterChip(val);
                 this.loadConversations(this.dom.searchInput?.value || '', false);
             });
         }

@@ -122,6 +122,9 @@ Object.assign(window.MobileApp.prototype, {
 
             const previousScrollTop = append ? this.dom.conversationList.scrollTop : 0;
             this.dom.conversationList.innerHTML = html;
+            if (this.refreshIndicator) {
+                this.dom.conversationList.prepend(this.refreshIndicator);
+            }
             if (this.pullIndicator) {
                 this.dom.conversationList.appendChild(this.pullIndicator);
             }
@@ -226,7 +229,8 @@ Object.assign(window.MobileApp.prototype, {
             let refreshDistance = 0;
             const REFRESH_THRESHOLD = 80;
 
-            const refreshIndicator = document.createElement('div');
+            this.refreshIndicator = document.createElement('div');
+            const refreshIndicator = this.refreshIndicator;
             refreshIndicator.className = 'pull-refresh-indicator';
             refreshIndicator.innerHTML = `
                 <div class="pull-progress-ring">

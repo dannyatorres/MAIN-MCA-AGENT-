@@ -9,6 +9,13 @@
     background: var(--app-bg, #0f1115);
 }
 
+/* Active filter indicator */
+#mobileStateFilter.filter-active {
+    color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    background: rgba(59, 130, 246, 0.1) !important;
+}
+
 .search-field-clean {
     width: 100%;
     height: 40px;
