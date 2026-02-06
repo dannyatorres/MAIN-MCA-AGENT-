@@ -92,9 +92,26 @@ Object.assign(window.MobileApp.prototype, {
         console.log('View element:', view, 'classList:', view?.classList);
         if (view) view.classList.remove('hidden');
         console.log('After removing hidden:', view?.classList);
+
+        // Inject "Back to Chat" shortcut
+        let quickNav = document.getElementById('intelQuickNav');
+        if (!quickNav) {
+            quickNav = document.createElement('button');
+            quickNav.id = 'intelQuickNav';
+            quickNav.className = 'intel-quick-nav-btn';
+            quickNav.innerHTML = '<i class="fas fa-comment"></i> Chat';
+            quickNav.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:100;padding:10px 18px;border-radius:20px;border:none;background:#007aff;color:#fff;font-size:14px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,0.2);display:flex;align-items:center;gap:6px;';
+            quickNav.addEventListener('click', () => {
+                this.closeIntelView();
+                this.goToPanel(1);
+                quickNav.remove();
+            });
+            document.body.appendChild(quickNav);
+        }
     },
 
     closeIntelView() {
+        document.getElementById('intelQuickNav')?.remove();
         this.currentIntelView = null;
 
         // Hide all views

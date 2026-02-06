@@ -130,11 +130,55 @@ window.MobileApp = class MobileApp {
     }
 
     showToast(message, type = 'info') {
+        const duration = type === 'error' ? 5000 : type === 'success' ? 2000 : 3000;
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.textContent = message;
+        toast.style.cursor = 'pointer';
+        toast.addEventListener('click', () => toast.remove());
         this.dom.toastContainer.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        setTimeout(() => toast.remove(), duration);
+    }
+
+    showConfirm(message, onConfirm, onCancel) {
+        document.getElementById('mobileConfirmModal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'mobileConfirmModal';
+        modal.className = 'mobile-confirm-overlay';
+        modal.innerHTML = `
+            <div class="mobile-confirm-card">
+                <p class="mobile-confirm-message">${message}</p>
+                <div class="mobile-confirm-actions">
+                    <button class="mobile-confirm-btn cancel" id="confirmCancelBtn">Cancel</button>
+                    <button class="mobile-confirm-btn confirm" id="confirmOkBtn">Confirm</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('confirmOkBtn').addEventListener('click', () => {
+            modal.remove();
+            if (onConfirm) onConfirm();
+        });
+        document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+            modal.remove();
+            if (onCancel) onCancel();
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+                if (onCancel) onCancel();
+            }
+        });
+    }
+
+    showAlert(message) {
+        this.showToast(message, 'warning');
+    }
+
+    haptic(duration = 10) {
+        if (navigator.vibrate) navigator.vibrate(duration);
     }
 
     // ============ EVENT LISTENERS ============
@@ -149,7 +193,9 @@ window.MobileApp = class MobileApp {
         let searchTimeout;
         this.dom.searchInput.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => this.loadConversations(e.target.value), 400);
+            const val = e.target.value.trim();
+            if (val.length >= 1 && val.length < 2) return;
+            searchTimeout = setTimeout(() => this.loadConversations(val), 400);
         });
 
         // Mobile state filter
@@ -225,10 +271,10 @@ window.MobileApp = class MobileApp {
 
 
         document.getElementById('logoutBtn')?.addEventListener('click', () => {
-            if (confirm('Sign out?')) {
+            this.showConfirm('Sign out?', () => {
                 localStorage.removeItem('user');
                 window.location.href = '/mobile-login.html?logged_out';
-            }
+            });
         });
 
         document.getElementById('closeDashboardBtn')?.addEventListener('click', () => {

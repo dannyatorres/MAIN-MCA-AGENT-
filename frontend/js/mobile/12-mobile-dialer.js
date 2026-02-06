@@ -229,6 +229,7 @@ Object.assign(window.MobileApp.prototype, {
         this.lockDialerChannel(lead.id);
 
         // Open phone app
+        this.haptic(25);
         window.location.href = `tel:${phone}`;
 
         // When user returns, ask if they completed the call
@@ -307,6 +308,7 @@ Object.assign(window.MobileApp.prototype, {
         }
 
         try {
+            this.haptic(25);
             const call = await window.callManager.startCall(phone, lead.id);
 
             if (call) {
@@ -415,6 +417,15 @@ Object.assign(window.MobileApp.prototype, {
         // Load messages once
         this.loadMessages(leadId);
 
+        // Fetch full conversation object for downstream views
+        this.apiCall(`/api/conversations/${leadId}`).then(data => {
+            const full = data.conversation || data;
+            this.selectedConversation = full;
+            this.conversations.set(String(leadId), full);
+        }).catch(() => {
+            this.selectedConversation = lead;
+        });
+
         // Join socket room if connected
         if (this.socket?.connected) {
             this.socket.emit('join_conversation', leadId);
@@ -463,6 +474,8 @@ Object.assign(window.MobileApp.prototype, {
     async logDialerDisposition(disposition) {
         const lead = this.dialerCurrentLead;
         if (!lead) return;
+
+        this.haptic();
 
         // Calculate duration
         const duration = this.dialerCallStartTime

@@ -750,6 +750,12 @@ Let me know if you need anything else.</textarea>
     },
 
     async sendLenderSubmissions() {
+        const sendBtn = document.getElementById('confirmSubmissionBtn');
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        }
+
         const selectedLenders = [];
         document.querySelectorAll('#submissionLenderList .lender-checkbox:checked').forEach(cb => {
             selectedLenders.push({
@@ -760,6 +766,10 @@ Let me know if you need anything else.</textarea>
 
         if (selectedLenders.length === 0) {
             this.showToast('Please select at least one lender', 'warning');
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+            }
             return;
         }
 
@@ -782,28 +792,26 @@ Let me know if you need anything else.</textarea>
             customMessage: message
         };
 
-        // 1. OPTIMISTIC: Close modal and show success immediately
-        this.closeSubmissionModal();
-        this.showToast(`Sending to ${selectedLenders.length} lenders...`, 'success');
-
-        // 2. Fire API call in background (don't await)
-        this.apiCall(`/api/submissions/${this.currentConversationId}/send`, {
-            method: 'POST',
-            body: JSON.stringify({
-                selectedLenders,
-                businessData,
-                documents: selectedDocuments
-            })
-        }).then(result => {
-            if (result.success) {
-                this.showToast(`✓ Sent to ${selectedLenders.length} lenders!`, 'success');
-            } else {
-                throw new Error(result.error || 'Failed to send');
-            }
-        }).catch(err => {
+        try {
+            await this.apiCall(`/api/submissions/${this.currentConversationId}/send`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    selectedLenders,
+                    businessData,
+                    documents: selectedDocuments
+                })
+            });
+            this.showToast('Sent to lenders!', 'success');
+            this.closeSubmissionModal();
+        } catch (err) {
             console.error('Submission error:', err);
-            this.showToast('Failed to send: ' + err.message, 'error');
-        });
+            this.showToast('Failed to send', 'error');
+        } finally {
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+            }
+        }
     },
 
     closeSubmissionModal() {

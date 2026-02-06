@@ -53,7 +53,19 @@ Object.assign(window.MobileApp.prototype, {
             let convArray = Array.from(this.conversations.values());
 
             if (!convArray.length) {
-                this.dom.conversationList.innerHTML = '<div class="loading-state">No conversations found</div>';
+                this.dom.conversationList.innerHTML = `
+                    <div class="empty-state" style="text-align:center;padding:60px 20px;">
+                        <div style="font-size:48px;margin-bottom:16px;">📋</div>
+                        <h3 style="margin:0 0 8px;">No conversations yet</h3>
+                        <p style="color:#888;margin:0 0 20px;font-size:14px;">Add your first lead to get started</p>
+                        <button class="btn-mobile-primary" id="emptyStateAddLead" style="padding:12px 24px;border-radius:12px;border:none;background:#007aff;color:#fff;font-size:15px;font-weight:600;">
+                            <i class="fas fa-plus"></i> Add New Lead
+                        </button>
+                    </div>
+                `;
+                document.getElementById('emptyStateAddLead')?.addEventListener('click', () => {
+                    this.openCreateLeadForm();
+                });
                 return;
             }
 
@@ -207,9 +219,53 @@ Object.assign(window.MobileApp.prototype, {
                 progressCircle.style.strokeDashoffset = circumference;
                 checkmark.textContent = '↓';
             });
+
+            // === PULL-TO-REFRESH (top) ===
+            let refreshStartY = 0;
+            let isRefreshing = false;
+            let refreshDistance = 0;
+            const REFRESH_THRESHOLD = 80;
+
+            const refreshIndicator = document.createElement('div');
+            refreshIndicator.className = 'pull-refresh-indicator';
+            refreshIndicator.innerHTML = '<div class="pull-refresh-spinner"></div>';
+            refreshIndicator.style.cssText = 'height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:height 0.2s;';
+            list.prepend(refreshIndicator);
+
+            list.addEventListener('touchstart', (e) => {
+                if (list.scrollTop <= 0 && !this.isLoadingMore) {
+                    refreshStartY = e.touches[0].clientY;
+                    isRefreshing = true;
+                }
+            }, { passive: true });
+
+            list.addEventListener('touchmove', (e) => {
+                if (!isRefreshing || this.isLoadingMore) return;
+                refreshDistance = e.touches[0].clientY - refreshStartY;
+                if (refreshDistance > 0 && list.scrollTop <= 0) {
+                    const progress = Math.min(refreshDistance / REFRESH_THRESHOLD, 1);
+                    refreshIndicator.style.height = Math.min(refreshDistance * 0.5, 60) + 'px';
+                    refreshIndicator.style.opacity = progress;
+                }
+            }, { passive: true });
+
+            list.addEventListener('touchend', async () => {
+                if (!isRefreshing) return;
+                if (refreshDistance >= REFRESH_THRESHOLD && !this.isLoadingMore) {
+                    refreshIndicator.style.height = '40px';
+                    refreshIndicator.innerHTML = '<div class="loading-spinner" style="width:20px;height:20px;"></div>';
+                    await this.loadConversations(this.dom.searchInput?.value || '', false);
+                }
+                refreshIndicator.style.height = '0';
+                refreshIndicator.style.opacity = '0';
+                refreshIndicator.innerHTML = '<div class="pull-refresh-spinner"></div>';
+                isRefreshing = false;
+                refreshDistance = 0;
+            });
         },
 
         async selectConversation(id) {
+            this.haptic();
             this.currentConversationId = id;
             this.selectedConversation = this.conversations.get(id);
 
@@ -334,7 +390,7 @@ Object.assign(window.MobileApp.prototype, {
             picker.querySelector('[data-action="call"]')?.addEventListener('click', () => {
                 picker.remove();
                 if (!phone) {
-                    alert('No phone number available');
+                    this.showAlert('No phone number available');
                     return;
                 }
                 this.showCallOptions(phone);
@@ -354,13 +410,13 @@ Object.assign(window.MobileApp.prototype, {
         // ============ CALLING ============
         async startCall() {
             if (!this.currentConversationId || !this.selectedConversation) {
-                alert('Select a conversation first');
+                this.showAlert('Select a conversation first');
                 return;
             }
 
             const phone = this.selectedConversation.lead_phone || this.selectedConversation.phone;
             if (!phone) {
-                alert('No phone number available');
+                this.showAlert('No phone number available');
                 return;
             }
 
@@ -413,7 +469,7 @@ Object.assign(window.MobileApp.prototype, {
             picker.querySelector('[data-type="twilio"]')?.addEventListener('click', async () => {
                 picker.remove();
                 if (!window.callManager) {
-                    alert('Calling system not available');
+                    this.showAlert('Calling system not available');
                     return;
                 }
                 this.showCallUI();

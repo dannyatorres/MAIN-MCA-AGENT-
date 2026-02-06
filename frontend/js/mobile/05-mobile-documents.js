@@ -256,7 +256,7 @@ Object.assign(window.MobileApp.prototype, {
         try {
             const doc = this.currentDocuments?.find(d => d.id == docId);
             if (!doc) {
-                alert('Doc not found. ID: ' + docId + '\nDocs loaded: ' + (this.currentDocuments?.length || 0));
+                this.showAlert('Doc not found. ID: ' + docId + '\nDocs loaded: ' + (this.currentDocuments?.length || 0));
                 return;
             }
 
@@ -317,7 +317,7 @@ Object.assign(window.MobileApp.prototype, {
             document.getElementById('saveEditDocMobile').onclick = () => this.saveDocumentEdit();
         
         } catch (err) {
-            alert('Edit error: ' + err.message);
+            this.showAlert('Edit error: ' + err.message);
         }
     },
 
@@ -533,21 +533,21 @@ Object.assign(window.MobileApp.prototype, {
 
     // ============ DELETE ============
     async confirmDeleteDocument(docId) {
-        if (!confirm('Delete this document?')) return;
+        this.showConfirm('Delete this document?', async () => {
+            try {
+                const result = await this.apiCall(`/api/documents/${docId}`, {
+                    method: 'DELETE'
+                });
 
-        try {
-            const result = await this.apiCall(`/api/documents/${docId}`, {
-                method: 'DELETE'
-            });
-
-            if (result.success) {
-                this.showToast('Document deleted', 'success');
-                this.loadDocumentsView();
-            } else {
-                throw new Error(result.error);
+                if (result.success) {
+                    this.showToast('Document deleted', 'success');
+                    this.loadDocumentsView();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (err) {
+                this.showToast('Delete failed', 'error');
             }
-        } catch (err) {
-            this.showToast('Delete failed', 'error');
-        }
+        });
     }
 });

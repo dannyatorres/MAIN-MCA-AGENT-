@@ -56,6 +56,8 @@ Object.assign(window.MobileApp.prototype, {
             const content = this.dom.messageInput.value.trim();
             if (!content || !this.currentConversationId) return;
 
+            this.haptic();
+
             // Disable input
             this.dom.sendBtn.disabled = true;
             const originalContent = content;
@@ -92,6 +94,8 @@ Object.assign(window.MobileApp.prototype, {
                         content: content
                     })
                 });
+                const pendingEl = this.dom.messagesContainer.querySelector(`[data-id="${tempId}"]`);
+                if (pendingEl) pendingEl.classList.remove('pending');
                 this.showToast('Sent', 'success');
             } catch (err) {
                 // Remove failed message
@@ -175,7 +179,45 @@ Object.assign(window.MobileApp.prototype, {
                 this.conversations.delete(convId);
                 const newMap = new Map([[convId, conv], ...this.conversations]);
                 this.conversations = newMap;
-                this.renderConversationList();
+
+                // Targeted DOM update instead of full re-render
+                const existingItem = this.dom.conversationList.querySelector(`[data-id="${convId}"]`);
+                if (existingItem) {
+                    const preview = existingItem.querySelector('.message-preview');
+                    if (preview) {
+                        preview.textContent = msg.content;
+                    } else {
+                        const content = existingItem.querySelector('.conversation-content');
+                        if (content) {
+                            const previewDiv = document.createElement('div');
+                            previewDiv.className = 'message-preview';
+                            previewDiv.textContent = msg.content;
+                            content.appendChild(previewDiv);
+                        }
+                    }
+
+                    const timeEl = existingItem.querySelector('.conversation-time');
+                    if (timeEl) timeEl.textContent = this.utils.formatDate(messageTime, 'ago');
+
+                    if (convId !== String(this.currentConversationId) && conv.unread_count > 0) {
+                        let badge = existingItem.querySelector('.unread-badge');
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'unread-badge';
+                            existingItem.prepend(badge);
+                        }
+                        badge.textContent = conv.unread_count;
+                    }
+
+                    const refreshIndicator = this.dom.conversationList.querySelector('.pull-refresh-indicator');
+                    if (refreshIndicator && refreshIndicator.parentNode === this.dom.conversationList) {
+                        this.dom.conversationList.insertBefore(existingItem, refreshIndicator.nextSibling);
+                    } else {
+                        this.dom.conversationList.prepend(existingItem);
+                    }
+                } else {
+                    this.renderConversationList();
+                }
             }
 
             // Add to current chat
