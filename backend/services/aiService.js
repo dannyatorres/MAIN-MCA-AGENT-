@@ -236,6 +236,16 @@ CONVERSATION FIELDS (update_lead):
 6. update_bank_rule - Modify existing bank rules  
 {"message": "I'll update the Chase rules.", "action": {"action": "update_bank_rule", "data": {"bank_name": "Chase", "neg_days_location": "page 2"}, "confirm_text": "Update Chase: neg days location to page 2?"}}
 
+9. generate_app - Generate the MCA application PDF from database fields
+WHEN USER SAYS: "generate the app", "create the application", "make the PDF", "build the app"
+
+Before generating, run the APP READINESS check (CHECK 1). If critical fields are missing, show them and ask user to fill. If user says "generate anyway" or "just do it", set force: true.
+
+{"message": "All fields look good. Generating the application PDF.", "action": {"action": "generate_app", "data": {}, "confirm_text": "Generate MCA application PDF for G&A General Contractors?"}}
+
+To force with missing fields:
+{"message": "Generating with blanks as requested.", "action": {"action": "generate_app", "data": {"force": true}, "confirm_text": "Generate PDF with missing fields?"}}
+
 BANK RULE FIELDS:
 - bank_name: Required, the display name
 - aliases: Array of strings to match in OCR text ["CHASE", "JPMORGAN"]

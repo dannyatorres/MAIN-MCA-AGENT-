@@ -242,7 +242,8 @@ router.post('/execute-action', async (req, res) => {
         'insert_bank_rule': { table: 'bank_rules', type: 'insert' },
         'update_bank_rule': { table: 'bank_rules', type: 'update' },
         'qualify_deal': { table: 'lender_submissions', type: 'qualify' },
-        'submit_deal': { table: 'lender_submissions', type: 'submit' }
+        'submit_deal': { table: 'lender_submissions', type: 'submit' },
+        'generate_app': { table: 'conversations', type: 'generate' }
     };
 
     if (!ALLOWED_ACTIONS[action]) {
@@ -657,6 +658,130 @@ router.post('/execute-action', async (req, res) => {
                 }
 
                 result = { message: msg };
+                break;
+            }
+
+            case 'generate_app': {
+                // 1. Pull everything from conversations
+                const appDataResult = await db.query(`
+                    SELECT 
+                        business_name, dba_name, address, city, us_state, zip,
+                        lead_phone, email, tax_id, business_start_date, entity_type,
+                        industry_type, use_of_proceeds,
+                        annual_revenue, monthly_revenue, funding_amount,
+                        first_name, last_name, owner_title,
+                        owner_home_address, owner_home_city, owner_home_state, owner_home_zip,
+                        owner_email, ssn, date_of_birth, owner_ownership_percent, credit_score,
+                        owner2_first_name, owner2_last_name, owner2_title,
+                        owner2_email, owner2_phone, owner2_ssn, owner2_dob,
+                        owner2_ownership_percent, owner2_address, owner2_city, owner2_state, owner2_zip
+                    FROM conversations WHERE id = $1
+                `, [conversationId]);
+
+                if (appDataResult.rows.length === 0) {
+                    return res.json({ success: false, error: 'Conversation not found' });
+                }
+
+                const c = appDataResult.rows[0];
+
+                // 2. Calculate annual revenue from monthly if missing
+                const annualRev = c.annual_revenue || (c.monthly_revenue ? Math.round(c.monthly_revenue * 12) : '');
+
+                // 3. Format DOB
+                const formatDate = (d) => {
+                    if (!d) return '';
+                    const dt = new Date(d);
+                    return dt.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+                };
+
+                // 4. Format business start date
+                const formatStartDate = (d) => {
+                    if (!d) return '';
+                    const dt = new Date(d);
+                    return dt.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+                };
+
+                // 5. Map DB → template keys
+                const applicationData = {
+                    legalName: c.business_name || '',
+                    dba: c.dba_name || '',
+                    address: c.address || '',
+                    city: c.city || '',
+                    state: c.us_state || '',
+                    zip: c.zip || '',
+                    telephone: c.lead_phone || '',
+                    businessEmail: c.email || '',
+                    federalTaxId: c.tax_id || '',
+                    dateBusinessStarted: formatStartDate(c.business_start_date),
+                    entityType: c.entity_type || '',
+                    typeOfBusiness: c.industry_type || '',
+                    useOfFunds: c.use_of_proceeds || 'Working Capital',
+                    annualRevenue: annualRev ? `$${Number(annualRev).toLocaleString()}` : '',
+                    requestedAmount: c.funding_amount ? `$${Number(c.funding_amount).toLocaleString()}` : '',
+                    ownerFirstName: c.first_name || '',
+                    ownerLastName: c.last_name || '',
+                    ownerTitle: c.owner_title || 'Owner',
+                    ownerAddress: c.owner_home_address || '',
+                    ownerCity: c.owner_home_city || '',
+                    ownerState: c.owner_home_state || '',
+                    ownerZip: c.owner_home_zip || '',
+                    ownerEmail: c.owner_email || c.email || '',
+                    ownerSSN: c.ssn || '',
+                    ownerDOB: formatDate(c.date_of_birth),
+                    ownershipPercentage: c.owner_ownership_percent || '',
+                    creditScore: c.credit_score || 'N/A',
+                    owner2FirstName: c.owner2_first_name || '',
+                    owner2LastName: c.owner2_last_name || '',
+                    owner2Address: [c.owner2_address, c.owner2_city, c.owner2_state, c.owner2_zip].filter(Boolean).join(' '),
+                    owner2Email: c.owner2_email || '',
+                    owner2SSN: c.owner2_ssn || '',
+                    owner2DOB: formatDate(c.owner2_dob),
+                    owner2Percentage: c.owner2_ownership_percent || ''
+                };
+
+                // 6. Check for critical missing fields
+                const missing = [];
+                if (!c.business_name) missing.push('business_name');
+                if (!c.address) missing.push('address');
+                if (!c.lead_phone) missing.push('lead_phone');
+                if (!c.tax_id) missing.push('tax_id (EIN)');
+                if (!c.first_name) missing.push('first_name');
+                if (!c.ssn) missing.push('SSN');
+                if (!c.date_of_birth) missing.push('date_of_birth');
+                if (!c.owner_home_address) missing.push('owner_home_address');
+
+                if (missing.length > 0 && !data.force) {
+                    return res.json({
+                        success: true,
+                        message: `⚠️ Application has ${missing.length} missing field(s): ${missing.join(', ')}. Say "generate anyway" to create with blanks, or fill them first.`
+                    });
+                }
+
+                // 7. Generate PDF
+                const ownerName = `${c.first_name || ''} ${c.last_name || ''}`.trim();
+                const generateUrl = `http://localhost:${process.env.PORT || 3000}/api/conversations/${conversationId}/generate-pdf-document`;
+
+                let genResult;
+                try {
+                    const genRes = await fetch(generateUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': req.headers.authorization || '',
+                            'Cookie': req.headers.cookie || ''
+                        },
+                        body: JSON.stringify({ applicationData, ownerName })
+                    });
+                    genResult = await genRes.json();
+                } catch (fetchErr) {
+                    return res.json({ success: false, error: 'PDF generation failed: ' + fetchErr.message });
+                }
+
+                if (!genResult.success) {
+                    return res.json({ success: false, error: genResult.error || 'PDF generation failed' });
+                }
+
+                result = { message: `✅ Application PDF generated: ${genResult.document?.filename || 'WCA application'}` };
                 break;
             }
         }
