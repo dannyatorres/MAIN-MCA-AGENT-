@@ -121,36 +121,28 @@ router.get('/', async (req, res) => {
 
         // 4. SOURCE OF TRUTH FILTER
         if (filter) {
-            if (filter === 'OFFER') {
-                // Checks the lender_submissions table dynamically
-                query += ` AND EXISTS (
-                    SELECT 1 FROM lender_submissions ls
-                    WHERE ls.conversation_id = c.id
-                    AND ls.status IN ('OFFER', 'APPROVED')
-                    AND (ls.dismissed IS FALSE OR ls.dismissed IS NULL)
-                )`;
-            }
-            else if (filter === 'SUBMITTED') {
-                // Match stats card logic: any lender_submissions row counts as Submitted
-                query += ` AND EXISTS (
-                    SELECT 1 FROM lender_submissions ls
-                    WHERE ls.conversation_id = c.id
-                )`;
-            }
-            else if (filter === 'INTERESTED') {
-                query += ` AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound')`;
-            }
-            else if (filter === 'UNREAD') {
-                query += ` AND (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.direction = 'inbound' AND m.timestamp > COALESCE(c.last_read_at, '1970-01-01')) > 0`;
-            }
-            else if (filter === 'FCS_READY') {
+            const STATE_GROUPS = {
+                ACTIVE: ['ACTIVE'],
+                QUALIFIED: ['QUALIFIED', 'FCS_COMPLETE', 'STRATEGIZED'],
+                PITCHED: ['PITCH_READY'],
+                SUBMITTED: ['SUBMITTED', 'VETTING'],
+                OFFER: ['OFFER_RECEIVED', 'NEGOTIATING', 'CLOSING'],
+                DEAD: ['DEAD']
+            };
+
+            if (STATE_GROUPS[filter]) {
+                const states = STATE_GROUPS[filter];
+                const placeholders = states.map((_, i) => `$${paramIndex + i}`).join(', ');
+                query += ` AND c.state IN (${placeholders})`;
+                values.push(...states);
+                paramIndex += states.length;
+            } else if (filter === 'FCS_READY') {
                 query += ` AND EXISTS (
                     SELECT 1 FROM fcs_analyses f
                     WHERE f.conversation_id = c.id
                     AND f.status = 'completed'
                 )`;
-            }
-            else {
+            } else {
                 query += ` AND c.state = $${paramIndex++}`;
                 values.push(filter);
             }
