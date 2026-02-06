@@ -39,8 +39,8 @@ router.post('/chat', async (req, res) => {
             console.log('   🔍 [AI Route] Fetching Lead Details...');
             const convResult = await db.query(`
                 SELECT c.business_name, c.first_name, c.last_name, c.state, c.display_id,
-                       c.monthly_revenue, c.requested_amount, c.has_offer, c.ai_enabled,
-                       ld.credit_score, ld.business_type, ld.business_address
+                       c.monthly_revenue, c.has_offer, c.ai_enabled,
+                       ld.requested_amount, ld.credit_score, ld.business_type, ld.business_address
                 FROM conversations c
                 LEFT JOIN lead_details ld ON c.id = ld.conversation_id
                 WHERE c.id = $1
