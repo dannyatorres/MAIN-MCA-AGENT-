@@ -232,9 +232,13 @@ Object.assign(window.MobileApp.prototype, {
         window.location.href = `tel:${phone}`;
 
         // When user returns, ask if they completed the call
-        setTimeout(() => {
-            this.showNativeCallConfirm();
-        }, 1000);
+        const visibilityHandler = () => {
+            if (!document.hidden) {
+                document.removeEventListener('visibilitychange', visibilityHandler);
+                this.showNativeCallConfirm();
+            }
+        };
+        document.addEventListener('visibilitychange', visibilityHandler);
     },
 
     showNativeCallConfirm() {
@@ -392,7 +396,7 @@ Object.assign(window.MobileApp.prototype, {
 
         // Set current conversation
         this.currentConversationId = leadId;
-        this.selectedConversation = lead;
+        this.selectedConversation = this.conversations?.get(leadId) || lead;
 
         // Update header
         const personName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();

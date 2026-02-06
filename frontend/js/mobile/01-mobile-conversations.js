@@ -90,7 +90,7 @@ Object.assign(window.MobileApp.prototype, {
                 const preview = conv.last_message ? `<div class="message-preview">${this.utils.escapeHtml(conv.last_message)}</div>` : '';
 
                 return `
-                    <div class="conversation-item ${isSelected ? 'selected' : ''}" data-id="${conv.id}">
+                    <div class="conversation-item ${isSelected ? 'active' : ''}" data-id="${conv.id}">
                         ${unread > 0 && !isSelected ? `<div class="unread-badge">${unread}</div>` : ''}
                         <div class="avatar-circle">${initials}</div>
                         <div class="conversation-content">
@@ -108,9 +108,13 @@ Object.assign(window.MobileApp.prototype, {
                 `;
             }).join('');
 
+            const previousScrollTop = append ? this.dom.conversationList.scrollTop : 0;
             this.dom.conversationList.innerHTML = html;
             if (this.pullIndicator) {
                 this.dom.conversationList.appendChild(this.pullIndicator);
+            }
+            if (append) {
+                this.dom.conversationList.scrollTop = previousScrollTop;
             }
         },
 
@@ -283,12 +287,13 @@ Object.assign(window.MobileApp.prototype, {
             if (!this.currentConversationId) return;
 
             try {
-            const conv = await this.apiCall(`/api/conversations/${this.currentConversationId}`);
-            this.updateAIButtonState(conv.ai_enabled);
-        } catch (err) {
-            console.error('Failed to fetch AI state:', err);
-        }
-    },
+                const data = await this.apiCall(`/api/conversations/${this.currentConversationId}`);
+                const conv = data.conversation || data;
+                this.updateAIButtonState(conv?.ai_enabled);
+            } catch (err) {
+                console.error('Failed to fetch AI state:', err);
+            }
+        },
 
         showChatActions() {
             document.getElementById('chatActionsPicker')?.remove();
@@ -479,9 +484,11 @@ Object.assign(window.MobileApp.prototype, {
             this.applyCallManagerOverrides();
         },
 
-        applyCallManagerOverrides() {
+        applyCallManagerOverrides(retries = 0) {
             if (!window.callManager) {
-                setTimeout(() => this.applyCallManagerOverrides(), 500);
+                if (retries < 20) {
+                    setTimeout(() => this.applyCallManagerOverrides(retries + 1), 500);
+                }
                 return;
             }
 

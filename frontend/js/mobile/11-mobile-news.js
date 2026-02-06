@@ -89,6 +89,24 @@
         const container = document.getElementById('mobileNewsContainer');
         if (!container) return;
 
+        if (!container.dataset.clickBound) {
+            container.dataset.clickBound = '1';
+            container.addEventListener('click', (e) => {
+                const card = e.target.closest('.mobile-news-card');
+                if (!card || !container.contains(card)) return;
+                const url = card.dataset.link;
+                if (!url) return;
+                try {
+                    const parsed = new URL(url, window.location.origin);
+                    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                        window.open(parsed.href, '_blank', 'noopener');
+                    }
+                } catch (err) {
+                    console.warn('Blocked invalid news link', err);
+                }
+            });
+        }
+
         const html = data.map(item => {
             // Badge class mapping
             let badgeClass = 'source-industry';
@@ -101,7 +119,7 @@
             const timeAgo = item.pubDate ? this.utils.formatDate(item.pubDate, 'ago') : '';
 
             return `
-                <div class="mobile-news-card" onclick="window.open('${item.link}', '_blank')">
+                <div class="mobile-news-card" data-link="${this.utils.escapeHtml(item.link || '')}">
                     <div class="news-card-header">
                         <span class="news-source-badge ${badgeClass}">
                             <i class="fas ${iconClass}"></i> ${item.source}

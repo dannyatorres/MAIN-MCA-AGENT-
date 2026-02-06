@@ -361,10 +361,16 @@ Object.assign(window.MobileApp.prototype, {
         });
 
         // Currency
+        const formatMoney = (value) => {
+            const raw = value.replace(/[^0-9]/g, '');
+            return raw ? '$' + Number(raw).toLocaleString() : '';
+        };
         form.querySelectorAll('.money-input').forEach(input => {
+            input.addEventListener('input', (e) => {
+                e.target.value = formatMoney(e.target.value);
+            });
             input.addEventListener('blur', (e) => {
-                const num = e.target.value.replace(/[^0-9.]/g, '');
-                if (num) e.target.value = '$' + Number(num).toLocaleString();
+                e.target.value = formatMoney(e.target.value);
             });
         });
 

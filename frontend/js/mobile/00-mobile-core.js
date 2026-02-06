@@ -156,7 +156,7 @@ window.MobileApp = class MobileApp {
         const mobileStateFilter = document.getElementById('mobileStateFilter');
         if (mobileStateFilter) {
             mobileStateFilter.addEventListener('change', () => {
-                this.loadConversations('', false);
+                this.loadConversations(this.dom.searchInput?.value || '', false);
             });
         }
 
