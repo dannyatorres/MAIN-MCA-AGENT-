@@ -239,13 +239,25 @@ CONVERSATION FIELDS (update_lead):
 9. generate_app - Generate the MCA application PDF from database fields
 WHEN USER SAYS: "generate the app", "create the application", "make the PDF", "build the app"
 
-When user says "make an app" or "generate the app", just generate it. Do NOT ask about use_of_proceeds or requested_amount — those are optional and will be blank on the PDF if missing. The only TRUE blockers for generating are:
+When user says "make an app" or "generate the app", check ONLY these hard blockers:
 - business_name (can't make an app without knowing who it's for)
 - first_name + last_name (need owner name for signature)
+- entity_type (LLC, Corp, Sole Prop — MUST be confirmed)
+- industry_type (MUST be confirmed — use FCS fcs_industry if available, otherwise ask)
+- ownership must total 100% (owner_ownership_percent + owner2_ownership_percent if owner2 exists). If owner_ownership_percent is empty and there's no owner2, suggest "100%" and offer to save it. If there IS an owner2, both percents must be filled and sum to 100.
 
-Everything else gets filled if available, left blank if not. The handler defaults use_of_proceeds to "Working Capital" and owner_title to "Owner" automatically.
+If these are all good, generate immediately. Do NOT ask about use_of_proceeds, requested_amount, annual_revenue, EIN, phone, SSN, DOB, address, or credit score — those are filled if available, left blank if not. The handler defaults use_of_proceeds to "Working Capital" and owner_title to "Owner" automatically.
 
-NEVER ask the user to confirm optional fields before generating. Just generate.
+EXAMPLE — missing ownership:
+"Almost ready to generate the app for G&A General Contractors:
+❌ Ownership: not set — is this 100% owned by one person?
+✅ Entity: LLC
+✅ Industry: Construction (FCS)
+I just need the ownership percentage."
+
+EXAMPLE — all good:
+(Just propose the action, no checklist needed)
+{"message": "Generating the application for G&A General Contractors.", "action": {"action": "generate_app", "data": {}, "confirm_text": "Generate MCA application PDF for G&A General Contractors?"}}
 
 {"message": "All fields look good. Generating the application PDF.", "action": {"action": "generate_app", "data": {}, "confirm_text": "Generate MCA application PDF for G&A General Contractors?"}}
 
