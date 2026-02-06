@@ -36,7 +36,9 @@ router.post('/chat', async (req, res) => {
             // 1. Basic Lead Info
             console.log('   🔍 [AI Route] Fetching Lead Details...');
             const convResult = await db.query(`
-                SELECT c.*, ld.*
+                SELECT c.business_name, c.first_name, c.last_name, c.state, c.display_id,
+                       c.monthly_revenue, c.requested_amount, c.has_offer, c.ai_enabled,
+                       ld.credit_score, ld.business_type, ld.business_address
                 FROM conversations c
                 LEFT JOIN lead_details ld ON c.id = ld.conversation_id
                 WHERE c.id = $1
@@ -58,25 +60,30 @@ router.post('/chat', async (req, res) => {
                 let lenderResult = { rows: [] };
                 try {
                     lenderResult = await db.query(`
-                        SELECT lender_name, status, offer_amount, decline_reason, raw_email_body, offer_details
+                        SELECT lender_name, status, offer_amount, factor_rate, term_length, term_unit, payment_frequency, decline_reason
                         FROM lender_submissions
                         WHERE conversation_id = $1 ORDER BY created_at DESC
                     `, [conversationId]);
                     console.log(`   💰 [AI Route] Found ${lenderResult.rows.length} Lender Offers`);
                 } catch (e) { console.log('   ⚠️ Lender fetch error', e.message); }
 
-                // Fetch valid lenders for AI to reference
+                // Fetch valid lenders for AI to reference (only if needed)
                 let lendersResult = { rows: [] };
-                try {
-                    lendersResult = await db.query(`SELECT name FROM lenders ORDER BY name`);
-                    console.log(`   🏦 [AI Route] Found ${lendersResult.rows.length} lenders`);
-                } catch (e) { console.log('   ⚠️ Lenders fetch error', e.message); }
+                const needsLenders = /lender|submit|send to|qualify|match/i.test(query);
+                if (needsLenders) {
+                    try {
+                        lendersResult = await db.query(`SELECT name FROM lenders ORDER BY name`);
+                        console.log(`   🏦 [AI Route] Found ${lendersResult.rows.length} lenders`);
+                    } catch (e) { console.log('   ⚠️ Lenders fetch error', e.message); }
+                }
 
                 // 🟢 4. FETCH FCS / BANK ANALYSIS (NEW)
                 let fcsResult = { rows: [] };
                 try {
                     fcsResult = await db.query(`
-                        SELECT * FROM fcs_analyses 
+                        SELECT average_revenue, average_daily_balance, total_negative_days,
+                               average_deposit_count, analysis_summary, created_at
+                        FROM fcs_analyses 
                         WHERE conversation_id = $1 
                         ORDER BY created_at DESC LIMIT 1
                     `, [conversationId]);
@@ -159,7 +166,7 @@ router.post('/chat', async (req, res) => {
                     strategy_type: strategyResult.rows[0]?.strategy_type || null,
 
                     // Valid lenders for actions
-                    valid_lenders: lendersResult.rows.map(l => l.name)
+                    valid_lenders: needsLenders ? lendersResult.rows.map(l => l.name) : []
                 };
                 console.log('   📦 [AI Route] Context Package ready for Service.');
             }

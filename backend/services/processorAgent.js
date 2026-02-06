@@ -515,28 +515,6 @@ async function processEmail(email, db) {
 
     const systemNote = noteContent;
 
-    // 🟢 Write to AI Chat - check for EXACT duplicate (same lender + same summary)
-    try {
-        const recentNote = await db.query(`
-            SELECT 1 FROM ai_chat_messages 
-            WHERE conversation_id = $1 
-              AND content = $2
-              AND created_at > NOW() - INTERVAL '24 hours'
-            LIMIT 1
-        `, [bestMatchId, systemNote]);
-
-        if (recentNote.rows.length === 0) {
-            await db.query(`
-                INSERT INTO ai_chat_messages (conversation_id, role, content, created_at)
-                VALUES ($1, 'assistant', $2, NOW())
-            `, [bestMatchId, systemNote]);
-        } else {
-            console.log(`      ⏭️ Skipping duplicate AI note (exact match)`);
-        }
-    } catch (err) {
-        console.error('      ⚠️ [AI] Failed to log to assistant history:', err.message);
-    }
-
     // 🟢 Also write to notes table
     try {
         const noteResult = await db.query(`
