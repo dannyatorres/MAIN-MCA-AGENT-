@@ -239,6 +239,7 @@ router.post('/execute-action', async (req, res) => {
         'append_note': { table: 'conversations', type: 'append' },
         'insert_bank_rule': { table: 'bank_rules', type: 'insert' },
         'update_bank_rule': { table: 'bank_rules', type: 'update' },
+        'qualify_deal': { table: 'lender_submissions', type: 'qualify' },
         'submit_deal': { table: 'lender_submissions', type: 'submit' }
     };
 
@@ -454,6 +455,56 @@ router.post('/execute-action', async (req, res) => {
                 }
 
                 result = { message: `Bank rule updated for ${data.bank_name}` };
+                break;
+            }
+
+            case 'qualify_deal': {
+                const criteria = data.criteria;
+                if (!criteria || !criteria.requestedPosition) {
+                    return res.json({ success: false, error: 'Missing qualification criteria.' });
+                }
+
+                const qualifyUrl = `http://localhost:${process.env.PORT || 3000}/api/qualification/qualify`;
+                let qualData;
+                try {
+                    const qualRes = await fetch(qualifyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': req.headers.authorization || '',
+                            'Cookie': req.headers.cookie || ''
+                        },
+                        body: JSON.stringify(criteria)
+                    });
+                    qualData = await qualRes.json();
+                } catch (fetchErr) {
+                    return res.json({ success: false, error: 'Qualification failed: ' + fetchErr.message });
+                }
+
+                if (!qualData.qualified || qualData.qualified.length === 0) {
+                    const topReasons = (qualData.nonQualified || []).slice(0, 5)
+                        .map(l => `${l.lender}: ${l.blockingRule}`).join('\n');
+                    return res.json({
+                        success: true,
+                        message: `No lenders qualified.\n\nTop reasons:\n${topReasons}`
+                    });
+                }
+
+                // Build a clean list for the AI to present
+                const qualifiedList = qualData.qualified.map(l => {
+                    const name = l.name || l['Lender Name'];
+                    const tier = l.tier || l.Tier || '?';
+                    const preferred = l.isPreferred ? ' ★' : '';
+                    return `${name} (Tier ${tier}${preferred})`;
+                });
+
+                const nonQualCount = qualData.nonQualified?.length || 0;
+
+                result = {
+                    message: `✅ ${qualifiedList.length} lenders qualified, ${nonQualCount} blocked.\n\n` +
+                        qualifiedList.map((l, i) => `${i + 1}. ${l}`).join('\n') +
+                        `\n\nSay "send to all" or pick specific lenders like "send to #1, #3, #5" or "just send to Rapid Capital"`
+                };
                 break;
             }
 

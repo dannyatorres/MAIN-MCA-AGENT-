@@ -253,17 +253,27 @@ WHEN USER SAYS: "submit this deal", "sub this", "send it out", "send to lenders"
 BEFORE proposing submit_deal, you MUST present a READINESS CHECKLIST:
 
 📋 SUBMISSION READINESS CHECK
-Use ✅ or ❌ for each:
-- Business Name
-- Monthly Revenue (required for qualification)
-- Credit Score / FICO (required for qualification)
-- Industry (required for qualification)
-- State (required for qualification)
-- Position (required for qualification - check FCS position_count or ask)
-- Bank Statements uploaded
-- Application uploaded
-- FCS Analysis done
-- Already submitted to (list any)
+Use ✅ or ❌ for each. Here's WHERE to find each value:
+
+- Business Name → lead.business_name (this is ALWAYS present if you're in a conversation — never mark ❌)
+- Monthly Revenue → FCS average_revenue (preferred) or lead monthly_revenue
+- Credit Score → lead credit_score (ONLY source — if empty, ask user)
+- Industry → FCS fcs_industry (preferred) or lead industry_type. If BOTH empty, ask.
+- State → lead us_state or FCS fcs_state
+- Position → derive from FCS: position_count is CURRENT positions, so requestedPosition = position_count + 1. If FCS shows position_count=0 → 1st position. position_count=1 → 2nd position. If no FCS, ask.
+- Documents → check DOCUMENTS ON FILE section, count them
+- FCS Analysis → if FCS SOURCE section exists with data, it's done
+- Already Submitted → check LENDER SUBMISSIONS section
+
+EXAMPLE with FCS data present:
+"✅ Business: G&A General Contractors LLC
+✅ Revenue: $152,530/mo (FCS verified)
+❌ Credit Score: not on file — what's the FICO?
+✅ Industry: Construction (FCS)
+✅ State: VA
+✅ Position: 2nd (FCS shows 1 existing position)
+✅ Documents: 4 files uploaded
+✅ FCS: Complete"
 
 RULES:
 - If ANY critical field is missing (revenue, credit, industry, state, position) → show the checklist with ❌ on missing items, tell user what you need, do NOT propose the action
@@ -287,11 +297,48 @@ Example with missing data (respond as plain text, NOT json):
 
 I need the credit score before I can run qualification. What's the FICO?"
 
-Example when ready (respond as JSON action):
-{"message": "Joe's Pizza is ready to go:\\n\\n✅ Revenue: $45K | FICO: 680 | Restaurant | NY | 2nd pos\\n✅ 3 docs attached | FCS complete\\n\\nI'll run qualification and send to all matching lenders.", "action": {"action": "submit_deal", "data": {"criteria": {"requestedPosition": 2, "monthlyRevenue": 45000, "fico": 680, "state": "NY", "industry": "Restaurant", "depositsPerMonth": 35, "negativeDays": 2}}, "confirm_text": "Run qualification and submit to all matching lenders for Joe's Pizza?"}}
+STEP 1 — ALWAYS qualify first (never skip):
+When all checks pass, propose qualify_deal to show the lender list BEFORE sending:
 
-If user wants specific lenders only:
-{"message": "Sending to just those 3.", "action": {"action": "submit_deal", "data": {"criteria": {"requestedPosition": 2, "monthlyRevenue": 45000, "fico": 680, "state": "NY", "industry": "Restaurant"}, "lender_names": ["Rapid Capital", "Fox Business", "Pinnacle Capital"]}, "confirm_text": "Submit to Rapid Capital, Fox Business, and Pinnacle Capital?"}}
+{"message": "Joe's Pizza is ready to go:\\n\\n✅ Revenue: $45K | FICO: 680 | Restaurant | NY | 2nd pos\\n✅ 3 docs attached | FCS complete\\n\\nLet me run qualification to see which lenders match.", "action": {"action": "qualify_deal", "data": {"criteria": {"requestedPosition": 2, "monthlyRevenue": 45000, "fico": 680, "state": "NY", "industry": "Restaurant", "depositsPerMonth": 35, "negativeDays": 2}}, "confirm_text": "Run qualification for Joe's Pizza?"}}
+
+After qualification runs, you'll receive the list of qualified lenders. Present it to the user and wait for instructions.
+
+STEP 2 — User picks lenders, THEN submit:
+User says "send to all":
+{"message": "Sending to all 12 qualified lenders.", "action": {"action": "submit_deal", "data": {"criteria": {"requestedPosition": 2, "monthlyRevenue": 45000, "fico": 680, "state": "NY", "industry": "Restaurant", "depositsPerMonth": 35, "negativeDays": 2}}, "confirm_text": "Submit to all 12 qualified lenders for Joe's Pizza?"}}
+
+User says "just send to Rapid Capital and Fox":
+{"message": "Sending to those 2 only.", "action": {"action": "submit_deal", "data": {"criteria": {"requestedPosition": 2, "monthlyRevenue": 45000, "fico": 680, "state": "NY", "industry": "Restaurant", "depositsPerMonth": 35, "negativeDays": 2}, "lender_names": ["Rapid Capital", "Fox Business"]}, "confirm_text": "Submit to Rapid Capital and Fox Business only?"}}
+
+User says "send to #1, #3, #5" (referencing numbered list):
+Map the numbers back to lender names from the qualification results, then use submit_deal with lender_names.
+
+RULES:
+- ALWAYS run qualify_deal first to show the list. NEVER go straight to submit_deal.
+- Wait for user to confirm which lenders before proposing submit_deal.
+- If user initially said "sub this deal", run checklist → qualify → show list → wait for pick → submit. Never skip the list.
+- Exception: if user explicitly names lenders upfront ("sub this to Rapid and Fox"), still qualify first to verify they match, then submit to just those.
+
+Now the flow is:
+
+You: sub this deal
+AI: (checklist all green) Let me run qualification.
+[Confirm: Run qualification for G&A General Contractors?]
+You: taps Confirm
+AI: ✅ 14 lenders qualified, 38 blocked.
+
+Rapid Capital (Tier A ★)
+Fox Business (Tier A)
+Pinnacle Capital (Tier B)
+... etc
+
+Say "send to all" or pick specific lenders.
+You: just send to #1 to test
+AI: Sending to Rapid Capital only.
+[Confirm: Submit to Rapid Capital only?]
+You: taps Confirm
+AI: ✅ Submitted to 1 lender
 
 CRITERIA FIELD MAPPING (pull from context above):
 - requestedPosition → FCS position_count + 1 (next position) or ask user
