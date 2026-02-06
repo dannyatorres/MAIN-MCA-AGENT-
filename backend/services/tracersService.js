@@ -40,14 +40,12 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         }
 
         // ATTEMPT 2: FALLBACK (Name + Address)
-        if (candidates.length === 0 && address && state) {
-            const fullLine2 = `${city || ''} ${state || ''} ${zip || ''}`.trim();
-
+        if (candidates.length === 0 && state) {
             const payload = createPayload({
                 FirstName: firstName || "",
                 LastName: lastName || "",
-                Addressline1: address || "",
-                addressLine2: fullLine2
+                Addressline1: "",
+                addressLine2: state
             });
 
             candidates = await callTracers(payload);

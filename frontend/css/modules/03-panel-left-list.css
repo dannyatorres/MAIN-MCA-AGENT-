@@ -369,6 +369,8 @@
     align-items: center;
     width: 100%;
     gap: 8px;
+    flex-wrap: nowrap;
+    overflow: hidden;
 }
 
 .phone-number {
@@ -384,7 +386,7 @@
 /* The CID Tag - Teal accent style */
 .conversation-meta > span:last-child,
 .cid-tag {
-    font-size: 11px;
+    font-size: 10px;
     font-family: 'Inter', sans-serif;
     font-weight: 600;
 
@@ -392,9 +394,11 @@
     color: #2dd4bf !important; /* Teal Text */
     border: 1px solid rgba(45, 212, 191, 0.2);
 
-    padding: 2px 6px;
+    padding: 1px 5px;
     border-radius: 4px;
     letter-spacing: -0.3px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .agent-tag {
