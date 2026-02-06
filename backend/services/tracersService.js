@@ -16,7 +16,8 @@ async function searchBySsn(ssn, firstName, lastName, address = null, city = null
         // ATTEMPT 1: SEARCH BY SSN ONLY (Force Loose Search)
         const rawSsn = ssn ? ssn.replace(/\D/g, '') : '';
 
-        if (rawSsn.length === 9) {
+        const invalidSsns = ['000000000', '111111111', '999999999'];
+        if (rawSsn.length === 9 && !invalidSsns.includes(rawSsn) && !rawSsn.startsWith('9')) {
             const payload = createPayload({
                 FirstName: "",
                 LastName: "",
@@ -153,7 +154,8 @@ async function callTracers(payload) {
         return data.persons;
 
     } catch (error) {
-        console.error(`[Lookup Error]:`, error.message);
+        const detail = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+        console.error(`[Lookup Error]: ${error.message} | Detail: ${detail}`);
         return [];
     }
 }
