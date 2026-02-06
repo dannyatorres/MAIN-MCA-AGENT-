@@ -248,6 +248,20 @@ class FCSService {
             const lastMca = extractStringValue(fcsAnalysis, 'Last MCA Deposit');
             const state = extractStringValue(fcsAnalysis, 'State');
             const industry = extractStringValue(fcsAnalysis, 'Industry');
+
+            // Extract position count from report
+            let positionCount = 0;
+            const posNextMatch = fcsAnalysis.match(/Position \(ASSUME NEXT\):\s*(\d+)\s*active/i);
+            if (posNextMatch) {
+                positionCount = parseInt(posNextMatch[1]);
+            } else if (/Positions:\s*None active/i.test(fcsAnalysis)) {
+                positionCount = 0;
+            } else {
+                // Count "Position N:" lines that aren't paid off
+                const posLines = (fcsAnalysis.match(/Position \d+:.*/gi) || []);
+                positionCount = posLines.filter(l => !/paid off|closed|settled/i.test(l)).length;
+            }
+
             const withholdingPct = calculateWithholding(fcsAnalysis, averageRevenue);
 
             // 📊 Inject withholding into report before saving
@@ -280,6 +294,7 @@ Last MCA: ${lastMca}
 State: ${state}
 Industry: ${industry}
 Withholding %: ${withholdingPct}
+Position Count: ${positionCount}
 ==================
 `;
             logFCSReport(conversationId, metricsLog + '\n\nFULL REPORT:\n' + finalReport, '3-final-with-metrics');
@@ -299,11 +314,12 @@ Withholding %: ${withholdingPct}
                     time_in_business_text = $9,
                     last_mca_deposit_date = $10,
                     withholding_percentage = $11,
+                    position_count = $12,
                     completed_at = NOW()
-                WHERE id = $12
+                WHERE id = $13
             `, [
                 finalReport, averageRevenue, state, industry, negDays, avgNegDays,
-                avgBalance, depositCount, tibText, lastMca, withholdingPct, analysisId
+                avgBalance, depositCount, tibText, lastMca, withholdingPct, positionCount, analysisId
             ]);
 
             console.log(`✅ [${businessName}] FCS complete: $${averageRevenue}/mo, ${negDays} neg days`);
