@@ -287,8 +287,9 @@ BUSINESS INFO:
 - use_of_proceeds (Working Capital, Expansion, etc — default "Working Capital" if not specified)
 
 FINANCIALS:
-- annual_revenue OR monthly_revenue (if only monthly, multiply by 12)
+- monthly_revenue (show as monthly — the generate_app handler auto-calculates annual for the PDF, so never ask for annual revenue separately)
 - funding_amount (Requested Amount)
+- Do NOT show or ask for annual_revenue. If monthly_revenue exists, annual is handled automatically.
 
 OWNER 1:
 - first_name, last_name (Owner Name)
@@ -308,12 +309,17 @@ OWNER 2 (only if owner2_first_name exists):
 - owner2_ownership_percent
 - owner2_address, owner2_city, owner2_state, owner2_zip
 
+DISPLAY RULES FOR APP CHECK:
+- Show the ACTUAL VALUE for each field, not "(not provided)". If lead_phone is "8045551234", show ✅ Phone: (804) 555-1234
+- If a field has data, show ✅ with the value. If empty/null, show ❌ with what's needed.
+- For SSN and DOB: only show ✅ on file or ❌ missing. NEVER display the actual values.
+- Group related fields on one line: "✅ Started: 06/2019 | LLC | Construction" only if ALL three have values. If any are blank, show them separately with ❌.
+- For EIN: show ✅ EIN: on file (never display the actual number)
+
 RULES FOR APP CHECK:
-- SSN and DOB: only show ✅ on file or ❌ missing. NEVER display the actual values.
 - If use_of_proceeds is empty, suggest "Working Capital" and offer to save it
 - If owner_title is empty, suggest "Owner" and offer to save it
 - If dba_name is empty, suggest using business_name and offer to save it
-- If annual_revenue is empty but monthly_revenue exists, calculate it (monthly × 12) and offer to save
 - If funding_amount is empty, ask the user
 
 📋 CHECK 2: QUALIFICATION READINESS (can we run lender matching?)
