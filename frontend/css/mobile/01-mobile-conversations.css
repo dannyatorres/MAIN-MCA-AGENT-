@@ -66,7 +66,7 @@
     transform: scale(0.98);
 }
 
-.conversation-item.selected {
+.conversation-item.active {
     background: rgba(45, 212, 191, 0.05);
     border: 1px solid rgba(45, 212, 191, 0.4);
     box-shadow: 0 0 15px rgba(45, 212, 191, 0.1);
@@ -90,7 +90,7 @@
     flex-shrink: 0;
 }
 
-.conversation-item.selected .avatar-circle {
+.conversation-item.active .avatar-circle {
     background: linear-gradient(145deg, #2dd4bf, #0f766e);
     color: #000;
     text-shadow: none;
@@ -141,6 +141,13 @@
     margin-top: 2px;
 }
 
+.message-preview-row {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
+}
+
 .phone-number {
     font-size: 12px;
     color: #8b949e;
@@ -150,6 +157,17 @@
 }
 
 .conversation-id-badge {
+    font-size: 11px;
+    background: rgba(45, 212, 191, 0.1);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.cid-tag {
     font-size: 11px;
     background: rgba(45, 212, 191, 0.1);
     color: #2dd4bf;
@@ -200,13 +218,54 @@
     font-size: 11px;
     font-weight: 700;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    animation: pulse 2s infinite;
+    animation: unreadPulse 2s infinite;
 }
 
-@keyframes pulse {
+@keyframes unreadPulse {
     0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
     70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
     100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.conversation-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    animation: unreadPulse 2s infinite;
+}
+
+/* Badge animations (used by ConversationAnimator) */
+.badge-animate-in {
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.badge-animate-in.badge-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.badge-animate-out {
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.conversation-item.highlight-flash {
+    animation: highlightFlash 1s ease;
+}
+
+@keyframes highlightFlash {
+    0%, 100% { background: linear-gradient(180deg, #1f2937 0%, #161b22 100%); }
+    30% { background: rgba(59, 130, 246, 0.15); }
 }
 
 /* --- 7. CONNECTION STATUS --- */
