@@ -32,6 +32,7 @@ function getSystemPrompt() {
 function normalizeName(name) {
     if (!name) return "";
     return name.toLowerCase()
+        .replace(/\([^)]*\)/g, "")
         .replace(/[,.-]/g, "")
         .replace(/\b(llc|inc|corp|corporation|ltd|co|company|holdings|group|enterprises|services|solutions|consulting|partners|capital|funding|financial|management)\b/g, "")
         .replace(/\s+/g, ' ')
@@ -225,13 +226,23 @@ async function processEmail(email, db) {
         .substring(0, 3000)
         .trim();
 
+    // Build dynamic lender list from DB and inject into prompt
+    const lenderList = await db.query('SELECT name FROM lenders ORDER BY name');
+    const lenderNames = lenderList.rows
+        .map(r => r.name.replace(/\s*\([^)]*\)/g, ''))
+        .join('\n- ');
+    const dynamicPrompt = systemPrompt.replace(
+        /\*\*KNOWN LENDERS REFERENCE \(Priority List\):\*\*[\s\S]*?\*\*CRITICAL DATA SOURCE RULES:\*\*/,
+        `**KNOWN LENDERS REFERENCE (Priority List):**\n- ${lenderNames}\n\n**CRITICAL DATA SOURCE RULES:**`
+    );
+
     let extraction;
     try {
         extraction = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [{
                 role: "system",
-                content: systemPrompt
+                content: dynamicPrompt
             }, {
                 role: "user",
                 content: `Sender: "${senderName}" <${senderEmail}>\nSubject: "${email.subject}"\n\nFull Email Body:\n${emailBody}`
