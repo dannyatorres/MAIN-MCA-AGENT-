@@ -84,7 +84,7 @@ const generateResponse = async (query, context, userId = null) => {
                 systemPrompt += `\nAvg Deposits: ${fcs.average_deposit_count || '0'}/month ($${fcs.average_deposits || '0'} volume)`;
                 systemPrompt += `\nNegative Days: ${fcs.total_negative_days || '0'} total (${fcs.average_negative_days || '0'} avg/month)`;
                 systemPrompt += `\nStatement Count: ${fcs.statement_count || '0'} months`;
-                systemPrompt += `\nExisting Positions: ${fcs.position_count || '0'}`;
+                systemPrompt += `\nExisting Positions: ${fcs.position_count !== null ? fcs.position_count : 'NULL — check the Full Analyst Report below for position info'}`;
                 systemPrompt += `\nLast MCA Date: ${fcs.last_mca_deposit_date || 'None detected'}`;
                 systemPrompt += `\nTime in Business: ${fcs.time_in_business_text || 'Unknown'}`;
                 if (fcs.withholding_percentage) systemPrompt += `\nCurrent Withholding: ${fcs.withholding_percentage}%`;
@@ -260,7 +260,13 @@ Use ✅ or ❌ for each. Here's WHERE to find each value:
 - Credit Score → lead credit_score (ONLY source — if empty, ask user)
 - Industry → FCS fcs_industry (preferred) or lead industry_type. If BOTH empty, ask.
 - State → lead us_state or FCS fcs_state
-- Position → derive from FCS: position_count is CURRENT positions, so requestedPosition = position_count + 1. If FCS shows position_count=0 → 1st position. position_count=1 → 2nd position. If no FCS, ask.
+- Position → FIRST check FCS position_count field. If it's a number: requestedPosition = position_count + 1 (0 → 1st, 1 → 2nd, etc).
+  If position_count is NULL, READ the FCS Full Analyst Report text. Look for lines like:
+  - "Position (ASSUME NEXT): 0 active -> Looking for 1st" → requestedPosition = 1
+  - "Positions: None active" → requestedPosition = 1  
+  - "Positions: 1 active" → requestedPosition = 2
+  - "Position 1: [lender] - Status: Paid off" with no other active positions → requestedPosition = 1 (paid off doesn't count)
+  The report ALWAYS has position info. Only ask the user if there truly is no FCS data at all.
 - Documents → check DOCUMENTS ON FILE section, count them
 - FCS Analysis → if FCS SOURCE section exists with data, it's done
 - Already Submitted → check LENDER SUBMISSIONS section
