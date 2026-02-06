@@ -46,7 +46,7 @@ class ConversationAnimator {
         // After animation, actually move the DOM element
         await this.sleep(this.animationDuration);
 
-        // Reset transforms and move element
+        // Reset transforms on ALL items (some may be new nodes from a re-render)
         item.style.transition = '';
         item.style.transform = '';
         item.style.zIndex = '';
@@ -56,8 +56,13 @@ class ConversationAnimator {
             el.style.transform = '';
         });
 
-        // Move in DOM
-        container.insertBefore(item, firstItem);
+        // Only move if the original node is still in this container
+        if (item.parentNode === container) {
+            const currentFirst = container.querySelector('.conversation-item');
+            if (currentFirst && currentFirst !== item) {
+                container.insertBefore(item, currentFirst);
+            }
+        }
     }
 
     // Add badge with animation
@@ -70,7 +75,10 @@ class ConversationAnimator {
         if (!target) return;
 
         // Check if badge already exists
-        if (item.querySelector(`.badge-${type}`) || item.querySelector('.badge-offer-icon')) return;
+        const existing = type === 'offer'
+            ? item.querySelector('.badge-offer-icon')
+            : item.querySelector(`.badge-${type}`);
+        if (existing) return;
 
         const badge = document.createElement('span');
         if (type === 'offer') {

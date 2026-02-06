@@ -184,6 +184,8 @@ class ConversationCore {
 
     async selectConversation(conversationId) {
         const convoId = String(conversationId);
+        if (this.currentConversationId === convoId) return;
+
         // Handle dialer view - minimize if call active, hide if not
         if (window.powerDialer) {
             window.powerDialer.allowConversationSwitch();
@@ -191,7 +193,6 @@ class ConversationCore {
 
         // Ensure dialer view is hidden (safety net)
         document.getElementById('dialerView')?.classList.add('hidden');
-        if (this.currentConversationId === convoId) return;
 
         // 1. Clear badges immediately (Optimistic UI)
         this.clearBadge(convoId);
@@ -246,10 +247,12 @@ class ConversationCore {
             const dataPromise = this.parent.apiCall(`/api/conversations/${convoId}`);
 
             if (this.parent.messaging) {
-                this.parent.messaging.loadConversationMessages(convoId); // Don't await
+                this.parent.messaging.loadConversationMessages(convoId).catch(e =>
+                    console.error('Error loading messages:', e));
             }
             if (this.parent.documents) {
-                this.parent.documents.loadDocuments(); // Don't await
+                this.parent.documents.loadDocuments().catch(e =>
+                    console.error('Error loading documents:', e));
             }
 
             // BACKGROUND: Update with fresh data when ready
