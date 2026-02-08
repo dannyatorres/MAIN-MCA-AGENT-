@@ -110,6 +110,69 @@ function formatName(name) {
         .join(' ');
 }
 
+// 🕐 TEMPORAL CONTEXT ENGINE - Always-on date/time awareness
+function buildTemporalContext(historyRows) {
+    const now = new Date();
+    const estNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const dayOfMonth = estNow.getDate();
+    const dayOfWeek = estNow.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
+    const currentMonthName = estNow.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
+    const currentYear = estNow.getFullYear();
+    const hour = estNow.getHours();
+
+    const lastMonth = new Date(estNow.getFullYear(), estNow.getMonth() - 1, 1);
+    const lastMonthName = lastMonth.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
+    const twoMonthsAgo = new Date(estNow.getFullYear(), estNow.getMonth() - 2, 1);
+    const twoMonthsAgoName = twoMonthsAgo.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
+
+    // Figure out conversation duration
+    let convoStartDate = null;
+    let convoAge = '';
+    if (historyRows && historyRows.length > 0) {
+        const firstMsg = historyRows.find(m => m.timestamp);
+        if (firstMsg?.timestamp) {
+            convoStartDate = new Date(firstMsg.timestamp);
+            const daysDiff = Math.floor((estNow - convoStartDate) / (1000 * 60 * 60 * 24));
+            if (daysDiff === 0) convoAge = 'started today';
+            else if (daysDiff === 1) convoAge = 'started yesterday';
+            else convoAge = `started ${daysDiff} days ago`;
+        }
+    }
+
+    // Business hours context
+    let timeContext = '';
+    if (hour < 8) timeContext = 'Before business hours - they may not respond immediately.';
+    else if (hour >= 20) timeContext = 'After business hours - expect delayed responses.';
+    else if (hour >= 17) timeContext = 'Late afternoon/evening - people are wrapping up work.';
+    else timeContext = 'During business hours.';
+
+    // Bank statement logic
+    let statementGuidance = '';
+    if (dayOfMonth <= 7) {
+        statementGuidance = `CRITICAL: It is early ${currentMonthName}. The ${lastMonthName} full statement is likely NOT generated yet by banks. Ask for bank transactions from ${lastMonthName} 1st through ${lastMonthName} end, OR a month-to-date from ${currentMonthName} 1st through today. Do NOT ask for "${currentMonthName} statement" as a full statement - it doesnt exist yet. If you need recent activity say "transactions from the 1st till today".`;
+    } else if (dayOfMonth <= 15) {
+        statementGuidance = `The ${lastMonthName} full statement should be available now from most banks. Ask for the ${lastMonthName} statement if missing. MTD (${currentMonthName} 1st through today) only needed if they got new funding this month.`;
+    } else {
+        statementGuidance = `The ${lastMonthName} statement is definitely available. If missing from their file, ask for it. You can also request ${currentMonthName} MTD (1st through today) if it helps close the deal or lender needs recent activity.`;
+    }
+
+    return `## 🕐 TEMPORAL CONTEXT (READ THIS FIRST - THIS IS YOUR CLOCK)
+RIGHT NOW: ${dayOfWeek}, ${currentMonthName} ${dayOfMonth}, ${currentYear} at ${estNow.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })} EST
+${timeContext}
+${convoAge ? `This conversation ${convoAge}.` : ''}
+
+STATEMENT RULES FOR TODAY:
+${statementGuidance}
+
+IMPORTANT DATE RULES:
+- When you say "1st till today" you mean ${currentMonthName} 1st through ${currentMonthName} ${dayOfMonth}
+- "${lastMonthName} statement" = the full month of ${lastMonthName} ${currentYear}
+- "MTD" always means ${currentMonthName} 1st through today (${currentMonthName} ${dayOfMonth})
+- NEVER ask for a month-to-date for a month that has already ended (e.g. dont say "${lastMonthName} MTD" - thats just the ${lastMonthName} statement)
+- If lead already promised to send docs at a specific time, REMEMBER THAT and dont re-ask before that time passes
+`;
+}
+
 // 📊 TRAINING DATA TRACKER
 async function trackResponseForTraining(conversationId, leadMessage, humanResponse, responseSource, leadName = 'Unknown') {
     const db = getDatabase();
@@ -600,7 +663,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 4. BUILD CONVERSATION HISTORY
         // 4. BUILD CONVERSATION HISTORY - Get LATEST 20, then reverse for chronological order
         const historyRes = await db.query(`
-            SELECT direction, content FROM messages
+            SELECT direction, content, timestamp FROM messages
             WHERE conversation_id = $1
             ORDER BY timestamp DESC LIMIT 20
         `, [conversationId]);
@@ -636,16 +699,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = await getPromptForPhase(usageUserId, currentState);
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
-        // After building the base systemPrompt
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-US', { 
-            timeZone: 'America/New_York',
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-        systemPrompt += `\n## 📅 TODAY'S DATE\n${dateStr}\n`;
+        // Inject temporal context FIRST (clock + statement logic)
+        const temporalContext = buildTemporalContext(history.rows);
+        systemPrompt = temporalContext + '\n\n' + systemPrompt;
         systemPrompt += `\n## ⚠️ CRITICAL RULES\n- If lead says \"what?\", \"I don't understand\", \"what are you talking about\" → APOLOGIZE and explain simply\n- If lead says \"why are you repeating yourself\" → APOLOGIZE, acknowledge the issue, and change approach\n- NEVER start with \"depends on\" twice in a row\n- Before responding, mentally check: \"Did I already say this?\"\n`;
         systemPrompt += `\n## 💪 FIGHT FOR THE DEAL\nWhen lead says \"going with another broker\" or \"found someone else\":\n- \"wait what are they offering? let me see if i can beat it\"\n- \"hold on - what numbers they give you? dont sign anything yet\"\n- \"who you going with? i can probably match or beat it\"\n\nWhen lead says \"not interested\":\n- \"what happened?\"\n- \"you get funded already?\"\n- \"what changed?\"\n\nWhen lead goes quiet after seeing numbers:\n- \"too high?\"\n- \"what payment works better?\"\n- \"talk to me\"\n\nRULES:\n- Short punchy texts. No fluff.\n- Never say \"no worries\" or \"feel free to reach out\" on first objection\n- Sound like a real person, not a bot\n- Match their energy\n- One question at a time\n- Lowercase is fine\n`;
         systemPrompt += `\n## ⚠️ NEVER INCLUDE IN YOUR RESPONSE:\n- Internal notes or thinking (\"Consult note:\", \"Strategy:\", \"Note to self:\")\n- Reasoning about what to say\n- References to tools or functions\n- Anything the lead shouldn't see\n\nYour response goes DIRECTLY to the lead via SMS. Only include the actual message.\n`;
@@ -843,29 +899,6 @@ Collecting info. Follow the checklist - ask for missing items.
 
         systemPrompt += stateBehavior;
 
-        // Add date context and statement logic
-        const today = new Date();
-        const dayOfMonth = today.getDate();
-        const currentMonthName = today.toLocaleString('en-US', {
-            timeZone: 'America/New_York', month: 'long'
-        });
-        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const lastMonthName = lastMonth.toLocaleString('en-US', {
-            timeZone: 'America/New_York', month: 'long'
-        });
-
-        systemPrompt += `\n\n## DOCUMENT TIMING
-Today: ${currentMonthName} ${dayOfMonth}
-`;
-
-        if (dayOfMonth <= 7) {
-            systemPrompt += `The ${lastMonthName} statement is almost definitely not in the pack. Ask for it right away. If its not generated yet, ask them to pull transactions from ${lastMonthName} 1st through today.\n`;
-        } else if (dayOfMonth <= 15) {
-            systemPrompt += `The ${lastMonthName} statement should be available by now. Check if we have it (see FCS data). If missing, ask for it. No need for MTD yet unless they got funded recently.\n`;
-        } else {
-            systemPrompt += `The ${lastMonthName} statement should definitely be available. If missing, ask for it. Lenders may also want to see ${currentMonthName} activity - ask for MTD if it helps close the deal or if lender requires it.\n`;
-        }
-
         // Skip AI call if just waiting for MTD
         if (currentState === 'QUALIFIED') {
             const lastInbound = history.rows.filter(m => m.direction === 'inbound').slice(-1)[0]?.content?.toLowerCase() || '';
@@ -891,7 +924,20 @@ Today: ${currentMonthName} ${dayOfMonth}
                 return;
             }
 
-            messages.push({ role: role, content: msg.content });
+            // Prepend timestamp so AI knows WHEN each message was sent
+            let timestampPrefix = '';
+            if (msg.timestamp) {
+                const msgDate = new Date(msg.timestamp);
+                timestampPrefix = `[${msgDate.toLocaleString('en-US', { 
+                    timeZone: 'America/New_York',
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: 'numeric', 
+                    minute: '2-digit'
+                })}] `;
+            }
+
+            messages.push({ role: role, content: timestampPrefix + msg.content });
         });
 
         // --- FIX 3: Execution Switchboard (Complete) ---
