@@ -3,6 +3,8 @@
 
 const { getDatabase } = require('./database');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const fs = require('fs');
+const path = require('path');
 
 function getEtDateString(date = new Date()) {
     const fmt = new Intl.DateTimeFormat('en-CA', {
@@ -278,27 +280,18 @@ async function generateDailyReport(dateStr) {
         });
     }
 
-    const prompt = `You are the operations analyst for JMS Global, an MCA brokerage. 
-Analyze today's activity and produce a daily operations report.
+    let promptTemplate;
+    try {
+        promptTemplate = fs.readFileSync(path.join(__dirname, '../prompts/daily-report-prompt.md'), 'utf8');
+    } catch (err) {
+        console.error('❌ Could not load daily-report-prompt.md:', err.message);
+        return 'Failed to load prompt template.';
+    }
 
-## DATE
-${dateStr}
-
-## TODAY'S STATS
-${JSON.stringify(stats, null, 2)}
-
-## FULL TIMELINE BY DEAL
-${JSON.stringify(byConversation, null, 2)}
-
-## REPORT REQUIREMENTS
-1. Executive Summary — 3-4 sentences on the day overall
-2. Deal Highlights — Which deals moved forward? Any offers? Any funded?
-3. Pipeline Issues — Leads that went cold, stuck in a state too long, or need attention tomorrow
-4. Broker Performance — Who was active, response times, conversion
-5. Action Items for Tomorrow — Specific follow-ups needed, leads to re-engage
-6. Offer Analysis — Compare any offers received to what Commander predicted
-
-Be specific with names, numbers, and times. This is an internal ops report, not a marketing piece.`;
+    const prompt = promptTemplate
+        .replace('{{DATE}}', dateStr)
+        .replace('{{STATS}}', JSON.stringify(stats, null, 2))
+        .replace('{{TIMELINE}}', JSON.stringify(byConversation, null, 2));
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
