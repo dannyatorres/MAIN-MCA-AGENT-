@@ -691,18 +691,19 @@ router.get('/available', async (req, res) => {
     }
 });
 
-// Get submission history for a conversation
+// Get submissions for a conversation
 router.get('/submissions/:conversationId', async (req, res) => {
     try {
         const { conversationId } = req.params;
         const db = getDatabase();
 
         const result = await db.query(`
-            SELECT lender_name, status, offer_amount, factor_rate,
-                   decline_reason, submitted_at, last_response_at
+            SELECT id, lender_name, status, offer_amount, factor_rate,
+                   term_length, term_unit, payment_frequency, decline_reason,
+                   submitted_at, last_response_at
             FROM lender_submissions
             WHERE conversation_id = $1
-            ORDER BY submitted_at DESC
+            ORDER BY last_response_at DESC NULLS LAST, submitted_at DESC
         `, [conversationId]);
 
         res.json({ success: true, submissions: result.rows });

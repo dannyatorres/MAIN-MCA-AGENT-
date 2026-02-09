@@ -714,3 +714,102 @@ textarea.form-control {
     white-space: nowrap;
     pointer-events: none;
 }
+
+.submission-tracker {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.submission-tracker-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #30363d;
+}
+
+.submission-tracker-header h4 {
+    margin: 0 0 8px;
+    color: #e6edf3;
+    font-size: 14px;
+}
+
+.submission-stats-row {
+    display: flex;
+    gap: 16px;
+}
+
+.sub-stat {
+    font-size: 12px;
+    color: #8b949e;
+}
+
+.sub-stat-num {
+    font-weight: 700;
+    margin-right: 3px;
+}
+
+.submission-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.submission-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #21262d;
+}
+
+.submission-row:last-child {
+    border-bottom: none;
+}
+
+.submission-row-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.submission-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.submission-row-info {
+    min-width: 0;
+}
+
+.submission-lender-name {
+    color: #e6edf3;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.submission-detail {
+    color: #8b949e;
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.submission-row-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    gap: 2px;
+}
+
+.submission-status-badge {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.submission-date {
+    font-size: 10px;
+    color: #484f58;
+}

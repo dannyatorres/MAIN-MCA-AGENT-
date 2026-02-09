@@ -337,5 +337,64 @@ export const LenderTemplates = {
                     <button id="saveLenderResponse" class="btn btn-primary">Save Response</button>
                 </div>
             </div>`;
+    },
+
+    renderSubmissionTracker(submissions) {
+        if (!submissions || submissions.length === 0) return '';
+
+        const statusConfig = {
+            'OFFER':   { icon: '💰', color: '#2ea043', label: 'Offer' },
+            'FUNDED':  { icon: '🎉', color: '#2ea043', label: 'Funded' },
+            'DECLINE': { icon: '❌', color: '#f85149', label: 'Declined' },
+            'DECLINED':{ icon: '❌', color: '#f85149', label: 'Declined' },
+            'STIP':    { icon: '📋', color: '#d29922', label: 'Stips' },
+            'sent':    { icon: '📤', color: '#8b949e', label: 'Sent' },
+            'processing': { icon: '⏳', color: '#8b949e', label: 'Processing' },
+            'failed':  { icon: '⚠️', color: '#f85149', label: 'Failed' }
+        };
+
+        const offers = submissions.filter(s => s.status === 'OFFER' || s.status === 'FUNDED').length;
+        const declines = submissions.filter(s => s.status === 'DECLINE' || s.status === 'DECLINED').length;
+        const pending = submissions.filter(s => s.status === 'sent' || s.status === 'processing').length;
+
+        return `
+            <div class="submission-tracker">
+                <div class="submission-tracker-header">
+                    <h4>📊 Submission Tracker</h4>
+                    <div class="submission-stats-row">
+                        <span class="sub-stat"><span class="sub-stat-num" style="color:#2ea043">${offers}</span> Offers</span>
+                        <span class="sub-stat"><span class="sub-stat-num" style="color:#f85149">${declines}</span> Declined</span>
+                        <span class="sub-stat"><span class="sub-stat-num" style="color:#8b949e">${pending}</span> Pending</span>
+                    </div>
+                </div>
+                <div class="submission-list">
+                    ${submissions.map(sub => {
+                        const cfg = statusConfig[sub.status] || statusConfig['sent'];
+                        const date = sub.last_response_at || sub.submitted_at;
+                        const dateStr = date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+
+                        let detailStr = '';
+                        if (sub.offer_amount) detailStr += '$' + Number(sub.offer_amount).toLocaleString();
+                        if (sub.factor_rate) detailStr += ' @ ' + sub.factor_rate;
+                        if (sub.term_length) detailStr += ' / ' + sub.term_length + ' ' + (sub.term_unit || 'days');
+                        if (sub.decline_reason) detailStr = sub.decline_reason;
+
+                        return `
+                            <div class="submission-row" style="border-left: 3px solid ${cfg.color}">
+                                <div class="submission-row-left">
+                                    <span class="submission-icon">${cfg.icon}</span>
+                                    <div class="submission-row-info">
+                                        <div class="submission-lender-name">${escapeHtml(sub.lender_name)}</div>
+                                        ${detailStr ? `<div class="submission-detail">${escapeHtml(detailStr)}</div>` : ''}
+                                    </div>
+                                </div>
+                                <div class="submission-row-right">
+                                    <span class="submission-status-badge" style="color:${cfg.color}">${cfg.label}</span>
+                                    <span class="submission-date">${dateStr}</span>
+                                </div>
+                            </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
     }
 };

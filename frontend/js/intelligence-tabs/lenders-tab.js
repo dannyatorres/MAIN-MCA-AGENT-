@@ -1,4 +1,5 @@
 // js/intelligence-tabs/lenders-tab.js
+import { LenderTemplates } from '../lenders/ui/LenderTemplates.js';
 
 export class LendersTab {
     constructor(parent) {
@@ -9,8 +10,8 @@ export class LendersTab {
         return this.parent.lenders;
     }
 
-    render(container) {
-        console.log('🏦 Rendering Submission Tab');
+    async render(container) {
+        console.log('🦁 Rendering Submission Tab');
 
         const conversation = this.parent.getSelectedConversation();
         if (!conversation) {
@@ -35,7 +36,7 @@ export class LendersTab {
             return;
         }
 
-        // Render Landing Page
+        // Show loading while fetching
         container.innerHTML = `
             <div class="lender-landing-page">
                 <div class="lender-landing-icon">🤝</div>
@@ -46,6 +47,9 @@ export class LendersTab {
                 <button id="openLendersModalBtn" class="btn btn-primary btn-lg">
                     Re-Open Submission
                 </button>
+                <div id="submissionTrackerContainer" style="width:100%; margin-top:20px;">
+                    <div style="text-align:center; color:#8b949e; padding:10px;">Loading submissions...</div>
+                </div>
             </div>
         `;
 
@@ -53,8 +57,21 @@ export class LendersTab {
             this.openModal(conversation);
         });
 
-        // Auto-trigger
-        setTimeout(() => { this.openModal(conversation); }, 50);
+        // Fetch and render submissions
+        try {
+            const result = await this.parent.apiCall(`/api/lenders/submissions/${conversation.id}`);
+            const trackerContainer = document.getElementById('submissionTrackerContainer');
+
+            if (result.success && result.submissions && result.submissions.length > 0) {
+                trackerContainer.innerHTML = LenderTemplates.renderSubmissionTracker(result.submissions);
+            } else {
+                trackerContainer.innerHTML = '';
+            }
+        } catch (err) {
+            console.error('Failed to load submissions:', err);
+            const trackerContainer = document.getElementById('submissionTrackerContainer');
+            if (trackerContainer) trackerContainer.innerHTML = '';
+        }
     }
 
     openModal(conversation) {
