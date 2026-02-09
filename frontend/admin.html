@@ -263,6 +263,57 @@
     .btn-dismiss:hover {
       background: #374151;
     }
+    /* Daily Reports */
+    .report-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .report-stat-num {
+      font-size: 20px;
+      font-weight: 700;
+      color: #e6edf3;
+    }
+    .report-stat-label {
+      font-size: 10px;
+      color: #8b949e;
+      text-transform: uppercase;
+    }
+    .report-body {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #c9d1d9;
+    }
+    .report-body h3 {
+      color: #58a6ff;
+      margin: 24px 0 12px;
+      font-size: 16px;
+    }
+    .report-body ul, .report-body ol {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+    .report-body li {
+      margin-bottom: 6px;
+    }
+    .report-body strong {
+      color: #e6edf3;
+    }
+    .report-date-chip {
+      padding: 6px 12px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #8b949e;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .report-date-chip:hover {
+      border-color: #58a6ff;
+      color: #58a6ff;
+    }
   </style>
 </head>
 <body>
@@ -280,6 +331,9 @@
         <span id="userCount">0 users</span>
       </div>
       <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="openDailyReports()">
+          📊 Daily Reports
+        </button>
         <button class="btn btn-secondary" onclick="openTrainingModal()" data-action="open-training">
           🧠 AI Learning
         </button>
@@ -567,6 +621,44 @@
         <button class="btn btn-primary" id="saveManualRuleBtn" onclick="saveManualRule()">
           <i class="fas fa-save"></i> Save Rule
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Reports Modal -->
+  <div id="dailyReportsModal" class="modal-overlay">
+    <div class="modal" style="max-width: 1000px;">
+      <div class="modal-header">
+        <h2 style="margin: 0;">📊 Daily Operations Reports</h2>
+        <button class="modal-close" onclick="closeDailyReports()">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 80vh; overflow-y: auto; padding: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #374151; position: sticky; top: 0; background: #1f2937; z-index: 10;">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="date" id="reportDate" style="padding: 8px 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px;">
+            <button class="btn btn-primary btn-sm" onclick="generateReport()"><i class="fas fa-bolt"></i> Generate</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadReport()"><i class="fas fa-eye"></i> View</button>
+          </div>
+          <div id="reportStatus" style="font-size: 12px; color: #8b949e;"></div>
+        </div>
+        <div id="reportStatsBar" style="display: none; padding: 16px 20px; border-bottom: 1px solid #374151;">
+          <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <div class="report-stat"><span class="report-stat-num" id="statNewLeads">0</span><span class="report-stat-label">New Leads</span></div>
+            <div class="report-stat"><span class="report-stat-num" id="statMsgsSent">0</span><span class="report-stat-label">Msgs Sent</span></div>
+            <div class="report-stat"><span class="report-stat-num" id="statMsgsRecv">0</span><span class="report-stat-label">Msgs Received</span></div>
+            <div class="report-stat"><span class="report-stat-num" id="statSubmissions">0</span><span class="report-stat-label">Submissions</span></div>
+            <div class="report-stat"><span class="report-stat-num" id="statOffers" style="color: #2ea043;">0</span><span class="report-stat-label">Offers</span></div>
+            <div class="report-stat"><span class="report-stat-num" id="statDeclines" style="color: #f85149;">0</span><span class="report-stat-label">Declines</span></div>
+            <div class="report-stat"><span class="report-stat-num" id="statActive">0</span><span class="report-stat-label">Active Leads</span></div>
+          </div>
+        </div>
+        <div id="reportContent" style="padding: 20px;">
+          <div style="text-align: center; color: #8b949e; padding: 40px;">Select a date and click <strong>View</strong> to load a report, or <strong>Generate</strong> to create a new one.</div>
+        </div>
+        <div style="padding: 0 20px 20px;">
+          <h4 style="color: #8b949e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Recent Reports</h4>
+          <div id="reportHistory" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1199,6 +1291,131 @@
     document.getElementById('trainingModal').addEventListener('click', (e) => { if (e.target.id === 'trainingModal') closeTrainingModal(); });
     document.getElementById('rulesModal').addEventListener('click', (e) => { if (e.target.id === 'rulesModal') closeRulesModal(); });
     document.getElementById('manualRuleModal').addEventListener('click', (e) => { if (e.target.id === 'manualRuleModal') closeManualRuleModal(); });
+    document.getElementById('dailyReportsModal').addEventListener('click', (e) => { if (e.target.id === 'dailyReportsModal') closeDailyReports(); });
+
+    const REPORTS_API = '/api/daily-reports';
+
+    function openDailyReports() {
+      document.getElementById('dailyReportsModal').classList.add('show');
+      document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+      loadReportHistory();
+    }
+
+    function closeDailyReports() {
+      document.getElementById('dailyReportsModal').classList.remove('show');
+    }
+
+    async function loadReportHistory() {
+      try {
+        const res = await fetch(REPORTS_API, { credentials: 'include' });
+        const data = await res.json();
+        const container = document.getElementById('reportHistory');
+        if (data.success && data.reports.length > 0) {
+          container.innerHTML = data.reports.map(r => {
+            const d = new Date(r.date + 'T12:00:00');
+            const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return `<button class="report-date-chip" onclick="loadReportByDate('${r.date}')">${label}</button>`;
+          }).join('');
+        } else {
+          container.innerHTML = '<span style="color:#6b7280; font-size:12px;">No reports yet</span>';
+        }
+      } catch (err) { console.error('Failed to load report history:', err); }
+    }
+
+    async function loadReport() {
+      const date = document.getElementById('reportDate').value;
+      if (!date) return;
+      await loadReportByDate(date);
+    }
+
+    async function loadReportByDate(date) {
+      document.getElementById('reportDate').value = date;
+      const statusEl = document.getElementById('reportStatus');
+      const contentEl = document.getElementById('reportContent');
+      const statsBar = document.getElementById('reportStatsBar');
+      statusEl.textContent = 'Loading...';
+      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Loading report...</div>';
+      try {
+        const res = await fetch(REPORTS_API + '/' + date, { credentials: 'include' });
+        const data = await res.json();
+        if (data.success && data.report) {
+          const report = data.report;
+          if (report.stats) {
+            const s = typeof report.stats === 'string' ? JSON.parse(report.stats) : report.stats;
+            const o = s.overview || {};
+            document.getElementById('statNewLeads').textContent = o.new_leads || 0;
+            document.getElementById('statMsgsSent').textContent = o.msgs_sent || 0;
+            document.getElementById('statMsgsRecv').textContent = o.msgs_received || 0;
+            document.getElementById('statSubmissions').textContent = o.submissions_sent || 0;
+            document.getElementById('statOffers').textContent = o.offers_received || 0;
+            document.getElementById('statDeclines').textContent = o.declines_received || 0;
+            document.getElementById('statActive').textContent = o.active_leads || 0;
+            statsBar.style.display = 'block';
+          }
+          contentEl.innerHTML = '<div class="report-body">' + markdownToHtml(report.report) + '</div>';
+          statusEl.textContent = 'Generated ' + new Date(report.created_at).toLocaleString();
+        } else {
+          statsBar.style.display = 'none';
+          contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;">No report for this date. Click <strong>Generate</strong> to create one.</div>';
+          statusEl.textContent = '';
+        }
+      } catch (err) {
+        contentEl.innerHTML = '<div style="color:#f85149;padding:20px;">Error: ' + err.message + '</div>';
+        statusEl.textContent = '';
+      }
+    }
+
+    async function generateReport() {
+      const date = document.getElementById('reportDate').value;
+      if (!date) return;
+      const statusEl = document.getElementById('reportStatus');
+      const contentEl = document.getElementById('reportContent');
+      statusEl.textContent = 'Generating...';
+      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Generating report... this may take 30-60 seconds.</div>';
+      try {
+        const res = await fetch(REPORTS_API + '/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ date })
+        });
+        const data = await res.json();
+        if (data.success) {
+          statusEl.textContent = 'Generating... polling for results';
+          let attempts = 0;
+          const poll = setInterval(async () => {
+            attempts++;
+            try {
+              const check = await fetch(REPORTS_API + '/' + date, { credentials: 'include' });
+              const result = await check.json();
+              if (result.success && result.report) {
+                clearInterval(poll);
+                await loadReportByDate(date);
+                loadReportHistory();
+              } else if (attempts > 24) {
+                clearInterval(poll);
+                statusEl.textContent = 'Timed out - check back in a minute';
+              }
+            } catch (e) {}
+          }, 5000);
+        }
+      } catch (err) {
+        statusEl.textContent = '';
+        contentEl.innerHTML = '<div style="color:#f85149;padding:20px;">Failed: ' + err.message + '</div>';
+      }
+    }
+
+    function markdownToHtml(md) {
+      if (!md) return '';
+      return md
+        .replace(/### (.*)/g, '<h3>$1</h3>')
+        .replace(/## (.*)/g, '<h3>$1</h3>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\d+\.\s+(.*)/gm, '<li>$1</li>')
+        .replace(/^[-•]\s+(.*)/gm, '<li>$1</li>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+    }
   </script>
 </body>
 </html>
