@@ -313,7 +313,7 @@ async function processEmail(email, db) {
 
     const emailNameClean = normalizeName(businessName);
     const candidates = await db.query(`
-        SELECT id, business_name, first_name, last_name 
+        SELECT id, business_name, first_name, last_name, dba_name
         FROM conversations 
         WHERE state NOT IN ('ARCHIVED', 'DEAD')
     `);
@@ -330,12 +330,14 @@ async function processEmail(email, db) {
         // Check against both business name and owner name
         const bizScore = getSimilarity(emailNameClean, leadNameClean);
         const ownerScore = ownerNameClean ? getSimilarity(emailNameClean, ownerNameClean) : 0;
-        const finalScore = Math.max(bizScore, ownerScore);
+        const dbaClean = normalizeName(lead.dba_name);
+        const dbaScore = dbaClean ? getSimilarity(emailNameClean, dbaClean) : 0;
+        const finalScore = Math.max(bizScore, ownerScore, dbaScore);
 
         if (finalScore > 0.85 && finalScore > highestScore) {
             highestScore = finalScore;
             bestMatchId = lead.id;
-            const matchedOn = bizScore >= ownerScore ? 'business' : 'owner';
+            const matchedOn = dbaScore >= bizScore && dbaScore >= ownerScore ? 'dba' : bizScore >= ownerScore ? 'business' : 'owner';
             console.log(`      🔍 Potential match: "${lead.business_name}" [${matchedOn}] (score: ${finalScore.toFixed(2)})`);
         }
     }

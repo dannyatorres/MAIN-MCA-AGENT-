@@ -41,6 +41,10 @@ router.get('/:date', requireRole('admin'), async (req, res) => {
 router.post('/generate', requireRole('admin'), async (req, res) => {
     try {
         const date = req.body.date || new Date().toISOString().split('T')[0];
+        const db = getDatabase();
+
+        // Delete stale report so polling waits for the fresh one
+        await db.query('DELETE FROM daily_reports WHERE date = $1', [date]);
         res.json({ success: true, message: 'Report generation started', date });
 
         // Fire and forget
