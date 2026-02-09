@@ -3,6 +3,7 @@ const router = express.Router();
 const { processLeadWithAI } = require('../services/aiAgent');
 const { getDatabase } = require('../services/database');
 const { runMorningFollowUp } = require('../services/morningFollowUp');
+const { runDailyAgent } = require('../services/dailyAgent');
 const twilio = require('twilio');
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
@@ -170,6 +171,25 @@ router.post('/morning-followup', async (req, res) => {
         return res.json({ success: true, ...result });
     } catch (err) {
         console.error('Morning follow-up error:', err);
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/agent/daily-report
+router.post('/daily-report', async (req, res) => {
+    const secret = req.headers['x-internal-secret'];
+    if (secret !== process.env.INTERNAL_API_SECRET) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { date } = req.body || {};
+
+    console.log('📊 Daily report triggered via API', date ? `(date: ${date})` : '');
+    try {
+        const report = await runDailyAgent(date || null);
+        return res.json({ success: true, report });
+    } catch (err) {
+        console.error('Daily report error:', err);
         return res.status(500).json({ success: false, error: err.message });
     }
 });

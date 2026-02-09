@@ -175,6 +175,25 @@ async function initialize() {
             );
         `);
 
+        // 9. Create daily_reports (Daily Operations Agent output)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS daily_reports (
+                id BIGSERIAL PRIMARY KEY,
+                date DATE UNIQUE,
+                report TEXT NOT NULL,
+                stats JSONB,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `);
+
+        // Ensure expected columns exist (safe for older tables)
+        await pool.query(`ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS id BIGSERIAL;`);
+        await pool.query(`ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS date DATE;`);
+        await pool.query(`ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS report TEXT;`);
+        await pool.query(`ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS stats JSONB;`);
+        await pool.query(`ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();`);
+        await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(date);`);
+
         console.log('✅ Database schema verified and repaired (Job Queue & FCS tables added)');
     } catch (err) {
         console.warn('⚠️ Schema verification warning (non-fatal):', err.message);

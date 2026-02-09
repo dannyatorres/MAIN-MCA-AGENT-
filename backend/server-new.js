@@ -19,6 +19,7 @@ require('dotenv').config();
 const { getDatabase } = require('./services/database');
 const { startRuleLearner } = require('./services/ruleLearner');
 const { updateTrainingOutcomes } = require('./services/outcomeTracker');
+const { scheduleDailyAgent } = require('./services/dailyAgent');
 
 // Create Express app
 const app = express();
@@ -158,6 +159,7 @@ app.use('/api/agent', require('./routes/agent'));
 app.use('/api/cleaner', require('./routes/cleaner'));
 app.use('/api/rules', require('./routes/rule-suggestions'));
 app.use('/api/dialer', require('./routes/dialer'));
+app.use('/api/daily-reports', require('./routes/dailyReports'));
 
 // CLEANED UP MODULES
 app.use('/api/integrations', require('./routes/integrationRoutes'));
@@ -245,6 +247,12 @@ try {
     startRuleLearner();
     console.log('✅ Rule Learner Service: INITIALIZED');
 } catch (e) { console.error('⚠️ Failed to start Rule Learner:', e.message); }
+
+// Start Daily Operations Agent (10pm ET)
+try {
+    scheduleDailyAgent();
+    console.log('✅ Daily Operations Agent: SCHEDULED');
+} catch (e) { console.error('⚠️ Failed to schedule Daily Agent:', e.message); }
 
 // Update training outcomes every 6 hours
 setInterval(() => {
