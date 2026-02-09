@@ -14,8 +14,7 @@ Use this list to identify the lender if the email sender is generic.
 - BCA Capital Partners
 - Bitty Advance
 - BizFund
-- BIG Funding
-- Blackbridge Investment Group
+- Blackbridge Investment Group (aka BIG Funding)
 - BMF
 - CAN Capital
 - Capital Express
@@ -156,6 +155,10 @@ Use this list to identify the lender if the email sender is generic.
 - Wellen Capital
 - Westwood Funding
 - World Business Lenders
+
+**LENDER ALIASES & ACRONYMS:**
+Some lenders use abbreviations or trade names in emails. Always map to the full name:
+- BIG / BIG Funding → Blackbridge Investment Group
 
 **CRITICAL DATA SOURCE RULES:**
 1.  **BUSINESS NAME**: Look in the **SUBJECT LINE**. The business name is almost always in the Subject.
