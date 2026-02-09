@@ -230,6 +230,11 @@ function checkNonProfit(lender, criteria) {
 function checkSoleProp(lender, criteria) {
     if (!criteria.isSoleProp) return null;
 
+    // Check dedicated boolean column first
+    if (lender.accepts_sole_prop === false) {
+        return 'Sole Prop - Not accepted';
+    }
+
     const requirements = (lender.other_requirements || '').toLowerCase();
     const prohibited = (lender.prohibited_industries || '').toLowerCase();
     const allText = requirements + ' ' + prohibited;
