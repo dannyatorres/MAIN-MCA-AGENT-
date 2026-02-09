@@ -566,7 +566,7 @@ Object.assign(window.MobileApp.prototype, {
                 this.showToast('Delete failed', 'error');
             }
         });
-    }
+    },
 
     // ============ FCS GENERATION ============
     openFCSModalMobile() {
