@@ -54,7 +54,17 @@ Object.assign(window.MobileApp.prototype, {
             return;
         }
 
-        container.innerHTML = documents.map(doc => {
+        const hasDocuments = documents.length > 0;
+
+        container.innerHTML = (hasDocuments ? `
+            <div class="fcs-generate-bar" id="fcsGenerateBarMobile">
+                <div class="fcs-bar-info">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Generate FCS Report</span>
+                </div>
+                <button class="btn btn-primary btn-sm" id="generateFCSBtnMobile">Generate</button>
+            </div>
+        ` : '') + documents.map(doc => {
             const filename = doc.originalFilename || doc.original_filename || doc.original_name || 'Unknown';
             const docType = doc.documentType || doc.document_type || 'Document';
             const fileSize = this.formatFileSize(doc.fileSize || doc.file_size || 0);
@@ -156,6 +166,13 @@ Object.assign(window.MobileApp.prototype, {
                     this.confirmDeleteDocument(docId);
                 }
             });
+        }
+
+        // FCS Generate button
+        const fcsBtn = document.getElementById('generateFCSBtnMobile');
+        if (fcsBtn && !fcsBtn._bound) {
+            fcsBtn._bound = true;
+            fcsBtn.addEventListener('click', () => this.openFCSModalMobile());
         }
     },
 
@@ -549,5 +566,198 @@ Object.assign(window.MobileApp.prototype, {
                 this.showToast('Delete failed', 'error');
             }
         });
+    }
+
+    // ============ FCS GENERATION ============
+    openFCSModalMobile() {
+        const docs = this.currentDocuments || [];
+        if (docs.length === 0) {
+            this.showToast('No documents available. Upload files first.', 'warning');
+            return;
+        }
+
+        const modalHtml = `
+            <div class="upload-modal-mobile" id="fcsModalMobile">
+                <div class="upload-modal-content">
+                    <div class="upload-modal-header">
+                        <h3>📊 Generate FCS Report</h3>
+                        <button class="upload-modal-close" id="closeFCSModal">&times;</button>
+                    </div>
+
+                    <p style="color: #8b949e; font-size: 13px; margin: 0 0 12px;">
+                        Select documents to include in the analysis:
+                    </p>
+
+                    <label class="fcs-select-row-mobile" style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #262c36; margin-bottom:8px;">
+                        <input type="checkbox" id="fcsSelectAllMobile" checked>
+                        <span style="color:#e6edf3; font-weight:600;">Select All</span>
+                    </label>
+
+                    <div class="fcs-doc-list-mobile" style="max-height:300px; overflow-y:auto;">
+                        ${docs.map(doc => {
+                            const filename = doc.originalFilename || doc.original_filename || doc.original_name || 'Unknown';
+                            const docType = doc.documentType || doc.document_type || 'Document';
+                            const fileSize = this.formatFileSize(doc.fileSize || doc.file_size || 0);
+                            return `
+                                <label class="fcs-doc-row-mobile" style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #1a1f2b;">
+                                    <input type="checkbox" class="fcs-doc-check-mobile" value="${doc.id}" checked>
+                                    <div style="flex:1; min-width:0;">
+                                        <div style="color:#e6edf3; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${this.utils.escapeHtml(filename)}</div>
+                                        <div style="color:#8b949e; font-size:11px;">${docType} • ${fileSize}</div>
+                                    </div>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <div class="upload-modal-actions">
+                        <button class="upload-cancel-btn" id="cancelFCSMobile">Cancel</button>
+                        <button class="upload-confirm-btn" id="confirmFCSMobile">
+                            <i class="fas fa-bolt"></i> Generate FCS
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Select All toggle
+        const selectAll = document.getElementById('fcsSelectAllMobile');
+        const checkboxes = () => document.querySelectorAll('.fcs-doc-check-mobile');
+
+        selectAll?.addEventListener('change', (e) => {
+            checkboxes().forEach(cb => cb.checked = e.target.checked);
+        });
+
+        checkboxes().forEach(cb => {
+            cb.addEventListener('change', () => {
+                const all = Array.from(checkboxes());
+                selectAll.checked = all.every(c => c.checked);
+                selectAll.indeterminate = all.some(c => c.checked) && !all.every(c => c.checked);
+            });
+        });
+
+        document.getElementById('closeFCSModal').onclick = () => this.closeFCSModalMobile();
+        document.getElementById('cancelFCSMobile').onclick = () => this.closeFCSModalMobile();
+        document.getElementById('confirmFCSMobile').onclick = () => this.confirmFCSGenerationMobile();
+    },
+
+    closeFCSModalMobile() {
+        const modal = document.getElementById('fcsModalMobile');
+        if (modal) modal.remove();
+    },
+
+    async confirmFCSGenerationMobile() {
+        const selectedIds = Array.from(document.querySelectorAll('.fcs-doc-check-mobile:checked'))
+            .map(cb => cb.value);
+
+        if (selectedIds.length === 0) {
+            this.showToast('Select at least one document', 'warning');
+            return;
+        }
+
+        this.closeFCSModalMobile();
+
+        // Show loading overlay
+        const container = document.getElementById('documentsContainer');
+        const originalContent = container?.innerHTML;
+
+        if (container) {
+            container.innerHTML = `
+                <div class="ai-loading-container" id="fcsLoadingMobile">
+                    <div class="ai-thinking">
+                        <div class="ai-dot"></div>
+                        <div class="ai-dot"></div>
+                        <div class="ai-dot"></div>
+                    </div>
+                    <p id="fcsStatusText">Starting FCS analysis...</p>
+                </div>
+            `;
+        }
+
+        try {
+            const conversation = this.conversations?.find(c => c.id === this.currentConversationId);
+            const businessName = conversation?.business_name || '';
+
+            // 1. Start the job
+            const startResponse = await this.apiCall('/api/fcs/generate', {
+                method: 'POST',
+                body: JSON.stringify({
+                    conversationId: this.currentConversationId,
+                    businessName: businessName,
+                    documentIds: selectedIds
+                })
+            });
+
+            if (!startResponse.success || !startResponse.jobId) {
+                throw new Error(startResponse.error || 'Failed to start FCS generation');
+            }
+
+            // 2. Poll for completion
+            const result = await this.pollFCSStatusMobile(startResponse.jobId);
+
+            if (result.status === 'completed') {
+                this.showToast('FCS Report generated!', 'success');
+                // Reload documents view
+                this.loadDocumentsView();
+            } else {
+                throw new Error(result.error || 'FCS generation failed');
+            }
+
+        } catch (error) {
+            console.error('FCS Generation error:', error);
+            this.showToast('FCS failed: ' + error.message, 'error');
+            // Restore documents list
+            if (container && originalContent) {
+                container.innerHTML = originalContent;
+                this.setupDocumentsListeners();
+            } else {
+                this.loadDocumentsView();
+            }
+        }
+    },
+
+    async pollFCSStatusMobile(jobId, maxAttempts = 120) {
+        const pollInterval = 3000;
+        let attempts = 0;
+
+        const statusMessages = [
+            'Extracting text from documents...',
+            'Analyzing financial data...',
+            'Running AI underwriting...',
+            'Calculating metrics...',
+            'Generating FCS report...',
+            'Almost done...'
+        ];
+
+        while (attempts < maxAttempts) {
+            attempts++;
+
+            try {
+                const status = await this.apiCall(`/api/fcs/generate/status/${jobId}?_=${Date.now()}`);
+
+                // Update status text
+                const statusEl = document.getElementById('fcsStatusText');
+                if (statusEl && status.status === 'processing') {
+                    const msgIndex = Math.min(Math.floor(attempts / 10), statusMessages.length - 1);
+                    statusEl.textContent = status.progress || statusMessages[msgIndex];
+                }
+
+                if (status.status === 'completed' || status.status === 'failed') {
+                    return status;
+                }
+
+            } catch (err) {
+                console.warn(`Poll attempt ${attempts} failed:`, err.message);
+                if (err.message.includes('404')) {
+                    throw new Error('Job not found - it may have expired');
+                }
+            }
+
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+
+        throw new Error('FCS generation timed out after 6 minutes');
     }
 });
