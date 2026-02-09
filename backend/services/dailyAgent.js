@@ -73,7 +73,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM state_history sh
         JOIN conversations c ON sh.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (sh.created_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (sh.changed_at AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'state_history');
     events.push(...stateChanges);
 
