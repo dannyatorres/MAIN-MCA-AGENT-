@@ -241,28 +241,21 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
 
             if (existing) {
                 const isOwnLead = existing.assigned_user_id === req.user?.id;
-                const lockedStates = ['SUBMITTED', 'FUNDED', 'OFFER_RECEIVED'];
 
-                if (lockedStates.includes(existing.state) && !isOwnLead) {
-                    const isExpired = !existing.exclusivity_expires_at || 
-                                      new Date(existing.exclusivity_expires_at) < new Date();
-
-                    if (!isExpired) {
-                        const daysLeft = Math.ceil(
-                            (new Date(existing.exclusivity_expires_at) - new Date()) / (1000 * 60 * 60 * 24)
-                        );
-                        rejections.push({
-                            row: validLeads.indexOf(lead) + 1,
-                            phone: lead.lead_phone,
-                            business_name: lead.business_name,
-                            reason: `Submitted by ${existing.assigned_user_name || 'another user'} (CID# ${existing.display_id}, available in ${daysLeft} days)`,
-                            matched_by: existing.lead_phone === lead.lead_phone ? 'phone' : 'EIN'
-                        });
-                        continue;
-                    }
+                if (!isOwnLead) {
+                    // NEVER allow a CSV import to reassign another user's lead
+                    rejections.push({
+                        row: validLeads.indexOf(lead) + 1,
+                        phone: lead.lead_phone,
+                        business_name: lead.business_name,
+                        reason: `Already assigned to ${existing.assigned_user_name || 'another user'} (CID# ${existing.display_id})`,
+                        matched_by: existing.lead_phone === lead.lead_phone ? 'phone' : 'EIN'
+                    });
+                    continue;
                 }
 
-                toUpdate.push({ lead, existingId: existing.id, claim: !isOwnLead });
+                // Own lead — enrich with new CSV data only
+                toUpdate.push({ lead, existingId: existing.id, claim: false });
             } else {
                 toInsert.push(lead);
             }
