@@ -54,7 +54,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM messages m
         JOIN conversations c ON m.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (m.timestamp AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'messages');
     events.push(...messages);
 
@@ -73,7 +73,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM state_history sh
         JOIN conversations c ON sh.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (sh.changed_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (sh.changed_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'state_history');
     events.push(...stateChanges);
 
@@ -92,7 +92,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM lender_submissions ls
         JOIN conversations c ON ls.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (ls.submitted_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (ls.submitted_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'lender_submissions');
     events.push(...submissions);
 
@@ -117,7 +117,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM lender_submissions ls
         JOIN conversations c ON ls.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (ls.last_response_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (ls.last_response_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
           AND ls.status IN ('OFFER', 'DECLINE', 'DECLINED', 'STIP', 'FUNDED')
     `, [dateStr], 'lender_responses');
     events.push(...responses);
@@ -138,7 +138,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM fcs_analyses fa
         JOIN conversations c ON fa.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (fa.completed_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (fa.completed_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'fcs');
     events.push(...fcsEvents);
 
@@ -157,7 +157,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM lead_strategy ls
         JOIN conversations c ON ls.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (ls.created_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (ls.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'lead_strategy');
     events.push(...strategyEvents);
 
@@ -176,7 +176,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM notes n
         JOIN conversations c ON n.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (n.created_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (n.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'notes');
     events.push(...notes);
 
@@ -195,7 +195,7 @@ async function buildDailyTimeline(db, dateStr) {
         FROM ai_decisions ad
         JOIN conversations c ON ad.conversation_id = c.id
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (ad.created_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (ad.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'ai_decisions');
     events.push(...aiDecisions);
 
@@ -213,7 +213,7 @@ async function buildDailyTimeline(db, dateStr) {
             c.state as current_state
         FROM conversations c
         LEFT JOIN users u ON c.assigned_user_id = u.id
-        WHERE (c.created_at AT TIME ZONE 'America/New_York')::date = $1
+        WHERE (c.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
     `, [dateStr], 'new_leads');
     events.push(...newLeads);
 
@@ -226,14 +226,14 @@ async function buildDailyTimeline(db, dateStr) {
 async function buildDailyStats(db, dateStr) {
     const overview = (await safeQuery(db, `
         SELECT
-            (SELECT COUNT(*) FROM conversations WHERE (created_at AT TIME ZONE 'America/New_York')::date = $1) as new_leads,
-            (SELECT COUNT(*) FROM messages WHERE direction = 'outbound' AND (timestamp AT TIME ZONE 'America/New_York')::date = $1) as msgs_sent,
-            (SELECT COUNT(*) FROM messages WHERE direction = 'inbound' AND (timestamp AT TIME ZONE 'America/New_York')::date = $1) as msgs_received,
-            (SELECT COUNT(*) FROM lender_submissions WHERE (submitted_at AT TIME ZONE 'America/New_York')::date = $1) as submissions_sent,
-            (SELECT COUNT(*) FROM lender_submissions WHERE (last_response_at AT TIME ZONE 'America/New_York')::date = $1 AND status = 'OFFER') as offers_received,
-            (SELECT COUNT(*) FROM lender_submissions WHERE (last_response_at AT TIME ZONE 'America/New_York')::date = $1 AND status IN ('DECLINE', 'DECLINED')) as declines_received,
-            (SELECT COUNT(*) FROM fcs_analyses WHERE (completed_at AT TIME ZONE 'America/New_York')::date = $1) as fcs_generated,
-            (SELECT COUNT(DISTINCT conversation_id) FROM messages WHERE (timestamp AT TIME ZONE 'America/New_York')::date = $1 AND direction = 'inbound') as active_leads
+            (SELECT COUNT(*) FROM conversations WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1) as new_leads,
+            (SELECT COUNT(*) FROM messages WHERE direction = 'outbound' AND (timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1) as msgs_sent,
+            (SELECT COUNT(*) FROM messages WHERE direction = 'inbound' AND (timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1) as msgs_received,
+            (SELECT COUNT(*) FROM lender_submissions WHERE (submitted_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1) as submissions_sent,
+            (SELECT COUNT(*) FROM lender_submissions WHERE (last_response_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1 AND status = 'OFFER') as offers_received,
+            (SELECT COUNT(*) FROM lender_submissions WHERE (last_response_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1 AND status IN ('DECLINE', 'DECLINED')) as declines_received,
+            (SELECT COUNT(*) FROM fcs_analyses WHERE (completed_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1) as fcs_generated,
+            (SELECT COUNT(DISTINCT conversation_id) FROM messages WHERE (timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1 AND direction = 'inbound') as active_leads
     `, [dateStr], 'overview_stats'))[0] || {};
 
     const brokers = await safeQuery(db, `
@@ -244,8 +244,8 @@ async function buildDailyStats(db, dateStr) {
             COUNT(DISTINCT ls.id) as submissions
         FROM users u
         LEFT JOIN conversations c ON c.assigned_user_id = u.id
-        LEFT JOIN messages m ON m.conversation_id = c.id AND (m.timestamp AT TIME ZONE 'America/New_York')::date = $1
-        LEFT JOIN lender_submissions ls ON ls.conversation_id = c.id AND (ls.submitted_at AT TIME ZONE 'America/New_York')::date = $1
+        LEFT JOIN messages m ON m.conversation_id = c.id AND (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
+        LEFT JOIN lender_submissions ls ON ls.conversation_id = c.id AND (ls.submitted_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $1
         WHERE u.role != 'admin'
         GROUP BY COALESCE(u.agent_name, u.name)
         HAVING COUNT(m.id) > 0
