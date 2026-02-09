@@ -65,7 +65,7 @@ async function buildDailyTimeline(db, dateStr) {
             c.business_name,
             c.assigned_user_id,
             COALESCE(u.agent_name, u.name) as broker,
-            sh.created_at as event_time,
+            sh.changed_at as event_time,
             'STATE_CHANGE' as event_type,
             sh.changed_by as direction,
             (sh.old_state || ' → ' || sh.new_state) as detail,
