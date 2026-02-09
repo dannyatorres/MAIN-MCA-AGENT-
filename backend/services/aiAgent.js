@@ -987,7 +987,7 @@ Collecting info. Follow the checklist - ask for missing items.
         else if (decision.action === 'qualify') {
             if (!['QUALIFIED', 'SUBMITTED', 'CLOSING'].includes(currentState)) {
                 await updateState(conversationId, 'QUALIFIED', 'ai_agent');
-                await db.query('UPDATE conversations SET nudge_count = 1 WHERE id = $1', [conversationId]);
+                await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
                 stateAfter = 'QUALIFIED';
 
                 responseContent = "got it. give me a few minutes to run the numbers and ill text you back shortly";
@@ -995,6 +995,16 @@ Collecting info. Follow the checklist - ask for missing items.
                 const facts = await getLeadFacts(conversationId);
                 if (facts.email) {
                     syncDriveFiles(conversationId, businessName, usageUserId);
+                }
+
+                const fcsCheck = await db.query(
+                    "SELECT id FROM fcs_analyses WHERE conversation_id = $1 AND status = 'completed'",
+                    [conversationId]
+                );
+                if (fcsCheck.rows.length > 0) {
+                    console.log(`📊 FCS already exists - triggering Commander`);
+                    commanderService.analyzeAndStrategize(conversationId)
+                        .catch(err => console.error('Commander auto-trigger failed:', err.message));
                 }
             }
         }
@@ -1074,10 +1084,6 @@ Collecting info. Follow the checklist - ask for missing items.
             });
         } catch (err) {
             console.error('⚠️ Memory store failed:', err.message);
-        }
-
-        if (currentState === 'QUALIFIED') {
-            await db.query('UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1', [conversationId]);
         }
 
         return { shouldReply: true, content: responseContent };
