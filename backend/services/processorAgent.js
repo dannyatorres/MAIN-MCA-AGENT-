@@ -292,29 +292,51 @@ async function processEmail(email, db) {
         .replace(/New Submission from\s*/gi, '')
         .trim();
 
+    // Fallback: extract name from subject if AI couldn't find it
+    if (!businessName || businessName === "null") {
+        const subjectMatch = (email.subject || '')
+            .replace(/^Re:\s*/i, '')
+            .replace(/^Fwd?:\s*/i, '')
+            .replace(/New Submission from\s*/gi, '')
+            .replace(/JMS\s*GLOBAL\s*[:\-]?\s*/gi, '')
+            .trim();
+        if (subjectMatch && subjectMatch.length > 2) {
+            businessName = subjectMatch;
+            console.log(`      �� Fallback: extracted "${businessName}" from subject line`);
+        }
+    }
+
     if (!businessName || businessName === "null" || data.category === "IGNORE") {
         console.log(`      ⏭️ [AI] Skipping: ${data.category === 'IGNORE' ? 'Status update' : 'No merchant found'}`);
         return;
     }
 
     const emailNameClean = normalizeName(businessName);
-    const candidates = await db.query(`SELECT id, business_name FROM conversations WHERE state NOT IN ('ARCHIVED', 'DEAD')`);
+    const candidates = await db.query(`
+        SELECT id, business_name, first_name, last_name 
+        FROM conversations 
+        WHERE state NOT IN ('ARCHIVED', 'DEAD')
+    `);
 
     let bestMatchId = null;
     let highestScore = 0;
 
     for (const lead of candidates.rows) {
         const leadNameClean = normalizeName(lead.business_name);
+        const ownerNameClean = normalizeName(
+            [lead.first_name, lead.last_name].filter(Boolean).join(' ')
+        );
 
-        // Check similarity for ALL candidates, not just includes matches
-        const score = getSimilarity(emailNameClean, leadNameClean);
-
-        const finalScore = score;
+        // Check against both business name and owner name
+        const bizScore = getSimilarity(emailNameClean, leadNameClean);
+        const ownerScore = ownerNameClean ? getSimilarity(emailNameClean, ownerNameClean) : 0;
+        const finalScore = Math.max(bizScore, ownerScore);
 
         if (finalScore > 0.85 && finalScore > highestScore) {
             highestScore = finalScore;
             bestMatchId = lead.id;
-            console.log(`      🔍 Potential match: "${lead.business_name}" (score: ${finalScore.toFixed(2)})`);
+            const matchedOn = bizScore >= ownerScore ? 'business' : 'owner';
+            console.log(`      🔍 Potential match: "${lead.business_name}" [${matchedOn}] (score: ${finalScore.toFixed(2)})`);
         }
     }
 

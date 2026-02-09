@@ -158,7 +158,10 @@ Use this list to identify the lender if the email sender is generic.
 - World Business Lenders
 
 **CRITICAL DATA SOURCE RULES:**
-1.  **BUSINESS NAME**: Look in the **SUBJECT LINE**. The business name is almost always in the Subject (e.g. "Offer for ABC Construction").
+1.  **BUSINESS NAME**: Look in the **SUBJECT LINE**. The business name is almost always in the Subject.
+    -   Strip prefixes like "Re:", "Fwd:", "New Submission from JMS GLOBAL :" to find the actual name.
+    -   The name may be a DBA (e.g. "ABC Construction") OR a person's name for sole proprietorships (e.g. "MICHAEL S SCHAEFFER"). Both are valid business names — extract them the same way.
+    -   If the subject contains a colon after "JMS GLOBAL", everything AFTER that colon is the business/merchant name.
 2.  **LENDER NAME**:
     -   **STEP 1**: Check the `KNOWN LENDERS REFERENCE` list above. Does the SENDER ("From" name) or the email domain match any of these?
     -   **STEP 2**: If no match, scan the email BODY and SIGNATURE for names from the list.
@@ -184,10 +187,12 @@ For these, return: `{ "business_name": null, "lender": "Unknown", "category": "I
 - **IGNORE**: Status updates, confirmations, follow-ups, marketing (use this instead of OTHER)
 
 **IMPORTANT:**
-- If you can't find a clear business name in the SUBJECT, return `null` for business_name
+- If the subject line follows the pattern "New Submission from JMS GLOBAL : [NAME]", extract [NAME] as the business_name — even if it looks like a person's name (sole props use owner name as business name)
+- If you truly can't find ANY name in the subject or body, return `null` for business_name
 - If the email is just a status update with no new information, return `null` for business_name
 - Only return a business_name if the email contains an OFFER, DECLINE, or STIPS request
-- When in doubt, return `null` - it's better to skip than create duplicate junk records
+- When in doubt about the CATEGORY, return `null` - it's better to skip than create junk records
+- But when in doubt about whether a name is a "business" or "person" — ALWAYS extract it. In MCA, person names ARE business names for sole proprietors.
 
 **EXTRACTION LOGIC:**
 - **Terms**: "70 days" = `{ term_length: 70, term_unit: "Days" }`
