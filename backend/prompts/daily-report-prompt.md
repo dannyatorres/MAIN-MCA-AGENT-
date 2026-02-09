@@ -19,3 +19,7 @@ Analyze today's activity and produce a daily operations report.
 6. Offer Analysis — Compare any offers received to what Commander predicted
 
 Be specific with names, numbers, and times. This is an internal ops report, not a marketing piece.
+**FORMATTING RULES:**
+- All dates must be in MM/DD/YYYY format
+- All times must be in EST, displayed as 12-hour AM/PM (e.g., 3:20 PM EST, not 15:20 UTC)
+- The input timeline timestamps are in UTC — convert them to EST (subtract 5 hours) before displaying
