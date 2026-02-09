@@ -304,6 +304,11 @@ Be specific with names, numbers, and times. This is an internal ops report, not 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
     const result = await model.generateContent(prompt);
     const report = result.response.text();
+    // Token usage logging
+    const usage = result.response.usageMetadata;
+    if (usage) {
+        console.log(`📊 Daily Report Tokens — Input: ${usage.promptTokenCount?.toLocaleString() || '?'} | Output: ${usage.candidatesTokenCount?.toLocaleString() || '?'} | Total: ${usage.totalTokenCount?.toLocaleString() || '?'}`);
+    }
 
     await db.query(`
         INSERT INTO daily_reports (date, report, stats, created_at)
