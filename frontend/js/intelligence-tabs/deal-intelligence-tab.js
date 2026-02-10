@@ -345,7 +345,6 @@ export class DealIntelligenceTab {
                     <div><label class="ob-label">Factor</label><input class="ob-input" data-tier="${i}" data-field="factorRate" value="${o.factorRate}" placeholder="1.38"></div>
                     <div><label class="ob-label">Payback $</label><input class="ob-input" data-tier="${i}" data-field="payback" value="${o.payback}" placeholder="44160"></div>
                     <div><label class="ob-label">Payment $</label><input class="ob-input" data-tier="${i}" data-field="payment" value="${o.payment}" placeholder="1840"></div>
-                    <div><label class="ob-label">Commission</label><input class="ob-input" data-tier="${i}" data-field="commission" value="${o.commission}" placeholder="0"></div>
                     <div><label class="ob-label">Points</label><input class="ob-input" data-tier="${i}" data-field="points" value="${o.points}" placeholder="0"></div>
                 </div>
             </div>
@@ -425,7 +424,6 @@ export class DealIntelligenceTab {
 <th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Factor</th>
 <th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Payback</th>
 <th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Payment</th>
-<th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Commission</th>
 <th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Points</th>
 </tr>
 ${tiers.map((o, i) => `<tr style="background:${i % 2 === 0 ? '#f8fafc' : '#ffffff'};">
@@ -433,7 +431,6 @@ ${tiers.map((o, i) => `<tr style="background:${i % 2 === 0 ? '#f8fafc' : '#fffff
 <td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${o.factorRate || '—'}</td>
 <td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${this._fmtMoney(o.payback)}</td>
 <td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${this._fmtMoney(o.payment)}</td>
-<td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${this._fmtMoney(o.commission)}</td>
 <td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${o.points || '0'}</td>
 </tr>`).join('')}
 </table>
