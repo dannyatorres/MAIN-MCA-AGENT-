@@ -305,6 +305,27 @@ router.post('/upload', csvUpload.single('csvFile'), async (req, res) => {
                     created_by_user_id, assigned_user_id,
                     exclusivity_expires_at, created_at
                 ) VALUES ${values.join(', ')}
+                ON CONFLICT (lead_phone) DO UPDATE SET
+                    business_name = COALESCE(EXCLUDED.business_name, conversations.business_name),
+                    email = COALESCE(EXCLUDED.email, conversations.email),
+                    us_state = COALESCE(EXCLUDED.us_state, conversations.us_state),
+                    address = COALESCE(EXCLUDED.address, conversations.address),
+                    city = COALESCE(EXCLUDED.city, conversations.city),
+                    zip = COALESCE(EXCLUDED.zip, conversations.zip),
+                    first_name = COALESCE(EXCLUDED.first_name, conversations.first_name),
+                    last_name = COALESCE(EXCLUDED.last_name, conversations.last_name),
+                    owner_home_address = COALESCE(EXCLUDED.owner_home_address, conversations.owner_home_address),
+                    owner_home_city = COALESCE(EXCLUDED.owner_home_city, conversations.owner_home_city),
+                    owner_home_state = COALESCE(EXCLUDED.owner_home_state, conversations.owner_home_state),
+                    owner_home_zip = COALESCE(EXCLUDED.owner_home_zip, conversations.owner_home_zip),
+                    annual_revenue = COALESCE(EXCLUDED.annual_revenue, conversations.annual_revenue),
+                    business_start_date = COALESCE(EXCLUDED.business_start_date, conversations.business_start_date),
+                    date_of_birth = COALESCE(EXCLUDED.date_of_birth, conversations.date_of_birth),
+                    tax_id = COALESCE(EXCLUDED.tax_id, conversations.tax_id),
+                    ssn = COALESCE(EXCLUDED.ssn, conversations.ssn),
+                    industry_type = COALESCE(EXCLUDED.industry_type, conversations.industry_type),
+                    funding_amount = COALESCE(EXCLUDED.funding_amount, conversations.funding_amount),
+                    updated_at = NOW()
             `, params);
 
             importedCount += batch.length;
