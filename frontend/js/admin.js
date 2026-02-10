@@ -615,6 +615,7 @@ const ReportsManager = {
   openDailyReports() {
     document.getElementById('dailyReportsModal').classList.add('show');
     document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('briefingDate').value = new Date().toLocaleDateString('en-CA');
     const today = new Date();
     const weekAgo = new Date(today - 7 * 24 * 60 * 60 * 1000);
     document.getElementById('analyticsEnd').value = today.toISOString().split('T')[0];
@@ -730,13 +731,15 @@ const ReportsManager = {
   async loadRawBriefing() {
     const userId = document.getElementById('briefingBroker').value;
     if (!userId) return alert('Select a broker first');
+    const dateVal = document.getElementById('briefingDate').value;
+    const url = `/api/broker-briefing/${userId}/raw${dateVal ? `?date=${dateVal}` : ''}`;
 
     const statusEl = document.getElementById('briefingStatus');
     const contentEl = document.getElementById('briefingContent');
     statusEl.textContent = 'Loading...';
     contentEl.innerHTML = '<div class="text-center text-muted p-40"><i class="fas fa-spinner fa-spin"></i> Loading data...</div>';
 
-    const data = await API.get(`/api/broker-briefing/${userId}/raw`);
+    const data = await API.get(url);
     if (!data) return;
 
     contentEl.innerHTML = this.renderRawBriefing(data);
@@ -745,13 +748,15 @@ const ReportsManager = {
   async generateBriefing() {
     const userId = document.getElementById('briefingBroker').value;
     if (!userId) return alert('Select a broker first');
+    const dateVal = document.getElementById('briefingDate').value;
+    const url = `/api/broker-briefing/${userId}${dateVal ? `?date=${dateVal}` : ''}`;
 
     const statusEl = document.getElementById('briefingStatus');
     const contentEl = document.getElementById('briefingContent');
     statusEl.textContent = 'Generating with AI...';
     contentEl.innerHTML = '<div class="text-center text-muted p-40"><i class="fas fa-spinner fa-spin"></i> Generating briefing... this may take 30-60 seconds.</div>';
 
-    const result = await API.get(`/api/broker-briefing/${userId}`);
+    const result = await API.get(url);
     if (!result) return;
 
     let html = '';

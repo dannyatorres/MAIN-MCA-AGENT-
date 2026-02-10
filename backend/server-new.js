@@ -149,13 +149,14 @@ app.get('/api/broker-briefing/:userId', async (req, res) => {
     try {
         const requestingUser = req.user;
         const targetUserId = req.params.userId;
+        const dateStr = req.query.date || null;
 
         // Brokers can only see their own, admin can see anyone
         if (requestingUser.role !== 'admin' && requestingUser.id !== targetUserId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        const result = await generateBrokerBriefing(targetUserId);
+        const result = await generateBrokerBriefing(targetUserId, dateStr);
         res.json(result);
     } catch (err) {
         console.error('❌ Broker briefing error:', err);
@@ -208,13 +209,14 @@ app.get('/api/broker-briefing/:userId/raw', async (req, res) => {
     try {
         const requestingUser = req.user;
         const targetUserId = req.params.userId;
+        const dateStr = req.query.date || null;
 
         if (requestingUser.role !== 'admin' && requestingUser.id !== targetUserId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
         const db = getDatabase();
-        const data = await buildBrokerActionBriefing(db, targetUserId);
+        const data = await buildBrokerActionBriefing(db, targetUserId, dateStr);
         res.json(data);
     } catch (err) {
         console.error('❌ Raw briefing error:', err);
