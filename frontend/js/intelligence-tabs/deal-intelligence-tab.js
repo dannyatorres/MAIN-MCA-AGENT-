@@ -178,6 +178,9 @@ export class DealIntelligenceTab {
                             <button class="di-btn secondary" id="offerDownloadBtn" style="font-size: 12px; padding: 6px 14px;">
                                 <span>⬇️</span> Download
                             </button>
+                            <button class="di-btn primary" id="offerSendBtn" style="font-size: 12px; padding: 6px 14px; background: #2ea043;">
+                                <span>✉️</span> Send
+                            </button>
                             <button class="di-modal-close" id="offerCloseBtn">×</button>
                         </div>
                     </div>
@@ -294,6 +297,34 @@ export class DealIntelligenceTab {
             a.download = `offer-${biz.replace(/\\s+/g, '-').toLowerCase()}.html`;
             a.click();
             URL.revokeObjectURL(url);
+        });
+        document.getElementById('offerSendBtn').addEventListener('click', async () => {
+            const to = prompt('Recipient email address:');
+            if (!to) return;
+            const subject = prompt('Subject:', `Your Funding Offer - ${document.getElementById('obBusiness').value || 'JMS Global'}`);
+            if (subject === null) return;
+
+            const btn = document.getElementById('offerSendBtn');
+            btn.innerHTML = '<span>⏳</span> Sending...';
+            btn.disabled = true;
+
+            try {
+                const res = await this.parent.apiCall('/api/send-offer-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to, subject, html: this._generateOfferHTML() })
+                });
+                if (res.success) {
+                    btn.innerHTML = '<span>✅</span> Sent!';
+                    setTimeout(() => { btn.innerHTML = '<span>✉️</span> Send'; btn.disabled = false; }, 3000);
+                } else {
+                    throw new Error(res.error);
+                }
+            } catch (err) {
+                alert('Send failed: ' + err.message);
+                btn.innerHTML = '<span>✉️</span> Send';
+                btn.disabled = false;
+            }
         });
     }
 

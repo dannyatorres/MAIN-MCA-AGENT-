@@ -12,6 +12,7 @@ const nodemailer = require('nodemailer');
 const emailRoutes = require('./routes/emailRoutes');
 const usageRoutes = require('./routes/usage');
 const notesRoutes = require('./routes/notes');
+const GmailInboxService = require('./services/gmailInboxService');
 require('dotenv').config();
 
 // Migration imports
@@ -29,6 +30,7 @@ const {
 // Create Express app
 const app = express();
 const server = http.createServer(app);
+const gmailService = new GmailInboxService();
 
 // --- TRUST PROXY ---
 app.set('trust proxy', 1);
@@ -180,6 +182,24 @@ app.get('/api/admin/broker-analytics/:userId', async (req, res) => {
     } catch (err) {
         console.error('❌ Owner analytics error:', err);
         res.status(500).json({ error: 'Failed to generate analytics' });
+    }
+});
+
+// Send Offer Email (Gmail API)
+app.post('/api/send-offer-email', async (req, res) => {
+    try {
+        const { to, subject, html } = req.body;
+        if (!to || !html) {
+            return res.status(400).json({ success: false, error: 'Missing to or html' });
+        }
+
+        const safeSubject = subject || 'Your Funding Offer - JMS Global';
+        await gmailService.sendEmail(to, safeSubject, html);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('❌ Send offer email failed:', err);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
