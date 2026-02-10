@@ -19,19 +19,22 @@ List any leads in OFFER state. For each one include:
 - These are MONEY on the table — be urgent
 
 ### 🎯 PITCH-READY — Send These Out
-List leads in PITCH-READY state with:
-- Business name, FCS summary if available, hours since last activity
-- Suggest specific next step (submit to lenders, call to confirm details, etc.)
+For each PITCH-READY lead, review their recent_messages and summarize:
+- Business name, FCS data if available (revenue, negative days), credit score
+- Where the conversation left off — what was the last thing said and by whom
+- Specific next step: which lenders to target, what docs to confirm, etc.
 
 ### ✅ QUALIFIED — Move These Forward
-List leads in QUALIFIED state with:
-- Business name, last activity, what's needed to advance to pitch-ready
-- Suggest action: collect docs, run FCS, schedule call, etc.
+For each QUALIFIED lead:
+- Business name, what's been discussed so far based on recent_messages
+- What's missing to get to PITCH-READY (docs? FCS? confirmation of numbers?)
+- Suggested next message or action
 
 ### 💬 ACTIVE — Keep the Conversation Going
-List leads in ACTIVE state with:
-- Business name, last message direction, hours since activity
-- Quick suggestion: follow up, ask qualifying questions, etc.
+For each ACTIVE lead:
+- Business name, last exchange summary from recent_messages
+- Where the conversation stalled or what question is pending
+- Suggested follow-up message to move them toward qualification
 
 ### 🟡 FOLLOW UP TODAY
 List cold and stale leads that are in actionable states: ACTIVE, QUALIFIED, PITCH-READY, OFFER.

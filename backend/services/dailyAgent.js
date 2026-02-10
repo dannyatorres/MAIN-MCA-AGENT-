@@ -442,6 +442,58 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         ORDER BY count DESC
     `, [userId], 'pipeline');
 
+    // 🎯 Actionable leads with conversation context
+    const actionableLeads = await safeQuery(db, `
+        WITH lead_list AS (
+            SELECT c.id, c.business_name, c.state, c.last_activity_at, c.credit_score, c.monthly_revenue
+            FROM conversations c
+            WHERE c.assigned_user_id = $1
+              AND c.state IN ('ACTIVE', 'QUALIFIED', 'PITCH_READY', 'PITCH-READY')
+        ),
+        recent_msgs AS (
+            SELECT m.conversation_id, m.direction, m.content, m.timestamp,
+                   ROW_NUMBER() OVER (PARTITION BY m.conversation_id ORDER BY m.timestamp DESC) as rn
+            FROM messages m
+            WHERE m.conversation_id IN (SELECT id FROM lead_list)
+        ),
+        last_fcs AS (
+            SELECT DISTINCT ON (conversation_id) 
+                conversation_id, average_revenue, total_negative_days
+            FROM fcs_analyses
+            WHERE conversation_id IN (SELECT id FROM lead_list)
+            ORDER BY conversation_id, completed_at DESC
+        )
+        SELECT 
+            ll.id as conversation_id,
+            ll.business_name,
+            ll.state,
+            ll.last_activity_at,
+            ll.credit_score,
+            ll.monthly_revenue,
+            lf.average_revenue as fcs_revenue,
+            lf.total_negative_days as fcs_neg_days,
+            json_agg(
+                json_build_object(
+                    'direction', rm.direction,
+                    'content', LEFT(rm.content, 300),
+                    'timestamp', rm.timestamp
+                ) ORDER BY rm.timestamp DESC
+            ) FILTER (WHERE rm.rn <= 5) as recent_messages
+        FROM lead_list ll
+        LEFT JOIN recent_msgs rm ON ll.id = rm.conversation_id AND rm.rn <= 5
+        LEFT JOIN last_fcs lf ON ll.id = lf.conversation_id
+        GROUP BY ll.id, ll.business_name, ll.state, ll.last_activity_at, 
+                 ll.credit_score, ll.monthly_revenue, lf.average_revenue, lf.total_negative_days
+        ORDER BY 
+            CASE ll.state 
+                WHEN 'PITCH_READY' THEN 1
+                WHEN 'PITCH-READY' THEN 1
+                WHEN 'QUALIFIED' THEN 2
+                WHEN 'ACTIVE' THEN 3
+            END,
+            ll.last_activity_at DESC
+    `, [userId], 'actionable_leads');
+
     // Today's activity snapshot
     const todayActivity = await safeQuery(db, `
         SELECT 
@@ -486,6 +538,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         pendingOffers,
         pendingDocs,
         pipeline,
+        actionableLeads,
         nonActionable,
         todayActivity: todayActivity[0] || {},
         generated_at: refIso
