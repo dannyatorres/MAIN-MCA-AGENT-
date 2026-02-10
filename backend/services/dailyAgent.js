@@ -366,7 +366,8 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
     `, [userId, targetDate, refIso], 'unanswered');
 
     // 🟡 Stale leads (stuck in same state 3+ days, still active)
-    const stale = await safeQuery(db, `
+    // Only fetch stale/cold for "today" live view, not historical
+    const stale = isToday ? await safeQuery(db, `
         WITH latest_state AS (
             SELECT DISTINCT ON (conversation_id) 
                 conversation_id, new_state, changed_at
@@ -387,10 +388,10 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
           AND ls.changed_at < ($3::timestamp - INTERVAL '3 days')
           AND ls.changed_at > ($3::timestamp - INTERVAL '7 days')
         ORDER BY ls.changed_at ASC
-    `, [userId, refIso, refIso], 'stale');
+    `, [userId, refIso, refIso], 'stale') : [];
 
     // 🔴 Cold leads (no activity in 2+ days)
-    const cold = await safeQuery(db, `
+    const cold = isToday ? await safeQuery(db, `
         WITH last_activity AS (
             SELECT conversation_id, MAX(timestamp) as last_msg
             FROM messages
@@ -410,7 +411,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
           AND la.last_msg < ($3::timestamp - INTERVAL '2 days')
           AND la.last_msg > ($3::timestamp - INTERVAL '7 days')
         ORDER BY la.last_msg ASC
-    `, [userId, refIso, refIso], 'cold');
+    `, [userId, refIso, refIso], 'cold') : [];
 
     // 🟢 Offers awaiting follow-up
     const pendingOffers = await safeQuery(db, `
@@ -427,10 +428,9 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         WHERE c.assigned_user_id = $1
           AND ls.status = 'OFFER'
           AND c.state NOT IN ('FUNDED', 'DEAD', 'DNC')
-          AND ls.last_response_at <= $2
-          AND ls.last_response_at > ($2::timestamp - INTERVAL '7 days')
+          AND (ls.last_response_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $2::date
         ORDER BY ls.last_response_at DESC
-    `, [userId, refIso], 'pending_offers');
+    `, [userId, targetDate], 'pending_offers');
 
     // 📋 Pipeline summary by state
     const pipeline = await safeQuery(db, `
