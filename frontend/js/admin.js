@@ -765,7 +765,7 @@ const ReportsManager = {
 
     let html = '';
     if (result.data) html += this.renderRawBriefing(result.data);
-    if (result.narrative) html += '<div class="report-body" style="border-top: 1px solid #30363d; margin-top: 20px; padding-top: 20px;"><h3 class="text-blue" style="margin-bottom: 12px;">🤖 AI Briefing</h3><div class="report-body">' + Utils.markdownToHtml(result.narrative) + '</div></div>';
+    if (result.narrative) html += '<div class="report-body briefing-ai-divider"><h3 class="text-blue mb-12">🤖 AI Briefing</h3><div class="report-body">' + Utils.markdownToHtml(result.narrative) + '</div></div>';
 
     contentEl.innerHTML = html;
     statusEl.textContent = 'Generated ' + new Date().toLocaleTimeString();
@@ -773,51 +773,85 @@ const ReportsManager = {
   renderRawBriefing(data) {
     let html = '';
 
+    // Top stat cards — only 3
     const ta = data.todayActivity || {};
-    html += `<div class="analytics-grid" style="margin-bottom: 16px;">
-      <div class="analytics-card"><div class="analytics-card-num">${ta.msgs_sent || 0}</div><div class="analytics-card-label">Sent Today</div></div>
-      <div class="analytics-card"><div class="analytics-card-num">${ta.msgs_received || 0}</div><div class="analytics-card-label">Received Today</div></div>
+    html += `<div class="analytics-grid mb-16">
+      <div class="analytics-card"><div class="analytics-card-num">${ta.msgs_sent || 0}</div><div class="analytics-card-label">Messages Sent</div></div>
+      <div class="analytics-card"><div class="analytics-card-num">${ta.msgs_received || 0}</div><div class="analytics-card-label">Messages Received</div></div>
       <div class="analytics-card"><div class="analytics-card-num">${ta.leads_touched || 0}</div><div class="analytics-card-label">Leads Touched</div></div>
-      <div class="analytics-card"><div class="analytics-card-num text-danger">${(data.unanswered || []).length}</div><div class="analytics-card-label">Unanswered</div></div>
-      <div class="analytics-card"><div class="analytics-card-num text-warning">${(data.cold || []).length}</div><div class="analytics-card-label">Cold Leads</div></div>
-      <div class="analytics-card"><div class="analytics-card-num text-success">${(data.pendingOffers || []).length}</div><div class="analytics-card-label">Pending Offers</div></div>
     </div>`;
 
-    html += this.renderUrgencySection('🔴 Respond NOW', 'red', data.unanswered, item =>
-      `<div class="urgency-item"><span class="lead-name">${Utils.escapeHtml(item.business_name || 'Unknown')}</span> — waiting <strong>${Utils.formatHours(item.hours_waiting)}</strong><br><span class="lead-meta">State: ${item.state} | Phone: ${item.phone || 'N/A'}</span></div>`
+    // 💰 Offers — grouped by business
+    const offers = data.pendingOffers || [];
+    const grouped = {};
+    offers.forEach(o => {
+      const name = o.business_name || 'Unknown';
+      if (!grouped[name]) grouped[name] = [];
+      grouped[name].push(o);
+    });
+    const offerItems = Object.entries(grouped).map(([biz, offs]) =>
+      `<div class="urgency-item">
+        <span class="lead-name">${Utils.escapeHtml(biz)}</span>
+        ${offs.map(o => `<div class="lead-meta" style="margin-top:4px;">
+          ${Utils.escapeHtml(o.lender_name)}: <strong>$${Number(o.offer_amount || 0).toLocaleString()}</strong> — ${Utils.formatHours(o.hours_since_offer)} ago
+        </div>`).join('')}
+      </div>`
     );
+    html += this.renderUrgencySection('💰 Offers', 'green', offerItems.length > 0 ? offerItems : null, null, offerItems);
 
-    html += this.renderUrgencySection('🟢 Close the Deal', 'green', data.pendingOffers, item =>
-      `<div class="urgency-item"><span class="lead-name">${Utils.escapeHtml(item.business_name || 'Unknown')}</span> — <strong>${Utils.escapeHtml(item.lender_name)}</strong> offered <strong>$${Number(item.offer_amount || 0).toLocaleString()}</strong><br><span class="lead-meta">${Utils.formatHours(item.hours_since_offer)} ago | State: ${item.state}</span></div>`
-    );
+    // 🎯 Pitched
+    const pitched = (data.actionableLeads || []).filter(l => l.state === 'PITCH_READY' || l.state === 'PITCH-READY');
+    html += this.renderUrgencySection('🎯 Pitched', 'blue', pitched, item => this.renderActionableLead(item));
 
-    const followUps = [
-      ...(data.stale || []).map(s => ({ ...s, reason: `stuck in ${s.state} for ${Math.round(s.days_in_state)}d` })),
-      ...(data.cold || []).map(c => ({ ...c, reason: `no activity for ${Math.round(c.days_silent)}d` }))
-    ];
-    html += this.renderUrgencySection('🟡 Follow Up Today', 'yellow', followUps, item =>
-      `<div class="urgency-item"><span class="lead-name">${Utils.escapeHtml(item.business_name || 'Unknown')}</span> — ${item.reason}<br><span class="lead-meta">State: ${item.state}</span></div>`
-    );
+    // 💬 Active
+    const active = (data.actionableLeads || []).filter(l => l.state === 'ACTIVE');
+    html += this.renderUrgencySection('💬 Active', 'yellow', active, item => this.renderActionableLead(item));
 
-    html += this.renderUrgencySection('📄 Docs Needed', 'blue', data.pendingDocs, item =>
-      `<div class="urgency-item"><span class="lead-name">${Utils.escapeHtml(item.business_name || 'Unknown')}</span><br><span class="lead-meta">State: ${item.state} — No FCS generated yet</span></div>`
-    );
+    // ✅ Qualified
+    const qualified = (data.actionableLeads || []).filter(l => l.state === 'QUALIFIED');
+    html += this.renderUrgencySection('✅ Qualified', 'green', qualified, item => this.renderActionableLead(item));
 
-    if (data.pipeline && data.pipeline.length) {
-      html += `<div style="margin-top: 16px;"><h4 class="section-header">Pipeline</h4><div class="analytics-grid">`;
-      data.pipeline.forEach(p => {
-        html += `<div class="analytics-card"><div class="analytics-card-num">${p.count}</div><div class="analytics-card-label">${p.state}</div></div>`;
-      });
-      html += `</div></div>`;
-    }
+    // 📭 Drip
+    const dripCount = (data.nonActionable || []).reduce((sum, s) => s.state === 'DRIP' ? sum + parseInt(s.count) : sum, 0);
+    html += `<div class="urgency-section"><div class="urgency-header blue">📭 Drip</div>
+      <div class="urgency-body text-muted text-sm">${dripCount} leads in drip — no response yet</div>
+    </div>`;
 
     return html;
   },
-  renderUrgencySection(title, color, items, renderItem) {
-    const count = (items || []).length;
-    let html = `<div class="urgency-section"><div class="urgency-header ${color}">${title} <span style="opacity: 0.7;">(${count})</span></div>`;
+  renderActionableLead(item) {
+    const msgs = item.recent_messages || [];
+    let context = '';
+    if (msgs.length > 0) {
+      const last = msgs[0];
+      const dir = last.direction === 'inbound' ? '← Lead' : '→ Broker';
+      const preview = Utils.escapeHtml((last.content || '').substring(0, 150));
+      context = `<div class="lead-meta" style="margin-top:4px;">${dir}: "${preview}"</div>`;
+      if (msgs.length > 1) {
+        const prev = msgs[1];
+        const prevDir = prev.direction === 'inbound' ? '← Lead' : '→ Broker';
+        const prevPreview = Utils.escapeHtml((prev.content || '').substring(0, 120));
+        context += `<div class="lead-meta">${prevDir}: "${prevPreview}"</div>`;
+      }
+    }
+    const meta = [];
+    if (item.credit_score) meta.push(`Credit: ${item.credit_score}`);
+    if (item.fcs_revenue) meta.push(`Rev: $${Number(item.fcs_revenue).toLocaleString()}/mo`);
+    if (item.fcs_neg_days) meta.push(`Neg days: ${item.fcs_neg_days}`);
+
+    return `<div class="urgency-item">
+      <span class="lead-name">${Utils.escapeHtml(item.business_name || 'Unknown')}</span>
+      ${meta.length ? `<span class="lead-meta"> — ${meta.join(' | ')}</span>` : ''}
+      ${context}
+    </div>`;
+  },
+  renderUrgencySection(title, color, items, renderItem, preBuiltHtml) {
+    const count = preBuiltHtml ? preBuiltHtml.length : (items || []).length;
+    let html = `<div class="urgency-section"><div class="urgency-header ${color}">${title} <span class="urgency-count">(${count})</span></div>`;
     if (count === 0) {
-      html += `<div class="urgency-body text-muted text-sm">None — you're good here ✓</div>`;
+      html += `<div class="urgency-body text-muted text-sm">None right now</div>`;
+    } else if (preBuiltHtml) {
+      html += `<div class="urgency-body">${preBuiltHtml.join('')}</div>`;
     } else {
       html += `<div class="urgency-body">${items.map(renderItem).join('')}</div>`;
     }
@@ -843,7 +877,7 @@ const ReportsManager = {
 
     let html = '';
     if (result.data) html += this.renderOwnerAnalytics(result.data);
-    if (result.narrative) html += '<div class="report-body" style="border-top: 1px solid #30363d; margin-top: 20px; padding-top: 20px;"><h3 class="text-blue" style="margin-bottom: 12px;">🤖 AI Analysis</h3><div class="report-body">' + Utils.markdownToHtml(result.narrative) + '</div></div>';
+    if (result.narrative) html += '<div class="report-body briefing-ai-divider"><h3 class="text-blue mb-12">🤖 AI Analysis</h3><div class="report-body">' + Utils.markdownToHtml(result.narrative) + '</div></div>';
 
     contentEl.innerHTML = html;
     statusEl.textContent = 'Generated ' + new Date().toLocaleTimeString();
