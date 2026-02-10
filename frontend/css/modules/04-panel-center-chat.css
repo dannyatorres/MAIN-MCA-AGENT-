@@ -386,7 +386,7 @@
 
 .quick-actions-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 8px;
 }
 
@@ -426,6 +426,62 @@
     color: #8b949e;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   [OFFER BUILDER]
+   ========================================================================== */
+
+.offer-label {
+    display: block;
+    font-size: 11px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.offer-input {
+    width: 100%;
+    padding: 9px 11px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 13px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.offer-input:focus { border-color: #58a6ff; }
+
+.offer-tier {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.offer-tier-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #f85149;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+}
+
+.offer-tier-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
 }
 
 /* ==========================================================================

@@ -25,6 +25,13 @@ const globalActions = {
         const modal = document.getElementById('settingsModal');
         if (modal) modal.classList.remove('hidden');
     },
+    'open-offer-builder': () => {
+        if (typeof window.openOfferBuilder === 'function') {
+            window.openOfferBuilder();
+        } else {
+            console.warn('Offer builder not loaded yet');
+        }
+    },
     'open-dialer': () => {
         if (window.powerDialer) {
             window.powerDialer.show();
