@@ -33,6 +33,13 @@ List leads in ACTIVE state with:
 - Business name, last message direction, hours since activity
 - Quick suggestion: follow up, ask qualifying questions, etc.
 
+### 🟡 FOLLOW UP TODAY
+List cold and stale leads that are in actionable states: ACTIVE, QUALIFIED, PITCH-READY, OFFER.
+For each one, say:
+- Business name, current state, how long since last activity
+- A specific suggested action based on their state
+Ignore any leads in legacy states (INTERESTED, STRATEGIZED, HOT_LEAD, HUMAN_REVIEW, STALE, etc.)
+
 ### 📭 DRIP — No Response Yet
 Just give the count: "X leads in drip — no response yet."
 Do NOT list individual DRIP leads. Only mention the total number.

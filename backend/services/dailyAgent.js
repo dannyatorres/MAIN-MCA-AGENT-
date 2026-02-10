@@ -338,7 +338,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
             JOIN conversations c ON m.conversation_id = c.id
             WHERE m.direction = 'inbound'
               AND c.assigned_user_id = $1
-              AND c.state NOT IN ('DEAD', 'FUNDED', 'DNC')
+              AND c.state IN ('ACTIVE', 'QUALIFIED', 'PITCH-READY', 'PITCH_READY', 'OFFER', 'OFFER_RECEIVED', 'SUBMITTED')
             GROUP BY m.conversation_id
         ),
         last_outbound AS (
@@ -382,7 +382,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         FROM conversations c
         JOIN latest_state ls ON c.id = ls.conversation_id
         WHERE c.assigned_user_id = $1
-          AND c.state NOT IN ('DEAD', 'FUNDED', 'DNC', 'NEW')
+          AND c.state IN ('ACTIVE', 'QUALIFIED', 'PITCH-READY', 'PITCH_READY', 'OFFER', 'OFFER_RECEIVED')
           AND ls.changed_at < $3
         ORDER BY ls.changed_at ASC
     `, [userId, referenceTime.toISOString(), threeDaysBeforeRef], 'stale');
@@ -403,7 +403,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         FROM conversations c
         JOIN last_activity la ON c.id = la.conversation_id
         WHERE c.assigned_user_id = $1
-          AND c.state NOT IN ('DEAD', 'FUNDED', 'DNC')
+          AND c.state IN ('ACTIVE', 'QUALIFIED', 'PITCH-READY', 'PITCH_READY', 'OFFER', 'OFFER_RECEIVED')
           AND la.last_msg < $2
         ORDER BY la.last_msg ASC
     `, [userId, twoDaysBeforeRef, referenceTime.toISOString()], 'cold');
@@ -431,7 +431,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         SELECT state, COUNT(*) as count
         FROM conversations
         WHERE assigned_user_id = $1
-          AND state NOT IN ('DEAD', 'DNC')
+          AND state IN ('DRIP', 'ACTIVE', 'QUALIFIED', 'PITCH-READY', 'PITCH_READY', 'OFFER', 'OFFER_RECEIVED', 'SUBMITTED', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4')
         GROUP BY state
         ORDER BY count DESC
     `, [userId], 'pipeline');
