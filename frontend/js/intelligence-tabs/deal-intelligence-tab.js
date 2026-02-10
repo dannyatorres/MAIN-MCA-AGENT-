@@ -201,8 +201,12 @@ export class DealIntelligenceTab {
                                         <input class="ob-input" id="obContact" value="${this.escHtml(prefill.contactName)}">
                                     </div>
                                     <div>
-                                        <label class="ob-label">Lender</label>
-                                        <input class="ob-input" id="obLender" placeholder="Reliable Capital">
+                                        <label class="ob-label">Recipient Email</label>
+                                        <input class="ob-input" id="obEmail" value="${this.escHtml(conv?.email || '')}" placeholder="client@email.com">
+                                    </div>
+                                    <div style="grid-column: 1 / -1;">
+                                        <label class="ob-label">Email Subject</label>
+                                        <input class="ob-input" id="obSubject" value="Your Funding Offer - ${this.escHtml(prefill.businessName || 'JMS Global')}">
                                     </div>
                                     <div>
                                         <label class="ob-label">Position</label>
@@ -225,9 +229,8 @@ export class DealIntelligenceTab {
                             </div>
 
                             <div style="margin-bottom: 20px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <div class="di-section-header" style="margin: 0;">Offer Tiers</div>
-                                    <button class="di-btn secondary" id="obAddTier" style="font-size: 11px; padding: 4px 10px;">+ Add Tier</button>
+                                <div style="margin-bottom: 12px;">
+                                    <div class="di-section-header" style="margin: 0;">Offer Details</div>
                                 </div>
                                 <div id="obTiersContainer"></div>
                             </div>
@@ -269,59 +272,58 @@ export class DealIntelligenceTab {
         document.getElementById('offerBuilderModal').addEventListener('click', (e) => {
             if (e.target.id === 'offerBuilderModal') e.target.remove();
         });
-        document.getElementById('obAddTier').addEventListener('click', () => {
-            this._offerTiers.push({ approved: '', factorRate: '', payback: '', payment: '', commission: '', points: '' });
-            this._renderOfferTiers();
-            this._updateOfferPreview();
-        });
         document.getElementById('offerFormPane').addEventListener('input', (e) => {
             if (e.target.dataset.tier !== undefined) {
                 const idx = parseInt(e.target.dataset.tier);
                 const field = e.target.dataset.field;
                 this._offerTiers[idx][field] = e.target.value;
 
-                // Auto-calc
-                const tier = this._offerTiers[idx];
-                const approved = parseFloat(tier.approved);
-                const factor = parseFloat(tier.factorRate);
-                const payments = parseFloat(document.getElementById('obPayments')?.value);
+                // Auto-calc in next frame to avoid focus loss
+                requestAnimationFrame(() => {
+                    const tier = this._offerTiers[idx];
+                    const approved = parseFloat(tier.approved);
+                    const factor = parseFloat(tier.factorRate);
+                    const payments = parseFloat(document.getElementById('obPayments')?.value);
 
-                if (field === 'approved' || field === 'factorRate') {
-                    if (!isNaN(approved) && !isNaN(factor)) {
-                        tier.payback = (approved * factor).toFixed(2);
-                        const pbInput = document.querySelector(`[data-tier="${idx}"][data-field="payback"]`);
-                        if (pbInput) pbInput.value = tier.payback;
+                    if (field === 'approved' || field === 'factorRate') {
+                        if (!isNaN(approved) && !isNaN(factor)) {
+                            tier.payback = (approved * factor).toFixed(2);
+                            const pbInput = document.querySelector(`[data-tier="${idx}"][data-field="payback"]`);
+                            if (pbInput && pbInput !== document.activeElement) pbInput.value = tier.payback;
 
-                        if (!isNaN(payments) && payments > 0) {
-                            tier.payment = (approved * factor / payments).toFixed(2);
-                            const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
-                            if (pmInput) pmInput.value = tier.payment;
+                            if (!isNaN(payments) && payments > 0) {
+                                tier.payment = (approved * factor / payments).toFixed(2);
+                                const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
+                                if (pmInput && pmInput !== document.activeElement) pmInput.value = tier.payment;
+                            }
                         }
                     }
-                }
 
-                if (field === 'payback') {
-                    if (!isNaN(payments) && payments > 0 && !isNaN(parseFloat(tier.payback))) {
-                        tier.payment = (parseFloat(tier.payback) / payments).toFixed(2);
-                        const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
-                        if (pmInput) pmInput.value = tier.payment;
+                    if (field === 'payback') {
+                        if (!isNaN(payments) && payments > 0 && !isNaN(parseFloat(tier.payback))) {
+                            tier.payment = (parseFloat(tier.payback) / payments).toFixed(2);
+                            const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
+                            if (pmInput && pmInput !== document.activeElement) pmInput.value = tier.payment;
+                        }
                     }
-                }
+                });
             }
 
             // Also recalc when # payments changes
             if (e.target.id === 'obPayments') {
-                const payments = parseFloat(e.target.value);
-                if (!isNaN(payments) && payments > 0) {
-                    this._offerTiers.forEach((tier, idx) => {
-                        const payback = parseFloat(tier.payback);
-                        if (!isNaN(payback)) {
-                            tier.payment = (payback / payments).toFixed(2);
-                            const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
-                            if (pmInput) pmInput.value = tier.payment;
-                        }
-                    });
-                }
+                requestAnimationFrame(() => {
+                    const payments = parseFloat(e.target.value);
+                    if (!isNaN(payments) && payments > 0) {
+                        this._offerTiers.forEach((tier, idx) => {
+                            const payback = parseFloat(tier.payback);
+                            if (!isNaN(payback)) {
+                                tier.payment = (payback / payments).toFixed(2);
+                                const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
+                                if (pmInput && pmInput !== document.activeElement) pmInput.value = tier.payment;
+                            }
+                        });
+                    }
+                });
             }
 
             this._debounce(() => this._updateOfferPreview());
@@ -347,7 +349,7 @@ export class DealIntelligenceTab {
         document.getElementById('offerSendBtn').addEventListener('click', async () => {
             const to = prompt('Recipient email address:');
             if (!to) return;
-            const subject = prompt('Subject:', `Your Funding Offer - ${document.getElementById('obBusiness').value || 'JMS Global'}`);
+            const subject = document.getElementById('obSubject')?.value || `Your Funding Offer - JMS Global`;
             if (subject === null) return;
 
             const btn = document.getElementById('offerSendBtn');
@@ -391,7 +393,6 @@ export class DealIntelligenceTab {
                     <div><label class="ob-label">Factor</label><input class="ob-input" data-tier="${i}" data-field="factorRate" value="${o.factorRate}" placeholder="1.38"></div>
                     <div><label class="ob-label">Payback $</label><input class="ob-input" data-tier="${i}" data-field="payback" value="${o.payback}" placeholder="44160"></div>
                     <div><label class="ob-label">Payment $</label><input class="ob-input" data-tier="${i}" data-field="payment" value="${o.payment}" placeholder="1840"></div>
-                    <div><label class="ob-label">Points</label><input class="ob-input" data-tier="${i}" data-field="points" value="${o.points}" placeholder="0"></div>
                 </div>
             </div>
         `).join('');
@@ -415,13 +416,17 @@ export class DealIntelligenceTab {
 
     _updateOfferPreview() {
         const el = document.getElementById('obPreview');
-        if (el) el.innerHTML = this._generateOfferHTML();
+        if (!el) return;
+        const focused = document.activeElement;
+        el.innerHTML = this._generateOfferHTML();
+        if (focused && focused.closest('#offerFormPane')) {
+            focused.focus();
+        }
     }
 
     _generateOfferHTML() {
         const biz = document.getElementById('obBusiness')?.value || '';
         const contact = document.getElementById('obContact')?.value || '';
-        const lender = document.getElementById('obLender')?.value || '';
         const position = document.getElementById('obPosition')?.value || '';
         const payments = document.getElementById('obPayments')?.value || '';
         const freq = document.getElementById('obFrequency')?.value || 'weekly';
@@ -475,18 +480,15 @@ export class DealIntelligenceTab {
 <th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Factor</th>
 <th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Payback</th>
 <th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Payment</th>
-<th style="padding:10px 12px;color:#fff;font-size:11px;text-align:center;text-transform:uppercase;">Points</th>
 </tr>
 ${tiers.map((o, i) => `<tr style="background:${i % 2 === 0 ? '#f8fafc' : '#ffffff'};">
 <td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;">${this._fmtMoney(o.approved)}</td>
 <td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${o.factorRate || '—'}</td>
 <td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${this._fmtMoney(o.payback)}</td>
 <td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${this._fmtMoney(o.payment)}</td>
-<td style="padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${o.points || '0'}</td>
 </tr>`).join('')}
 </table>
 </td></tr>
-${lender ? `<tr><td style="padding:16px 40px 0;"><p style="margin:0;font-size:13px;color:#64748b;">Lender: <strong style="color:#334155;">${lender}</strong></p></td></tr>` : ''}
 ${notes ? `<tr><td style="padding:16px 40px 0;"><p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px 16px;">${notes}</p></td></tr>` : ''}
 <tr><td style="padding:30px 40px;text-align:center;">
 <p style="margin:0 0 16px;font-size:14px;color:#334155;">Ready to move forward? Reply to this email or call us directly.</p>
