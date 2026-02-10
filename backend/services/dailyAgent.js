@@ -313,6 +313,400 @@ async function generateDailyReport(dateStr) {
     return report;
 }
 
+// ============================================
+// BROKER ACTION BRIEFING (for brokers)
+// ============================================
+
+async function buildBrokerActionBriefing(db, userId) {
+    const now = new Date();
+    const todayStr = getEtDateString();
+    const twoDaysAgo = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
+
+    // 🔴 Unanswered inbounds (last inbound > 1hr ago, no outbound after it)
+    const unanswered = await safeQuery(db, `
+        WITH last_inbound AS (
+            SELECT m.conversation_id, MAX(m.timestamp) as last_in
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            WHERE m.direction = 'inbound'
+              AND c.assigned_user_id = $1
+              AND c.state NOT IN ('DEAD', 'FUNDED', 'DNC')
+            GROUP BY m.conversation_id
+        ),
+        last_outbound AS (
+            SELECT m.conversation_id, MAX(m.timestamp) as last_out
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            WHERE m.direction = 'outbound'
+              AND c.assigned_user_id = $1
+            GROUP BY m.conversation_id
+        )
+        SELECT 
+            li.conversation_id,
+            c.business_name,
+            c.state,
+            c.phone,
+            li.last_in,
+            lo.last_out,
+            EXTRACT(EPOCH FROM (NOW() - li.last_in)) / 3600 as hours_waiting
+        FROM last_inbound li
+        JOIN conversations c ON li.conversation_id = c.id
+        LEFT JOIN last_outbound lo ON li.conversation_id = lo.conversation_id
+        WHERE (lo.last_out IS NULL OR lo.last_out < li.last_in)
+          AND li.last_in < $2
+        ORDER BY li.last_in ASC
+    `, [userId, oneHourAgo], 'unanswered');
+
+    // 🟡 Stale leads (stuck in same state 3+ days, still active)
+    const stale = await safeQuery(db, `
+        WITH latest_state AS (
+            SELECT DISTINCT ON (conversation_id) 
+                conversation_id, new_state, changed_at
+            FROM state_history
+            ORDER BY conversation_id, changed_at DESC
+        )
+        SELECT 
+            c.id as conversation_id,
+            c.business_name,
+            c.state,
+            ls.changed_at as state_since,
+            EXTRACT(EPOCH FROM (NOW() - ls.changed_at)) / 86400 as days_in_state
+        FROM conversations c
+        JOIN latest_state ls ON c.id = ls.conversation_id
+        WHERE c.assigned_user_id = $1
+          AND c.state NOT IN ('DEAD', 'FUNDED', 'DNC', 'NEW')
+          AND ls.changed_at < NOW() - INTERVAL '3 days'
+        ORDER BY ls.changed_at ASC
+    `, [userId], 'stale');
+
+    // 🔴 Cold leads (no activity in 2+ days)
+    const cold = await safeQuery(db, `
+        WITH last_activity AS (
+            SELECT conversation_id, MAX(timestamp) as last_msg
+            FROM messages
+            GROUP BY conversation_id
+        )
+        SELECT 
+            c.id as conversation_id,
+            c.business_name,
+            c.state,
+            la.last_msg,
+            EXTRACT(EPOCH FROM (NOW() - la.last_msg)) / 86400 as days_silent
+        FROM conversations c
+        JOIN last_activity la ON c.id = la.conversation_id
+        WHERE c.assigned_user_id = $1
+          AND c.state NOT IN ('DEAD', 'FUNDED', 'DNC')
+          AND la.last_msg < $2
+        ORDER BY la.last_msg ASC
+    `, [userId, twoDaysAgo], 'cold');
+
+    // 🟢 Offers awaiting follow-up
+    const pendingOffers = await safeQuery(db, `
+        SELECT 
+            ls.conversation_id,
+            c.business_name,
+            c.state,
+            ls.lender_name,
+            ls.offer_amount,
+            ls.last_response_at,
+            EXTRACT(EPOCH FROM (NOW() - ls.last_response_at)) / 3600 as hours_since_offer
+        FROM lender_submissions ls
+        JOIN conversations c ON ls.conversation_id = c.id
+        WHERE c.assigned_user_id = $1
+          AND ls.status = 'OFFER'
+          AND c.state NOT IN ('FUNDED', 'DEAD', 'DNC')
+        ORDER BY ls.last_response_at ASC
+    `, [userId], 'pending_offers');
+
+    // 📋 Pipeline summary by state
+    const pipeline = await safeQuery(db, `
+        SELECT state, COUNT(*) as count
+        FROM conversations
+        WHERE assigned_user_id = $1
+          AND state NOT IN ('DEAD', 'DNC')
+        GROUP BY state
+        ORDER BY count DESC
+    `, [userId], 'pipeline');
+
+    // Today's activity snapshot
+    const todayActivity = await safeQuery(db, `
+        SELECT 
+            COUNT(*) FILTER (WHERE m.direction = 'outbound') as msgs_sent,
+            COUNT(*) FILTER (WHERE m.direction = 'inbound') as msgs_received,
+            COUNT(DISTINCT m.conversation_id) as leads_touched
+        FROM messages m
+        JOIN conversations c ON m.conversation_id = c.id
+        WHERE c.assigned_user_id = $1
+          AND (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $2
+    `, [userId, todayStr], 'today_activity');
+
+    // Pending doc collection leads
+    const pendingDocs = await safeQuery(db, `
+        SELECT 
+            c.id as conversation_id,
+            c.business_name,
+            c.state
+        FROM conversations c
+        WHERE c.assigned_user_id = $1
+          AND c.state IN ('VETTING', 'DOC_COLLECTION', 'DOCS_NEEDED')
+          AND NOT EXISTS (
+              SELECT 1 FROM fcs_analyses fa WHERE fa.conversation_id = c.id
+          )
+    `, [userId], 'pending_docs');
+
+    return {
+        unanswered,
+        stale,
+        cold,
+        pendingOffers,
+        pendingDocs,
+        pipeline,
+        todayActivity: todayActivity[0] || {},
+        generated_at: now.toISOString()
+    };
+}
+
+
+// ============================================
+// OWNER PERFORMANCE ANALYTICS (for Danny)
+// ============================================
+
+async function buildOwnerBrokerAnalytics(db, userId, startDate, endDate) {
+    
+    // Volume metrics
+    const volume = (await safeQuery(db, `
+        SELECT 
+            COUNT(*) FILTER (WHERE m.direction = 'outbound') as msgs_sent,
+            COUNT(*) FILTER (WHERE m.direction = 'inbound') as msgs_received,
+            COUNT(DISTINCT m.conversation_id) FILTER (WHERE m.direction = 'outbound') as leads_worked,
+            COUNT(DISTINCT m.conversation_id) FILTER (WHERE m.direction = 'inbound') as leads_engaged
+        FROM messages m
+        JOIN conversations c ON m.conversation_id = c.id
+        WHERE c.assigned_user_id = $1
+          AND (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date BETWEEN $2 AND $3
+    `, [userId, startDate, endDate], 'volume'))[0] || {};
+
+    // Average response time
+    const responseTime = (await safeQuery(db, `
+        WITH inbound_msgs AS (
+            SELECT m.conversation_id, m.timestamp as in_time,
+                   LEAD(m.timestamp) OVER (PARTITION BY m.conversation_id ORDER BY m.timestamp) as next_msg_time
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            WHERE c.assigned_user_id = $1
+              AND m.direction = 'inbound'
+              AND (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date BETWEEN $2 AND $3
+        ),
+        first_response AS (
+            SELECT im.conversation_id, im.in_time,
+                   MIN(m2.timestamp) as response_time
+            FROM inbound_msgs im
+            JOIN messages m2 ON m2.conversation_id = im.conversation_id
+                AND m2.direction = 'outbound'
+                AND m2.timestamp > im.in_time
+                AND m2.timestamp < im.in_time + INTERVAL '24 hours'
+            GROUP BY im.conversation_id, im.in_time
+        )
+        SELECT 
+            AVG(EXTRACT(EPOCH FROM (response_time - in_time))) / 60 as avg_response_minutes,
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (response_time - in_time)) / 60) as median_response_minutes,
+            COUNT(*) as responses_measured,
+            COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (response_time - in_time)) < 3600) as under_1hr,
+            COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (response_time - in_time)) >= 3600) as over_1hr
+        FROM first_response
+    `, [userId, startDate, endDate], 'response_time'))[0] || {};
+
+    // Conversion funnel
+    const funnel = await safeQuery(db, `
+        WITH period_changes AS (
+            SELECT conversation_id, old_state, new_state
+            FROM state_history sh
+            JOIN conversations c ON sh.conversation_id = c.id
+            WHERE c.assigned_user_id = $1
+              AND (sh.changed_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date BETWEEN $2 AND $3
+        )
+        SELECT 
+            old_state || ' → ' || new_state as transition,
+            COUNT(*) as count
+        FROM period_changes
+        GROUP BY old_state, new_state
+        ORDER BY count DESC
+    `, [userId, startDate, endDate], 'funnel');
+
+    // Submissions & outcomes
+    const submissions = (await safeQuery(db, `
+        SELECT 
+            COUNT(*) as total_submitted,
+            COUNT(*) FILTER (WHERE ls.status = 'OFFER') as offers,
+            COUNT(*) FILTER (WHERE ls.status IN ('DECLINE', 'DECLINED')) as declines,
+            COUNT(*) FILTER (WHERE ls.status = 'FUNDED') as funded,
+            COUNT(*) FILTER (WHERE ls.status = 'STIP') as stips,
+            COALESCE(SUM(ls.offer_amount) FILTER (WHERE ls.status = 'OFFER'), 0) as total_offer_amount,
+            COALESCE(SUM(ls.offer_amount) FILTER (WHERE ls.status = 'FUNDED'), 0) as total_funded_amount,
+            ROUND(COUNT(*) FILTER (WHERE ls.status = 'OFFER')::numeric / NULLIF(COUNT(*), 0) * 100, 1) as offer_rate_pct
+        FROM lender_submissions ls
+        JOIN conversations c ON ls.conversation_id = c.id
+        WHERE c.assigned_user_id = $1
+          AND (ls.submitted_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date BETWEEN $2 AND $3
+    `, [userId, startDate, endDate], 'submissions'))[0] || {};
+
+    // Decline reason breakdown
+    const declineReasons = await safeQuery(db, `
+        SELECT ls.decline_reason, COUNT(*) as count
+        FROM lender_submissions ls
+        JOIN conversations c ON ls.conversation_id = c.id
+        WHERE c.assigned_user_id = $1
+          AND ls.status IN ('DECLINE', 'DECLINED')
+          AND ls.decline_reason IS NOT NULL
+          AND (ls.last_response_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date BETWEEN $2 AND $3
+        GROUP BY ls.decline_reason
+        ORDER BY count DESC
+    `, [userId, startDate, endDate], 'decline_reasons');
+
+    // Active hours distribution
+    const activeHours = await safeQuery(db, `
+        SELECT 
+            EXTRACT(HOUR FROM (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')) as hour_et,
+            COUNT(*) as msg_count
+        FROM messages m
+        JOIN conversations c ON m.conversation_id = c.id
+        WHERE c.assigned_user_id = $1
+          AND m.direction = 'outbound'
+          AND (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date BETWEEN $2 AND $3
+        GROUP BY EXTRACT(HOUR FROM (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York'))
+        ORDER BY hour_et
+    `, [userId, startDate, endDate], 'active_hours');
+
+    // Team averages for comparison
+    const teamAvg = (await safeQuery(db, `
+        WITH broker_stats AS (
+            SELECT 
+                c.assigned_user_id,
+                COUNT(*) FILTER (WHERE m.direction = 'outbound') as msgs_sent,
+                COUNT(DISTINCT m.conversation_id) as leads_worked
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            JOIN users u ON c.assigned_user_id = u.id
+            WHERE u.role != 'admin'
+              AND (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date BETWEEN $1 AND $2
+            GROUP BY c.assigned_user_id
+        )
+        SELECT 
+            AVG(msgs_sent) as avg_msgs_sent,
+            AVG(leads_worked) as avg_leads_worked
+        FROM broker_stats
+    `, [startDate, endDate], 'team_avg'))[0] || {};
+
+    // Current pipeline snapshot
+    const pipeline = await safeQuery(db, `
+        SELECT state, COUNT(*) as count
+        FROM conversations
+        WHERE assigned_user_id = $1
+          AND state NOT IN ('DEAD', 'DNC')
+        GROUP BY state
+        ORDER BY count DESC
+    `, [userId], 'pipeline');
+
+    // AI vs human message ratio
+    const aiRatio = (await safeQuery(db, `
+        SELECT 
+            COUNT(*) FILTER (WHERE m.sender_type = 'ai' OR m.is_ai = true) as ai_sent,
+            COUNT(*) FILTER (WHERE m.sender_type != 'ai' AND (m.is_ai IS NULL OR m.is_ai = false) AND m.direction = 'outbound') as human_sent
+        FROM messages m
+        JOIN conversations c ON m.conversation_id = c.id
+        WHERE c.assigned_user_id = $1
+          AND m.direction = 'outbound'
+          AND (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date BETWEEN $2 AND $3
+    `, [userId, startDate, endDate], 'ai_ratio'))[0] || {};
+
+    return {
+        volume,
+        responseTime,
+        funnel,
+        submissions,
+        declineReasons,
+        activeHours,
+        teamAvg,
+        pipeline,
+        aiRatio,
+        period: { start: startDate, end: endDate }
+    };
+}
+
+
+// ============================================
+// NARRATIVE GENERATORS
+// ============================================
+
+async function generateBrokerBriefing(userId) {
+    const db = getDatabase();
+    const data = await buildBrokerActionBriefing(db, userId);
+
+    const broker = (await safeQuery(db, `
+        SELECT COALESCE(agent_name, name) as name FROM users WHERE id = $1
+    `, [userId], 'broker_name'))[0];
+
+    let promptTemplate;
+    try {
+        promptTemplate = fs.readFileSync(path.join(__dirname, '../prompts/broker-briefing-prompt.md'), 'utf8');
+    } catch (err) {
+        console.error('❌ Could not load broker-briefing-prompt.md:', err.message);
+        return { data, narrative: 'Failed to load prompt template.' };
+    }
+
+    const prompt = promptTemplate
+        .replace('{{BROKER_NAME}}', broker?.name || 'Broker')
+        .replace('{{DATA}}', JSON.stringify(data, null, 2));
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    const result = await model.generateContent(prompt);
+    const narrative = result.response.text();
+
+    const usage = result.response.usageMetadata;
+    if (usage) {
+        console.log(`📊 Broker Briefing Tokens — Input: ${usage.promptTokenCount?.toLocaleString() || '?'} | Output: ${usage.candidatesTokenCount?.toLocaleString() || '?'}`);
+    }
+
+    return { data, narrative };
+}
+
+async function generateOwnerAnalytics(userId, startDate, endDate) {
+    const db = getDatabase();
+    const data = await buildOwnerBrokerAnalytics(db, userId, startDate, endDate);
+
+    const broker = (await safeQuery(db, `
+        SELECT COALESCE(agent_name, name) as name FROM users WHERE id = $1
+    `, [userId], 'broker_name'))[0];
+
+    let promptTemplate;
+    try {
+        promptTemplate = fs.readFileSync(path.join(__dirname, '../prompts/owner-analytics-prompt.md'), 'utf8');
+    } catch (err) {
+        console.error('❌ Could not load owner-analytics-prompt.md:', err.message);
+        return { data, narrative: 'Failed to load prompt template.' };
+    }
+
+    const prompt = promptTemplate
+        .replace('{{BROKER_NAME}}', broker?.name || 'Broker')
+        .replace('{{START_DATE}}', startDate)
+        .replace('{{END_DATE}}', endDate)
+        .replace('{{DATA}}', JSON.stringify(data, null, 2));
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    const result = await model.generateContent(prompt);
+    const narrative = result.response.text();
+
+    const usage = result.response.usageMetadata;
+    if (usage) {
+        console.log(`📊 Owner Analytics Tokens — Input: ${usage.promptTokenCount?.toLocaleString() || '?'} | Output: ${usage.candidatesTokenCount?.toLocaleString() || '?'}`);
+    }
+
+    return { data, narrative };
+}
+
 async function runDailyAgent(dateStr = null) {
     const db = getDatabase();
     const date = dateStr || getEtDateString();
@@ -349,5 +743,9 @@ module.exports = {
     buildDailyStats,
     generateDailyReport,
     runDailyAgent,
-    scheduleDailyAgent
+    scheduleDailyAgent,
+    buildBrokerActionBriefing,
+    buildOwnerBrokerAnalytics,
+    generateBrokerBriefing,
+    generateOwnerAnalytics
 };

@@ -19,7 +19,12 @@ require('dotenv').config();
 const { getDatabase } = require('./services/database');
 const { startRuleLearner } = require('./services/ruleLearner');
 const { updateTrainingOutcomes } = require('./services/outcomeTracker');
-const { scheduleDailyAgent } = require('./services/dailyAgent');
+const { 
+    scheduleDailyAgent,
+    generateBrokerBriefing,
+    generateOwnerAnalytics,
+    buildBrokerActionBriefing 
+} = require('./services/dailyAgent');
 
 // Create Express app
 const app = express();
@@ -136,6 +141,66 @@ app.post('/api/agent/morning-followup', async (req, res) => {
 
 // Apply auth check to all other routes
 app.use(requireAuth);
+
+// Broker Action Briefing — broker or admin can access
+app.get('/api/broker-briefing/:userId', async (req, res) => {
+    try {
+        const requestingUser = req.user;
+        const targetUserId = req.params.userId;
+
+        // Brokers can only see their own, admin can see anyone
+        if (requestingUser.role !== 'admin' && requestingUser.id !== targetUserId) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const result = await generateBrokerBriefing(targetUserId);
+        res.json(result);
+    } catch (err) {
+        console.error('❌ Broker briefing error:', err);
+        res.status(500).json({ error: 'Failed to generate briefing' });
+    }
+});
+
+// Owner Analytics — admin only
+app.get('/api/admin/broker-analytics/:userId', async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin only' });
+        }
+
+        const { userId } = req.params;
+        const { start, end } = req.query;
+
+        if (!start || !end) {
+            return res.status(400).json({ error: 'start and end query params required (YYYY-MM-DD)' });
+        }
+
+        const result = await generateOwnerAnalytics(userId, start, end);
+        res.json(result);
+    } catch (err) {
+        console.error('❌ Owner analytics error:', err);
+        res.status(500).json({ error: 'Failed to generate analytics' });
+    }
+});
+
+// Raw briefing data (no Gemini, for quick loading)
+app.get('/api/broker-briefing/:userId/raw', async (req, res) => {
+    try {
+        const requestingUser = req.user;
+        const targetUserId = req.params.userId;
+
+        if (requestingUser.role !== 'admin' && requestingUser.id !== targetUserId) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const db = getDatabase();
+        const data = await buildBrokerActionBriefing(db, targetUserId);
+        res.json(data);
+    } catch (err) {
+        console.error('❌ Raw briefing error:', err);
+        res.status(500).json({ error: 'Failed to build briefing data' });
+    }
+});
 
 // User management (admin only)
 app.use('/api/users', require('./routes/users'));

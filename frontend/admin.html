@@ -314,6 +314,90 @@
       border-color: #58a6ff;
       color: #58a6ff;
     }
+    /* Broker Analytics */
+    .report-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid #30363d;
+      background: #161b22;
+    }
+    .report-tab {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      color: #8b949e;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .report-tab:hover { color: #c9d1d9; }
+    .report-tab.active {
+      color: #58a6ff;
+      border-bottom-color: #58a6ff;
+    }
+    .broker-select {
+      padding: 8px 12px;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+    }
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .analytics-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .analytics-card-num {
+      font-size: 22px;
+      font-weight: 700;
+      color: #e6edf3;
+    }
+    .analytics-card-label {
+      font-size: 10px;
+      color: #8b949e;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .urgency-section {
+      margin-bottom: 20px;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .urgency-header {
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .urgency-header.red { background: rgba(248,81,73,0.1); color: #f85149; }
+    .urgency-header.green { background: rgba(46,160,67,0.1); color: #2ea043; }
+    .urgency-header.yellow { background: rgba(210,153,34,0.1); color: #d29922; }
+    .urgency-header.blue { background: rgba(88,166,255,0.1); color: #58a6ff; }
+    .urgency-body {
+      padding: 12px 16px;
+    }
+    .urgency-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #21262d;
+      font-size: 13px;
+      color: #c9d1d9;
+    }
+    .urgency-item:last-child { border-bottom: none; }
+    .urgency-item .lead-name { color: #58a6ff; font-weight: 600; }
+    .urgency-item .lead-meta { color: #8b949e; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -632,33 +716,82 @@
         <h2 style="margin: 0;">📊 Daily Operations Reports</h2>
         <button class="modal-close" onclick="closeDailyReports()">&times;</button>
       </div>
+
+      <!-- Tabs -->
+      <div class="report-tabs">
+        <button class="report-tab active" onclick="switchReportTab('daily', this)">Daily Report</button>
+        <button class="report-tab" onclick="switchReportTab('briefing', this)">Broker Briefing</button>
+        <button class="report-tab" onclick="switchReportTab('analytics', this)">Broker Analytics</button>
+      </div>
+
       <div class="modal-body" style="max-height: 80vh; overflow-y: auto; padding: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #374151; position: sticky; top: 0; background: #1f2937; z-index: 10;">
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <input type="date" id="reportDate" style="padding: 8px 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px;">
-            <button class="btn btn-primary btn-sm" onclick="generateReport()"><i class="fas fa-bolt"></i> Generate</button>
-            <button class="btn btn-secondary btn-sm" onclick="loadReport()"><i class="fas fa-eye"></i> View</button>
+
+        <!-- TAB: Daily Report -->
+        <div id="tabDaily">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #374151; position: sticky; top: 0; background: #1f2937; z-index: 10;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="date" id="reportDate" style="padding: 8px 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px;">
+              <button class="btn btn-primary btn-sm" onclick="generateReport()"><i class="fas fa-bolt"></i> Generate</button>
+              <button class="btn btn-secondary btn-sm" onclick="loadReport()"><i class="fas fa-eye"></i> View</button>
+            </div>
+            <div id="reportStatus" style="font-size: 12px; color: #8b949e;"></div>
           </div>
-          <div id="reportStatus" style="font-size: 12px; color: #8b949e;"></div>
-        </div>
-        <div id="reportStatsBar" style="display: none; padding: 16px 20px; border-bottom: 1px solid #374151;">
-          <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <div class="report-stat"><span class="report-stat-num" id="statNewLeads">0</span><span class="report-stat-label">New Leads</span></div>
-            <div class="report-stat"><span class="report-stat-num" id="statMsgsSent">0</span><span class="report-stat-label">Msgs Sent</span></div>
-            <div class="report-stat"><span class="report-stat-num" id="statMsgsRecv">0</span><span class="report-stat-label">Msgs Received</span></div>
-            <div class="report-stat"><span class="report-stat-num" id="statSubmissions">0</span><span class="report-stat-label">Submissions</span></div>
-            <div class="report-stat"><span class="report-stat-num" id="statOffers" style="color: #2ea043;">0</span><span class="report-stat-label">Offers</span></div>
-            <div class="report-stat"><span class="report-stat-num" id="statDeclines" style="color: #f85149;">0</span><span class="report-stat-label">Declines</span></div>
-            <div class="report-stat"><span class="report-stat-num" id="statActive">0</span><span class="report-stat-label">Active Leads</span></div>
+          <div id="reportStatsBar" style="display: none; padding: 16px 20px; border-bottom: 1px solid #374151;">
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+              <div class="report-stat"><span class="report-stat-num" id="statNewLeads">0</span><span class="report-stat-label">New Leads</span></div>
+              <div class="report-stat"><span class="report-stat-num" id="statMsgsSent">0</span><span class="report-stat-label">Msgs Sent</span></div>
+              <div class="report-stat"><span class="report-stat-num" id="statMsgsRecv">0</span><span class="report-stat-label">Msgs Received</span></div>
+              <div class="report-stat"><span class="report-stat-num" id="statSubmissions">0</span><span class="report-stat-label">Submissions</span></div>
+              <div class="report-stat"><span class="report-stat-num" id="statOffers" style="color: #2ea043;">0</span><span class="report-stat-label">Offers</span></div>
+              <div class="report-stat"><span class="report-stat-num" id="statDeclines" style="color: #f85149;">0</span><span class="report-stat-label">Declines</span></div>
+              <div class="report-stat"><span class="report-stat-num" id="statActive">0</span><span class="report-stat-label">Active Leads</span></div>
+            </div>
+          </div>
+          <div id="reportContent" style="padding: 20px;">
+            <div style="text-align: center; color: #8b949e; padding: 40px;">Select a date and click <strong>View</strong> to load a report, or <strong>Generate</strong> to create a new one.</div>
+          </div>
+          <div style="padding: 0 20px 20px;">
+            <h4 style="color: #8b949e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Recent Reports</h4>
+            <div id="reportHistory" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
           </div>
         </div>
-        <div id="reportContent" style="padding: 20px;">
-          <div style="text-align: center; color: #8b949e; padding: 40px;">Select a date and click <strong>View</strong> to load a report, or <strong>Generate</strong> to create a new one.</div>
+
+        <!-- TAB: Broker Briefing -->
+        <div id="tabBriefing" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #374151; position: sticky; top: 0; background: #1f2937; z-index: 10;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <select id="briefingBroker" class="broker-select">
+                <option value="">Select broker...</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="generateBriefing()"><i class="fas fa-bolt"></i> Generate Briefing</button>
+              <button class="btn btn-secondary btn-sm" onclick="loadRawBriefing()"><i class="fas fa-eye"></i> Quick View</button>
+            </div>
+            <div id="briefingStatus" style="font-size: 12px; color: #8b949e;"></div>
+          </div>
+          <div id="briefingContent" style="padding: 20px;">
+            <div style="text-align: center; color: #8b949e; padding: 40px;">Select a broker to see their action briefing — what they need to do right now.</div>
+          </div>
         </div>
-        <div style="padding: 0 20px 20px;">
-          <h4 style="color: #8b949e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Recent Reports</h4>
-          <div id="reportHistory" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+
+        <!-- TAB: Broker Analytics -->
+        <div id="tabAnalytics" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #374151; position: sticky; top: 0; background: #1f2937; z-index: 10;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <select id="analyticsBroker" class="broker-select">
+                <option value="">Select broker...</option>
+              </select>
+              <input type="date" id="analyticsStart" style="padding: 8px 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px;">
+              <span style="color: #8b949e;">to</span>
+              <input type="date" id="analyticsEnd" style="padding: 8px 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px;">
+              <button class="btn btn-primary btn-sm" onclick="generateAnalytics()"><i class="fas fa-chart-bar"></i> Analyze</button>
+            </div>
+            <div id="analyticsStatus" style="font-size: 12px; color: #8b949e;"></div>
+          </div>
+          <div id="analyticsContent" style="padding: 20px;">
+            <div style="text-align: center; color: #8b949e; padding: 40px;">Select a broker and date range to view their performance analytics.</div>
+          </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -1298,6 +1431,11 @@
     function openDailyReports() {
       document.getElementById('dailyReportsModal').classList.add('show');
       document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+      // Default analytics date range to last 7 days
+      const today = new Date();
+      const weekAgo = new Date(today - 7 * 24 * 60 * 60 * 1000);
+      document.getElementById('analyticsEnd').value = today.toISOString().split('T')[0];
+      document.getElementById('analyticsStart').value = weekAgo.toISOString().split('T')[0];
       loadReportHistory();
     }
 
@@ -1415,6 +1553,280 @@
         .replace(/^[-•]\s+(.*)/gm, '<li>$1</li>')
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>');
+    }
+
+    // =============================================
+    // TAB SWITCHING
+    // =============================================
+
+    function switchReportTab(tab, btn) {
+      document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tabDaily').style.display = tab === 'daily' ? '' : 'none';
+      document.getElementById('tabBriefing').style.display = tab === 'briefing' ? '' : 'none';
+      document.getElementById('tabAnalytics').style.display = tab === 'analytics' ? '' : 'none';
+
+      if (tab === 'briefing' || tab === 'analytics') {
+        populateBrokerDropdowns();
+      }
+    }
+
+    function populateBrokerDropdowns() {
+      const brokers = users.filter(u => u.role !== 'admin' && u.is_active);
+      ['briefingBroker', 'analyticsBroker'].forEach(id => {
+        const sel = document.getElementById(id);
+        const current = sel.value;
+        sel.innerHTML = '<option value="">Select broker...</option>' +
+          brokers.map(b => `<option value="${b.id}" ${b.id === current ? 'selected' : ''}>${escapeHtml(b.agent_name || b.name)}</option>`).join('');
+      });
+    }
+
+    // =============================================
+    // BROKER BRIEFING (Action Items)
+    // =============================================
+
+    async function loadRawBriefing() {
+      const userId = document.getElementById('briefingBroker').value;
+      if (!userId) return alert('Select a broker first');
+
+      const statusEl = document.getElementById('briefingStatus');
+      const contentEl = document.getElementById('briefingContent');
+      statusEl.textContent = 'Loading...';
+      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Loading data...</div>';
+
+      try {
+        const res = await fetch(`/api/broker-briefing/${userId}/raw`, { credentials: 'include' });
+        const data = await res.json();
+        contentEl.innerHTML = renderRawBriefing(data);
+        statusEl.textContent = 'Data loaded (no AI narrative)';
+      } catch (err) {
+        contentEl.innerHTML = `<div style="color:#f85149;padding:20px;">Error: ${err.message}</div>`;
+        statusEl.textContent = '';
+      }
+    }
+
+    async function generateBriefing() {
+      const userId = document.getElementById('briefingBroker').value;
+      if (!userId) return alert('Select a broker first');
+
+      const statusEl = document.getElementById('briefingStatus');
+      const contentEl = document.getElementById('briefingContent');
+      statusEl.textContent = 'Generating with AI...';
+      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Generating briefing... this may take 30-60 seconds.</div>';
+
+      try {
+        const res = await fetch(`/api/broker-briefing/${userId}`, { credentials: 'include' });
+        const result = await res.json();
+
+        let html = '';
+        if (result.data) html += renderRawBriefing(result.data);
+        if (result.narrative) html += '<div style="border-top: 1px solid #30363d; margin-top: 20px; padding-top: 20px;"><h3 style="color: #58a6ff; margin-bottom: 12px;">🤖 AI Briefing</h3><div class="report-body">' + markdownToHtml(result.narrative) + '</div></div>';
+
+        contentEl.innerHTML = html;
+        statusEl.textContent = 'Generated ' + new Date().toLocaleTimeString();
+      } catch (err) {
+        contentEl.innerHTML = `<div style="color:#f85149;padding:20px;">Error: ${err.message}</div>`;
+        statusEl.textContent = '';
+      }
+    }
+
+    function renderRawBriefing(data) {
+      let html = '';
+
+      // Today's snapshot
+      const ta = data.todayActivity || {};
+      html += `<div class="analytics-grid" style="margin-bottom: 16px;">
+        <div class="analytics-card"><div class="analytics-card-num">${ta.msgs_sent || 0}</div><div class="analytics-card-label">Sent Today</div></div>
+        <div class="analytics-card"><div class="analytics-card-num">${ta.msgs_received || 0}</div><div class="analytics-card-label">Received Today</div></div>
+        <div class="analytics-card"><div class="analytics-card-num">${ta.leads_touched || 0}</div><div class="analytics-card-label">Leads Touched</div></div>
+        <div class="analytics-card"><div class="analytics-card-num" style="color: #f85149;">${(data.unanswered || []).length}</div><div class="analytics-card-label">Unanswered</div></div>
+        <div class="analytics-card"><div class="analytics-card-num" style="color: #d29922;">${(data.cold || []).length}</div><div class="analytics-card-label">Cold Leads</div></div>
+        <div class="analytics-card"><div class="analytics-card-num" style="color: #2ea043;">${(data.pendingOffers || []).length}</div><div class="analytics-card-label">Pending Offers</div></div>
+      </div>`;
+
+      // Unanswered
+      html += renderUrgencySection('🔴 Respond NOW', 'red', data.unanswered, item =>
+        `<div class="urgency-item"><span class="lead-name">${escapeHtml(item.business_name || 'Unknown')}</span> — waiting <strong>${formatHours(item.hours_waiting)}</strong><br><span class="lead-meta">State: ${item.state} | Phone: ${item.phone || 'N/A'}</span></div>`
+      );
+
+      // Pending offers
+      html += renderUrgencySection('🟢 Close the Deal', 'green', data.pendingOffers, item =>
+        `<div class="urgency-item"><span class="lead-name">${escapeHtml(item.business_name || 'Unknown')}</span> — <strong>${escapeHtml(item.lender_name)}</strong> offered <strong>$${Number(item.offer_amount || 0).toLocaleString()}</strong><br><span class="lead-meta">${formatHours(item.hours_since_offer)} ago | State: ${item.state}</span></div>`
+      );
+
+      // Stale + Cold combined
+      const followUps = [...(data.stale || []).map(s => ({ ...s, reason: `stuck in ${s.state} for ${Math.round(s.days_in_state)}d` })),
+                          ...(data.cold || []).map(c => ({ ...c, reason: `no activity for ${Math.round(c.days_silent)}d` }))];
+      html += renderUrgencySection('🟡 Follow Up Today', 'yellow', followUps, item =>
+        `<div class="urgency-item"><span class="lead-name">${escapeHtml(item.business_name || 'Unknown')}</span> — ${item.reason}<br><span class="lead-meta">State: ${item.state}</span></div>`
+      );
+
+      // Pending docs
+      html += renderUrgencySection('📄 Docs Needed', 'blue', data.pendingDocs, item =>
+        `<div class="urgency-item"><span class="lead-name">${escapeHtml(item.business_name || 'Unknown')}</span><br><span class="lead-meta">State: ${item.state} — No FCS generated yet</span></div>`
+      );
+
+      // Pipeline
+      if (data.pipeline && data.pipeline.length) {
+        html += `<div style="margin-top: 16px;"><h4 style="color: #8b949e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Pipeline</h4><div class="analytics-grid">`;
+        data.pipeline.forEach(p => {
+          html += `<div class="analytics-card"><div class="analytics-card-num">${p.count}</div><div class="analytics-card-label">${p.state}</div></div>`;
+        });
+        html += `</div></div>`;
+      }
+
+      return html;
+    }
+
+    function renderUrgencySection(title, color, items, renderItem) {
+      const count = (items || []).length;
+      let html = `<div class="urgency-section"><div class="urgency-header ${color}">${title} <span style="opacity: 0.7;">(${count})</span></div>`;
+      if (count === 0) {
+        html += `<div class="urgency-body" style="color: #8b949e; font-size: 13px;">None — you're good here ✓</div>`;
+      } else {
+        html += `<div class="urgency-body">${items.map(renderItem).join('')}</div>`;
+      }
+      html += `</div>`;
+      return html;
+    }
+
+    function formatHours(h) {
+      if (!h && h !== 0) return '?';
+      h = parseFloat(h);
+      if (h < 1) return Math.round(h * 60) + ' min';
+      if (h < 24) return Math.round(h * 10) / 10 + ' hrs';
+      return Math.round(h / 24 * 10) / 10 + ' days';
+    }
+
+    // =============================================
+    // OWNER BROKER ANALYTICS
+    // =============================================
+
+    async function generateAnalytics() {
+      const userId = document.getElementById('analyticsBroker').value;
+      const start = document.getElementById('analyticsStart').value;
+      const end = document.getElementById('analyticsEnd').value;
+
+      if (!userId) return alert('Select a broker');
+      if (!start || !end) return alert('Select a date range');
+      if (start > end) return alert('Start date must be before end date');
+
+      const statusEl = document.getElementById('analyticsStatus');
+      const contentEl = document.getElementById('analyticsContent');
+      statusEl.textContent = 'Analyzing with AI...';
+      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Generating analytics... this may take 30-60 seconds.</div>';
+
+      try {
+        const res = await fetch(`/api/admin/broker-analytics/${userId}?start=${start}&end=${end}`, { credentials: 'include' });
+        const result = await res.json();
+
+        let html = '';
+        if (result.data) html += renderOwnerAnalytics(result.data);
+        if (result.narrative) html += '<div style="border-top: 1px solid #30363d; margin-top: 20px; padding-top: 20px;"><h3 style="color: #58a6ff; margin-bottom: 12px;">🤖 AI Analysis</h3><div class="report-body">' + markdownToHtml(result.narrative) + '</div></div>';
+
+        contentEl.innerHTML = html;
+        statusEl.textContent = 'Generated ' + new Date().toLocaleTimeString();
+      } catch (err) {
+        contentEl.innerHTML = `<div style="color:#f85149;padding:20px;">Error: ${err.message}</div>`;
+        statusEl.textContent = '';
+      }
+    }
+
+    function renderOwnerAnalytics(data) {
+      let html = '';
+
+      // Volume stats
+      const v = data.volume || {};
+      const rt = data.responseTime || {};
+      const s = data.submissions || {};
+      const ai = data.aiRatio || {};
+
+      html += `<div class="analytics-grid">
+        <div class="analytics-card"><div class="analytics-card-num">${v.msgs_sent || 0}</div><div class="analytics-card-label">Msgs Sent</div></div>
+        <div class="analytics-card"><div class="analytics-card-num">${v.leads_worked || 0}</div><div class="analytics-card-label">Leads Worked</div></div>
+        <div class="analytics-card"><div class="analytics-card-num">${v.leads_engaged || 0}</div><div class="analytics-card-label">Leads Engaged</div></div>
+        <div class="analytics-card"><div class="analytics-card-num">${rt.avg_response_minutes ? Math.round(rt.avg_response_minutes) + 'm' : 'N/A'}</div><div class="analytics-card-label">Avg Response</div></div>
+        <div class="analytics-card"><div class="analytics-card-num">${s.total_submitted || 0}</div><div class="analytics-card-label">Submissions</div></div>
+        <div class="analytics-card"><div class="analytics-card-num" style="color: #2ea043;">${s.offer_rate_pct || 0}%</div><div class="analytics-card-label">Offer Rate</div></div>
+        <div class="analytics-card"><div class="analytics-card-num" style="color: #2ea043;">$${Number(s.total_funded_amount || 0).toLocaleString()}</div><div class="analytics-card-label">Funded</div></div>
+        <div class="analytics-card"><div class="analytics-card-num">${ai.ai_sent || 0}/${ai.human_sent || 0}</div><div class="analytics-card-label">AI / Human Msgs</div></div>
+      </div>`;
+
+      // Response time breakdown
+      if (rt.responses_measured) {
+        const pctUnder = Math.round((rt.under_1hr / rt.responses_measured) * 100);
+        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
+          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">Response Time</div>
+          <div style="display: flex; gap: 20px; font-size: 13px; color: #c9d1d9;">
+            <span>Median: <strong>${Math.round(rt.median_response_minutes || 0)} min</strong></span>
+            <span>Under 1hr: <strong style="color: ${pctUnder >= 70 ? '#2ea043' : '#f85149'};">${pctUnder}%</strong> (${rt.under_1hr}/${rt.responses_measured})</span>
+          </div>
+        </div>`;
+      }
+
+      // Funnel
+      if (data.funnel && data.funnel.length) {
+        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
+          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">State Transitions</div>`;
+        data.funnel.slice(0, 10).forEach(f => {
+          html += `<div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; color: #c9d1d9; border-bottom: 1px solid #21262d;">
+            <span>${escapeHtml(f.transition)}</span><strong>${f.count}</strong></div>`;
+        });
+        html += `</div>`;
+      }
+
+      // Decline reasons
+      if (data.declineReasons && data.declineReasons.length) {
+        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
+          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">Decline Reasons</div>`;
+        data.declineReasons.forEach(d => {
+          html += `<div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; color: #f85149; border-bottom: 1px solid #21262d;">
+            <span>${escapeHtml(d.decline_reason)}</span><strong>${d.count}</strong></div>`;
+        });
+        html += `</div>`;
+      }
+
+      // Active hours
+      if (data.activeHours && data.activeHours.length) {
+        const maxCount = Math.max(...data.activeHours.map(h => parseInt(h.msg_count)));
+        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
+          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">Active Hours (ET)</div>
+          <div style="display: flex; align-items: flex-end; gap: 3px; height: 60px;">`;
+        for (let h = 7; h <= 21; h++) {
+          const found = data.activeHours.find(a => parseInt(a.hour_et) === h);
+          const count = found ? parseInt(found.msg_count) : 0;
+          const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+          const label = h <= 12 ? h + (h === 12 ? 'p' : 'a') : (h - 12) + 'p';
+          html += `<div style="flex:1; display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 100%; background: ${pct > 0 ? '#58a6ff' : '#21262d'}; height: ${Math.max(pct, 4)}%; border-radius: 2px; min-height: 2px;" title="${count} msgs at ${label}"></div>
+            <span style="font-size: 9px; color: #6b7280; margin-top: 4px;">${label}</span>
+          </div>`;
+        }
+        html += `</div></div>`;
+      }
+
+      // Team comparison
+      const ta = data.teamAvg || {};
+      if (ta.avg_msgs_sent) {
+        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
+          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">vs Team Average</div>
+          <div style="display: flex; gap: 20px; font-size: 13px; color: #c9d1d9;">
+            <span>Msgs: <strong>${v.msgs_sent || 0}</strong> vs avg <strong>${Math.round(ta.avg_msgs_sent)}</strong></span>
+            <span>Leads: <strong>${v.leads_worked || 0}</strong> vs avg <strong>${Math.round(ta.avg_leads_worked)}</strong></span>
+          </div>
+        </div>`;
+      }
+
+      // Pipeline
+      if (data.pipeline && data.pipeline.length) {
+        html += `<div style="margin-top: 16px;"><h4 style="color: #8b949e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Current Pipeline</h4><div class="analytics-grid">`;
+        data.pipeline.forEach(p => {
+          html += `<div class="analytics-card"><div class="analytics-card-num">${p.count}</div><div class="analytics-card-label">${p.state}</div></div>`;
+        });
+        html += `</div></div>`;
+      }
+
+      return html;
     }
   </script>
 </body>
