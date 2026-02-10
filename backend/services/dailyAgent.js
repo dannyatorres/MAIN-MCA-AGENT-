@@ -418,6 +418,10 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         SELECT 
             ls.conversation_id,
             c.business_name,
+            c.first_name,
+            c.last_name,
+            c.lead_phone,
+            c.cell_phone,
             c.state,
             ls.lender_name,
             ls.offer_amount,
@@ -445,7 +449,8 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
     // 🎯 Actionable leads with conversation context
     const actionableLeads = await safeQuery(db, `
         WITH lead_list AS (
-            SELECT c.id, c.business_name, c.state, c.last_activity_at, c.credit_score, c.monthly_revenue
+            SELECT c.id, c.business_name, c.state, c.last_activity_at, c.credit_score, c.monthly_revenue,
+                   c.first_name, c.last_name, c.lead_phone, c.cell_phone
             FROM conversations c
             WHERE c.assigned_user_id = $1
               AND c.state IN ('ACTIVE', 'QUALIFIED', 'PITCH_READY', 'PITCH-READY')
@@ -470,6 +475,10 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
             ll.last_activity_at,
             ll.credit_score,
             ll.monthly_revenue,
+            ll.first_name,
+            ll.last_name,
+            ll.lead_phone,
+            ll.cell_phone,
             lf.average_revenue as fcs_revenue,
             lf.total_negative_days as fcs_neg_days,
             json_agg(
@@ -483,7 +492,8 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         LEFT JOIN recent_msgs rm ON ll.id = rm.conversation_id AND rm.rn <= 5
         LEFT JOIN last_fcs lf ON ll.id = lf.conversation_id
         GROUP BY ll.id, ll.business_name, ll.state, ll.last_activity_at, 
-                 ll.credit_score, ll.monthly_revenue, lf.average_revenue, lf.total_negative_days
+                 ll.credit_score, ll.monthly_revenue, ll.first_name, ll.last_name, ll.lead_phone, ll.cell_phone,
+                 lf.average_revenue, lf.total_negative_days
         ORDER BY 
             CASE ll.state 
                 WHEN 'PITCH_READY' THEN 1

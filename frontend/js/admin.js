@@ -786,17 +786,22 @@ const ReportsManager = {
     const grouped = {};
     offers.forEach(o => {
       const name = o.business_name || 'Unknown';
-      if (!grouped[name]) grouped[name] = [];
-      grouped[name].push(o);
+      if (!grouped[name]) grouped[name] = { offers: [], contact: o };
+      grouped[name].offers.push(o);
     });
-    const offerItems = Object.entries(grouped).map(([biz, offs]) =>
-      `<div class="urgency-item">
+    const offerItems = Object.entries(grouped).map(([biz, data]) => {
+      const c = data.contact;
+      const contactName = [c.first_name, c.last_name].filter(Boolean).join(' ');
+      const phone = c.cell_phone || c.lead_phone || '';
+      const contactInfo = [contactName, phone].filter(Boolean).join(' — ');
+      return `<div class="urgency-item">
         <span class="lead-name">${Utils.escapeHtml(biz)}</span>
-        ${offs.map(o => `<div class="lead-meta" style="margin-top:4px;">
+        ${contactInfo ? `<span class="lead-meta"> — ${Utils.escapeHtml(contactInfo)}</span>` : ''}
+        ${data.offers.map(o => `<div class="lead-meta" style="margin-top:4px;">
           ${Utils.escapeHtml(o.lender_name)}: <strong>$${Number(o.offer_amount || 0).toLocaleString()}</strong> — ${Utils.formatHours(o.hours_since_offer)} ago
         </div>`).join('')}
-      </div>`
-    );
+      </div>`;
+    });
     html += this.renderUrgencySection('💰 Offers', 'green', offerItems.length > 0 ? offerItems : null, null, offerItems);
 
     // 🎯 Pitched
@@ -834,7 +839,11 @@ const ReportsManager = {
         context += `<div class="lead-meta">${prevDir}: "${prevPreview}"</div>`;
       }
     }
+    const contactName = [item.first_name, item.last_name].filter(Boolean).join(' ');
+    const phone = item.cell_phone || item.lead_phone || '';
     const meta = [];
+    if (contactName) meta.push(contactName);
+    if (phone) meta.push(phone);
     if (item.credit_score) meta.push(`Credit: ${item.credit_score}`);
     if (item.fcs_revenue) meta.push(`Rev: $${Number(item.fcs_revenue).toLocaleString()}/mo`);
     if (item.fcs_neg_days) meta.push(`Neg days: ${item.fcs_neg_days}`);
