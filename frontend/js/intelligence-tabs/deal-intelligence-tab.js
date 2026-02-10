@@ -276,9 +276,55 @@ export class DealIntelligenceTab {
         });
         document.getElementById('offerFormPane').addEventListener('input', (e) => {
             if (e.target.dataset.tier !== undefined) {
-                this._offerTiers[parseInt(e.target.dataset.tier)][e.target.dataset.field] = e.target.value;
+                const idx = parseInt(e.target.dataset.tier);
+                const field = e.target.dataset.field;
+                this._offerTiers[idx][field] = e.target.value;
+
+                // Auto-calc
+                const tier = this._offerTiers[idx];
+                const approved = parseFloat(tier.approved);
+                const factor = parseFloat(tier.factorRate);
+                const payments = parseFloat(document.getElementById('obPayments')?.value);
+
+                if (field === 'approved' || field === 'factorRate') {
+                    if (!isNaN(approved) && !isNaN(factor)) {
+                        tier.payback = (approved * factor).toFixed(2);
+                        const pbInput = document.querySelector(`[data-tier="${idx}"][data-field="payback"]`);
+                        if (pbInput) pbInput.value = tier.payback;
+
+                        if (!isNaN(payments) && payments > 0) {
+                            tier.payment = (approved * factor / payments).toFixed(2);
+                            const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
+                            if (pmInput) pmInput.value = tier.payment;
+                        }
+                    }
+                }
+
+                if (field === 'payback') {
+                    if (!isNaN(payments) && payments > 0 && !isNaN(parseFloat(tier.payback))) {
+                        tier.payment = (parseFloat(tier.payback) / payments).toFixed(2);
+                        const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
+                        if (pmInput) pmInput.value = tier.payment;
+                    }
+                }
             }
-            this._updateOfferPreview();
+
+            // Also recalc when # payments changes
+            if (e.target.id === 'obPayments') {
+                const payments = parseFloat(e.target.value);
+                if (!isNaN(payments) && payments > 0) {
+                    this._offerTiers.forEach((tier, idx) => {
+                        const payback = parseFloat(tier.payback);
+                        if (!isNaN(payback)) {
+                            tier.payment = (payback / payments).toFixed(2);
+                            const pmInput = document.querySelector(`[data-tier="${idx}"][data-field="payment"]`);
+                            if (pmInput) pmInput.value = tier.payment;
+                        }
+                    });
+                }
+            }
+
+            this._debounce(() => this._updateOfferPreview());
         });
         document.getElementById('offerCopyBtn').addEventListener('click', async () => {
             try {
@@ -360,6 +406,11 @@ export class DealIntelligenceTab {
     _fmtMoney(v) {
         const n = parseFloat(v);
         return isNaN(n) ? '$0.00' : '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    _debounce(fn, ms = 300) {
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = setTimeout(fn, ms);
     }
 
     _updateOfferPreview() {
