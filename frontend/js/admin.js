@@ -731,8 +731,10 @@ const ReportsManager = {
   async loadRawBriefing() {
     const userId = document.getElementById('briefingBroker').value;
     if (!userId) return alert('Select a broker first');
-    const dateVal = document.getElementById('briefingDate').value;
-    const url = `/api/broker-briefing/${userId}/raw${dateVal ? `?date=${dateVal}` : ''}`;
+    const mode = document.getElementById('briefingMode').value;
+    const dateVal = mode === 'date' ? document.getElementById('briefingDate').value : null;
+    const params = dateVal ? `?date=${dateVal}` : '';
+    const url = `/api/admin/broker-briefing/${userId}/raw${params}`;
 
     const statusEl = document.getElementById('briefingStatus');
     const contentEl = document.getElementById('briefingContent');
@@ -748,8 +750,10 @@ const ReportsManager = {
   async generateBriefing() {
     const userId = document.getElementById('briefingBroker').value;
     if (!userId) return alert('Select a broker first');
-    const dateVal = document.getElementById('briefingDate').value;
-    const url = `/api/broker-briefing/${userId}${dateVal ? `?date=${dateVal}` : ''}`;
+    const mode = document.getElementById('briefingMode').value;
+    const dateVal = mode === 'date' ? document.getElementById('briefingDate').value : null;
+    const params = dateVal ? `?date=${dateVal}` : '';
+    const url = `/api/admin/broker-briefing/${userId}${params}`;
 
     const statusEl = document.getElementById('briefingStatus');
     const contentEl = document.getElementById('briefingContent');
@@ -956,6 +960,20 @@ function bindGlobalButtons() {
 
   const briefingQuickBtn = document.getElementById('btn-quick-briefing');
   if (briefingQuickBtn) briefingQuickBtn.addEventListener('click', () => ReportsManager.loadRawBriefing());
+
+  const briefingMode = document.getElementById('briefingMode');
+  if (briefingMode) {
+    briefingMode.addEventListener('change', (e) => {
+      const datePicker = document.getElementById('briefingDate');
+      if (!datePicker) return;
+      if (e.target.value === 'date') {
+        datePicker.classList.remove('hidden');
+        if (!datePicker.value) datePicker.value = new Date().toLocaleDateString('en-CA');
+      } else {
+        datePicker.classList.add('hidden');
+      }
+    });
+  }
 
   const analyticsGenerateBtn = document.getElementById('btn-generate-analytics');
   if (analyticsGenerateBtn) analyticsGenerateBtn.addEventListener('click', () => ReportsManager.generateAnalytics());

@@ -318,17 +318,15 @@ async function generateDailyReport(dateStr) {
 // ============================================
 
 async function buildBrokerActionBriefing(db, userId, dateStr = null) {
-    const targetDate = dateStr || getEtDateString();
-    const isToday = (targetDate === getEtDateString());
+    const todayStr = getEtDateString();
+    const targetDate = dateStr || todayStr;
+    const isToday = (targetDate === todayStr);
 
-    // For "now" calculations, use end-of-day if historical, or actual now if today
-    const referenceTime = isToday
+    // For "today" mode: reference = now. For historical: reference = end of that day
+    const refTime = isToday
         ? new Date()
         : new Date(targetDate + 'T23:59:59-05:00');
-
-    const twoDaysBeforeRef = new Date(referenceTime - 2 * 24 * 60 * 60 * 1000).toISOString();
-    const oneHourBeforeRef = new Date(referenceTime - 60 * 60 * 1000).toISOString();
-    const threeDaysBeforeRef = new Date(referenceTime - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const refIso = refTime.toISOString();
 
     // 🔴 Unanswered inbounds (last inbound > 1hr ago, no outbound after it)
     const unanswered = await safeQuery(db, `
@@ -339,6 +337,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
             WHERE m.direction = 'inbound'
               AND c.assigned_user_id = $1
               AND c.state IN ('ACTIVE', 'QUALIFIED', 'PITCH-READY', 'PITCH_READY', 'OFFER', 'OFFER_RECEIVED', 'SUBMITTED')
+              AND m.timestamp <= $3
             GROUP BY m.conversation_id
         ),
         last_outbound AS (
@@ -347,6 +346,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
             JOIN conversations c ON m.conversation_id = c.id
             WHERE m.direction = 'outbound'
               AND c.assigned_user_id = $1
+              AND m.timestamp <= $3
             GROUP BY m.conversation_id
         )
         SELECT 
@@ -361,9 +361,9 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         JOIN conversations c ON li.conversation_id = c.id
         LEFT JOIN last_outbound lo ON li.conversation_id = lo.conversation_id
         WHERE (lo.last_out IS NULL OR lo.last_out < li.last_in)
-          AND li.last_in < $2
+          AND li.last_in < ($3::timestamp - INTERVAL '1 hour')
         ORDER BY li.last_in ASC
-    `, [userId, oneHourBeforeRef, referenceTime.toISOString()], 'unanswered');
+    `, [userId, targetDate, refIso], 'unanswered');
 
     // 🟡 Stale leads (stuck in same state 3+ days, still active)
     const stale = await safeQuery(db, `
@@ -371,6 +371,7 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
             SELECT DISTINCT ON (conversation_id) 
                 conversation_id, new_state, changed_at
             FROM state_history
+            WHERE changed_at <= $3
             ORDER BY conversation_id, changed_at DESC
         )
         SELECT 
@@ -383,15 +384,17 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         JOIN latest_state ls ON c.id = ls.conversation_id
         WHERE c.assigned_user_id = $1
           AND c.state IN ('ACTIVE', 'QUALIFIED', 'PITCH-READY', 'PITCH_READY', 'OFFER', 'OFFER_RECEIVED')
-          AND ls.changed_at < $3
+          AND ls.changed_at < ($3::timestamp - INTERVAL '3 days')
+          AND ls.changed_at > ($3::timestamp - INTERVAL '7 days')
         ORDER BY ls.changed_at ASC
-    `, [userId, referenceTime.toISOString(), threeDaysBeforeRef], 'stale');
+    `, [userId, refIso, refIso], 'stale');
 
     // 🔴 Cold leads (no activity in 2+ days)
     const cold = await safeQuery(db, `
         WITH last_activity AS (
             SELECT conversation_id, MAX(timestamp) as last_msg
             FROM messages
+            WHERE timestamp <= $3
             GROUP BY conversation_id
         )
         SELECT 
@@ -404,9 +407,10 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         JOIN last_activity la ON c.id = la.conversation_id
         WHERE c.assigned_user_id = $1
           AND c.state IN ('ACTIVE', 'QUALIFIED', 'PITCH-READY', 'PITCH_READY', 'OFFER', 'OFFER_RECEIVED')
-          AND la.last_msg < $2
+          AND la.last_msg < ($3::timestamp - INTERVAL '2 days')
+          AND la.last_msg > ($3::timestamp - INTERVAL '7 days')
         ORDER BY la.last_msg ASC
-    `, [userId, twoDaysBeforeRef, referenceTime.toISOString()], 'cold');
+    `, [userId, refIso, refIso], 'cold');
 
     // 🟢 Offers awaiting follow-up
     const pendingOffers = await safeQuery(db, `
@@ -417,14 +421,16 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
             ls.lender_name,
             ls.offer_amount,
             ls.last_response_at,
-            EXTRACT(EPOCH FROM (NOW() - ls.last_response_at)) / 3600 as hours_since_offer
+            EXTRACT(EPOCH FROM ($2::timestamp - ls.last_response_at)) / 3600 as hours_since_offer
         FROM lender_submissions ls
         JOIN conversations c ON ls.conversation_id = c.id
         WHERE c.assigned_user_id = $1
           AND ls.status = 'OFFER'
           AND c.state NOT IN ('FUNDED', 'DEAD', 'DNC')
-        ORDER BY ls.last_response_at ASC
-    `, [userId], 'pending_offers');
+          AND ls.last_response_at <= $2
+          AND ls.last_response_at > ($2::timestamp - INTERVAL '7 days')
+        ORDER BY ls.last_response_at DESC
+    `, [userId, refIso], 'pending_offers');
 
     // 📋 Pipeline summary by state
     const pipeline = await safeQuery(db, `
@@ -435,58 +441,6 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         GROUP BY state
         ORDER BY count DESC
     `, [userId], 'pipeline');
-
-    // 📊 State-prioritized lead details (everything except DRIP gets full detail)
-    const detailedLeads = await safeQuery(db, `
-        WITH last_msg AS (
-            SELECT conversation_id, 
-                   MAX(timestamp) as last_activity,
-                   MAX(timestamp) FILTER (WHERE direction = 'inbound') as last_inbound,
-                   MAX(timestamp) FILTER (WHERE direction = 'outbound') as last_outbound
-            FROM messages
-            GROUP BY conversation_id
-        )
-        SELECT 
-            c.id as conversation_id,
-            c.business_name,
-            c.state,
-            c.phone,
-            lm.last_activity,
-            lm.last_inbound,
-            lm.last_outbound,
-            EXTRACT(EPOCH FROM ($3::timestamp - COALESCE(lm.last_activity, c.created_at))) / 3600 as hours_since_activity,
-            CASE WHEN fa.id IS NOT NULL THEN true ELSE false END as has_fcs,
-            fa.average_revenue as fcs_revenue,
-            fa.total_negative_days as fcs_neg_days
-        FROM conversations c
-        LEFT JOIN last_msg lm ON c.id = lm.conversation_id
-        LEFT JOIN LATERAL (
-            SELECT id, average_revenue, total_negative_days 
-            FROM fcs_analyses WHERE conversation_id = c.id 
-            ORDER BY completed_at DESC LIMIT 1
-        ) fa ON true
-        WHERE c.assigned_user_id = $1
-          AND c.state NOT IN ('DEAD', 'DNC', 'FUNDED')
-          AND (
-            c.state = 'DRIP' 
-            OR (lm.last_activity AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date <= $2::date
-            OR (c.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date <= $2::date
-          )
-        ORDER BY 
-            CASE c.state 
-                WHEN 'OFFER' THEN 1
-                WHEN 'PITCH-READY' THEN 2
-                WHEN 'QUALIFIED' THEN 3
-                WHEN 'ACTIVE' THEN 4
-                WHEN 'DRIP' THEN 5
-                ELSE 3
-            END,
-            lm.last_activity DESC NULLS LAST
-    `, [userId, targetDate, referenceTime.toISOString()], 'detailed_leads');
-
-    // Split DRIP (just count) vs priority states (full detail)
-    const dripLeads = detailedLeads.filter(l => l.state === 'DRIP');
-    const priorityLeads = detailedLeads.filter(l => l.state !== 'DRIP');
 
     // Today's activity snapshot
     const todayActivity = await safeQuery(db, `
@@ -499,6 +453,15 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         WHERE c.assigned_user_id = $1
           AND (m.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date = $2
     `, [userId, targetDate], 'today_activity');
+
+    const nonActionable = await safeQuery(db, `
+        SELECT state, COUNT(*) as count
+        FROM conversations
+        WHERE assigned_user_id = $1
+          AND state IN ('DRIP', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4')
+        GROUP BY state
+        ORDER BY count DESC
+    `, [userId], 'non_actionable');
 
     // Pending doc collection leads
     const pendingDocs = await safeQuery(db, `
@@ -523,10 +486,9 @@ async function buildBrokerActionBriefing(db, userId, dateStr = null) {
         pendingOffers,
         pendingDocs,
         pipeline,
-        priorityLeads,
-        dripCount: dripLeads.length,
+        nonActionable,
         todayActivity: todayActivity[0] || {},
-        generated_at: referenceTime.toISOString()
+        generated_at: refIso
     };
 }
 
@@ -720,7 +682,7 @@ async function generateBrokerBriefing(userId, dateStr = null) {
 
     const prompt = promptTemplate
         .replace('{{BROKER_NAME}}', broker?.name || 'Broker')
-        .replace('{{DATE}}', data.date || getEtDateString())
+        .replace('{{DATE}}', data.date)
         .replace('{{DATA}}', JSON.stringify(data, null, 2));
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);

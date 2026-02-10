@@ -164,6 +164,23 @@ app.get('/api/broker-briefing/:userId', async (req, res) => {
     }
 });
 
+// Admin-only Broker Action Briefing
+app.get('/api/admin/broker-briefing/:userId', async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin only' });
+        }
+
+        const { userId } = req.params;
+        const dateStr = req.query.date || null;
+        const result = await generateBrokerBriefing(userId, dateStr);
+        res.json(result);
+    } catch (err) {
+        console.error('❌ Admin broker briefing error:', err);
+        res.status(500).json({ error: 'Failed to generate briefing' });
+    }
+});
+
 // Owner Analytics — admin only
 app.get('/api/admin/broker-analytics/:userId', async (req, res) => {
     try {
@@ -220,6 +237,24 @@ app.get('/api/broker-briefing/:userId/raw', async (req, res) => {
         res.json(data);
     } catch (err) {
         console.error('❌ Raw briefing error:', err);
+        res.status(500).json({ error: 'Failed to build briefing data' });
+    }
+});
+
+// Admin-only Raw Broker Briefing (no Gemini)
+app.get('/api/admin/broker-briefing/:userId/raw', async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin only' });
+        }
+
+        const { userId } = req.params;
+        const dateStr = req.query.date || null;
+        const db = getDatabase();
+        const data = await buildBrokerActionBriefing(db, userId, dateStr);
+        res.json(data);
+    } catch (err) {
+        console.error('❌ Admin raw briefing error:', err);
         res.status(500).json({ error: 'Failed to build briefing data' });
     }
 });
