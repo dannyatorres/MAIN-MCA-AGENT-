@@ -6,399 +6,8 @@
   <title>User Management - MCA Command Center</title>
   <link rel="stylesheet" href="/css/modules/01-theme.css">
   <link rel="stylesheet" href="/css/user-menu.css">
+  <link rel="stylesheet" href="/css/admin.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-primary, #111827);
-      color: var(--text-primary, #fff);
-      min-height: 100vh;
-    }
-    .admin-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 24px;
-      background: var(--card-bg, #1f2937);
-      border-bottom: 1px solid var(--border-color, #374151);
-    }
-    .admin-header h1 { font-size: 20px; display: flex; align-items: center; gap: 12px; }
-    .admin-header a { color: var(--text-secondary, #9ca3af); text-decoration: none; }
-    .admin-header a:hover { color: var(--text-primary, #fff); }
-    .admin-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-    .admin-toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-    .btn {
-      padding: 10px 20px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    .btn-primary { background: #3b82f6; color: #fff; }
-    .btn-primary:hover { background: #2563eb; }
-    .btn-secondary { background: #374151; color: #fff; }
-    .btn-secondary:hover { background: #4b5563; }
-    .btn-danger { background: #ef4444; color: #fff; }
-    .btn-danger:hover { background: #dc2626; }
-    .btn-sm { padding: 6px 12px; font-size: 13px; }
-    .users-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--card-bg, #1f2937);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .users-table th, .users-table td {
-      padding: 14px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border-color, #374151);
-    }
-    .users-table th {
-      background: rgba(0,0,0,0.2);
-      font-weight: 600;
-      font-size: 12px;
-      text-transform: uppercase;
-      color: var(--text-secondary, #9ca3af);
-    }
-    .users-table tr:hover { background: rgba(255,255,255,0.03); }
-    .badge {
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    .badge-admin { background: #7c3aed; color: #fff; }
-    .badge-agent { background: #3b82f6; color: #fff; }
-    .badge-viewer { background: #6b7280; color: #fff; }
-    .badge-manager { background: #f59e0b; color: #fff; }
-    .badge-active { background: #10b981; color: #fff; }
-    .badge-inactive { background: #ef4444; color: #fff; }
-    .actions { display: flex; gap: 8px; }
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.2s;
-    }
-    .modal-overlay.show { opacity: 1; visibility: visible; }
-    .modal {
-      background: var(--card-bg, #1f2937);
-      border-radius: 12px;
-      width: 100%;
-      max-width: 480px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border-color, #374151);
-    }
-    .modal-header h2 { font-size: 18px; }
-    .modal-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px; }
-    .modal-body { padding: 20px; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; margin-bottom: 6px; font-size: 14px; color: var(--text-secondary, #9ca3af); }
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--bg-primary, #111827);
-      border: 1px solid var(--border-color, #374151);
-      border-radius: 8px;
-      color: var(--text-primary, #fff);
-      font-size: 14px;
-    }
-    .form-group input:focus, .form-group select:focus {
-      outline: none;
-      border-color: #3b82f6;
-    }
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      padding: 16px 20px;
-      border-top: 1px solid var(--border-color, #374151);
-    }
-    .error-msg { color: #ef4444; font-size: 13px; margin-top: 4px; }
-    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
-    .toggle-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: var(--bg-primary, #111827);
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--text-primary, #e6edf3);
-      font-size: 13px;
-    }
-    .toggle-item input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-    }
-    .form-section {
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border-color, #374151);
-    }
-    .form-section h4 {
-      color: var(--text-primary, #e6edf3);
-      margin-bottom: 16px;
-      font-size: 14px;
-    }
-    .services-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    /* Rules Modal Styles */
-    .rule-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 16px;
-      border-bottom: 1px solid #374151;
-      transition: background 0.15s;
-    }
-    .rule-card:hover {
-      background: rgba(255,255,255,0.03);
-    }
-    .rule-card:last-child {
-      border-bottom: none;
-    }
-    .rule-info {
-      flex: 1;
-    }
-    .rule-lender {
-      font-weight: 600;
-      color: #e6edf3;
-      margin-bottom: 4px;
-    }
-    .rule-message {
-      font-size: 13px;
-      color: #9ca3af;
-      margin-bottom: 8px;
-    }
-    .rule-meta {
-      font-size: 11px;
-      color: #6b7280;
-    }
-    .rule-meta span {
-      background: #374151;
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-right: 6px;
-    }
-    .rule-actions {
-      display: flex;
-      gap: 8px;
-      margin-left: 16px;
-    }
-    .btn-approve {
-      background: #10b981;
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .btn-approve:hover {
-      background: #059669;
-    }
-    .btn-reject {
-      background: #ef4444;
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .btn-reject:hover {
-      background: #dc2626;
-    }
-    .btn-create-rule {
-      background: #3b82f6;
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .btn-create-rule:hover {
-      background: #2563eb;
-    }
-    .btn-dismiss {
-      background: #4b5563;
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .btn-dismiss:hover {
-      background: #374151;
-    }
-    /* Daily Reports */
-    .report-stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-    .report-stat-num {
-      font-size: 20px;
-      font-weight: 700;
-      color: #e6edf3;
-    }
-    .report-stat-label {
-      font-size: 10px;
-      color: #8b949e;
-      text-transform: uppercase;
-    }
-    .report-body {
-      font-size: 14px;
-      line-height: 1.7;
-      color: #c9d1d9;
-    }
-    .report-body h3 {
-      color: #58a6ff;
-      margin: 24px 0 12px;
-      font-size: 16px;
-    }
-    .report-body ul, .report-body ol {
-      margin: 8px 0;
-      padding-left: 24px;
-    }
-    .report-body li {
-      margin-bottom: 6px;
-    }
-    .report-body strong {
-      color: #e6edf3;
-    }
-    .report-date-chip {
-      padding: 6px 12px;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #8b949e;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .report-date-chip:hover {
-      border-color: #58a6ff;
-      color: #58a6ff;
-    }
-    /* Broker Analytics */
-    .report-tabs {
-      display: flex;
-      gap: 0;
-      border-bottom: 1px solid #30363d;
-      background: #161b22;
-    }
-    .report-tab {
-      padding: 10px 20px;
-      background: none;
-      border: none;
-      color: #8b949e;
-      font-size: 13px;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.15s;
-    }
-    .report-tab:hover { color: #c9d1d9; }
-    .report-tab.active {
-      color: #58a6ff;
-      border-bottom-color: #58a6ff;
-    }
-    .broker-select {
-      padding: 8px 12px;
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 6px;
-      color: #fff;
-      font-size: 13px;
-    }
-    .analytics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .analytics-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 14px;
-      text-align: center;
-    }
-    .analytics-card-num {
-      font-size: 22px;
-      font-weight: 700;
-      color: #e6edf3;
-    }
-    .analytics-card-label {
-      font-size: 10px;
-      color: #8b949e;
-      text-transform: uppercase;
-      margin-top: 4px;
-    }
-    .urgency-section {
-      margin-bottom: 20px;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .urgency-header {
-      padding: 10px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .urgency-header.red { background: rgba(248,81,73,0.1); color: #f85149; }
-    .urgency-header.green { background: rgba(46,160,67,0.1); color: #2ea043; }
-    .urgency-header.yellow { background: rgba(210,153,34,0.1); color: #d29922; }
-    .urgency-header.blue { background: rgba(88,166,255,0.1); color: #58a6ff; }
-    .urgency-body {
-      padding: 12px 16px;
-    }
-    .urgency-item {
-      padding: 8px 0;
-      border-bottom: 1px solid #21262d;
-      font-size: 13px;
-      color: #c9d1d9;
-    }
-    .urgency-item:last-child { border-bottom: none; }
-    .urgency-item .lead-name { color: #58a6ff; font-weight: 600; }
-    .urgency-item .lead-meta { color: #8b949e; font-size: 12px; }
-  </style>
 </head>
 <body>
   <header class="admin-header">
@@ -414,14 +23,14 @@
       <div>
         <span id="userCount">0 users</span>
       </div>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-secondary" onclick="openDailyReports()">
+      <div class="toolbar-actions">
+        <button class="btn btn-secondary" id="btn-reports">
           📊 Daily Reports
         </button>
-        <button class="btn btn-secondary" onclick="openTrainingModal()" data-action="open-training">
+        <button class="btn btn-secondary" id="btn-training">
           🧠 AI Learning
         </button>
-        <button class="btn btn-secondary" onclick="openRulesModal()">
+        <button class="btn btn-secondary" id="btn-rules">
           <i class="fas fa-gavel"></i> AI Rules
         </button>
         <button class="btn btn-primary" id="addUserBtn">
@@ -473,7 +82,7 @@
           <div class="form-group" id="passwordGroup">
             <label>Password *</label>
             <input type="password" id="userPassword">
-            <small style="color: var(--text-secondary)">Min 8 chars, 1 uppercase, 1 number</small>
+            <small class="text-muted">Min 8 chars, 1 uppercase, 1 number</small>
           </div>
           <div class="form-group">
             <label>Role</label>
@@ -487,27 +96,27 @@
           <div class="form-group">
             <label>Agent Name (AI Persona)</label>
             <input type="text" id="userAgentName" placeholder="e.g. Dan Torres">
-            <small style="color: var(--text-secondary)">Name the AI uses when texting leads</small>
+            <small class="text-muted">Name the AI uses when texting leads</small>
           </div>
 
           <!-- Service Settings Section (only shown when editing) -->
-          <div class="form-section" id="serviceSettingsSection" style="display:none;">
+          <div class="form-section hidden" id="serviceSettingsSection">
             <h4><i class="fas fa-cogs"></i> Service Access</h4>
 
           <div class="form-group">
             <label>Google Drive Folder ID</label>
             <input type="text" id="userDriveFolderId" placeholder="Leave blank for default">
-            <small style="color: var(--text-secondary)">Custom folder for this user's bank statements</small>
-            <button type="button" onclick="testDriveConnection()" style="margin-top: 10px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+            <small class="text-muted">Custom folder for this user's bank statements</small>
+            <button type="button" class="btn btn-primary btn-sm mt-10" id="btn-test-drive">
               <i class="fas fa-plug"></i> Test Connection
             </button>
-            <div id="driveTestResult" style="margin-top: 10px; font-size: 12px;"></div>
+            <div id="driveTestResult" class="mt-10 text-xs"></div>
           </div>
 
           <div class="form-group">
             <label>Campaign Hook Message</label>
-            <textarea id="userCampaignHook" rows="3" style="width:100%;padding:10px 12px;background:var(--bg-primary,#111827);border:1px solid var(--border-color,#374151);border-radius:8px;color:var(--text-primary,#fff);font-size:14px;resize:vertical;" placeholder="Hey {{LEAD_NAME}}, I'm an underwriter - saw you took funding recently..."></textarea>
-            <small style="color: var(--text-secondary)">First message sent to new leads. Leave blank for default.</small>
+            <textarea id="userCampaignHook" rows="3" class="form-textarea" placeholder="Hey {{LEAD_NAME}}, I'm an underwriter - saw you took funding recently..."></textarea>
+            <small class="text-muted">First message sent to new leads. Leave blank for default.</small>
           </div>
 
             <div class="services-grid">
@@ -538,7 +147,7 @@
             </div>
           </div>
 
-          <div id="formError" class="error-msg" style="display:none;"></div>
+          <div id="formError" class="error-msg hidden"></div>
         </form>
       </div>
       <div class="modal-footer">
@@ -558,13 +167,13 @@
       <div class="modal-body">
         <form id="passwordForm">
           <input type="hidden" id="passwordUserId">
-          <p style="margin-bottom:16px;color:var(--text-secondary)">Resetting password for: <strong id="passwordUserName"></strong></p>
+          <p class="mb-16 text-muted">Resetting password for: <strong id="passwordUserName"></strong></p>
           <div class="form-group">
             <label>New Password *</label>
             <input type="password" id="newPassword" required>
-            <small style="color: var(--text-secondary)">Min 8 chars, 1 uppercase, 1 number</small>
+            <small class="text-muted">Min 8 chars, 1 uppercase, 1 number</small>
           </div>
-          <div id="passwordFormError" class="error-msg" style="display:none;"></div>
+          <div id="passwordFormError" class="error-msg hidden"></div>
         </form>
       </div>
       <div class="modal-footer">
@@ -576,22 +185,22 @@
 
   <!-- Training Modal -->
   <div id="trainingModal" class="modal-overlay">
-    <div class="modal" style="max-width: 800px;">
+    <div class="modal modal-lg">
       <div class="modal-header">
-        <h2 style="margin: 0;">🧠 AI Learning</h2>
-        <button class="modal-close" onclick="closeTrainingModal()">&times;</button>
+        <h2 class="modal-title">🧠 AI Learning</h2>
+        <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #58a6ff;">Suggested Patterns</h3>
-          <p style="color: #8b949e; font-size: 12px;">These patterns appeared 2+ times. Approve to add to AI persona.</p>
+        <div class="mb-30">
+          <h3 class="text-blue">Suggested Patterns</h3>
+          <p class="text-muted text-xs">These patterns appeared 2+ times. Approve to add to AI persona.</p>
           <div id="pendingPatterns"></div>
         </div>
 
         <div>
-          <h3 style="color: #3fb950;">Active Patterns</h3>
-          <p style="color: #8b949e; font-size: 12px;">Currently in dan_torres.md</p>
-          <div id="currentPatterns" style="background: #161b22; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap;"></div>
+          <h3 class="text-green">Active Patterns</h3>
+          <p class="text-muted text-xs">Currently in dan_torres.md</p>
+          <div id="currentPatterns" class="panel-box"></div>
         </div>
       </div>
     </div>
@@ -599,38 +208,38 @@
 
   <!-- AI Rules Modal -->
   <div id="rulesModal" class="modal-overlay">
-    <div class="modal" style="max-width: 900px;">
+    <div class="modal modal-xl">
       <div class="modal-header">
-        <h2 style="margin: 0;"><i class="fas fa-gavel"></i> AI Rule Suggestions</h2>
-        <button class="modal-close" onclick="closeRulesModal()">&times;</button>
+        <h2 class="modal-title"><i class="fas fa-gavel"></i> AI Rule Suggestions</h2>
+        <button class="modal-close">&times;</button>
       </div>
-      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+      <div class="modal-body modal-body-scroll">
 
         <!-- Pending Suggestions -->
-        <div style="margin-bottom: 30px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="color: #f59e0b; margin: 0;"><i class="fas fa-brain"></i> Pending Suggestions</h3>
-            <button class="btn btn-sm btn-secondary" onclick="loadRuleSuggestions()">
+        <div class="mb-30">
+          <div class="flex-between flex-center mb-12">
+            <h3 class="text-warning m-0"><i class="fas fa-brain"></i> Pending Suggestions</h3>
+            <button class="btn btn-sm btn-secondary" id="btn-refresh-rules">
               <i class="fas fa-sync"></i> Refresh
             </button>
           </div>
-          <p style="color: #8b949e; font-size: 12px; margin-bottom: 12px;">AI-detected patterns from declined submissions. Approve to block future submissions.</p>
-          <div id="ruleSuggestionsList" style="background: #111827; border-radius: 8px; overflow: hidden;">
-            <div style="padding: 20px; text-align: center; color: #8b949e;">Loading...</div>
+          <p class="text-muted text-xs mb-12">AI-detected patterns from declined submissions. Approve to block future submissions.</p>
+          <div id="ruleSuggestionsList" class="panel-muted">
+            <div class="p-20 text-center text-muted">Loading...</div>
           </div>
         </div>
 
         <!-- Needs Manual Review -->
         <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="color: #3b82f6; margin: 0;"><i class="fas fa-exclamation-circle"></i> Needs Manual Review</h3>
-            <button class="btn btn-sm btn-secondary" onclick="loadNeedsReview()">
+          <div class="flex-between flex-center mb-12">
+            <h3 class="text-blue m-0"><i class="fas fa-exclamation-circle"></i> Needs Manual Review</h3>
+            <button class="btn btn-sm btn-secondary" id="btn-refresh-needs-review">
               <i class="fas fa-sync"></i> Refresh
             </button>
           </div>
-          <p style="color: #8b949e; font-size: 12px; margin-bottom: 12px;">Declines where AI couldn't detect a clear pattern. Create rules manually.</p>
-          <div id="needsReviewList" style="background: #111827; border-radius: 8px; overflow: hidden;">
-            <div style="padding: 20px; text-align: center; color: #8b949e;">Loading...</div>
+          <p class="text-muted text-xs mb-12">Declines where AI couldn't detect a clear pattern. Create rules manually.</p>
+          <div id="needsReviewList" class="panel-muted">
+            <div class="p-20 text-center text-muted">Loading...</div>
           </div>
         </div>
 
@@ -640,17 +249,17 @@
 
   <!-- Manual Rule Modal -->
   <div id="manualRuleModal" class="modal-overlay">
-    <div class="modal" style="max-width: 500px;">
+    <div class="modal modal-md">
       <div class="modal-header">
-        <h2 style="margin: 0;">Create Manual Rule</h2>
-        <button class="modal-close" onclick="closeManualRuleModal()">&times;</button>
+        <h2 class="modal-title">Create Manual Rule</h2>
+        <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="manualRuleSubmissionId">
 
-        <div style="background: #111827; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-          <div style="font-size: 12px; color: #8b949e;">Decline Context</div>
-          <div id="manualRuleContext" style="font-size: 14px; color: #e6edf3; margin-top: 4px;"></div>
+        <div class="card-muted mb-16">
+          <div class="text-xs text-muted">Decline Context</div>
+          <div id="manualRuleContext" class="mt-4"></div>
         </div>
 
         <div class="form-group">
@@ -672,24 +281,24 @@
 
         <div class="form-group">
           <label>State (if blocking a state)</label>
-          <input type="text" id="manualRuleState" placeholder="e.g., CA" maxlength="2" style="text-transform: uppercase;">
+          <input type="text" id="manualRuleState" class="input-uppercase" placeholder="e.g., CA" maxlength="2">
         </div>
 
         <div class="form-group">
           <label>Condition (for minimum requirements)</label>
-          <div style="display: flex; gap: 8px;">
-            <select id="manualRuleField" style="flex: 1;">
+          <div class="form-row">
+            <select id="manualRuleField" class="flex-1">
               <option value="">Field...</option>
               <option value="tib">Time in Business (months)</option>
               <option value="revenue">Monthly Revenue</option>
               <option value="fico">FICO Score</option>
               <option value="position">Position</option>
             </select>
-            <select id="manualRuleOperator" style="width: 80px;">
+            <select id="manualRuleOperator" class="w-80">
               <option value="min">Min</option>
               <option value="max">Max</option>
             </select>
-            <input type="number" id="manualRuleValue" style="width: 100px;" placeholder="Value">
+            <input type="number" id="manualRuleValue" class="w-100" placeholder="Value">
           </div>
         </div>
 
@@ -698,11 +307,11 @@
           <input type="text" id="manualRuleMessage" placeholder="e.g., Does not fund trucking companies">
         </div>
 
-        <div id="manualRuleError" class="error-msg" style="display: none;"></div>
+        <div id="manualRuleError" class="error-msg hidden"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeManualRuleModal()">Cancel</button>
-        <button class="btn btn-primary" id="saveManualRuleBtn" onclick="saveManualRule()">
+        <button class="btn btn-secondary" id="manualRuleCancel">Cancel</button>
+        <button class="btn btn-primary" id="saveManualRuleBtn">
           <i class="fas fa-save"></i> Save Rule
         </button>
       </div>
@@ -711,84 +320,84 @@
 
   <!-- Daily Reports Modal -->
   <div id="dailyReportsModal" class="modal-overlay">
-    <div class="modal" style="max-width: 1000px;">
+    <div class="modal modal-xxl">
       <div class="modal-header">
-        <h2 style="margin: 0;">📊 Daily Operations Reports</h2>
-        <button class="modal-close" onclick="closeDailyReports()">&times;</button>
+        <h2 class="modal-title">📊 Daily Operations Reports</h2>
+        <button class="modal-close">&times;</button>
       </div>
 
       <!-- Tabs -->
       <div class="report-tabs">
-        <button class="report-tab active" onclick="switchReportTab('daily', this)">Daily Report</button>
-        <button class="report-tab" onclick="switchReportTab('briefing', this)">Broker Briefing</button>
-        <button class="report-tab" onclick="switchReportTab('analytics', this)">Broker Analytics</button>
+        <button class="report-tab active" data-tab="daily">Daily Report</button>
+        <button class="report-tab" data-tab="briefing">Broker Briefing</button>
+        <button class="report-tab" data-tab="analytics">Broker Analytics</button>
       </div>
 
-      <div class="modal-body" style="max-height: 80vh; overflow-y: auto; padding: 0;">
+      <div class="modal-body modal-body-scroll-lg p-0">
 
         <!-- TAB: Daily Report -->
         <div id="tabDaily">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #374151; position: sticky; top: 0; background: #1f2937; z-index: 10;">
-            <div style="display: flex; gap: 10px; align-items: center;">
-              <input type="date" id="reportDate" style="padding: 8px 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px;">
-              <button class="btn btn-primary btn-sm" onclick="generateReport()"><i class="fas fa-bolt"></i> Generate</button>
-              <button class="btn btn-secondary btn-sm" onclick="loadReport()"><i class="fas fa-eye"></i> View</button>
+          <div class="sticky-bar">
+            <div class="flex gap-10 flex-center">
+              <input type="date" id="reportDate" class="broker-select">
+              <button class="btn btn-primary btn-sm" id="btn-generate-report"><i class="fas fa-bolt"></i> Generate</button>
+              <button class="btn btn-secondary btn-sm" id="btn-view-report"><i class="fas fa-eye"></i> View</button>
             </div>
-            <div id="reportStatus" style="font-size: 12px; color: #8b949e;"></div>
+            <div id="reportStatus" class="text-xs text-muted"></div>
           </div>
-          <div id="reportStatsBar" style="display: none; padding: 16px 20px; border-bottom: 1px solid #374151;">
-            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <div id="reportStatsBar" class="report-stats hidden">
+            <div class="flex gap-20 flex-wrap">
               <div class="report-stat"><span class="report-stat-num" id="statNewLeads">0</span><span class="report-stat-label">New Leads</span></div>
               <div class="report-stat"><span class="report-stat-num" id="statMsgsSent">0</span><span class="report-stat-label">Msgs Sent</span></div>
               <div class="report-stat"><span class="report-stat-num" id="statMsgsRecv">0</span><span class="report-stat-label">Msgs Received</span></div>
               <div class="report-stat"><span class="report-stat-num" id="statSubmissions">0</span><span class="report-stat-label">Submissions</span></div>
-              <div class="report-stat"><span class="report-stat-num" id="statOffers" style="color: #2ea043;">0</span><span class="report-stat-label">Offers</span></div>
-              <div class="report-stat"><span class="report-stat-num" id="statDeclines" style="color: #f85149;">0</span><span class="report-stat-label">Declines</span></div>
+              <div class="report-stat"><span class="report-stat-num text-success" id="statOffers">0</span><span class="report-stat-label">Offers</span></div>
+              <div class="report-stat"><span class="report-stat-num text-danger" id="statDeclines">0</span><span class="report-stat-label">Declines</span></div>
               <div class="report-stat"><span class="report-stat-num" id="statActive">0</span><span class="report-stat-label">Active Leads</span></div>
             </div>
           </div>
-          <div id="reportContent" style="padding: 20px;">
-            <div style="text-align: center; color: #8b949e; padding: 40px;">Select a date and click <strong>View</strong> to load a report, or <strong>Generate</strong> to create a new one.</div>
+          <div id="reportContent" class="p-20">
+            <div class="text-center text-muted p-40">Select a date and click <strong>View</strong> to load a report, or <strong>Generate</strong> to create a new one.</div>
           </div>
-          <div style="padding: 0 20px 20px;">
-            <h4 style="color: #8b949e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Recent Reports</h4>
-            <div id="reportHistory" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+          <div class="px-20 pb-20">
+            <h4 class="section-header">Recent Reports</h4>
+            <div id="reportHistory" class="flex gap-8 flex-wrap"></div>
           </div>
         </div>
 
         <!-- TAB: Broker Briefing -->
-        <div id="tabBriefing" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #374151; position: sticky; top: 0; background: #1f2937; z-index: 10;">
-            <div style="display: flex; gap: 10px; align-items: center;">
+        <div id="tabBriefing" class="hidden">
+          <div class="sticky-bar">
+            <div class="flex gap-10 flex-center">
               <select id="briefingBroker" class="broker-select">
                 <option value="">Select broker...</option>
               </select>
-              <button class="btn btn-primary btn-sm" onclick="generateBriefing()"><i class="fas fa-bolt"></i> Generate Briefing</button>
-              <button class="btn btn-secondary btn-sm" onclick="loadRawBriefing()"><i class="fas fa-eye"></i> Quick View</button>
+              <button class="btn btn-primary btn-sm" id="btn-generate-briefing"><i class="fas fa-bolt"></i> Generate Briefing</button>
+              <button class="btn btn-secondary btn-sm" id="btn-quick-briefing"><i class="fas fa-eye"></i> Quick View</button>
             </div>
-            <div id="briefingStatus" style="font-size: 12px; color: #8b949e;"></div>
+            <div id="briefingStatus" class="text-xs text-muted"></div>
           </div>
-          <div id="briefingContent" style="padding: 20px;">
-            <div style="text-align: center; color: #8b949e; padding: 40px;">Select a broker to see their action briefing — what they need to do right now.</div>
+          <div id="briefingContent" class="p-20">
+            <div class="text-center text-muted p-40">Select a broker to see their action briefing — what they need to do right now.</div>
           </div>
         </div>
 
         <!-- TAB: Broker Analytics -->
-        <div id="tabAnalytics" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #374151; position: sticky; top: 0; background: #1f2937; z-index: 10;">
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <div id="tabAnalytics" class="hidden">
+          <div class="sticky-bar">
+            <div class="flex gap-10 flex-center flex-wrap">
               <select id="analyticsBroker" class="broker-select">
                 <option value="">Select broker...</option>
               </select>
-              <input type="date" id="analyticsStart" style="padding: 8px 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px;">
-              <span style="color: #8b949e;">to</span>
-              <input type="date" id="analyticsEnd" style="padding: 8px 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px;">
-              <button class="btn btn-primary btn-sm" onclick="generateAnalytics()"><i class="fas fa-chart-bar"></i> Analyze</button>
+              <input type="date" id="analyticsStart" class="broker-select">
+              <span class="text-muted">to</span>
+              <input type="date" id="analyticsEnd" class="broker-select">
+              <button class="btn btn-primary btn-sm" id="btn-generate-analytics"><i class="fas fa-chart-bar"></i> Analyze</button>
             </div>
-            <div id="analyticsStatus" style="font-size: 12px; color: #8b949e;"></div>
+            <div id="analyticsStatus" class="text-xs text-muted"></div>
           </div>
-          <div id="analyticsContent" style="padding: 20px;">
-            <div style="text-align: center; color: #8b949e; padding: 40px;">Select a broker and date range to view their performance analytics.</div>
+          <div id="analyticsContent" class="p-20">
+            <div class="text-center text-muted p-40">Select a broker and date range to view their performance analytics.</div>
           </div>
         </div>
 
@@ -797,1037 +406,7 @@
   </div>
 
   <script src="/js/user-menu.js"></script>
-  <script>
-    // Admin Panel Logic
-    const API_BASE = '/api/users';
-    let users = [];
+  <script src="/js/admin.js"></script>
 
-    // Elements
-    const usersTableBody = document.getElementById('usersTableBody');
-    const userCount = document.getElementById('userCount');
-    const addUserBtn = document.getElementById('addUserBtn');
-    const userModal = document.getElementById('userModal');
-    const passwordModal = document.getElementById('passwordModal');
-
-    // Load users on page load
-    loadUsers();
-
-    async function loadUsers() {
-      try {
-        const res = await fetch(API_BASE, { credentials: 'include' });
-        if (res.status === 403) {
-          alert('Access denied. Admin role required.');
-          window.location.href = '/command-center.html';
-          return;
-        }
-        const data = await res.json();
-        users = data.users || [];
-        renderUsers();
-      } catch (err) {
-        console.error('Failed to load users:', err);
-        usersTableBody.innerHTML = '<tr><td colspan="7" class="empty-state">Failed to load users</td></tr>';
-      }
-    }
-
-    function renderUsers() {
-      userCount.textContent = `${users.length} user${users.length !== 1 ? 's' : ''}`;
-
-      if (users.length === 0) {
-        usersTableBody.innerHTML = '<tr><td colspan="7" class="empty-state">No users found</td></tr>';
-        return;
-      }
-
-      usersTableBody.innerHTML = users.map(user => `
-        <tr data-id="${user.id}">
-          <td><strong>${escapeHtml(user.name)}</strong></td>
-          <td>${escapeHtml(user.email)}</td>
-          <td>${escapeHtml(user.username || '-')}</td>
-          <td><span class="badge badge-${user.role}">${user.role}</span></td>
-          <td><span class="badge badge-${user.is_active ? 'active' : 'inactive'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
-          <td>${user.last_login ? formatDate(user.last_login) : 'Never'}</td>
-          <td class="actions">
-            <button class="btn btn-secondary btn-sm" onclick="editUser('${user.id}')"><i class="fas fa-edit"></i></button>
-            <button class="btn btn-secondary btn-sm" onclick="resetPassword('${user.id}')"><i class="fas fa-key"></i></button>
-            <button class="btn btn-danger btn-sm" onclick="toggleUser('${user.id}', ${user.is_active})" ${user.role === 'admin' ? 'disabled' : ''}>
-              <i class="fas fa-${user.is_active ? 'ban' : 'check'}"></i>
-            </button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
-
-    // =============================================
-    // AI RULES MANAGEMENT
-    // =============================================
-
-    let currentManualRuleData = {};
-
-    function openRulesModal() {
-      document.getElementById('rulesModal').classList.add('show');
-      loadRuleSuggestions();
-      loadNeedsReview();
-    }
-
-    function closeRulesModal() {
-      document.getElementById('rulesModal').classList.remove('show');
-    }
-
-    async function loadRuleSuggestions() {
-      const container = document.getElementById('ruleSuggestionsList');
-      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #8b949e;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-
-      try {
-        const res = await fetch('/api/lenders/rule-suggestions', { credentials: 'include' });
-        const rules = await res.json();
-
-        if (!rules || rules.length === 0) {
-          container.innerHTML = '<div style="padding: 30px; text-align: center; color: #6b7280;">✓ No pending suggestions</div>';
-          return;
-        }
-
-        container.innerHTML = rules.map(r => `
-          <div class="rule-card">
-            <div class="rule-info">
-              <div class="rule-lender">${escapeHtml(r.lender_name)}</div>
-              <div class="rule-message">${escapeHtml(r.decline_message || 'No description')}</div>
-              <div class="rule-meta">
-                <span>${escapeHtml((r.rule_type || '').replace('_', ' '))}</span>
-                ${r.industry ? `<span>Industry: ${escapeHtml(r.industry)}</span>` : ''}
-                ${r.state ? `<span>State: ${escapeHtml(r.state)}</span>` : ''}
-              </div>
-            </div>
-            <div class="rule-actions">
-              <button class="btn-approve" onclick="approveRule('${r.id}')">
-                <i class="fas fa-check"></i> Approve
-              </button>
-              <button class="btn-reject" onclick="rejectRule('${r.id}')">
-                <i class="fas fa-times"></i> Reject
-              </button>
-            </div>
-          </div>
-        `).join('');
-
-      } catch (err) {
-        console.error('Failed to load rule suggestions:', err);
-        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">Failed to load</div>';
-      }
-    }
-
-    async function loadNeedsReview() {
-      const container = document.getElementById('needsReviewList');
-      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #8b949e;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-
-      try {
-        const res = await fetch('/api/lenders/needs-review', { credentials: 'include' });
-        const declines = await res.json();
-
-        if (!declines || declines.length === 0) {
-          container.innerHTML = '<div style="padding: 30px; text-align: center; color: #6b7280;">✓ Nothing needs review</div>';
-          return;
-        }
-
-        container.innerHTML = declines.map(d => `
-          <div class="rule-card">
-            <div class="rule-info">
-              <div class="rule-lender">${escapeHtml(d.lender_name)} → ${escapeHtml(d.business_name || 'Unknown')}</div>
-              <div class="rule-message">${escapeHtml(d.decline_reason || 'No reason provided')}</div>
-              <div class="rule-meta">
-                ${d.industry ? `<span>Industry: ${escapeHtml(d.industry)}</span>` : ''}
-                ${d.us_state ? `<span>State: ${escapeHtml(d.us_state)}</span>` : ''}
-              </div>
-            </div>
-            <div class="rule-actions">
-              <button class="btn-create-rule" onclick="openManualRuleModal('${d.id}', '${encodeURIComponent(d.lender_name || '')}', '${encodeURIComponent(d.decline_reason || '')}', '${encodeURIComponent(d.industry || '')}', '${encodeURIComponent(d.us_state || '')}')">
-                <i class="fas fa-plus"></i> Create Rule
-              </button>
-              <button class="btn-dismiss" onclick="dismissDecline('${d.id}')">
-                <i class="fas fa-eye-slash"></i> Dismiss
-              </button>
-            </div>
-          </div>
-        `).join('');
-
-      } catch (err) {
-        console.error('Failed to load needs review:', err);
-        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">Failed to load</div>';
-      }
-    }
-
-    async function approveRule(ruleId) {
-      if (!confirm('Approve this rule? It will be applied to future submissions.')) return;
-
-      try {
-        const res = await fetch(`/api/lenders/rule-suggestions/${ruleId}/approve`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          alert(data.error || 'Failed to approve rule');
-          return;
-        }
-
-        loadRuleSuggestions();
-      } catch (err) {
-        alert('Connection error');
-      }
-    }
-
-    async function rejectRule(ruleId) {
-      if (!confirm('Reject this rule? It will be deleted.')) return;
-
-      try {
-        const res = await fetch(`/api/lenders/rule-suggestions/${ruleId}/reject`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          alert(data.error || 'Failed to reject rule');
-          return;
-        }
-
-        loadRuleSuggestions();
-      } catch (err) {
-        alert('Connection error');
-      }
-    }
-
-    function openManualRuleModal(submissionId, lenderName, declineReason, industry, state) {
-      const decodedName = decodeURIComponent(lenderName || '');
-      const decodedReason = decodeURIComponent(declineReason || '');
-      const decodedIndustry = decodeURIComponent(industry || '');
-      const decodedState = decodeURIComponent(state || '');
-
-      currentManualRuleData = { submissionId, lenderName: decodedName };
-
-      document.getElementById('manualRuleSubmissionId').value = submissionId;
-      document.getElementById('manualRuleContext').textContent = `${decodedName}: ${decodedReason || 'No reason provided'}`;
-      document.getElementById('manualRuleIndustry').value = decodedIndustry || '';
-      document.getElementById('manualRuleState').value = decodedState || '';
-      document.getElementById('manualRuleType').value = '';
-      document.getElementById('manualRuleField').value = '';
-      document.getElementById('manualRuleOperator').value = 'min';
-      document.getElementById('manualRuleValue').value = '';
-      document.getElementById('manualRuleMessage').value = '';
-      document.getElementById('manualRuleError').style.display = 'none';
-
-      document.getElementById('manualRuleModal').classList.add('show');
-    }
-
-    function closeManualRuleModal() {
-      document.getElementById('manualRuleModal').classList.remove('show');
-    }
-
-    async function saveManualRule() {
-      const ruleType = document.getElementById('manualRuleType').value;
-      const message = document.getElementById('manualRuleMessage').value.trim();
-      const errorDiv = document.getElementById('manualRuleError');
-
-      if (!ruleType || !message) {
-        errorDiv.textContent = 'Please select a rule type and enter a description';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      const btn = document.getElementById('saveManualRuleBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
-      const data = {
-        lender_name: currentManualRuleData.lenderName,
-        rule_type: ruleType,
-        industry: document.getElementById('manualRuleIndustry').value.trim() || null,
-        state: document.getElementById('manualRuleState').value.trim().toUpperCase() || null,
-        condition_field: document.getElementById('manualRuleField').value || null,
-        condition_operator: document.getElementById('manualRuleOperator').value || null,
-        condition_value: document.getElementById('manualRuleValue').value || null,
-        decline_message: message,
-        submission_id: currentManualRuleData.submissionId
-      };
-
-      try {
-        const res = await fetch('/api/lenders/rules/manual', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(data)
-        });
-
-        if (!res.ok) {
-          const result = await res.json();
-          errorDiv.textContent = result.error || 'Failed to save rule';
-          errorDiv.style.display = 'block';
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-save"></i> Save Rule';
-          return;
-        }
-
-        closeManualRuleModal();
-        loadNeedsReview();
-        loadRuleSuggestions();
-        alert('Rule created successfully!');
-
-      } catch (err) {
-        errorDiv.textContent = 'Connection error';
-        errorDiv.style.display = 'block';
-      }
-
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-save"></i> Save Rule';
-    }
-
-    async function dismissDecline(submissionId) {
-      if (!confirm('Dismiss this decline? It won\'t show up for review again.')) return;
-
-      try {
-        const res = await fetch(`/api/lenders/decline/${submissionId}/dismiss`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-
-        if (!res.ok) {
-          alert('Failed to dismiss');
-          return;
-        }
-
-        loadNeedsReview();
-      } catch (err) {
-        alert('Connection error');
-      }
-    }
-
-    function formatDate(dateStr) {
-      if (!dateStr) return 'Never';
-      const d = new Date(dateStr);
-      return d.toLocaleString('en-US', {
-        timeZone: 'America/New_York',
-        month: 'numeric',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-
-    async function openTrainingModal() {
-      document.getElementById('trainingModal').classList.add('show');
-      await loadPendingPatterns();
-      await loadCurrentPatterns();
-    }
-
-    function closeTrainingModal() {
-      document.getElementById('trainingModal').classList.remove('show');
-    }
-
-    async function loadPendingPatterns() {
-      const container = document.getElementById('pendingPatterns');
-      container.innerHTML = '<div style="color: #8b949e;">Loading...</div>';
-
-      try {
-        const res = await fetch('/api/usage/learned-patterns', { credentials: 'include' });
-        const data = await res.json();
-
-        if (!data.patterns || data.patterns.length === 0) {
-          container.innerHTML = '<div style="color: #8b949e;">No patterns yet. Keep training!</div>';
-          return;
-        }
-
-        container.innerHTML = data.patterns.map(p => `
-          <div style="background: #161b22; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #30363d;">
-            <div style="color: #8b949e; font-size: 11px; margin-bottom: 8px;">Lead said (${p.times}x):</div>
-            <div style="color: #e6edf3; margin-bottom: 10px;">"${p.lead_message?.substring(0, 100) || 'N/A'}"</div>
-            <div style="color: #8b949e; font-size: 11px; margin-bottom: 8px;">You responded:</div>
-            <div style="color: #3fb950; margin-bottom: 15px;">"${p.human_response?.substring(0, 100) || 'N/A'}"</div>
-            <button onclick="approvePattern('${encodeURIComponent(p.lead_message)}', '${encodeURIComponent(p.human_response)}')"
-              style="background: #238636; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px;">
-              ✓ Approve
-            </button>
-            <button onclick="ignorePattern(this)"
-              style="background: #30363d; color: #8b949e; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">
-              Ignore
-            </button>
-          </div>
-        `).join('');
-      } catch (err) {
-        container.innerHTML = `<div style="color: #f85149;">Error: ${err.message}</div>`;
-      }
-    }
-
-    async function loadCurrentPatterns() {
-      const container = document.getElementById('currentPatterns');
-      try {
-        const res = await fetch('/api/usage/current-patterns', { credentials: 'include' });
-        const data = await res.json();
-        container.textContent = data.content || 'No learned patterns yet';
-      } catch (err) {
-        container.textContent = 'Failed to load';
-      }
-    }
-
-    async function approvePattern(leadMessage, humanResponse) {
-      try {
-        const res = await fetch('/api/usage/approve-pattern', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            leadMessage: decodeURIComponent(leadMessage),
-            humanResponse: decodeURIComponent(humanResponse)
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          await loadPendingPatterns();
-          await loadCurrentPatterns();
-        }
-      } catch (err) {
-        alert('Failed to approve: ' + err.message);
-      }
-    }
-
-    function ignorePattern(btn) {
-      btn.closest('div[style*="background: #161b22"]').remove();
-    }
-
-    async function testDriveConnection() {
-      const userId = document.getElementById('userId').value;
-      const resultDiv = document.getElementById('driveTestResult');
-
-      if (!userId) {
-        resultDiv.innerHTML = '<span style="color: #ef4444;"><i class="fas fa-times-circle"></i> Save the user first.</span>';
-        return;
-      }
-
-      resultDiv.innerHTML = '<span style="color: #8b949e;"><i class="fas fa-spinner fa-spin"></i> Testing...</span>';
-
-      try {
-        const res = await fetch(`/api/users/test-drive/${userId}`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          resultDiv.innerHTML = `
-            <span style="color: #10b981;">
-              <i class="fas fa-check-circle"></i> ${data.message}
-            </span>
-            ${data.sampleFolders?.length ? `<br><span style="color: #8b949e; font-size: 11px;">Sample: ${data.sampleFolders.join(', ')}</span>` : ''}
-          `;
-        } else {
-          resultDiv.innerHTML = `<span style="color: #ef4444;"><i class="fas fa-times-circle"></i> ${data.error}</span>`;
-        }
-      } catch (err) {
-        resultDiv.innerHTML = `<span style="color: #ef4444;"><i class="fas fa-times-circle"></i> ${err.message}</span>`;
-      }
-    }
-
-    // Add User
-    addUserBtn.addEventListener('click', () => {
-      document.getElementById('modalTitle').textContent = 'Add User';
-      document.getElementById('userForm').reset();
-      document.getElementById('userId').value = '';
-      document.getElementById('passwordGroup').style.display = 'block';
-      document.getElementById('userPassword').required = true;
-      document.getElementById('formError').style.display = 'none';
-      // Hide service settings for new users (they get defaults)
-      document.getElementById('serviceSettingsSection').style.display = 'none';
-      userModal.classList.add('show');
-    });
-
-    // Edit User
-    async function editUser(id) {
-      const user = users.find(u => u.id === id);
-      if (!user) return;
-
-      document.getElementById('modalTitle').textContent = 'Edit User';
-      document.getElementById('userId').value = user.id;
-      document.getElementById('userName').value = user.name;
-      document.getElementById('userEmail').value = user.email;
-      document.getElementById('userUsername').value = user.username || '';
-      document.getElementById('userRole').value = user.role;
-      document.getElementById('userAgentName').value = user.agent_name || '';
-      document.getElementById('passwordGroup').style.display = 'none';
-      document.getElementById('userPassword').required = false;
-      document.getElementById('formError').style.display = 'none';
-
-      // Show service settings section for editing
-      document.getElementById('serviceSettingsSection').style.display = 'block';
-
-      // Load service settings
-      try {
-        const res = await fetch(`${API_BASE}/${id}/settings`, { credentials: 'include' });
-        if (res.ok) {
-          const settings = await res.json();
-          document.getElementById('userDriveFolderId').value = settings.drive_folder_id || '';
-          document.getElementById('userCampaignHook').value = settings.campaign_hook || '';
-          document.getElementById('svc_aiAgent').checked = settings.services?.aiAgent !== false;
-          document.getElementById('svc_driveSync').checked = settings.services?.driveSync !== false;
-          document.getElementById('svc_fcs').checked = settings.services?.fcs !== false;
-          document.getElementById('svc_commander').checked = settings.services?.commander !== false;
-          document.getElementById('svc_lenderMatcher').checked = settings.services?.lenderMatcher !== false;
-          document.getElementById('svc_successPredictor').checked = settings.services?.successPredictor !== false;
-        }
-      } catch (err) {
-        console.error('Failed to load service settings:', err);
-      }
-
-      userModal.classList.add('show');
-    }
-
-    // Save User
-    document.getElementById('modalSave').addEventListener('click', async () => {
-      const id = document.getElementById('userId').value;
-      const name = document.getElementById('userName').value.trim();
-      const email = document.getElementById('userEmail').value.trim();
-      const username = document.getElementById('userUsername').value.trim();
-      const role = document.getElementById('userRole').value;
-      const password = document.getElementById('userPassword').value;
-      const errorDiv = document.getElementById('formError');
-
-      errorDiv.style.display = 'none';
-
-      try {
-        const agent_name = document.getElementById('userAgentName').value.trim();
-        const body = { name, email, username, role, agent_name };
-        if (!id) body.password = password; // Only for new users
-
-        const res = await fetch(id ? `${API_BASE}/${id}` : API_BASE, {
-          method: id ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(body)
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          errorDiv.textContent = data.error || 'Failed to save user';
-          errorDiv.style.display = 'block';
-          return;
-        }
-
-        // If editing, also save service settings
-        if (id) {
-          const serviceSettings = {
-            campaign_hook: document.getElementById('userCampaignHook').value.trim() || null,
-            drive_folder_id: document.getElementById('userDriveFolderId').value.trim() || null,
-            services: {
-              aiAgent: document.getElementById('svc_aiAgent').checked,
-              driveSync: document.getElementById('svc_driveSync').checked,
-              fcs: document.getElementById('svc_fcs').checked,
-              commander: document.getElementById('svc_commander').checked,
-              lenderMatcher: document.getElementById('svc_lenderMatcher').checked,
-              successPredictor: document.getElementById('svc_successPredictor').checked
-            }
-          };
-
-          await fetch(`${API_BASE}/${id}/settings`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(serviceSettings)
-          });
-        }
-
-        userModal.classList.remove('show');
-        loadUsers();
-      } catch (err) {
-        errorDiv.textContent = 'Connection error';
-        errorDiv.style.display = 'block';
-      }
-    });
-
-    // Reset Password
-    function resetPassword(id) {
-      const user = users.find(u => u.id === id);
-      if (!user) return;
-
-      document.getElementById('passwordUserId').value = user.id;
-      document.getElementById('passwordUserName').textContent = user.name;
-      document.getElementById('newPassword').value = '';
-      document.getElementById('passwordFormError').style.display = 'none';
-      passwordModal.classList.add('show');
-    }
-
-    document.getElementById('passwordModalSave').addEventListener('click', async () => {
-      const id = document.getElementById('passwordUserId').value;
-      const password = document.getElementById('newPassword').value;
-      const errorDiv = document.getElementById('passwordFormError');
-
-      errorDiv.style.display = 'none';
-
-      try {
-        const res = await fetch(`${API_BASE}/${id}/password`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ password })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          errorDiv.textContent = data.error || 'Failed to reset password';
-          errorDiv.style.display = 'block';
-          return;
-        }
-
-        passwordModal.classList.remove('show');
-        alert('Password updated successfully');
-      } catch (err) {
-        errorDiv.textContent = 'Connection error';
-        errorDiv.style.display = 'block';
-      }
-    });
-
-    // Toggle Active/Inactive
-    async function toggleUser(id, currentlyActive) {
-      if (!confirm(`Are you sure you want to ${currentlyActive ? 'deactivate' : 'activate'} this user?`)) return;
-
-      try {
-        const res = await fetch(`${API_BASE}/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ is_active: !currentlyActive })
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          alert(data.error || 'Failed to update user');
-          return;
-        }
-
-        loadUsers();
-      } catch (err) {
-        alert('Connection error');
-      }
-    }
-
-    // Close modals
-    document.getElementById('modalClose').addEventListener('click', () => userModal.classList.remove('show'));
-    document.getElementById('modalCancel').addEventListener('click', () => userModal.classList.remove('show'));
-    document.getElementById('passwordModalClose').addEventListener('click', () => passwordModal.classList.remove('show'));
-    document.getElementById('passwordModalCancel').addEventListener('click', () => passwordModal.classList.remove('show'));
-
-    userModal.addEventListener('click', (e) => { if (e.target === userModal) userModal.classList.remove('show'); });
-    passwordModal.addEventListener('click', (e) => { if (e.target === passwordModal) passwordModal.classList.remove('show'); });
-    document.getElementById('trainingModal').addEventListener('click', (e) => { if (e.target.id === 'trainingModal') closeTrainingModal(); });
-    document.getElementById('rulesModal').addEventListener('click', (e) => { if (e.target.id === 'rulesModal') closeRulesModal(); });
-    document.getElementById('manualRuleModal').addEventListener('click', (e) => { if (e.target.id === 'manualRuleModal') closeManualRuleModal(); });
-    document.getElementById('dailyReportsModal').addEventListener('click', (e) => { if (e.target.id === 'dailyReportsModal') closeDailyReports(); });
-
-    const REPORTS_API = '/api/daily-reports';
-
-    function openDailyReports() {
-      document.getElementById('dailyReportsModal').classList.add('show');
-      document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
-      // Default analytics date range to last 7 days
-      const today = new Date();
-      const weekAgo = new Date(today - 7 * 24 * 60 * 60 * 1000);
-      document.getElementById('analyticsEnd').value = today.toISOString().split('T')[0];
-      document.getElementById('analyticsStart').value = weekAgo.toISOString().split('T')[0];
-      loadReportHistory();
-    }
-
-    function closeDailyReports() {
-      document.getElementById('dailyReportsModal').classList.remove('show');
-    }
-
-    async function loadReportHistory() {
-      try {
-        const res = await fetch(REPORTS_API, { credentials: 'include' });
-        const data = await res.json();
-        const container = document.getElementById('reportHistory');
-        if (data.success && data.reports.length > 0) {
-          container.innerHTML = data.reports.map(r => {
-            const d = new Date(r.date + 'T12:00:00');
-            const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            return `<button class="report-date-chip" onclick="loadReportByDate('${r.date}')">${label}</button>`;
-          }).join('');
-        } else {
-          container.innerHTML = '<span style="color:#6b7280; font-size:12px;">No reports yet</span>';
-        }
-      } catch (err) { console.error('Failed to load report history:', err); }
-    }
-
-    async function loadReport() {
-      const date = document.getElementById('reportDate').value;
-      if (!date) return;
-      await loadReportByDate(date);
-    }
-
-    async function loadReportByDate(date) {
-      document.getElementById('reportDate').value = date;
-      const statusEl = document.getElementById('reportStatus');
-      const contentEl = document.getElementById('reportContent');
-      const statsBar = document.getElementById('reportStatsBar');
-      statusEl.textContent = 'Loading...';
-      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Loading report...</div>';
-      try {
-        const res = await fetch(REPORTS_API + '/' + date, { credentials: 'include' });
-        const data = await res.json();
-        if (data.success && data.report) {
-          const report = data.report;
-          if (report.stats) {
-            const s = typeof report.stats === 'string' ? JSON.parse(report.stats) : report.stats;
-            const o = s.overview || {};
-            document.getElementById('statNewLeads').textContent = o.new_leads || 0;
-            document.getElementById('statMsgsSent').textContent = o.msgs_sent || 0;
-            document.getElementById('statMsgsRecv').textContent = o.msgs_received || 0;
-            document.getElementById('statSubmissions').textContent = o.submissions_sent || 0;
-            document.getElementById('statOffers').textContent = o.offers_received || 0;
-            document.getElementById('statDeclines').textContent = o.declines_received || 0;
-            document.getElementById('statActive').textContent = o.active_leads || 0;
-            statsBar.style.display = 'block';
-          }
-          contentEl.innerHTML = '<div class="report-body">' + markdownToHtml(report.report) + '</div>';
-          statusEl.textContent = 'Generated ' + new Date(report.created_at).toLocaleString();
-        } else {
-          statsBar.style.display = 'none';
-          contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;">No report for this date. Click <strong>Generate</strong> to create one.</div>';
-          statusEl.textContent = '';
-        }
-      } catch (err) {
-        contentEl.innerHTML = '<div style="color:#f85149;padding:20px;">Error: ' + err.message + '</div>';
-        statusEl.textContent = '';
-      }
-    }
-
-    async function generateReport() {
-      const date = document.getElementById('reportDate').value;
-      if (!date) return;
-      const statusEl = document.getElementById('reportStatus');
-      const contentEl = document.getElementById('reportContent');
-      statusEl.textContent = 'Generating...';
-      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Generating report... this may take 30-60 seconds.</div>';
-      try {
-        const res = await fetch(REPORTS_API + '/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ date })
-        });
-        const data = await res.json();
-        if (data.success) {
-          statusEl.textContent = 'Generating... polling for results';
-          let attempts = 0;
-          const poll = setInterval(async () => {
-            attempts++;
-            try {
-              const check = await fetch(REPORTS_API + '/' + date, { credentials: 'include' });
-              const result = await check.json();
-              if (result.success && result.report) {
-                clearInterval(poll);
-                await loadReportByDate(date);
-                loadReportHistory();
-              } else if (attempts > 24) {
-                clearInterval(poll);
-                statusEl.textContent = 'Timed out - check back in a minute';
-              }
-            } catch (e) {}
-          }, 5000);
-        }
-      } catch (err) {
-        statusEl.textContent = '';
-        contentEl.innerHTML = '<div style="color:#f85149;padding:20px;">Failed: ' + err.message + '</div>';
-      }
-    }
-
-    function markdownToHtml(md) {
-      if (!md) return '';
-      return md
-        .replace(/### (.*)/g, '<h3>$1</h3>')
-        .replace(/## (.*)/g, '<h3>$1</h3>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/^\d+\.\s+(.*)/gm, '<li>$1</li>')
-        .replace(/^[-•]\s+(.*)/gm, '<li>$1</li>')
-        .replace(/\n\n/g, '<br><br>')
-        .replace(/\n/g, '<br>');
-    }
-
-    // =============================================
-    // TAB SWITCHING
-    // =============================================
-
-    function switchReportTab(tab, btn) {
-      document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tabDaily').style.display = tab === 'daily' ? '' : 'none';
-      document.getElementById('tabBriefing').style.display = tab === 'briefing' ? '' : 'none';
-      document.getElementById('tabAnalytics').style.display = tab === 'analytics' ? '' : 'none';
-
-      if (tab === 'briefing' || tab === 'analytics') {
-        populateBrokerDropdowns();
-      }
-    }
-
-    function populateBrokerDropdowns() {
-      const brokers = users.filter(u => u.role !== 'admin' && u.is_active);
-      ['briefingBroker', 'analyticsBroker'].forEach(id => {
-        const sel = document.getElementById(id);
-        const current = sel.value;
-        sel.innerHTML = '<option value="">Select broker...</option>' +
-          brokers.map(b => `<option value="${b.id}" ${b.id === current ? 'selected' : ''}>${escapeHtml(b.agent_name || b.name)}</option>`).join('');
-      });
-    }
-
-    // =============================================
-    // BROKER BRIEFING (Action Items)
-    // =============================================
-
-    async function loadRawBriefing() {
-      const userId = document.getElementById('briefingBroker').value;
-      if (!userId) return alert('Select a broker first');
-
-      const statusEl = document.getElementById('briefingStatus');
-      const contentEl = document.getElementById('briefingContent');
-      statusEl.textContent = 'Loading...';
-      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Loading data...</div>';
-
-      try {
-        const res = await fetch(`/api/broker-briefing/${userId}/raw`, { credentials: 'include' });
-        const data = await res.json();
-        contentEl.innerHTML = renderRawBriefing(data);
-        statusEl.textContent = 'Data loaded (no AI narrative)';
-      } catch (err) {
-        contentEl.innerHTML = `<div style="color:#f85149;padding:20px;">Error: ${err.message}</div>`;
-        statusEl.textContent = '';
-      }
-    }
-
-    async function generateBriefing() {
-      const userId = document.getElementById('briefingBroker').value;
-      if (!userId) return alert('Select a broker first');
-
-      const statusEl = document.getElementById('briefingStatus');
-      const contentEl = document.getElementById('briefingContent');
-      statusEl.textContent = 'Generating with AI...';
-      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Generating briefing... this may take 30-60 seconds.</div>';
-
-      try {
-        const res = await fetch(`/api/broker-briefing/${userId}`, { credentials: 'include' });
-        const result = await res.json();
-
-        let html = '';
-        if (result.data) html += renderRawBriefing(result.data);
-        if (result.narrative) html += '<div style="border-top: 1px solid #30363d; margin-top: 20px; padding-top: 20px;"><h3 style="color: #58a6ff; margin-bottom: 12px;">🤖 AI Briefing</h3><div class="report-body">' + markdownToHtml(result.narrative) + '</div></div>';
-
-        contentEl.innerHTML = html;
-        statusEl.textContent = 'Generated ' + new Date().toLocaleTimeString();
-      } catch (err) {
-        contentEl.innerHTML = `<div style="color:#f85149;padding:20px;">Error: ${err.message}</div>`;
-        statusEl.textContent = '';
-      }
-    }
-
-    function renderRawBriefing(data) {
-      let html = '';
-
-      // Today's snapshot
-      const ta = data.todayActivity || {};
-      html += `<div class="analytics-grid" style="margin-bottom: 16px;">
-        <div class="analytics-card"><div class="analytics-card-num">${ta.msgs_sent || 0}</div><div class="analytics-card-label">Sent Today</div></div>
-        <div class="analytics-card"><div class="analytics-card-num">${ta.msgs_received || 0}</div><div class="analytics-card-label">Received Today</div></div>
-        <div class="analytics-card"><div class="analytics-card-num">${ta.leads_touched || 0}</div><div class="analytics-card-label">Leads Touched</div></div>
-        <div class="analytics-card"><div class="analytics-card-num" style="color: #f85149;">${(data.unanswered || []).length}</div><div class="analytics-card-label">Unanswered</div></div>
-        <div class="analytics-card"><div class="analytics-card-num" style="color: #d29922;">${(data.cold || []).length}</div><div class="analytics-card-label">Cold Leads</div></div>
-        <div class="analytics-card"><div class="analytics-card-num" style="color: #2ea043;">${(data.pendingOffers || []).length}</div><div class="analytics-card-label">Pending Offers</div></div>
-      </div>`;
-
-      // Unanswered
-      html += renderUrgencySection('🔴 Respond NOW', 'red', data.unanswered, item =>
-        `<div class="urgency-item"><span class="lead-name">${escapeHtml(item.business_name || 'Unknown')}</span> — waiting <strong>${formatHours(item.hours_waiting)}</strong><br><span class="lead-meta">State: ${item.state} | Phone: ${item.phone || 'N/A'}</span></div>`
-      );
-
-      // Pending offers
-      html += renderUrgencySection('🟢 Close the Deal', 'green', data.pendingOffers, item =>
-        `<div class="urgency-item"><span class="lead-name">${escapeHtml(item.business_name || 'Unknown')}</span> — <strong>${escapeHtml(item.lender_name)}</strong> offered <strong>$${Number(item.offer_amount || 0).toLocaleString()}</strong><br><span class="lead-meta">${formatHours(item.hours_since_offer)} ago | State: ${item.state}</span></div>`
-      );
-
-      // Stale + Cold combined
-      const followUps = [...(data.stale || []).map(s => ({ ...s, reason: `stuck in ${s.state} for ${Math.round(s.days_in_state)}d` })),
-                          ...(data.cold || []).map(c => ({ ...c, reason: `no activity for ${Math.round(c.days_silent)}d` }))];
-      html += renderUrgencySection('🟡 Follow Up Today', 'yellow', followUps, item =>
-        `<div class="urgency-item"><span class="lead-name">${escapeHtml(item.business_name || 'Unknown')}</span> — ${item.reason}<br><span class="lead-meta">State: ${item.state}</span></div>`
-      );
-
-      // Pending docs
-      html += renderUrgencySection('📄 Docs Needed', 'blue', data.pendingDocs, item =>
-        `<div class="urgency-item"><span class="lead-name">${escapeHtml(item.business_name || 'Unknown')}</span><br><span class="lead-meta">State: ${item.state} — No FCS generated yet</span></div>`
-      );
-
-      // Pipeline
-      if (data.pipeline && data.pipeline.length) {
-        html += `<div style="margin-top: 16px;"><h4 style="color: #8b949e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Pipeline</h4><div class="analytics-grid">`;
-        data.pipeline.forEach(p => {
-          html += `<div class="analytics-card"><div class="analytics-card-num">${p.count}</div><div class="analytics-card-label">${p.state}</div></div>`;
-        });
-        html += `</div></div>`;
-      }
-
-      return html;
-    }
-
-    function renderUrgencySection(title, color, items, renderItem) {
-      const count = (items || []).length;
-      let html = `<div class="urgency-section"><div class="urgency-header ${color}">${title} <span style="opacity: 0.7;">(${count})</span></div>`;
-      if (count === 0) {
-        html += `<div class="urgency-body" style="color: #8b949e; font-size: 13px;">None — you're good here ✓</div>`;
-      } else {
-        html += `<div class="urgency-body">${items.map(renderItem).join('')}</div>`;
-      }
-      html += `</div>`;
-      return html;
-    }
-
-    function formatHours(h) {
-      if (!h && h !== 0) return '?';
-      h = parseFloat(h);
-      if (h < 1) return Math.round(h * 60) + ' min';
-      if (h < 24) return Math.round(h * 10) / 10 + ' hrs';
-      return Math.round(h / 24 * 10) / 10 + ' days';
-    }
-
-    // =============================================
-    // OWNER BROKER ANALYTICS
-    // =============================================
-
-    async function generateAnalytics() {
-      const userId = document.getElementById('analyticsBroker').value;
-      const start = document.getElementById('analyticsStart').value;
-      const end = document.getElementById('analyticsEnd').value;
-
-      if (!userId) return alert('Select a broker');
-      if (!start || !end) return alert('Select a date range');
-      if (start > end) return alert('Start date must be before end date');
-
-      const statusEl = document.getElementById('analyticsStatus');
-      const contentEl = document.getElementById('analyticsContent');
-      statusEl.textContent = 'Analyzing with AI...';
-      contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#8b949e;"><i class="fas fa-spinner fa-spin"></i> Generating analytics... this may take 30-60 seconds.</div>';
-
-      try {
-        const res = await fetch(`/api/admin/broker-analytics/${userId}?start=${start}&end=${end}`, { credentials: 'include' });
-        const result = await res.json();
-
-        let html = '';
-        if (result.data) html += renderOwnerAnalytics(result.data);
-        if (result.narrative) html += '<div style="border-top: 1px solid #30363d; margin-top: 20px; padding-top: 20px;"><h3 style="color: #58a6ff; margin-bottom: 12px;">🤖 AI Analysis</h3><div class="report-body">' + markdownToHtml(result.narrative) + '</div></div>';
-
-        contentEl.innerHTML = html;
-        statusEl.textContent = 'Generated ' + new Date().toLocaleTimeString();
-      } catch (err) {
-        contentEl.innerHTML = `<div style="color:#f85149;padding:20px;">Error: ${err.message}</div>`;
-        statusEl.textContent = '';
-      }
-    }
-
-    function renderOwnerAnalytics(data) {
-      let html = '';
-
-      // Volume stats
-      const v = data.volume || {};
-      const rt = data.responseTime || {};
-      const s = data.submissions || {};
-      const ai = data.aiRatio || {};
-
-      html += `<div class="analytics-grid">
-        <div class="analytics-card"><div class="analytics-card-num">${v.msgs_sent || 0}</div><div class="analytics-card-label">Msgs Sent</div></div>
-        <div class="analytics-card"><div class="analytics-card-num">${v.leads_worked || 0}</div><div class="analytics-card-label">Leads Worked</div></div>
-        <div class="analytics-card"><div class="analytics-card-num">${v.leads_engaged || 0}</div><div class="analytics-card-label">Leads Engaged</div></div>
-        <div class="analytics-card"><div class="analytics-card-num">${rt.avg_response_minutes ? Math.round(rt.avg_response_minutes) + 'm' : 'N/A'}</div><div class="analytics-card-label">Avg Response</div></div>
-        <div class="analytics-card"><div class="analytics-card-num">${s.total_submitted || 0}</div><div class="analytics-card-label">Submissions</div></div>
-        <div class="analytics-card"><div class="analytics-card-num" style="color: #2ea043;">${s.offer_rate_pct || 0}%</div><div class="analytics-card-label">Offer Rate</div></div>
-        <div class="analytics-card"><div class="analytics-card-num" style="color: #2ea043;">$${Number(s.total_funded_amount || 0).toLocaleString()}</div><div class="analytics-card-label">Funded</div></div>
-        <div class="analytics-card"><div class="analytics-card-num">${ai.ai_sent || 0}/${ai.human_sent || 0}</div><div class="analytics-card-label">AI / Human Msgs</div></div>
-      </div>`;
-
-      // Response time breakdown
-      if (rt.responses_measured) {
-        const pctUnder = Math.round((rt.under_1hr / rt.responses_measured) * 100);
-        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
-          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">Response Time</div>
-          <div style="display: flex; gap: 20px; font-size: 13px; color: #c9d1d9;">
-            <span>Median: <strong>${Math.round(rt.median_response_minutes || 0)} min</strong></span>
-            <span>Under 1hr: <strong style="color: ${pctUnder >= 70 ? '#2ea043' : '#f85149'};">${pctUnder}%</strong> (${rt.under_1hr}/${rt.responses_measured})</span>
-          </div>
-        </div>`;
-      }
-
-      // Funnel
-      if (data.funnel && data.funnel.length) {
-        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
-          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">State Transitions</div>`;
-        data.funnel.slice(0, 10).forEach(f => {
-          html += `<div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; color: #c9d1d9; border-bottom: 1px solid #21262d;">
-            <span>${escapeHtml(f.transition)}</span><strong>${f.count}</strong></div>`;
-        });
-        html += `</div>`;
-      }
-
-      // Decline reasons
-      if (data.declineReasons && data.declineReasons.length) {
-        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
-          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">Decline Reasons</div>`;
-        data.declineReasons.forEach(d => {
-          html += `<div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; color: #f85149; border-bottom: 1px solid #21262d;">
-            <span>${escapeHtml(d.decline_reason)}</span><strong>${d.count}</strong></div>`;
-        });
-        html += `</div>`;
-      }
-
-      // Active hours
-      if (data.activeHours && data.activeHours.length) {
-        const maxCount = Math.max(...data.activeHours.map(h => parseInt(h.msg_count)));
-        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
-          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">Active Hours (ET)</div>
-          <div style="display: flex; align-items: flex-end; gap: 3px; height: 60px;">`;
-        for (let h = 7; h <= 21; h++) {
-          const found = data.activeHours.find(a => parseInt(a.hour_et) === h);
-          const count = found ? parseInt(found.msg_count) : 0;
-          const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
-          const label = h <= 12 ? h + (h === 12 ? 'p' : 'a') : (h - 12) + 'p';
-          html += `<div style="flex:1; display: flex; flex-direction: column; align-items: center;">
-            <div style="width: 100%; background: ${pct > 0 ? '#58a6ff' : '#21262d'}; height: ${Math.max(pct, 4)}%; border-radius: 2px; min-height: 2px;" title="${count} msgs at ${label}"></div>
-            <span style="font-size: 9px; color: #6b7280; margin-top: 4px;">${label}</span>
-          </div>`;
-        }
-        html += `</div></div>`;
-      }
-
-      // Team comparison
-      const ta = data.teamAvg || {};
-      if (ta.avg_msgs_sent) {
-        html += `<div style="margin-bottom: 16px; padding: 12px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
-          <div style="font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px;">vs Team Average</div>
-          <div style="display: flex; gap: 20px; font-size: 13px; color: #c9d1d9;">
-            <span>Msgs: <strong>${v.msgs_sent || 0}</strong> vs avg <strong>${Math.round(ta.avg_msgs_sent)}</strong></span>
-            <span>Leads: <strong>${v.leads_worked || 0}</strong> vs avg <strong>${Math.round(ta.avg_leads_worked)}</strong></span>
-          </div>
-        </div>`;
-      }
-
-      // Pipeline
-      if (data.pipeline && data.pipeline.length) {
-        html += `<div style="margin-top: 16px;"><h4 style="color: #8b949e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Current Pipeline</h4><div class="analytics-grid">`;
-        data.pipeline.forEach(p => {
-          html += `<div class="analytics-card"><div class="analytics-card-num">${p.count}</div><div class="analytics-card-label">${p.state}</div></div>`;
-        });
-        html += `</div></div>`;
-      }
-
-      return html;
-    }
-  </script>
 </body>
 </html>
