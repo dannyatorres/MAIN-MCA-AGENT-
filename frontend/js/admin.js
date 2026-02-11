@@ -745,6 +745,8 @@ const ReportsManager = {
     if (!data) return;
 
     contentEl.innerHTML = this.renderRawBriefing(data);
+    document.getElementById('btn-download-briefing').classList.remove('hidden');
+    document.getElementById('btn-email-briefing').classList.remove('hidden');
     statusEl.textContent = 'Data loaded (no AI narrative)';
   },
   async generateBriefing() {
@@ -768,7 +770,101 @@ const ReportsManager = {
     if (result.narrative) html += '<div class="report-body briefing-ai-divider"><h3 class="text-blue mb-12">🤖 AI Briefing</h3><div class="report-body">' + Utils.markdownToHtml(result.narrative) + '</div></div>';
 
     contentEl.innerHTML = html;
+    document.getElementById('btn-download-briefing').classList.remove('hidden');
+    document.getElementById('btn-email-briefing').classList.remove('hidden');
     statusEl.textContent = 'Generated ' + new Date().toLocaleTimeString();
+  },
+  downloadBriefing() {
+    const content = document.getElementById('briefingContent');
+    if (!content || !content.innerHTML.trim()) return alert('Nothing to save');
+
+    const brokerName = document.getElementById('briefingBroker').selectedOptions[0]?.text || 'Broker';
+    const date = document.getElementById('briefingDate')?.value || new Date().toLocaleDateString('en-CA');
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Briefing - ${brokerName} - ${date}</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f1115;
+            color: #e6edf3;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          h1 { font-size: 20px; margin-bottom: 8px; }
+          h3 { color: #58a6ff; margin: 20px 0 8px; font-size: 15px; }
+          .lead-name { color: #58a6ff; font-weight: 600; }
+          .lead-meta { color: #8b949e; font-size: 12px; }
+          .urgency-section { border: 1px solid #30363d; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+          .urgency-header { padding: 10px 16px; font-size: 13px; font-weight: 600; }
+          .urgency-header.green { background: rgba(16,185,129,0.1); color: #10b981; }
+          .urgency-header.blue { background: rgba(59,130,246,0.1); color: #3b82f6; }
+          .urgency-header.yellow { background: rgba(245,158,11,0.1); color: #f59e0b; }
+          .urgency-body { padding: 12px 16px; }
+          .urgency-item { padding: 8px 0; border-bottom: 1px solid #30363d; font-size: 13px; color: #c9d1d9; }
+          .urgency-item:last-child { border-bottom: none; }
+          .analytics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+          .analytics-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; text-align: center; }
+          .analytics-card-num { font-size: 22px; font-weight: 700; }
+          .analytics-card-label { font-size: 10px; color: #8b949e; text-transform: uppercase; margin-top: 4px; }
+          strong { color: #e6edf3; }
+          @media print {
+            body { background: #fff; color: #000; }
+            .urgency-header.green, .urgency-header.blue, .urgency-header.yellow { color: #000; }
+            .lead-name { color: #000; }
+            .analytics-card { border-color: #ccc; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Briefing: ${brokerName}</h1>
+        <p style="color: #8b949e; margin-bottom: 24px;">${date}</p>
+        ${content.innerHTML}
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 500);
+  },
+  async emailBriefing() {
+    const brokerSelect = document.getElementById('briefingBroker');
+    const userId = brokerSelect.value;
+    const brokerName = brokerSelect.selectedOptions[0]?.text || 'Broker';
+    const date = document.getElementById('briefingDate')?.value || new Date().toLocaleDateString('en-CA');
+    const content = document.getElementById('briefingContent');
+
+    if (!userId) return alert('Select a broker first');
+    if (!content || !content.innerHTML.trim()) return alert('Generate a briefing first');
+
+    const broker = AppState.users.find(u => u.id === userId);
+    if (!broker?.email) return alert('No email found for this broker');
+
+    if (!confirm(`Email briefing to ${broker.email}?`)) return;
+
+    const btn = document.getElementById('btn-email-briefing');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+    const result = await API.post('/api/admin/email-briefing', {
+      to: broker.email,
+      brokerName,
+      date,
+      html: content.innerHTML
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-envelope"></i> Email';
+
+    if (result?.success) {
+      alert('Briefing sent!');
+    } else {
+      alert('Failed to send: ' + (result?.error || 'Unknown error'));
+    }
   },
   renderRawBriefing(data) {
     let html = '';
@@ -1003,6 +1099,12 @@ function bindGlobalButtons() {
 
   const briefingQuickBtn = document.getElementById('btn-quick-briefing');
   if (briefingQuickBtn) briefingQuickBtn.addEventListener('click', () => ReportsManager.loadRawBriefing());
+
+  const briefingDownloadBtn = document.getElementById('btn-download-briefing');
+  if (briefingDownloadBtn) briefingDownloadBtn.addEventListener('click', () => ReportsManager.downloadBriefing());
+
+  const briefingEmailBtn = document.getElementById('btn-email-briefing');
+  if (briefingEmailBtn) briefingEmailBtn.addEventListener('click', () => ReportsManager.emailBriefing());
 
   const briefingMode = document.getElementById('briefingMode');
   if (briefingMode) {

@@ -259,6 +259,35 @@ app.get('/api/admin/broker-briefing/:userId/raw', async (req, res) => {
     }
 });
 
+// Admin-only Email Briefing
+app.post('/api/admin/email-briefing', async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin only' });
+        }
+
+        const { to, brokerName, date, html } = req.body;
+        if (!to || !html) {
+            return res.status(400).json({ error: 'Missing fields' });
+        }
+
+        const subject = `Daily Briefing — ${brokerName || 'Broker'} — ${date || ''}`.trim();
+        const emailBody = `
+      <div style="font-family: -apple-system, sans-serif; max-width: 700px; margin: 0 auto; background: #0f1115; color: #e6edf3; padding: 32px;">
+        <h1 style="font-size: 20px;">Briefing: ${brokerName || 'Broker'}</h1>
+        <p style="color: #8b949e;">${date || ''}</p>
+        <hr style="border-color: #30363d; margin: 20px 0;">
+        ${html}
+      </div>`;
+
+        await gmailService.sendEmail(to, subject, emailBody);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('❌ Email briefing error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // User management (admin only)
 app.use('/api/users', require('./routes/users'));
 
