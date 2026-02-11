@@ -19,7 +19,7 @@ async function getAIHypothetical(conversationId, leadMessage) {
 
         // Get FCS + Strategy context
         const fcsRes = await db.query(`
-            SELECT average_revenue, withholding_percentage, positions
+            SELECT average_revenue, withholding_percentage
             FROM fcs_analyses WHERE conversation_id = $1
             ORDER BY created_at DESC LIMIT 1
         `, [conversationId]);
