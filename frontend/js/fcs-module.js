@@ -9,6 +9,7 @@ class FCSModule {
         this._fcsGenerationInProgress = false;
         this._initialized = false;
         this.reportCache = new Map();
+        window.fcsModule = this;
 
         this.init();
     }
@@ -209,26 +210,51 @@ class FCSModule {
 
                 this.reportCache.set(conversationId, reportData);
                 this.displayFCSReport(reportData);
-            } else {
-                // EMPTY STATE -> Triggers the Sync Button
-                if (!this.reportCache.has(conversationId)) {
-                    fcsResults.innerHTML = `
-                        <div style="text-align: center; padding: 60px 40px;">
-                            <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
-                            <h3 style="color: #e6edf3; margin-bottom: 12px;">No FCS Report Available</h3>
-                            <p style="color: #8b949e; margin-bottom: 24px;">Generate a report to analyze your financial documents</p>
+                return;
+            }
 
-                            <button onclick="window.fcsModule.triggerSyncAndAnalyze()"
-                                    class="btn-sync"
-                                    style="padding: 12px 28px; font-size: 15px;">
-                                <span>☁️</span> Sync & Generate FCS
-                            </button>
-                        </div>
-                    `;
-                }
+            if (result.analysis?.status === 'processing') {
+                this.reportCache.delete(conversationId);
+                fcsResults.innerHTML = `
+                    <div style="text-align: center; padding: 60px 40px;">
+                        <div class="loading-spinner"></div>
+                        <h3 style="color: #e6edf3;">FCS Analysis In Progress...</h3>
+                        <p style="color: #8b949e;">Check back in a minute.</p>
+                    </div>`;
+                return;
+            }
+
+            if (result.analysis?.status === 'failed') {
+                this.reportCache.delete(conversationId);
+                fcsResults.innerHTML = `
+                    <div style="text-align: center; padding: 60px 40px;">
+                        <p style="color: #ef4444;">FCS failed: ${result.analysis.error_message || 'Unknown error'}</p>
+                        <button onclick="window.fcsModule.triggerSyncAndAnalyze()" class="btn btn-primary" style="margin-top: 16px;">Retry</button>
+                    </div>`;
+                return;
+            }
+
+            // EMPTY STATE -> Triggers the Sync Button
+            if (!this.reportCache.has(conversationId)) {
+                fcsResults.innerHTML = `
+                    <div style="text-align: center; padding: 60px 40px;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+                        <h3 style="color: #e6edf3; margin-bottom: 12px;">No FCS Report Available</h3>
+                        <p style="color: #8b949e; margin-bottom: 24px;">Generate a report to analyze your financial documents</p>
+
+                        <button onclick="window.fcsModule.triggerSyncAndAnalyze()"
+                                class="btn-sync"
+                                style="padding: 12px 28px; font-size: 15px;">
+                            <span>☁️</span> Sync & Generate FCS
+                        </button>
+                    </div>
+                `;
             }
         } catch (e) {
             console.error('Error loading FCS:', e);
+            if (this.reportCache.has(conversationId)) {
+                this.reportCache.delete(conversationId);
+            }
             if (fcsResults && !this.reportCache.has(conversationId)) {
                 // 404 just means no report exists yet
                 if (e.message.includes('404')) {
@@ -261,6 +287,15 @@ class FCSModule {
     // =========================================================
     displayFCSReport(report) {
          let fcsResults = document.getElementById('fcsResults');
+         if (fcsResults && !report.report_content) {
+             fcsResults.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    <p>FCS report is empty or unavailable.</p>
+                    <button onclick="window.fcsModule.triggerSyncAndAnalyze()" class="btn btn-primary" style="margin-top: 16px;">Retry</button>
+                </div>
+             `;
+             return;
+         }
          if(fcsResults && report.report_content) {
              const dateStr = report.generated_at
                 ? new Date(report.generated_at).toLocaleString('en-US', {

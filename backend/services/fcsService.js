@@ -324,28 +324,7 @@ Position Count: ${positionCount}
 
             console.log(`✅ [${businessName}] FCS complete: $${averageRevenue}/mo, ${negDays} neg days`);
 
-            try {
-                const stateCheck = await db.query(
-                    'SELECT state FROM conversations WHERE id = $1', 
-                    [conversationId]
-                );
-                const currentState = stateCheck.rows[0]?.state;
-
-                if (['QUALIFIED', 'PITCH_READY'].includes(currentState)) {
-                    const commanderService = require('./commanderService');
-                    commanderService.analyzeAndStrategize(conversationId)
-                        .then(result => {
-                            if (result) {
-                                console.log(`🎯 [${businessName}] Commander strategy ready → PITCH_READY`);
-                            }
-                        })
-                        .catch(err => console.error(`❌ [${businessName}] Commander failed:`, err.message));
-                } else {
-                    console.log(`⏸️ [${businessName}] FCS done but state is ${currentState} - Commander will trigger when QUALIFIED`);
-                }
-            } catch (err) {
-                console.error(`❌ Commander trigger check failed:`, err.message);
-            }
+            // Commander auto-trigger removed — requires manual review before strategy
 
             return { success: true, analysisId };
 
