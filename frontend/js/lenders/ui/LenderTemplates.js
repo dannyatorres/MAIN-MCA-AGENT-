@@ -200,7 +200,7 @@ export const LenderTemplates = {
                         ❌ View Non-Qualified Lenders (${nonQualifiedCount}) ▼
                     </button>
                     <div id="nonQualList" class="lender-nonqual-list">
-                        ${data.nonQualified.map(item => `
+${data.nonQualified.sort((a, b) => a.lender.localeCompare(b.lender)).map(item => `
                             <div class="non-qual-item">
                                 <span class="lender-nonqual-name">${escapeHtml(item.lender)}</span>
                                 <span class="non-qual-reason">${escapeHtml(item.blockingRule)}</span>
