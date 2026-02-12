@@ -701,3 +701,31 @@
 #networkDirectoryModal .admin-list::-webkit-scrollbar-thumb:hover {
     background: #3b82f6;
 }
+
+/* ==========================================================================
+   15. ACTIVE/INACTIVE TOGGLE
+   ========================================================================== */
+
+.toggle-active-btn {
+    font-size: 14px;
+    padding: 4px 6px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.toggle-active-btn:hover {
+    opacity: 0.7;
+}
+
+#networkDirectoryModal .lender-row:has(.toggle-active-btn.inactive) {
+    opacity: 0.45;
+}
+
+#networkDirectoryModal .lender-row:has(.toggle-active-btn.inactive):hover {
+    opacity: 0.7;
+}
+
+#networkDirectoryModal .lender-row:has(.toggle-active-btn.inactive) .lender-name {
+    text-decoration: line-through;
+    color: #6e7681;
+}

@@ -1086,4 +1086,29 @@ router.post('/import-csv', requireRole('admin'), async (req, res) => {
     }
 });
 
+// Toggle lender active status - ADMIN ONLY
+router.patch('/:id/toggle-active', requireRole('admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDatabase();
+
+        const result = await db.query(`
+            UPDATE lenders SET is_active = NOT COALESCE(is_active, true), updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, name, is_active
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Lender not found' });
+        }
+
+        const lender = result.rows[0];
+        console.log(`🔄 Lender ${lender.is_active ? 'activated' : 'deactivated'}: ${lender.name}`);
+        res.json({ success: true, id: lender.id, name: lender.name, is_active: lender.is_active });
+    } catch (error) {
+        console.error('Error toggling lender:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

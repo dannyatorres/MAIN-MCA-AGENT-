@@ -526,7 +526,7 @@ router.post('/qualify', async (req, res) => {
         // Get all lenders
         const lendersResult = await db.query(`
             SELECT * FROM lenders
-            WHERE name IS NOT NULL AND name != ''
+            WHERE name IS NOT NULL AND name != '' AND is_active = true
         `);
         const lenders = lendersResult.rows;
 

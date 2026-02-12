@@ -71,6 +71,7 @@ class LenderNetwork {
 
             if (action === 'edit') this.edit(id);
             if (action === 'delete') this.delete(id, name);
+            if (action === 'toggle-active') this.toggleActive(id);
         });
     }
 
@@ -108,6 +109,9 @@ class LenderNetwork {
                     </div>
                 </div>
                 <div class="lender-actions">
+                    <button class="action-link toggle-active-btn ${l.is_active === false ? 'inactive' : ''}" data-action="toggle-active" data-id="${l.id}" title="${l.is_active === false ? 'Activate' : 'Deactivate'}">
+                        ${l.is_active === false ? '🔴' : '🟢'}
+                    </button>
                     <button class="action-link" data-action="edit" data-id="${l.id}">Edit</button>
                     <button class="action-link danger" data-action="delete" data-id="${l.id}" data-name="${this.escapeHtml(l.name)}">Delete</button>
                 </div>
@@ -124,6 +128,21 @@ class LenderNetwork {
             (l.email && l.email.toLowerCase().includes(q))
         );
         this.render(filtered);
+    }
+
+    async toggleActive(id) {
+        try {
+            const result = await this.system.apiCall(`/api/lenders/${id}/toggle-active`, { method: 'PATCH' });
+            if (result && result.success) {
+                this.system.utils?.showNotification?.(
+                    `${result.name} ${result.is_active ? 'activated' : 'deactivated'}`,
+                    result.is_active ? 'success' : 'warning'
+                );
+                this.load();
+            }
+        } catch (error) {
+            console.error('Toggle failed:', error);
+        }
     }
 
     // ==========================================
