@@ -977,6 +977,7 @@ Collecting info. Follow the checklist - ask for missing items.
 
         // Check no_response FIRST
         if (decision.action === 'no_response') {
+            await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
             return { shouldReply: false };
         }
 
@@ -1020,6 +1021,7 @@ Collecting info. Follow the checklist - ask for missing items.
         }
 
         if (!responseContent || responseContent === 'null') {
+            await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
             return { shouldReply: false };
         }
 
@@ -1055,6 +1057,7 @@ Collecting info. Follow the checklist - ask for missing items.
 
         if (isDuplicate) {
             console.log(`🚫 Blocked duplicate message: "${responseContent.substring(0, 40)}..."`);
+            await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
             return { shouldReply: false };
         }
 
