@@ -899,10 +899,6 @@ Collecting info. Follow the checklist - ask for missing items.
 
         systemPrompt += stateBehavior;
 
-        const lastInbound = history.rows
-            .filter(m => m.direction === 'inbound')
-            .slice(-1)[0]?.content?.toLowerCase().trim() || '';
-
         // Skip AI call if just waiting for MTD
         if (currentState === 'QUALIFIED') {
             const waitingPhrases = ['later', 'will send', 'tonight', 'tomorrow', 'when i can', 'give me', 'few hours', 'after work'];
