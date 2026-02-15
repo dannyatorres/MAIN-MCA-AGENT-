@@ -899,15 +899,27 @@ Collecting info. Follow the checklist - ask for missing items.
 
         systemPrompt += stateBehavior;
 
+        const lastInbound = history.rows
+            .filter(m => m.direction === 'inbound')
+            .slice(-1)[0]?.content?.toLowerCase().trim() || '';
+
         // Skip AI call if just waiting for MTD
         if (currentState === 'QUALIFIED') {
-            const lastInbound = history.rows.filter(m => m.direction === 'inbound').slice(-1)[0]?.content?.toLowerCase() || '';
             const waitingPhrases = ['later', 'will send', 'tonight', 'tomorrow', 'when i can', 'give me', 'few hours', 'after work'];
 
             if (waitingPhrases.some(p => lastInbound.includes(p))) {
                 console.log(`⏸️ Lead said they'll send later - skipping AI call`);
                 return { shouldReply: false };
             }
+        }
+
+        // Skip AI call for simple acknowledgments (save API costs)
+        const ackPhrases = ['ok', 'okay', 'thanks', 'thank you', 'got it', 'sounds good',
+            'cool', 'k', 'ty', 'thx', 'appreciate it', 'will do'];
+        if (ackPhrases.includes(lastInbound) && currentState !== 'PITCH_READY') {
+            console.log(`⏸️ Lead sent acknowledgment "${lastInbound}" - skipping AI call`);
+            await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
+            return { shouldReply: false };
         }
 
         // Build the Message Chain
