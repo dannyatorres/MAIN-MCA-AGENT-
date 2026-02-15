@@ -1033,9 +1033,13 @@ Collecting info. Follow the checklist - ask for missing items.
             const min = gamePlan.offer_range.min?.toLocaleString();
             const max = gamePlan.offer_range.max?.toLocaleString();
 
-            const alreadyPitched = recentOutbound.rows.some(m =>
-                m.content.includes('$') || m.content.includes('offer') || m.content.includes('get you')
-            );
+            const alreadyPitched = recentOutbound.rows.some(m => {
+                const c = m.content.toLowerCase();
+                return c.includes('$') || c.includes('offer') || c.includes('get you') 
+                    || /does\s+\d+k\s+work/i.test(c)
+                    || /\b\d+k\b/.test(c)
+                    || c.includes('im looking at');
+            });
 
             if (!alreadyPitched) {
                 const pitchAmount = gamePlan.offer_range.aggressive || gamePlan.offer_range.max;
