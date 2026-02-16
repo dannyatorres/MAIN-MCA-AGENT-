@@ -934,8 +934,34 @@ Collecting info. Follow the checklist - ask for missing items.
         const ackPhrases = ['ok', 'okay', 'thanks', 'thank you', 'got it', 'sounds good',
             'cool', 'k', 'ty', 'thx', 'appreciate it', 'will do'];
         if (ackPhrases.includes(lastInbound) && currentState !== 'PITCH_READY') {
-            console.log(`⏸️ Lead sent acknowledgment "${lastInbound}" - skipping AI call`);
+            console.log(`⏸️ [${leadName}] Acknowledgment "${lastInbound}" - skipping AI call (FREE)`);
             await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
+            return { shouldReply: false };
+        }
+
+        // 🛡️ ATOMIC CLAIM - Same pattern as processorAgent
+        // Prevents race conditions between dispatcher + webhook
+        const lastInboundMsg = await db.query(`
+            SELECT id FROM messages 
+            WHERE conversation_id = $1 AND direction = 'inbound'
+            ORDER BY timestamp DESC LIMIT 1
+        `, [conversationId]);
+        const lastInboundMsgId = lastInboundMsg.rows[0]?.id || null;
+
+        let claimed = true;
+        if (lastInboundMsgId) {
+            const claimResult = await db.query(
+                `UPDATE conversations 
+                 SET last_processed_msg_id = $1, last_activity = NOW()
+                 WHERE id = $2 AND (last_processed_msg_id IS DISTINCT FROM $1)
+                 RETURNING id`,
+                [lastInboundMsgId, conversationId]
+            );
+            claimed = claimResult.rows.length > 0;
+        }
+
+        if (!claimed) {
+            console.log(`⏭️ [${leadName}] Already processed last inbound - skipping AI call (FREE)`);
             return { shouldReply: false };
         }
 
@@ -953,7 +979,6 @@ Collecting info. Follow the checklist - ask for missing items.
                 return;
             }
 
-            // Prepend timestamp so AI knows WHEN each message was sent
             let timestampPrefix = '';
             if (msg.timestamp) {
                 const msgDate = new Date(msg.timestamp);
@@ -969,27 +994,9 @@ Collecting info. Follow the checklist - ask for missing items.
             messages.push({ role: role, content: timestampPrefix + msg.content });
         });
 
-        // 🛡️ ALREADY-PROCESSED CHECK (skip if no new inbound since last AI call)
-        const lastInboundMsg = await db.query(`
-            SELECT id FROM messages 
-            WHERE conversation_id = $1 AND direction = 'inbound'
-            ORDER BY timestamp DESC LIMIT 1
-        `, [conversationId]);
-        const lastInboundMsgId = lastInboundMsg.rows[0]?.id || null;
-
-        const processedCheck = await db.query(
-            'SELECT last_processed_msg_id FROM conversations WHERE id = $1',
-            [conversationId]
-        );
-
-        if (lastInboundMsgId && processedCheck.rows[0]?.last_processed_msg_id === lastInboundMsgId) {
-            console.log(`⏭️ [${leadName}] Already processed last inbound - skipping AI call`);
-            await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
-            return { shouldReply: false };
-        }
-
-        // --- FIX 3: Execution Switchboard (Complete) ---
-        console.log(`🧠 Calling OpenAI (JSON Mode)...`);
+        // --- OPENAI CALL ---
+        const callStart = Date.now();
+        console.log(`🧠 [${leadName}] Calling OpenAI (JSON Mode)...`);
 
         const completion = await openai.chat.completions.create({
             model: "gpt-5-mini",
@@ -997,8 +1004,11 @@ Collecting info. Follow the checklist - ask for missing items.
             response_format: { type: "json_object" }
         });
 
+        const callDuration = ((Date.now() - callStart) / 1000).toFixed(1);
         const tokens = completion.usage || {};
-        console.log(`💰 TOKENS [${leadName}]: ${tokens.prompt_tokens} in / ${tokens.completion_tokens} out / ${tokens.total_tokens} total`);
+        const estimatedCost = ((tokens.prompt_tokens || 0) * 0.00000015 + (tokens.completion_tokens || 0) * 0.0000006).toFixed(4);
+
+        console.log(`💰 [${leadName}] ${tokens.prompt_tokens} in / ${tokens.completion_tokens} out / ${tokens.total_tokens} total | ~$${estimatedCost} | ${callDuration}s`);
 
         if (completion.usage) {
             await trackUsage({
@@ -1009,7 +1019,7 @@ Collecting info. Follow the checklist - ask for missing items.
                 model: 'gpt-5-mini',
                 inputTokens: completion.usage.prompt_tokens,
                 outputTokens: completion.usage.completion_tokens,
-                metadata: { mode: 'json_agent' }
+                metadata: { mode: 'json_agent', duration_ms: Date.now() - callStart }
             });
         }
 
@@ -1021,19 +1031,14 @@ Collecting info. Follow the checklist - ask for missing items.
             decision = { action: "respond", message: "got it, give me one sec" };
         }
 
-        console.log(`🤖 AI Decision: ${decision.action?.toUpperCase() || 'RESPOND'} | Reason: ${decision.reason || 'N/A'}`);
-
-        // Stamp so we don't reprocess this inbound message
-        if (lastInboundMsgId) {
-            await db.query('UPDATE conversations SET last_processed_msg_id = $1 WHERE id = $2',
-                [lastInboundMsgId, conversationId]);
-        }
+        console.log(`🤖 [${leadName}] Decision: ${decision.action?.toUpperCase() || 'RESPOND'} | Reason: ${decision.reason || 'N/A'}`);
 
         let responseContent = decision.message;
         let stateAfter = currentState;
 
         // Check no_response FIRST
         if (decision.action === 'no_response') {
+            console.log(`😴 [${leadName}] NO_RESPONSE - $${estimatedCost} wasted (consider adding this pattern to ack check)`);
             await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
             return { shouldReply: false };
         }
