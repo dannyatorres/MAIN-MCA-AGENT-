@@ -270,6 +270,7 @@ async function getGlobalPrompt(userId, currentState) {
             'ACTIVE': 'phase_active.md',
             'QUALIFIED': 'phase_qualified.md',
             'PITCH_READY': 'phase_pitch.md',
+            'READY_TO_SUBMIT': 'phase_ready_to_submit.md',
             'SUBMITTED': 'phase_submitted.md',
             'CLOSING': 'phase_closing.md'
         };
@@ -881,31 +882,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - "ready_to_submit": Lead accepted the offer. Ask for docs and move to submission.
         `;
 
-        // State-specific behavior
-        let stateBehavior = '';
-        if (currentState === 'PITCH_READY') {
-            stateBehavior = `
-## 🎯 STATE: PITCH_READY
-You MUST present an offer. Do NOT return no_response.
-- You have the Commander strategy with offer range
-- Lead is waiting for numbers
-- Even if their last message was "ok" or acknowledgment, NOW is the time to pitch
-- Use the offer_range from Commander's orders
-`;
-        } else if (currentState === 'QUALIFIED') {
-            stateBehavior = `
-## 📋 STATE: QUALIFIED  
-Still processing. If waiting for MTD or documents, it's ok to wait.
-`;
-        } else if (currentState === 'ACTIVE') {
-            stateBehavior = `
-## 📋 STATE: ACTIVE
-Collecting info. Follow the checklist - ask for missing items.
-`;
-        }
-
-        systemPrompt += stateBehavior;
-
         // Skip AI call if just waiting for MTD
         if (currentState === 'QUALIFIED') {
             const waitingPhrases = ['later', 'will send', 'tonight', 'tomorrow', 'when i can', 'give me', 'few hours', 'after work'];
@@ -1031,17 +1007,19 @@ Collecting info. Follow the checklist - ask for missing items.
             console.log(`🎯 [${leadName}] Accepted offer - READY_TO_SUBMIT`);
         }
         else if (decision.action === 'qualify') {
-            if (!['QUALIFIED', 'SUBMITTED', 'CLOSING'].includes(currentState)) {
+            const facts = await getLeadFacts(conversationId);
+
+            if (!facts.email) {
+                console.log(`🚫 [${leadName}] Tried to qualify without email - blocking`);
+                responseContent = "whats the best email to send the offer to?";
+            } else if (!['QUALIFIED', 'SUBMITTED', 'CLOSING', 'PITCH_READY', 'READY_TO_SUBMIT'].includes(currentState)) {
                 await updateState(conversationId, 'QUALIFIED', 'ai_agent');
                 await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
                 stateAfter = 'QUALIFIED';
 
                 responseContent = "got it. give me a few minutes to run the numbers and ill text you back shortly";
 
-                const facts = await getLeadFacts(conversationId);
-                if (facts.email) {
-                    syncDriveFiles(conversationId, businessName, usageUserId);
-                }
+                syncDriveFiles(conversationId, businessName, usageUserId);
 
                 const fcsCheck = await db.query(
                     "SELECT id FROM fcs_analyses WHERE conversation_id = $1 AND status = 'completed'",
@@ -1055,10 +1033,8 @@ Collecting info. Follow the checklist - ask for missing items.
             }
         }
         else if (decision.action === 'sync_drive') {
-            if (!['QUALIFIED', 'SUBMITTED', 'CLOSING', 'FUNDED'].includes(currentState)) {
-                syncDriveFiles(conversationId, businessName, usageUserId);
-                console.log("📂 Triggered Drive Sync");
-            }
+            syncDriveFiles(conversationId, businessName, usageUserId);
+            console.log("📂 Triggered Drive Sync");
             // Ensure we continue the conversation
             if (!responseContent || responseContent === 'null') {
                 responseContent = "got it. just confirming any new loans this month?";
