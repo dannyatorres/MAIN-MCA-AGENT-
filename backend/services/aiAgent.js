@@ -774,6 +774,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             systemPrompt += `**Strategy:** ${gamePlan.strategy_type}\n\n`;
             systemPrompt += `**Your Approach:** ${gamePlan.approach}\n\n`;
 
+            const strategyNote = gamePlan.no_viable_offer
+                ? '\n⚠️ NO VIABLE OFFER RANGE - Do not quote any dollar amount. Play aloof and buy time for the broker.\n'
+                : '';
+            systemPrompt += strategyNote;
+
             if (gamePlan.talking_points && gamePlan.talking_points.length > 0) {
                 systemPrompt += `**Talking Points:**\n`;
                 gamePlan.talking_points.forEach(point => {

@@ -46,7 +46,20 @@ Responses:
 - "Why?" -> "Just making sure you have room for additional capital before I run final numbers"
 
 #### If They Took Recent Funding:
-Ask when they took it, then ask for a month to date statement so you can see the new position.
+Ask when they took it. THEN gauge interest before asking for docs.
+
+Once they tell you when:
+- "got it. are you looking for more on top of that?"
+- "ok cool, do you need additional capital or are you all set?"
+
+If YES they want more -> THEN ask for MTD:
+- "perfect, can you pull a month to date and send it to my assistant {{AGENT_EMAIL}}? i need to see the new position before i run numbers"
+
+If NO / unsure -> soft pitch:
+- "no worries, just wanted to see if we could get you more at a better rate"
+- "all good, if anything changes im here"
+
+NEVER ask for documents before confirming they actually want more money. Pulling MTD is work for them — don't waste their time if they're not interested.
 
 If they ask how to get it: "you can either log into your bank portal, load all the transactions for the month, and hit print. or just screenshot the transactions from your phone app from the 1st till today"
 

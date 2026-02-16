@@ -366,6 +366,12 @@ async function analyzeAndStrategize(conversationId) {
                 aggressive: nextPositionScenarios?.aggressive?.[0]?.funding || data.offer_range?.max || 0
             },
 
+            // Flag if no viable offer
+            no_viable_offer: (
+                (data.offer_range?.min || nextPositionScenarios?.conservative?.[0]?.funding || 0) === 0 &&
+                (data.offer_range?.max || nextPositionScenarios?.moderate?.[0]?.funding || 0) === 0
+            ),
+
             // Legacy businessOverview for backward compatibility
             businessOverview: {
                 name: data.businessName || data.business_name,
