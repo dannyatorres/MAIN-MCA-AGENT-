@@ -696,6 +696,27 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             };
         }
 
+        // =================================================================
+        // 🚨 LAYER 4E: PITCH ACCEPTANCE CHECK
+        // =================================================================
+        if (currentState === 'PITCH_READY') {
+            const wePitched = /\b\d+k\b/.test(lastOutbound) ||
+                (lastOutbound.includes('does') && lastOutbound.includes('work'));
+            const theyAccepted = ['yes', 'yeah', 'sure', 'yep', 'that works', 'lets do it',
+                'ok', 'sounds good', 'im down', 'yes!', 'absolutely']
+                .some(phrase => lastInbound === phrase || lastInbound.startsWith(phrase));
+            const theyWantAmount = /\b\d+\b/.test(lastInbound) &&
+                (lastInbound.includes('would') || lastInbound.includes('help') ||
+                    lastInbound.includes('need') || lastInbound.includes('best'));
+
+            if (wePitched && (theyAccepted || theyWantAmount)) {
+                console.log('✅ Lead accepted pitch - moving to CLOSING');
+                await updateState(conversationId, 'CLOSING', 'ai_agent');
+                await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
+                systemInstruction = 'Lead accepted the offer amount. Confirm the number, express confidence, and ask them to send the required documents to close.';
+            }
+        }
+
         // 5. BUILD SYSTEM PROMPT
         let systemPrompt = await getPromptForPhase(usageUserId, currentState);
         systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
@@ -948,6 +969,25 @@ Collecting info. Follow the checklist - ask for missing items.
             messages.push({ role: role, content: timestampPrefix + msg.content });
         });
 
+        // 🛡️ ALREADY-PROCESSED CHECK (skip if no new inbound since last AI call)
+        const lastInboundMsg = await db.query(`
+            SELECT id FROM messages 
+            WHERE conversation_id = $1 AND direction = 'inbound'
+            ORDER BY timestamp DESC LIMIT 1
+        `, [conversationId]);
+        const lastInboundMsgId = lastInboundMsg.rows[0]?.id || null;
+
+        const processedCheck = await db.query(
+            'SELECT last_processed_msg_id FROM conversations WHERE id = $1',
+            [conversationId]
+        );
+
+        if (lastInboundMsgId && processedCheck.rows[0]?.last_processed_msg_id === lastInboundMsgId) {
+            console.log(`⏭️ [${leadName}] Already processed last inbound - skipping AI call`);
+            await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
+            return { shouldReply: false };
+        }
+
         // --- FIX 3: Execution Switchboard (Complete) ---
         console.log(`🧠 Calling OpenAI (JSON Mode)...`);
 
@@ -957,13 +997,16 @@ Collecting info. Follow the checklist - ask for missing items.
             response_format: { type: "json_object" }
         });
 
+        const tokens = completion.usage || {};
+        console.log(`💰 TOKENS [${leadName}]: ${tokens.prompt_tokens} in / ${tokens.completion_tokens} out / ${tokens.total_tokens} total`);
+
         if (completion.usage) {
             await trackUsage({
                 userId: usageUserId,
                 conversationId,
                 type: 'llm_call',
                 service: 'openai',
-                model: 'gpt-4o-mini',
+                model: 'gpt-5-mini',
                 inputTokens: completion.usage.prompt_tokens,
                 outputTokens: completion.usage.completion_tokens,
                 metadata: { mode: 'json_agent' }
@@ -979,6 +1022,12 @@ Collecting info. Follow the checklist - ask for missing items.
         }
 
         console.log(`🤖 AI Decision: ${decision.action?.toUpperCase() || 'RESPOND'} | Reason: ${decision.reason || 'N/A'}`);
+
+        // Stamp so we don't reprocess this inbound message
+        if (lastInboundMsgId) {
+            await db.query('UPDATE conversations SET last_processed_msg_id = $1 WHERE id = $2',
+                [lastInboundMsgId, conversationId]);
+        }
 
         let responseContent = decision.message;
         let stateAfter = currentState;
