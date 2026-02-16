@@ -421,7 +421,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             'STRATEGIZED', 'HOT_LEAD', 'VETTING', 'SUBMITTED',  // Agent 2's territory
             'OFFER_RECEIVED', 'NEGOTIATING',  // Agent 3's territory
             // Cold drip - dispatcher owns these, AI stays out
-            'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4'
+            'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4',
+            'READY_TO_SUBMIT'
         ];
 
         // If it's a manual command (systemInstruction has value), we ignore the lock.
@@ -685,7 +686,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // If we asked to close and they said yes, stop immediately
         // =================================================================
         const weAskedToClose = lastOutbound.includes('close the file') || lastOutbound.includes('close it out');
-        const theySaidYes = ['yes', 'yeah', 'sure', 'go ahead', 'yes!'].includes(lastInbound);
+        const theySaidYes = ['yes', 'yeah', 'sure', 'go ahead', 'yes!', 'ok', 'okay', 'ok!'].includes(lastInbound);
 
         if (weAskedToClose && theySaidYes) {
             console.log('📁 Lead confirmed file close - marking as dead');
@@ -694,27 +695,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                 shouldReply: true,
                 content: "understood, ill close it out. if anything changes down the line feel free to reach back out"
             };
-        }
-
-        // =================================================================
-        // 🚨 LAYER 4E: PITCH ACCEPTANCE CHECK
-        // =================================================================
-        if (currentState === 'PITCH_READY') {
-            const wePitched = /\b\d+k\b/.test(lastOutbound) ||
-                (lastOutbound.includes('does') && lastOutbound.includes('work'));
-            const theyAccepted = ['yes', 'yeah', 'sure', 'yep', 'that works', 'lets do it',
-                'ok', 'sounds good', 'im down', 'yes!', 'absolutely']
-                .some(phrase => lastInbound === phrase || lastInbound.startsWith(phrase));
-            const theyWantAmount = /\b\d+\b/.test(lastInbound) &&
-                (lastInbound.includes('would') || lastInbound.includes('help') ||
-                    lastInbound.includes('need') || lastInbound.includes('best'));
-
-            if (wePitched && (theyAccepted || theyWantAmount)) {
-                console.log('✅ Lead accepted pitch - moving to CLOSING');
-                await updateState(conversationId, 'CLOSING', 'ai_agent');
-                await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
-                systemInstruction = 'Lead accepted the offer amount. Confirm the number, express confidence, and ask them to send the required documents to close.';
-            }
         }
 
         // 5. BUILD SYSTEM PROMPT
@@ -887,7 +867,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         You must return Valid JSON ONLY. No markdown, no thinking text.
         Structure:
         {
-           "action": "respond" | "qualify" | "mark_dead" | "sync_drive" | "no_response",
+           "action": "respond" | "qualify" | "mark_dead" | "sync_drive" | "no_response" | "ready_to_submit",
            "message": "The exact SMS to send (lowercase, casual, <160 chars). Null if no_response.",
            "reason": "Internal reasoning here"
         }
@@ -898,6 +878,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - "mark_dead": Lead said stop/remove/not interested.
         - "sync_drive": Lead JUST provided email address.
         - "no_response": Lead said "ok", "thanks", or acknowledged. No reply needed. (NOT if state is PITCH_READY)
+        - "ready_to_submit": Lead accepted the offer. Ask for docs and move to submission.
         `;
 
         // State-specific behavior
@@ -933,15 +914,6 @@ Collecting info. Follow the checklist - ask for missing items.
                 console.log(`⏸️ Lead said they'll send later - skipping AI call`);
                 return { shouldReply: false };
             }
-        }
-
-        // Skip AI call for simple acknowledgments (save API costs)
-        const ackPhrases = ['ok', 'okay', 'thanks', 'thank you', 'got it', 'sounds good',
-            'cool', 'k', 'ty', 'thx', 'appreciate it', 'will do'];
-        if (ackPhrases.includes(lastInbound) && currentState !== 'PITCH_READY') {
-            console.log(`⏸️ [${leadName}] Acknowledgment "${lastInbound}" - skipping AI call (FREE)`);
-            await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
-            return { shouldReply: false };
         }
 
         // 🛡️ ATOMIC CLAIM - Same pattern as processorAgent
@@ -1051,6 +1023,12 @@ Collecting info. Follow the checklist - ask for missing items.
         if (decision.action === 'mark_dead') {
             await updateState(conversationId, 'DEAD', 'ai_agent');
             stateAfter = 'DEAD';
+        }
+        else if (decision.action === 'ready_to_submit') {
+            await updateState(conversationId, 'READY_TO_SUBMIT', 'ai_agent');
+            await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
+            stateAfter = 'READY_TO_SUBMIT';
+            console.log(`🎯 [${leadName}] Accepted offer - READY_TO_SUBMIT`);
         }
         else if (decision.action === 'qualify') {
             if (!['QUALIFIED', 'SUBMITTED', 'CLOSING'].includes(currentState)) {
