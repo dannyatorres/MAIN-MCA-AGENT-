@@ -488,7 +488,11 @@ async function analyzeAndStrategize(conversationId) {
 
         if (gamePlan) {
             // Don't change state - lead stays in ACTIVE, Commander data just gets injected
-            console.log(`🎯 [${businessName}] Strategy ready`);
+            await db.query(
+                `UPDATE conversations SET last_processed_msg_id = NULL WHERE id = $1`,
+                [conversationId]
+            );
+            console.log(`🎯 [${businessName}] Strategy ready - cleared last_processed for re-trigger`);
         }
 
         return gamePlan;
