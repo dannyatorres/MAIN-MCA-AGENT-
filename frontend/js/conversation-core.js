@@ -638,20 +638,25 @@ class ConversationCore {
             freshConv._fullLoaded = true;
             this.conversations.set(String(freshConv.id), freshConv);
 
-            // 4. Re-render the list (auto-sorts by last_activity)
-            this.renderConversationsList();
+            // 4. Update DOM in place instead of full re-render
+            const convoIdStr = String(freshConv.id);
+            const existingItem = document.querySelector(`[data-conversation-id="${convoIdStr}"]`);
 
-            // 5. Flash the row to indicate an update
-            setTimeout(() => {
-                const row = document.querySelector(`.conversation-item[data-conversation-id="${String(freshConv.id)}"]`);
-                if (row) {
-                    row.style.transition = "background-color 0.5s ease";
-                    row.style.backgroundColor = "rgba(0, 255, 136, 0.2)";
-                    setTimeout(() => {
-                        row.style.backgroundColor = "";
-                    }, 1000);
+            if (existingItem) {
+                const preview = existingItem.querySelector('.message-preview');
+                if (preview && freshConv.last_message) {
+                    preview.textContent = freshConv.last_message;
                 }
-            }, 50);
+
+                const timeEl = existingItem.querySelector('.conversation-time');
+                if (timeEl) timeEl.textContent = 'Just now';
+
+                this.animateToCorrectPosition(convoIdStr);
+                this.animator.highlight(convoIdStr);
+            } else {
+                // New conversation not in DOM yet — need to render it in
+                this.renderConversationsList();
+            }
 
         } catch (error) {
             console.error('Failed to handle conversation update:', error);

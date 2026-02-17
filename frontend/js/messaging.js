@@ -164,7 +164,7 @@ class MessagingModule {
         }).then(res => {
             if (res?.message) {
                 this.upgradeMessageBubble(tempId, res.message);
-                this.parent.conversationUI?.updateConversationPreview(convId, res.message);
+                this.parent.conversationUI?.updateConversationInPlace(convId, res.message);
                 if (res.message.status === 'failed') {
                     this.parent.utils?.showNotification('Message failed to send', 'error');
                 }
@@ -246,11 +246,12 @@ class MessagingModule {
         // we strictly ignore the WebSocket echo to prevent duplicates.
         const isOurOutbound = (message.direction === 'outbound' || message.sender_type === 'user')
                               && message.sent_by !== 'ai'
-                              && message.sent_by !== 'system';
+                              && message.sent_by !== 'system'
+                              && message.sent_by !== 'drip';
 
         if (isOurOutbound) {
             // We still update the sidebar preview so the "Last Message" text updates
-            this.parent.conversationUI?.updateConversationPreview(messageConversationId, message);
+            this.parent.conversationUI?.updateConversationInPlace(messageConversationId, message);
             const incomingContent = (message.content || message.message_content || '').trim();
             const incomingMedia = message.media_url || '';
             const isPendingHere = this.pendingMessages.some(p =>
