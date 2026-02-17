@@ -154,23 +154,22 @@ async function runAgentLoop() {
                     AND m.direction = 'inbound'
                     AND m.timestamp > NOW() - INTERVAL '3 days'
               )
-              AND (
-                  (latest.direction = 'outbound'
-                   AND c.nudge_count < 6
-                   AND c.last_activity < NOW() - make_interval(
-                       secs := CASE c.nudge_count
-                           WHEN 0 THEN 900
-                           WHEN 1 THEN 1800
-                           WHEN 2 THEN 3600
-                           WHEN 3 THEN 14400
-                           WHEN 4 THEN 28800
-                           ELSE 86400
-                       END
-                   ))
+              AND c.nudge_count < 6
+              AND c.last_activity < NOW() - make_interval(
+                  secs := CASE c.nudge_count
+                      WHEN 0 THEN 900
+                      WHEN 1 THEN 1800
+                      WHEN 2 THEN 3600
+                      WHEN 3 THEN 14400
+                      WHEN 4 THEN 28800
+                      ELSE 86400
+                  END
               )
             ORDER BY c.last_activity ASC
             LIMIT 50
         `);
+
+        console.log(`⏰ NUDGE LOOP — ${nudges.rows.length} leads queued`);
 
         for (const lead of nudges.rows) {
             const result = await processLeadWithAI(lead.id, '');
