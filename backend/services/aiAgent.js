@@ -827,17 +827,33 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
             console.log(`😴 [${leadName}] NO_RESPONSE — parking for nudge cycle`);
 
             // STALL COUNTER
+            let isStall = false;
             if (isStallMessage(decision.reason || '', lastInbound)) {
+                isStall = true;
                 const facts = await getLeadFacts(conversationId);
                 const currentStalls = parseInt(facts.stall_count || '0', 10) + 1;
                 await saveExtractedFacts(conversationId, { stall_count: String(currentStalls) });
                 console.log(`😴 [${leadName}] Stall detected — stall_count now ${currentStalls}`);
+
+                if (currentStalls >= 4) {
+                    await db.query(
+                        `UPDATE conversations SET nudge_count = 99 WHERE id = $1`,
+                        [conversationId]
+                    );
+                }
             }
 
-            await db.query(
-                `UPDATE conversations SET last_activity = NOW() + INTERVAL '13 minutes', nudge_count = 0 WHERE id = $1`,
-                [conversationId]
-            );
+            if (!isStall) {
+                await db.query(
+                    `UPDATE conversations SET last_activity = NOW() + INTERVAL '13 minutes', nudge_count = 0 WHERE id = $1`,
+                    [conversationId]
+                );
+            } else {
+                await db.query(
+                    `UPDATE conversations SET last_activity = NOW() + INTERVAL '13 minutes' WHERE id = $1`,
+                    [conversationId]
+                );
+            }
             return { shouldReply: false };
         }
 
