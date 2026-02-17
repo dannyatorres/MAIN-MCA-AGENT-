@@ -217,6 +217,24 @@ async function analyzeAndStrategize(conversationId) {
 
         const fcs = fcsRes.rows[0];
         const fcsReport = fcs.fcs_report || "No text report available.";
+        const statementMonths = fcs.statement_months || [];
+        const latestMonth = statementMonths[statementMonths.length - 1];
+
+        if (latestMonth) {
+            await db.query(`
+                INSERT INTO lead_facts (conversation_id, fact_key, fact_value, collected_at)
+                VALUES ($1, 'statements_on_file', $2, NOW())
+                ON CONFLICT (conversation_id, fact_key)
+                DO UPDATE SET fact_value = $2, collected_at = NOW()
+            `, [conversationId, statementMonths.join(', ')]);
+
+            await db.query(`
+                INSERT INTO lead_facts (conversation_id, fact_key, fact_value, collected_at)
+                VALUES ($1, 'statements_current', $2, NOW())
+                ON CONFLICT (conversation_id, fact_key)
+                DO UPDATE SET fact_value = $2, collected_at = NOW()
+            `, [conversationId, latestMonth]);
+        }
 
         // 1b. Fetch lead info for industry/state
         const leadRes = await db.query(`SELECT industry_type, us_state, business_name FROM conversations WHERE id = $1`, [conversationId]);

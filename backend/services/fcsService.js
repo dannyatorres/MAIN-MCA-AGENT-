@@ -219,6 +219,16 @@ class FCSService {
 
             if (extractedData.length === 0) throw new Error('No text extracted from any documents');
 
+            const monthsRes = await db.query(`
+                SELECT statement_month 
+                FROM documents 
+                WHERE conversation_id = $1 
+                  AND statement_month IS NOT NULL
+                ORDER BY statement_month ASC
+            `, [conversationId]);
+
+            const statementMonths = monthsRes.rows.map(r => r.statement_month);
+
             // Shadow learner (non-blocking, won't affect FCS)
             extractedData.forEach(d => {
                 learnFromStatement(d.text, conversationId).catch(err => {
@@ -315,11 +325,14 @@ Position Count: ${positionCount}
                     last_mca_deposit_date = $10,
                     withholding_percentage = $11,
                     position_count = $12,
+                    statement_months = $13,
+                    statement_count = $14,
                     completed_at = NOW()
-                WHERE id = $13
+                WHERE id = $15
             `, [
                 finalReport, averageRevenue, state, industry, negDays, avgNegDays,
-                avgBalance, depositCount, tibText, lastMca, withholdingPct, positionCount, analysisId
+                avgBalance, depositCount, tibText, lastMca, withholdingPct, positionCount,
+                JSON.stringify(statementMonths), statementMonths.length, analysisId
             ]);
 
             console.log(`✅ [${businessName}] FCS complete: $${averageRevenue}/mo, ${negDays} neg days`);
