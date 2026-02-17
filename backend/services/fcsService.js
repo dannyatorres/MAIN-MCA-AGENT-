@@ -446,7 +446,7 @@ async function classifyFromText(db, documentId, extractedText, filename) {
             UPDATE documents 
             SET statement_month = COALESCE($1, statement_month),
                 bank_name = COALESCE($2, bank_name),
-                document_type = 'bank_statement'
+                document_type = 'Bank Statement'
             WHERE id = $3
         `, [statementMonth, bankName, documentId]);
 
