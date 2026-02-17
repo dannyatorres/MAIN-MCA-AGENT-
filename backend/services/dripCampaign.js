@@ -33,7 +33,11 @@ async function sendAndAdvance(conversationId, content, nextState) {
     console.log(`📤 [${conversationId}] Template sent: "${content.substring(0, 50)}..."`);
 }
 
+let isDripRunning = false;
+
 async function runDripLoop() {
+    if (isDripRunning) return;
+    isDripRunning = true;
     const db = getDatabase();
 
     const now = new Date();
@@ -93,6 +97,8 @@ async function runDripLoop() {
         }
     } catch (err) {
         console.error('🔥 Drip loop error:', err.message);
+    } finally {
+        isDripRunning = false;
     }
 }
 

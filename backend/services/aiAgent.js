@@ -6,6 +6,7 @@ const { syncDriveFiles } = require('./driveService');
 const commanderService = require('./commanderService');
 const { updateState } = require('./stateManager');
 const { logAIDecision } = require('./aiDecisionLogger');
+const { sendSMS } = require('./smsSender');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -37,9 +38,15 @@ async function saveExtractedFacts(conversationId, extracted) {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+let isAIRunning = false;
+
 async function runAgentLoop() {
+    if (isAIRunning) {
+        console.log('⭕ AI loop still running — skipping');
+        return;
+    }
+    isAIRunning = true;
     const db = getDatabase();
-    const { sendSMS } = require('./smsSender');
 
     const now = new Date();
     const estHour = parseInt(now.toLocaleString('en-US', {
@@ -68,6 +75,9 @@ async function runAgentLoop() {
         for (const lead of dripReplies.rows) {
             const result = await processLeadWithAI(lead.id, '');
             if (result.shouldReply && result.content) {
+                const humanDelay = 30000 + Math.floor(Math.random() * 60000);
+                console.log(`⏳ [${lead.business_name}] Waiting ${Math.round(humanDelay / 1000)}s before sending...`);
+                await new Promise(r => setTimeout(r, humanDelay));
                 await sendSMS(lead.id, result.content, 'ai');
             }
             await new Promise(r => setTimeout(r, 2000));
@@ -111,11 +121,32 @@ async function runAgentLoop() {
             LIMIT 50
         `);
 
+        const results = [];
         for (const lead of activeLeads.rows) {
             const isNudge = lead.last_direction !== 'inbound';
-            const result = await processLeadWithAI(lead.id, isNudge ? '' : '');
+            const result = await processLeadWithAI(lead.id, '');
+            results.push({ lead, result, isNudge });
+            await new Promise(r => setTimeout(r, 2000));
+        }
 
+        for (const { lead, result, isNudge } of results) {
             if (result.shouldReply && result.content) {
+                if (!isNudge) {
+                    const humanDelay = 30000 + Math.floor(Math.random() * 60000);
+                    console.log(`⏳ [${lead.business_name}] Waiting ${Math.round(humanDelay / 1000)}s before sending...`);
+                    await new Promise(r => setTimeout(r, humanDelay));
+
+                    const fresh = await db.query(`
+                        SELECT direction FROM messages
+                        WHERE conversation_id = $1
+                        ORDER BY timestamp DESC LIMIT 1
+                    `, [lead.id]);
+
+                    if (fresh.rows[0]?.direction === 'inbound') {
+                        console.log(`🔄 [${lead.business_name}] New inbound during delay — skipping stale response`);
+                        continue;
+                    }
+                }
                 await sendSMS(lead.id, result.content, 'ai');
             }
 
@@ -130,6 +161,8 @@ async function runAgentLoop() {
 
     } catch (err) {
         console.error('🔥 Agent loop error:', err.message);
+    } finally {
+        isAIRunning = false;
     }
 }
 
