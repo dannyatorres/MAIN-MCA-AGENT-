@@ -243,7 +243,6 @@ async function analyzeAndStrategize(conversationId) {
                 for (const rule of rulesRes.rows) {
                     blockedLendersText += `- ${rule.lender_name}: ${rule.decline_message || rule.rule_type}\n`;
                 }
-                console.log(`COMMANDER: Found ${rulesRes.rows.length} blocked lenders for this lead`);
             }
         }
 
@@ -269,7 +268,6 @@ async function analyzeAndStrategize(conversationId) {
             .replace(/\{\{current_month\}\}/g, `${currentMonth} ${currentYear}`);
 
         // 3. Run AI
-        console.log('COMMANDER: Calling Gemini API...');
         const result = await commander.generateContent(prompt);
 
         // Track usage
@@ -300,11 +298,6 @@ async function analyzeAndStrategize(conversationId) {
         const data = JSON.parse(responseText);
 
         // Debug logging
-        console.log('=== GEMINI PARSED DATA ===');
-        console.log('avgRevenue:', data.avgRevenue);
-        console.log('currentPositionCount:', data.currentPositionCount);
-        console.log('mcaPositions:', data.mcaPositions?.length || 0);
-        console.log('==========================');
 
         // 4. Calculate Withholding
         const activePositions = (data.mcaPositions || []).filter(p =>
@@ -333,11 +326,6 @@ async function analyzeAndStrategize(conversationId) {
                 lastPositionForScenarios
             );
 
-            console.log('=== SCENARIO GENERATION ===');
-            console.log('Conservative:', nextPositionScenarios?.conservative?.length || 0);
-            console.log('Moderate:', nextPositionScenarios?.moderate?.length || 0);
-            console.log('Aggressive:', nextPositionScenarios?.aggressive?.length || 0);
-            console.log('===========================');
         }
 
         // 7. Build Game Plan Object - Pass through AI response + add computed fields
@@ -392,10 +380,7 @@ async function analyzeAndStrategize(conversationId) {
         const recommendedPayment = data.recommended_payment || nextPositionScenarios?.moderate?.[0]?.payment || 0;
         const avgRevenue = data.avg_monthly_revenue || data.revenue_trend?.floor_month?.amount || data.avgRevenue || 0;
 
-        console.log(`COMMANDER VERDICT:`);
-        console.log(`   Grade: ${gamePlan.lead_grade}`);
-        console.log(`   Strategy: ${gamePlan.strategy_type}`);
-        console.log(`   Offer Range: ${gamePlan.offer_range.min.toLocaleString()} - ${gamePlan.offer_range.max.toLocaleString()}`);
+        console.log(`COMMANDER VERDICT: Grade=${gamePlan.lead_grade} | Strategy=${gamePlan.strategy_type} | Offer=${gamePlan.offer_range.min.toLocaleString()}-${gamePlan.offer_range.max.toLocaleString()}`);
 
         // 8. SAVE TO DATABASE - Structured Data
         const strategyId = uuidv4();
