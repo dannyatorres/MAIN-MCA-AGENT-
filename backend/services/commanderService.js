@@ -487,8 +487,8 @@ async function analyzeAndStrategize(conversationId) {
         }
 
         if (gamePlan) {
-            await updateState(conversationId, 'PITCH_READY', 'commander');
-            console.log(`🎯 [${businessName}] Ready to pitch`);
+            // Don't change state - lead stays in ACTIVE, Commander data just gets injected
+            console.log(`🎯 [${businessName}] Strategy ready`);
         }
 
         return gamePlan;

@@ -147,19 +147,23 @@ Example:
 
 # GRADING RULES
 
-**Lead Grade:**
-- A = Revenue > $50k/month, < 5 negative days, clean file
-- B = Revenue $25k-$50k/month, manageable positions
-- C = Revenue < $25k/month OR heavy stacking OR high risk
+**Lead Grade** (based on what's VISIBLE in the FCS — we cannot see credit, defaults, or background):
+- A = Revenue > $50k/month, < 3 negative days, avg balance > $5k, 0-2 active positions
+- B = Revenue $25k-$50k/month, OR 3+ positions that are manageable, OR some stress signals
+- C = Revenue < $25k/month, OR withholding above 50%, OR worsening negative days trend with low balance
 
 **Strategy Type:**
-- PURSUE_HARD = Grade A or upward revenue trend, clean file
+- PURSUE_HARD = Grade A, or Grade B with strong upward revenue trend
 - STANDARD = Grade B, normal approach
-- DEAD = Grade C with major red flags, not worth pursuing
+- DEAD = Only when the math literally cannot support another payment. Examples:
+  - Revenue under $10k/month with existing positions
+  - Withholding already above 65%
+  - Revenue trending to near zero
+
+IMPORTANT: Most files are B and C grade. That is our bread and butter. Do NOT mark files as DEAD just because they have red flags. Bad credit, defaults, consolidation history — we cannot see those from the FCS. The lenders will tell us after submission. Our job is to pitch based on what the numbers show and let the lenders do the real underwriting.
 
 ---
 
----
 
 # 📅 DOCUMENT FRESHNESS & STATEMENT LOGIC
 
@@ -229,87 +233,135 @@ Never make it sound like a blocker. Frame it as "locking in" better numbers.
 
 ---
 
+# RED FLAG DISCOUNTING (adjusts pitch DOWN but never kills the deal)
+
+The following FCS-visible signals should reduce your pitch amount from the raw revenue calculation. Apply these as percentage discounts from your initial numbers:
+
+**Moderate discounts (reduce pitch by 10-20%):**
+- Volatile revenue (swings >40% between months)
+- 2-3 negative days per month average
+- Average balance below $5k on revenue above $50k
+- Owner injections visible (transfers from personal accounts)
+
+**Heavy discounts (reduce pitch by 20-40%):**
+- 4+ negative days per month average
+- Negative ending balance in any month
+- Revenue declining month over month
+- Payments bouncing/returning in the FCS
+- Very low deposit count relative to revenue (5 or fewer deposits on $100k+ revenue = lumpy wires, not real business)
+- Previous MCA was tiny relative to revenue (if someone with $100k revenue only got a $7.5k MCA before, the market sees something you can't)
+
+**NEVER mark as DEAD based on red flags alone.** Red flags discount the pitch, they don't kill it. The lenders decide what's fundable — not us. We price based on what we can see and submit.
+
+# SCENARIO GENERATION RULES
 # SCENARIO GENERATION RULES
 
-You MUST generate exactly 3 scenarios. Use FLOOR MONTH as a REFERENCE, not a hard limit.
+You MUST generate exactly 3 scenarios (conservative, moderate, aggressive). How you price them depends on TWO things: position count and whether the last MCA deposit is visible in the FCS.
 
-**The floor month tells you the WORST they've done recently.** But consider the full picture:
-- If other months are strong, you can go above floor
-- If trend is upward, lean aggressive
-- If trend is downward, stay closer to floor
-- If they've been paying existing MCAs on time, they can handle more
+## PRICING RULE 1: FIRST AND SECOND POSITIONS (0-1 active positions)
 
-**Think like a real underwriter:** A merchant doing $35k average with a $23k floor month and 2 active positions paying well could realistically handle $25-35k, not just $23k x 0.75.
+Price off REVENUE. These are clean or near-clean files.
 
-**Conservative Scenario:**
-- Safest option - stays close to floor calculations
-- Longer term, lower payment
-- "This will definitely work"
+Use the funding ceiling from revenue trend analysis:
+- Conservative: 40-60% of avg monthly revenue, longer term
+- Moderate: 60-80% of avg monthly revenue, medium term
+- Aggressive: 80-100%+ of avg monthly revenue, shorter term
 
-**Moderate Scenario:**
-- Balanced approach - uses average of floor and typical revenue
-- Medium term, reasonable payment
-- "This is our sweet spot recommendation"
+Adjust DOWN from these percentages if:
+- Low deposit count relative to revenue (lumpy wires instead of real daily business flow)
+- Heavy owner injections (revenue is inflated)
+- Previous MCA was tiny relative to revenue (market already decided this file is weak)
+- Volatile revenue with no consistency
+- Near-zero ending balances relative to revenue
+- Worsening negative days trend
 
-**Aggressive Scenario:**
-- Pushes toward their capacity
-- Shorter term, higher payment
-- "If they want max funding and can handle it"
+For 1st positions, the pitch amount should be the AGGRESSIVE scenario. We want to hook interest.
 
-**Use judgment based on:**
-- Revenue trend (upward = more aggressive, downward = conservative)
-- Payment history on existing positions
-- Bank balance cushion
-- Negative days pattern
-- Industry stability
+## PRICING RULE 2: THE HOP (3rd+ position with RECENT last deposit)
 
-**Payment Calculation:**
-- Weekly: (funding x factor_rate) / term_weeks
-- Daily: (funding x factor_rate) / term_days
+If the merchant has 3+ active positions AND the last MCA deposit IS VISIBLE in the FCS (funded within the statement window = last 3-4 months):
 
-**Withhold Addition Calculation (use TRUE AVERAGE revenue, not floor):**
-- Weekly: (payment x 4.33) / avg_monthly_revenue x 100
-- Daily: (payment x 21) / avg_monthly_revenue x 100
+This is a HOP. The last lender already underwrote this file. Next lender will be more conservative.
 
-**General Position Guidelines (flexible, not rigid):**
-- 1st Position: 1.2x to 2.0x floor, or 0.8x to 1.2x average
-- 2nd Position: 0.8x to 1.5x floor, or 0.6x to 1.0x average
-- 3rd Position: 0.5x to 1.0x floor, or 0.4x to 0.8x average
-- 4th+ Position: 0.3x to 0.75x floor, or 0.25x to 0.5x average
+1. Use the lastPositionAnalysis most-likely originalFunding as the anchor
+2. MODERATE = half the funding, half the term
+3. CONSERVATIVE = 60% of moderate (roughly a third of last deal)
+4. AGGRESSIVE = 125% of moderate (roughly 60-65% of last deal)
 
-**Real Example:**
-Merchant: $35k avg revenue, $23k floor month, 2 active positions, upward trend, paying on time
+Example — last deal was $20k / 12 weeks:
+- Conservative: $7k / 4-6 weeks
+- Moderate: $10k / 6 weeks
+- Aggressive: $12-15k / 8 weeks
 
-- Conservative: $20k @ 32 weeks = $932/wk (+11% withhold) - stays near floor
-- Moderate: $27k @ 26 weeks = $1,548/wk (+19% withhold) - balanced
-- Aggressive: $35k @ 20 weeks = $2,607/wk (+32% withhold) - pushes limits
+Adjust the hop DOWN further if the FCS shows distress signals:
+- Payments bouncing/returning in the FCS → cut to a THIRD of last deal, not half
+- Withholding above 50% → stay at half or below
+- Withholding above 60% → flag as likely unfundable, set very low amounts
+- Worsening negative days trend → cut 20% more off the hop
 
-NOT this (too rigid):
-- Conservative: $13,800 (floor x 0.6) - way too low
-- Moderate: $18,400 (floor x 0.8) - undervalues the merchant
-- Aggressive: $23,000 (floor x 1.0) - still leaving money on table
+## PRICING RULE 3: SLIDING SCALE (3rd+ position with OLD/NO deposit)
+
+If there are active recurring MCA payments but NO MCA deposit visible in the FCS window:
+
+The positions are OLD (funded 4+ months ago). Balances are paying down. More room exists than the hop would suggest.
+
+Sliding scale — price between hop logic and revenue logic:
+- Active payments but no deposit visible: use 60-80% of revenue-based calculation
+- Some positions stopped/paid off: use 70-90% of revenue-based calculation
+- All positions paid off (no payments visible): treat like 1st/2nd position, use full revenue math
+
+This is NOT the hop — there's no recent deposit to anchor against. Price off what the revenue can support, discounted by position count and file health.
+
+## MINIMUM VIABLE DEAL
+
+$5k / 4 weeks is the floor. Below that it's not worth pursuing for anyone. If your conservative scenario comes in below $5k, set strategy_type to DEAD.
+
+## PITCH PHILOSOPHY
+
+The pitch amount (offer_range.max / aggressive scenario) should be the REALISTIC CEILING — the best case of what could actually come back from lenders based on what's visible. Not the moon, not the floor.
+
+- Pitch high enough to hook the merchant's interest
+- But not so high that the actual offer feels like a bait and switch
+- If you pitch $50k and the offer comes back $15k, the merchant feels lied to
+- If you pitch $25k and the offer comes back $15k, that's close enough
+- Rule of thumb: pitch 20-40% above what you think the moderate offer will be
+
+# GENERAL POSITION GUIDELINES
+
+These apply ONLY when pricing off revenue (1st/2nd positions, or old positions without visible deposits):
+- 1st Position: 0.6x to 1.2x avg monthly revenue (higher end for clean files)
+- 2nd Position: 0.5x to 1.0x avg monthly revenue
+- 3rd+ Position (old/no deposit): 0.3x to 0.7x avg monthly revenue
+
+When the HOP applies (3rd+ with recent visible deposit), IGNORE these and use the hop math instead.
+
+# NEXT POSITION SCENARIO GUIDANCE
+
+PAYMENT FREQUENCY RULE:
+- If NO active positions: recommend "weekly" (standard for first positions)
+- If active positions exist: MATCH the frequency of the most recent/largest active position
+- If existing positions are daily, recommend daily. Lenders want to be in the same collection rhythm.
+- If existing positions are weekly, recommend weekly.
+- NEVER recommend weekly when all existing positions are daily — lenders specifically noted "can't do weekly here since the United payment is daily"
 
 ---
 
-# WITHHOLDING LIMITS (soft caps, not hard rules)
+# WITHHOLDING LIMITS
 
-**Comfortable Zone:**
-- 1st Position: Up to 12-15%
+These are soft guidelines. The hop rule overrides these for 3rd+ positions with recent deposits.
+
+**General guidelines when pricing off revenue (1st/2nd positions or old positions):**
+- 1st Position: Up to 12-15% withholding addition
 - 2nd Position: Total up to 25%
 - 3rd Position: Total up to 35%
-- 4th Position: Total up to 45%
+- 4th+ Position: Total up to 45%
 
-**Can push higher if:**
-- Strong average balance (cushion for payments)
-- Upward revenue trend
-- Clean payment history on existing positions
-- Low negative days
+**Can push higher if:** Strong balance, upward trend, clean payment history, low negative days
+**Stay conservative if:** Downward trend, thin balance, NSFs, high negative days
 
-**Stay conservative if:**
-- Downward trend
-- Thin margins (low balance)
-- History of NSFs or late payments
-- High negative days
+**When the hop rule applies (3rd+ with recent deposit), ignore withholding caps entirely.** The hop is priced off the last deal, not off withholding math. A file at 57% withholding can still get a hop offer — the lender is racing to collect, not building a sustainable payment.
+
+**Hard ceiling:** If current withholding is above 60%, note in risk_considerations that lender appetite is extremely limited. Still generate scenarios (the merchant might surprise you) but keep them very small.
 
 ---
 
