@@ -40,69 +40,118 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 let isAIRunning = false;
 
+function isAckMessage(text) {
+    if (!text) return false;
+    const msg = String(text).trim().toLowerCase();
+    const acks = new Set([
+        'ok', 'okay', 'thanks', 'thank you', 'got it', 'sounds good', 'cool', 'k', 'ty', 'thx',
+        'appreciate it', 'will do', '👍', '👌', '🙏', '✅'
+    ]);
+    return acks.has(msg);
+}
+
 async function runAgentLoop() {
     if (isAIRunning) {
         console.log('⭕ AI loop still running — skipping');
         return;
     }
     isAIRunning = true;
-    const db = getDatabase();
 
+    const db = getDatabase();
     const now = new Date();
     const estHour = parseInt(now.toLocaleString('en-US', {
         timeZone: 'America/New_York', hour: 'numeric', hour12: false
     }));
-    if (estHour < 8 || estHour >= 22) return;
+    if (estHour < 8 || estHour >= 22) { isAIRunning = false; return; }
 
     try {
-        const dripReplies = await db.query(`
-            SELECT c.id, c.business_name,
-                   last_msg.direction AS last_direction
+        const replies = await db.query(`
+            SELECT c.id, c.state, c.business_name, c.nudge_count,
+                   c.last_processed_msg_id,
+                   latest.id AS latest_msg_id,
+                   latest.direction AS last_direction,
+                   latest.content AS last_content
             FROM conversations c
-            LEFT JOIN LATERAL (
-                SELECT direction FROM messages m
+            JOIN LATERAL (
+                SELECT id, direction, content FROM messages m
                 WHERE m.conversation_id = c.id
                 ORDER BY m.timestamp DESC LIMIT 1
-            ) last_msg ON true
-            WHERE c.state = 'DRIP'
+            ) latest ON true
+            WHERE c.state IN ('DRIP', 'ACTIVE', 'PITCH_READY', 'CLOSING')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND c.last_activity < NOW() - INTERVAL '2 minutes'
-              AND last_msg.direction = 'inbound'
-            LIMIT 100
+              AND latest.direction = 'inbound'
+              AND (c.last_processed_msg_id IS NULL OR c.last_processed_msg_id != latest.id)
+            ORDER BY c.last_activity ASC
+            LIMIT 50
         `);
 
-        for (const lead of dripReplies.rows) {
-            const result = await processLeadWithAI(lead.id, '');
-            if (result.shouldReply && result.content) {
-                const humanDelay = 30000 + Math.floor(Math.random() * 60000);
-                console.log(`⏳ [${lead.business_name}] Waiting ${Math.round(humanDelay / 1000)}s before sending...`);
-                await new Promise(r => setTimeout(r, humanDelay));
-                await sendSMS(lead.id, result.content, 'ai');
+        console.log(`🤖 AI LOOP — ${replies.rows.length} inbound replies, checking nudges next...`);
+
+        const replyResults = [];
+        for (const lead of replies.rows) {
+            if (isAckMessage(lead.last_content)) {
+                console.log(`😴 [${lead.business_name}] Ack — skipping GPT`);
+                await db.query(
+                    `UPDATE conversations SET last_processed_msg_id = $1, last_activity = NOW(), nudge_count = 0 WHERE id = $2`,
+                    [lead.latest_msg_id, lead.id]
+                );
+                continue;
             }
+
+            await db.query(
+                'UPDATE conversations SET last_processed_msg_id = $1 WHERE id = $2',
+                [lead.latest_msg_id, lead.id]
+            );
+
+            const result = await processLeadWithAI(lead.id, '');
+            replyResults.push({ lead, result });
             await new Promise(r => setTimeout(r, 2000));
         }
 
-        const activeLeads = await db.query(`
+        for (const { lead, result } of replyResults) {
+            if (result.shouldReply && result.content) {
+                const humanDelay = 30000 + Math.floor(Math.random() * 60000);
+                console.log(`⏳ [${lead.business_name}] Waiting ${Math.round(humanDelay/1000)}s...`);
+                await new Promise(r => setTimeout(r, humanDelay));
+
+                const fresh = await db.query(`
+                    SELECT id FROM messages
+                    WHERE conversation_id = $1 AND direction = 'inbound'
+                      AND id != $2
+                    ORDER BY timestamp DESC LIMIT 1
+                `, [lead.id, lead.latest_msg_id]);
+
+                if (fresh.rows.length > 0 && fresh.rows[0].id !== lead.latest_msg_id) {
+                    console.log(`🔄 [${lead.business_name}] New message arrived — skipping stale response`);
+                    continue;
+                }
+
+                await sendSMS(lead.id, result.content, 'ai');
+            }
+
+            if (['DRIP', 'NEW'].includes(lead.state) && result.shouldReply) {
+                await updateState(lead.id, 'ACTIVE', 'ai_agent');
+            }
+        }
+
+        const nudges = await db.query(`
             SELECT c.id, c.state, c.business_name, c.nudge_count,
-                   last_msg.direction AS last_direction,
-                   EXTRACT(EPOCH FROM (NOW() - c.last_activity))/60 as minutes_idle
+                   latest.direction AS last_direction
             FROM conversations c
-            LEFT JOIN LATERAL (
+            JOIN LATERAL (
                 SELECT direction FROM messages m
                 WHERE m.conversation_id = c.id
                 ORDER BY m.timestamp DESC LIMIT 1
-            ) last_msg ON true
+            ) latest ON true
             WHERE c.state IN ('ACTIVE', 'PITCH_READY', 'CLOSING')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND (
                   c.state = 'PITCH_READY'
                   OR
-                  (last_msg.direction = 'inbound'
-                   AND c.last_activity < NOW() - INTERVAL '2 minutes')
-                  OR
-                  (last_msg.direction = 'outbound'
+                  (latest.direction = 'outbound'
                    AND c.nudge_count < 6
                    AND c.last_activity < NOW() - make_interval(
                        secs := CASE c.nudge_count
@@ -115,63 +164,39 @@ async function runAgentLoop() {
                        END
                    ))
               )
-            ORDER BY
-                CASE WHEN last_msg.direction = 'inbound' THEN 0 ELSE 1 END,
-                c.last_activity ASC
+            ORDER BY c.last_activity ASC
             LIMIT 50
         `);
 
-        const results = [];
-        for (const lead of activeLeads.rows) {
-            const isNudge = lead.last_direction !== 'inbound';
+        for (const lead of nudges.rows) {
             const result = await processLeadWithAI(lead.id, '');
-            results.push({ lead, result, isNudge });
-            await new Promise(r => setTimeout(r, 2000));
-        }
-
-        for (const { lead, result, isNudge } of results) {
             if (result.shouldReply && result.content) {
-                if (!isNudge) {
-                    const humanDelay = 30000 + Math.floor(Math.random() * 60000);
-                    console.log(`⏳ [${lead.business_name}] Waiting ${Math.round(humanDelay / 1000)}s before sending...`);
-                    await new Promise(r => setTimeout(r, humanDelay));
-
-                    const fresh = await db.query(`
-                        SELECT direction FROM messages
-                        WHERE conversation_id = $1
-                        ORDER BY timestamp DESC LIMIT 1
-                    `, [lead.id]);
-
-                    if (fresh.rows[0]?.direction === 'inbound') {
-                        console.log(`🔄 [${lead.business_name}] New inbound during delay — skipping stale response`);
-                        continue;
-                    }
-                }
                 await sendSMS(lead.id, result.content, 'ai');
             }
-
-            if (isNudge) {
-                await db.query(
-                    'UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1',
-                    [lead.id]
-                );
-            }
+            await db.query(
+                'UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1',
+                [lead.id]
+            );
             await new Promise(r => setTimeout(r, 2000));
         }
 
     } catch (err) {
-        console.error('🔥 Agent loop error:', err.message);
+        console.error('🔥 AI loop error:', err.message);
     } finally {
         isAIRunning = false;
     }
 }
 
 let loopInterval = null;
-function startAgentLoop(intervalMs = 30000) {
-    if (loopInterval) clearInterval(loopInterval);
-    console.log(`🚀 Agent loop started — every ${intervalMs / 1000}s`);
-    runAgentLoop();
-    loopInterval = setInterval(runAgentLoop, intervalMs);
+function startAgentLoop(intervalMs = 60000) {
+    console.log(`🤖 AI loop started — every ${intervalMs / 1000}s`);
+
+    async function tick() {
+        await runAgentLoop();
+        setTimeout(tick, intervalMs);
+    }
+
+    tick();
 }
 
 function stopAgentLoop() {

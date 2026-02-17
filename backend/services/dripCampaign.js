@@ -104,10 +104,14 @@ async function runDripLoop() {
 
 let loopInterval = null;
 function startDripLoop(intervalMs = 30000) {
-    if (loopInterval) clearInterval(loopInterval);
-    console.log(`🚀 Drip loop started — every ${intervalMs / 1000}s`);
-    runDripLoop();
-    loopInterval = setInterval(runDripLoop, intervalMs);
+    console.log(`📨 Drip loop started — every ${intervalMs / 1000}s`);
+
+    async function tick() {
+        await runDripLoop();
+        setTimeout(tick, intervalMs);
+    }
+
+    tick();
 }
 
 function stopDripLoop() {
