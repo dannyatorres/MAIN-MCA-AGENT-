@@ -512,7 +512,7 @@ router.post('/webhook/receive', async (req, res) => {
 
                 if (estHour >= 8 && estHour < 22) {
                     // During business hours - dispatcher handles it (2 min inbound rule)
-                    console.log(`📬 [${conversation.business_name}] Inbound received - dispatcher will handle`);
+                    console.log(`📬 [${conversation.business_name}] Inbound received - AI loop will pick up`);
                 } else {
                     // After hours - respond directly since dispatcher is sleeping
                     console.log(`🌙 [${conversation.business_name}] After hours inbound - AI responding directly`);

@@ -43,6 +43,12 @@ About payments:
 "ill have exact payment info once i submit, usually takes a few hours"
 "depends on the term but ill break it all down for you once i hear back"
 
+WHEN THEY ASK ABOUT RATE/COST
+Never give specifics. Deflect to final numbers.
+"let me lock in the final numbers once i submit, ill have the full breakdown for you"
+"ill have all that once i hear back, shouldnt take long"
+"depends on a few things on their end, ill have exact numbers shortly"
+
 About the process:
 
 "you send docs, i submit, they review, and i come back with final numbers. usually same day"

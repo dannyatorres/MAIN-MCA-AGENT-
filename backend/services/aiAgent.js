@@ -77,7 +77,7 @@ async function runAgentLoop() {
                 WHERE m.conversation_id = c.id
                 ORDER BY m.timestamp DESC LIMIT 1
             ) latest ON true
-            WHERE c.state IN ('DRIP', 'ACTIVE', 'PITCH_READY', 'CLOSING')
+            WHERE c.state IN ('DRIP', 'ACTIVE', 'PITCH_READY', 'CLOSING', 'READY_TO_SUBMIT')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND c.last_activity < NOW() - INTERVAL '2 minutes'
@@ -145,7 +145,7 @@ async function runAgentLoop() {
                 WHERE m.conversation_id = c.id
                 ORDER BY m.timestamp DESC LIMIT 1
             ) latest ON true
-            WHERE c.state IN ('ACTIVE', 'PITCH_READY', 'CLOSING')
+            WHERE c.state IN ('ACTIVE', 'PITCH_READY', 'CLOSING', 'READY_TO_SUBMIT')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND EXISTS (
@@ -155,7 +155,8 @@ async function runAgentLoop() {
                     AND m.timestamp > NOW() - INTERVAL '3 days'
               )
               AND (
-                  c.state = 'PITCH_READY'
+                  (c.state = 'PITCH_READY'
+                   AND c.last_activity < NOW() - INTERVAL '2 minutes')
                   OR
                   (latest.direction = 'outbound'
                    AND c.nudge_count < 6
@@ -705,7 +706,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - "mark_dead": Lead said stop/remove/not interested/wrong person.
         - "sync_drive": Lead JUST provided email address.
         - "no_response": Lead sent a pure acknowledgment AND you have nothing pending to deliver. Examples: lead says "ok" after you said you'd follow up, lead sends a thumbs up after receiving info. IMPORTANT: If you are in PITCH_READY state or have an offer range to present, you MUST pitch — an "ok" or "thanks" from the lead means they're waiting on YOU. Do not go silent when you owe them a response.
-        - "ready_to_submit": Lead accepted the pitch and is ready to move forward. Ask for docs and move to submission.
+        - "ready_to_submit": Lead accepted the pitch AND confirmed they're ok with weekly payments. If they accepted the amount but you haven't asked about weekly yet, DO NOT use this action — respond first and ask "let me run the final numbers but youre good with a weekly right?" Only use ready_to_submit once they confirm weekly.
         `;
 
         
