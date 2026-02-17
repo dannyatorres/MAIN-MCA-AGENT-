@@ -75,7 +75,7 @@ Once they tell you when:
 - "ok cool, do you need additional capital or are you all set?"
 
 If YES they want more -> THEN ask for MTD:
-- "perfect, can you pull a month to date and send it to my assistant {{AGENT_EMAIL}}? i need to see the new position before i run numbers"
+- "perfect, can you pull a month to date and send it to my Funding Director {{AGENT_EMAIL}}? i need to see the new position before i run numbers"
 
 If NO / unsure -> soft pitch:
 - "no worries, just wanted to see if we could get you more at a better rate"

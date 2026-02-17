@@ -519,8 +519,63 @@ router.post('/webhook/receive', async (req, res) => {
                     });
                 }
 
-                // AI handled by dispatcher (2 min inbound rule)
-                console.log(`📬 [${conversation.business_name}] Inbound received - dispatcher will handle`);
+                // Check if dispatcher is active (business hours)
+                const estHour = parseInt(new Date().toLocaleString('en-US', {
+                    timeZone: 'America/New_York',
+                    hour: 'numeric',
+                    hour12: false
+                }));
+
+                if (estHour >= 8 && estHour < 22) {
+                    // During business hours - dispatcher handles it (2 min inbound rule)
+                    console.log(`📬 [${conversation.business_name}] Inbound received - dispatcher will handle`);
+                } else {
+                    // After hours - respond directly since dispatcher is sleeping
+                    console.log(`🌙 [${conversation.business_name}] After hours inbound - AI responding directly`);
+
+                    const aiResult = await processLeadWithAI(conversation.id, null);
+
+                    if (aiResult.shouldReply && aiResult.content) {
+                        let messageToSend = aiResult.content
+                            .replace(/\(Calling\s+\w+[^)]*\)/gi, '')
+                            .replace(/\w+_\w+\s+(tool\s+)?invoked\.?/gi, '')
+                            .replace(/\{"status"\s*:\s*"[^"]*"[^}]*\}/gi, '')
+                            .trim();
+
+                        if (messageToSend && messageToSend.length >= 3) {
+                            if (messageToSend.includes('\n\n')) {
+                                messageToSend = messageToSend.split('\n\n')[0].trim();
+                            }
+
+                            const aiMsgResult = await db.query(`
+                                INSERT INTO messages (conversation_id, content, direction, message_type, sent_by, status, timestamp)
+                                VALUES ($1, $2, 'outbound', 'sms', 'ai', 'pending', NOW())
+                                RETURNING *
+                            `, [conversation.id, messageToSend]);
+
+                            const twilio = require('twilio');
+                            const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+                            const sentMsg = await client.messages.create({
+                                body: messageToSend,
+                                from: process.env.TWILIO_PHONE_NUMBER,
+                                to: From
+                            });
+
+                            await db.query("UPDATE messages SET status = 'sent', twilio_sid = $1 WHERE id = $2",
+                                [sentMsg.sid, aiMsgResult.rows[0].id]);
+
+                            console.log(`✅ [${conversation.business_name}] After hours AI sent: "${messageToSend.substring(0, 50)}..."`);
+
+                            if (global.io) {
+                                global.io.emit('new_message', {
+                                    conversation_id: conversation.id,
+                                    message: { ...aiMsgResult.rows[0], status: 'sent', twilio_sid: sentMsg.sid }
+                                });
+                            }
+                        }
+                    }
+                }
             } catch (err) {
                 console.error('❌ Post-webhook error:', err);
             } finally {
