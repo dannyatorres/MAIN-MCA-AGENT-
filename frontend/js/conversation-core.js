@@ -342,17 +342,23 @@ class ConversationCore {
         let visible = Array.from(this.conversations.values());
 
         // All filtering (UNREAD, INTERESTED, search) is now server-side
-        // Just sort locally: Offers first, then unread, then by message time
+        // Just sort locally: Offers first, then unread, then engagement, then by message time
         visible.sort((a, b) => {
+            // Tier 1: Offers always on top
             if (a.has_offer && !b.has_offer) return -1;
             if (!a.has_offer && b.has_offer) return 1;
 
+            // Tier 2: Unread inbound messages
             if ((a.unread_count > 0) && !(b.unread_count > 0)) return -1;
             if (!(a.unread_count > 0) && (b.unread_count > 0)) return 1;
 
+            // Tier 3: Active engagement (lead has replied) above drip-only
+            if (a.has_response && !b.has_response) return -1;
+            if (!a.has_response && b.has_response) return 1;
+
+            // Tier 4: Most recent activity
             const timeA = new Date(a.last_message_at || a.last_activity || a.created_at || 0);
             const timeB = new Date(b.last_message_at || b.last_activity || b.created_at || 0);
-
             return timeB - timeA;
         });
 
@@ -480,12 +486,121 @@ class ConversationCore {
         }
 
         // Update data
+        const now = new Date().toISOString();
         conv.last_message = message.content || (message.media_url ? '📷 Photo' : 'New Message');
-        conv.last_activity = new Date().toISOString();
+        conv.last_message_at = now;
+        conv.last_activity = now;
         this.conversations.set(convoId, conv);
 
         // Re-render the list to keep ordering consistent
         this.renderConversationsList();
+    }
+
+    // Targeted sidebar update — no full re-render, uses animator
+    updateConversationInPlace(conversationId, message) {
+        const convoId = String(conversationId);
+        let conv = this.conversations.get(convoId);
+
+        if (!conv) {
+            // New conversation we don't have yet — fetch and full render
+            this.handleConversationUpdate(convoId);
+            return;
+        }
+
+        // 1. Update the data
+        const now = new Date().toISOString();
+        conv.last_message = message.content || message.message_content || (message.media_url ? '📷 Photo' : 'New Message');
+        conv.last_message_at = now;
+        conv.last_activity = now;
+        this.conversations.set(convoId, conv);
+
+        // 2. Update the DOM element in place (no innerHTML nuke)
+        const container = this.getContainer();
+        if (!container) return;
+
+        const item = container.querySelector(`[data-conversation-id="${convoId}"]`);
+        if (!item) {
+            // Item not in DOM (maybe scrolled out of page) — full render
+            this.renderConversationsList();
+            return;
+        }
+
+        const preview = item.querySelector('.message-preview');
+        if (preview) {
+            preview.style.opacity = '0';
+            setTimeout(() => {
+                preview.textContent = conv.last_message;
+                preview.style.opacity = '1';
+            }, 120);
+        }
+
+        const timeEl = item.querySelector('.conversation-time');
+        if (timeEl) timeEl.textContent = 'Just now';
+
+        // 3. Animate to correct position (instead of full re-render)
+        this.animateToCorrectPosition(convoId);
+    }
+
+    getContainer() {
+        return document.getElementById('conversationsList');
+    }
+
+    animateToCorrectPosition(conversationId) {
+        const container = this.getContainer();
+        if (!container) return;
+
+        const item = container.querySelector(`[data-conversation-id="${conversationId}"]`);
+        if (!item) return;
+
+        // Figure out where this item SHOULD be based on current sort
+        const sorted = Array.from(this.conversations.values());
+        sorted.sort((a, b) => {
+            // Tier 1: Offers
+            if (a.has_offer && !b.has_offer) return -1;
+            if (!a.has_offer && b.has_offer) return 1;
+
+            // Tier 2: Unread inbound
+            if ((a.unread_count > 0) && !(b.unread_count > 0)) return -1;
+            if (!(a.unread_count > 0) && (b.unread_count > 0)) return 1;
+
+            // Tier 3: Has inbound response (active engagement) vs drip-only
+            if (a.has_response && !b.has_response) return -1;
+            if (!a.has_response && b.has_response) return 1;
+
+            // Tier 4: Time
+            const timeA = new Date(a.last_message_at || a.last_activity || a.created_at || 0);
+            const timeB = new Date(b.last_message_at || b.last_activity || b.created_at || 0);
+            return timeB - timeA;
+        });
+
+        const targetIndex = sorted.findIndex(c => String(c.id) === conversationId);
+        const items = container.querySelectorAll('.conversation-item');
+        const currentIndex = Array.from(items).indexOf(item);
+
+        if (targetIndex === currentIndex || targetIndex === -1) {
+            // Already in the right place — just flash it
+            this.animator.highlight(conversationId);
+            return;
+        }
+
+        if (targetIndex === 0) {
+            // Animate to top
+            this.animator.moveToTop(conversationId);
+        } else if (targetIndex < currentIndex) {
+            // Needs to move up — use DOM reorder with a flash
+            const referenceNode = items[targetIndex];
+            if (referenceNode) {
+                item.style.transition = 'opacity 0.15s';
+                item.style.opacity = '0.5';
+                setTimeout(() => {
+                    container.insertBefore(item, referenceNode);
+                    item.style.opacity = '1';
+                    setTimeout(() => { item.style.transition = ''; }, 200);
+                }, 150);
+            }
+        }
+
+        this.animator.highlight(conversationId);
     }
 
     filterConversations() {

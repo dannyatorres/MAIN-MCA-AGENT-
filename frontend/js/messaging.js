@@ -270,14 +270,16 @@ class MessagingModule {
 
         if (isCurrentChat) {
             this.addMessage(message);
-        } else {
-            // Only notify for actual incoming messages
-            if (message.direction === 'inbound') {
-                this.parent.conversationUI?.incrementBadge(messageConversationId);
-                this.playNotificationSound();
-                this.showBrowserNotification(data);
-            }
         }
+
+        if (!isCurrentChat && message.direction === 'inbound') {
+            this.parent.conversationUI?.incrementBadge(messageConversationId);
+            this.playNotificationSound();
+            this.showBrowserNotification(data);
+        }
+
+        // ALWAYS update sidebar preview + reorder for every message type
+        this.parent.conversationUI?.updateConversationInPlace(messageConversationId, message);
     }
 
     // ============================================================
