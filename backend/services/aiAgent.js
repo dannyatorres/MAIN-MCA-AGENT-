@@ -77,7 +77,7 @@ async function runAgentLoop() {
                 WHERE m.conversation_id = c.id
                 ORDER BY m.timestamp DESC LIMIT 1
             ) latest ON true
-            WHERE c.state IN ('DRIP', 'ACTIVE', 'CLOSING', 'READY_TO_SUBMIT')
+            WHERE c.state IN ('DRIP', 'ACTIVE', 'CLOSING')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND c.last_activity < NOW() - INTERVAL '2 minutes'
@@ -145,7 +145,7 @@ async function runAgentLoop() {
                 WHERE m.conversation_id = c.id
                 ORDER BY m.timestamp DESC LIMIT 1
             ) latest ON true
-            WHERE c.state IN ('ACTIVE', 'CLOSING', 'READY_TO_SUBMIT')
+            WHERE c.state IN ('ACTIVE', 'CLOSING')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND EXISTS (
@@ -175,11 +175,13 @@ async function runAgentLoop() {
             const result = await processLeadWithAI(lead.id, '');
             if (result.shouldReply && result.content) {
                 await sendSMS(lead.id, result.content, 'ai');
+                await db.query(
+                    'UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1',
+                    [lead.id]
+                );
+            } else {
+                console.log(`😴 [${lead.business_name}] Nudge suppressed — no response needed`);
             }
-            await db.query(
-                'UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1',
-                [lead.id]
-            );
             await new Promise(r => setTimeout(r, 2000));
         }
 
