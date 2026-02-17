@@ -77,7 +77,7 @@ async function runAgentLoop() {
                 WHERE m.conversation_id = c.id
                 ORDER BY m.timestamp DESC LIMIT 1
             ) latest ON true
-            WHERE c.state IN ('DRIP', 'ACTIVE', 'PITCH_READY', 'CLOSING', 'READY_TO_SUBMIT')
+            WHERE c.state IN ('DRIP', 'ACTIVE', 'CLOSING', 'READY_TO_SUBMIT')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND c.last_activity < NOW() - INTERVAL '2 minutes'
@@ -145,7 +145,7 @@ async function runAgentLoop() {
                 WHERE m.conversation_id = c.id
                 ORDER BY m.timestamp DESC LIMIT 1
             ) latest ON true
-            WHERE c.state IN ('ACTIVE', 'PITCH_READY', 'CLOSING', 'READY_TO_SUBMIT')
+            WHERE c.state IN ('ACTIVE', 'CLOSING', 'READY_TO_SUBMIT')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND EXISTS (
@@ -155,9 +155,6 @@ async function runAgentLoop() {
                     AND m.timestamp > NOW() - INTERVAL '3 days'
               )
               AND (
-                  (c.state = 'PITCH_READY'
-                   AND c.last_activity < NOW() - INTERVAL '2 minutes')
-                  OR
                   (latest.direction = 'outbound'
                    AND c.nudge_count < 6
                    AND c.last_activity < NOW() - make_interval(
@@ -678,6 +675,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - Credit Score: ${facts.credit_score || 'NOT COLLECTED'}
         - Recent Funding: ${facts.recent_funding || 'NOT COLLECTED'}
         - Desired Amount: ${facts.desired_amount || 'NOT COLLECTED'}
+        - Pitch Sent: ${facts.pitch_sent ? '✅ Already pitched' : '❌ NOT PITCHED YET'}
         ${mtdStatusLine}
         ${statementsCurrentLine}
         ${needsMTD ? '⚠️ DO NOT qualify until MTD is received.' : ''}
@@ -696,7 +694,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                "recent_funding": "yes or no if discussed, else null",
                "desired_amount": "amount they want if mentioned, else null",
                "statements_current": "month name if confirmed sent, else null",
-               "mtd_sent": "true if confirmed, else null"
+               "mtd_sent": "true if confirmed, else null",
+               "pitch_sent": "true if you just pitched an offer amount, else null"
            }
         }
         
@@ -789,25 +788,12 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // Check no_response FIRST
         if (decision.action === 'no_response') {
-            if (currentState === 'PITCH_READY') {
-                console.log(`🎯 [${leadName}] NO_RESPONSE overridden — must pitch`);
-                if (gamePlan?.offer_range) {
-                    const pitchAmount = gamePlan.offer_range.aggressive || gamePlan.offer_range.max;
-                    const rounded = Math.round(pitchAmount / 1000) + 'k';
-                    responseContent = `hey so i just finished going over everything, does ${rounded} work?`;
-                    decision.action = 'respond';
-                } else {
-                    responseContent = "hey just finished reviewing your file, let me get some numbers together real quick";
-                    decision.action = 'respond';
-                }
-            } else {
-                console.log(`😴 [${leadName}] NO_RESPONSE — parking for nudge cycle`);
-                await db.query(
-                    `UPDATE conversations SET last_activity = NOW() + INTERVAL '13 minutes', nudge_count = 0 WHERE id = $1`,
-                    [conversationId]
-                );
-                return { shouldReply: false };
-            }
+            console.log(`😴 [${leadName}] NO_RESPONSE — parking for nudge cycle`);
+            await db.query(
+                `UPDATE conversations SET last_activity = NOW() + INTERVAL '13 minutes', nudge_count = 0 WHERE id = $1`,
+                [conversationId]
+            );
+            return { shouldReply: false };
         }
 
         if (decision.action === 'mark_dead') {
@@ -884,10 +870,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
 
-        if (currentState === 'PITCH_READY') {
-            await updateState(conversationId, 'ACTIVE', 'ai_agent');
-            console.log(`🎯 [${leadName}] Pitched → back to ACTIVE`);
-        }
         if (currentState === 'DRIP' || currentState === 'NEW') {
             await updateState(conversationId, 'ACTIVE', 'ai_agent');
             console.log(`📬 [${leadName}] ${currentState} → ACTIVE (lead replied)`);

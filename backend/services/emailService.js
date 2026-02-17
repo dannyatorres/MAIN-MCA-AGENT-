@@ -367,8 +367,6 @@ JMS GLOBAL
                 await this.initializeTransporter();
             }
 
-            console.log(`📧 Sending email to ${to} with ${attachments ? attachments.length : 0} attachments`);
-
             const info = await this.transporter.sendMail({
                 from: process.env.EMAIL_FROM || getEnvVar('EMAIL_USER'),
                 to,
@@ -378,7 +376,7 @@ JMS GLOBAL
                 attachments: attachments || []
             });
 
-            console.log(`✅ Email sent: ${info.messageId}`);
+            console.log(`✅ Email sent to ${to}`);
             return { success: true, messageId: info.messageId };
         } catch (error) {
             console.error('❌ Error sending email:', error);

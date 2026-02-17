@@ -575,7 +575,6 @@ async function generateOffer(conversationId) {
             WHERE conversation_id = $3
         `, [offer.offer_amount, JSON.stringify({ offer_details: offer }), conversationId]);
 
-        await updateState(conversationId, 'OFFER_READY', 'commander');
 
         return offer;
 

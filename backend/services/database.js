@@ -19,11 +19,8 @@ async function initialize() {
         console.error('❌ Unexpected database error:', err);
     });
 
-    console.log('✅ Database connection pool created');
-
     // 🛠️ PERMANENT FIX: Ensure Schema is Correct on Startup
     try {
-        console.log('🔧 Verifying database schema...');
 
         // 1. Fix 'csv_imports' table (Adding missing columns)
         await pool.query(`
@@ -194,7 +191,7 @@ async function initialize() {
         await pool.query(`ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();`);
         await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(date);`);
 
-        console.log('✅ Database schema verified and repaired (Job Queue & FCS tables added)');
+        console.log('✅ Database schema verified');
     } catch (err) {
         console.warn('⚠️ Schema verification warning (non-fatal):', err.message);
     }
@@ -214,7 +211,7 @@ function getDatabase() {
             console.error('❌ Unexpected database error:', err);
         });
 
-        console.log('✅ Database connection pool created');
+        console.log('✅ Database pool created');
     }
 
     return pool;  // Return the pool directly, NOT a promise
