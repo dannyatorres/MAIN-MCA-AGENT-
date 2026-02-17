@@ -788,9 +788,25 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // Check no_response FIRST
         if (decision.action === 'no_response') {
-            console.log(`😴 [${leadName}] NO_RESPONSE - $${estimatedCost} wasted (consider adding this pattern to ack check)`);
-            await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [conversationId]);
-            return { shouldReply: false };
+            if (currentState === 'PITCH_READY') {
+                console.log(`🎯 [${leadName}] NO_RESPONSE overridden — must pitch`);
+                if (gamePlan?.offer_range) {
+                    const pitchAmount = gamePlan.offer_range.aggressive || gamePlan.offer_range.max;
+                    const rounded = Math.round(pitchAmount / 1000) + 'k';
+                    responseContent = `hey so i just finished going over everything, does ${rounded} work?`;
+                    decision.action = 'respond';
+                } else {
+                    responseContent = "hey just finished reviewing your file, let me get some numbers together real quick";
+                    decision.action = 'respond';
+                }
+            } else {
+                console.log(`😴 [${leadName}] NO_RESPONSE — parking for nudge cycle`);
+                await db.query(
+                    `UPDATE conversations SET last_activity = NOW() + INTERVAL '13 minutes', nudge_count = 0 WHERE id = $1`,
+                    [conversationId]
+                );
+                return { shouldReply: false };
+            }
         }
 
         if (decision.action === 'mark_dead') {
