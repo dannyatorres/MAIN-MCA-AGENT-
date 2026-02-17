@@ -329,6 +329,19 @@ If they say they DID take new loans:
 
 ---
 
+## WHEN STATE IS PITCH_READY
+
+Commander just finished running the numbers. The strategy data is in your context. Pitch NOW.
+
+Do NOT:
+- Ask more qualifying questions
+- Say "give me a few minutes"
+- Ask for email or credit score again
+
+Just pitch the range based on the Commander data in your context. Follow the PITCHING THE RANGE rules (conditional vs straight based on statement freshness).
+
+---
+
 ## ZERO OFFER / NO VIABLE RANGE
 
 If the Commander came back with $0 or the offer range is 0-0 or there are no scenarios:

@@ -879,13 +879,15 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             : '';
 
         systemPrompt += `\n\n## 📝 DATA CHECKLIST (Status: ${currentState})
-        - Email: ${facts.email ? '✅ ' + facts.email : '❌ (Ask for this)'}
-        - Credit Score: ${facts.credit_score ? '✅ ' + facts.credit_score : '❌ (Ask for this after Email)'}
-        - Recent Funding: ${facts.recent_funding ? '✅ ' + facts.recent_funding : '❌ (Ask if they took new loans)'}
+        - Email: ${facts.email ? '✅ ' + facts.email : '❓ (Check conversation - they may have already provided it)'}
+        - Credit Score: ${facts.credit_score ? '✅ ' + facts.credit_score : '❓ (Check conversation first)'}
+        - Recent Funding: ${facts.recent_funding ? '✅ ' + facts.recent_funding : '❓ (Check conversation first)'}
         ${mtdStatusLine}
         ${statementsCurrentLine}
         ${needsMTD ? '⚠️ CRITICAL: DO NOT set action to "qualify" until MTD is received.' : ''}
         
+        IMPORTANT: The checklist may be incomplete. If the merchant already provided info in the conversation above, DO NOT ask again. Use what they gave you and call the appropriate tool to save it.
+
         ## ⚙️ OUTPUT FORMAT
         You must return Valid JSON ONLY. No markdown, no thinking text.
         Structure:
