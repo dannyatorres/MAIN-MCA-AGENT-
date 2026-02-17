@@ -55,7 +55,7 @@ async function syncDriveFiles(conversationId, businessName, userId = null) {
 
     // Get user-specific folder ID (or fall back to env var)
     const FOLDER_ID = await getDriveFolderId(userId);
-    console.log(`📂 [${businessName}] Drive sync starting...`);
+    console.log(`📂 [${businessName}] Syncing drive...`);
 
     function extractFolderId(input) {
         if (!input) return null;
@@ -88,7 +88,7 @@ async function syncDriveFiles(conversationId, businessName, userId = null) {
             return { success: false, error: "Master folder appears empty" };
         }
 
-        console.log(`📂 [${businessName}] Searching ${folders.length} folders...`);
+        
 
         // B. AI MATCHING WITH GEMINI
         const prompt = `
@@ -135,13 +135,13 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
         }
 
         if (matchedName === "NO_MATCH") {
-            console.log(`⚠️ [${businessName}] No folder match found`);
+            console.log(`📂 [${businessName}] No folder match`);
             return { success: false, error: "No matching folder found" };
         }
 
         const targetFolder = folders.find(f => f.name === matchedName);
 
-        console.log(`✅ [${businessName}] Matched → "${matchedName}"`);
+        console.log(`📂 [${businessName}] → ${matchedName}`);
 
         // C. PEEK INSIDE
         const fileRes = await drive.files.list({
@@ -156,11 +156,11 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
         );
 
         if (usefulFiles.length === 0) {
-            console.log(`⚠️ Folder "${matchedName}" exists but is empty.`);
+            
             return { success: true, count: 0, message: "Folder empty" };
         }
 
-        console.log(`📄 [${businessName}] Found ${usefulFiles.length} PDFs, downloading...`);
+        console.log(`📂 [${businessName}] ${usefulFiles.length} PDFs found`);
 
         // D. DOWNLOAD & SAVE
         let uploadedCount = 0;
@@ -173,7 +173,6 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
                 `, [conversationId, file.name]);
 
                 if (existingDoc.rows.length > 0) {
-                    console.log(`⏭️ Skipping duplicate: ${file.name}`);
                     continue;
                 }
 
@@ -225,14 +224,14 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
         }
 
         if (uploadedCount > 0) {
-            console.log(`✅ [${businessName}] Synced ${uploadedCount} docs`);
+            console.log(`📂 [${businessName}] Synced ${uploadedCount} docs → running FCS`);
 
             // --- ⚡ AUTO-TRIGGER FCS ANALYSIS ---
             if (await isServiceEnabled(userId, 'fcs')) {
-                console.log(`⚡ [${businessName}] Running FCS...`);
+                
                 try {
                     await fcsService.generateAndSaveFCS(conversationId, businessName, db);
-                    console.log(`✅ [${businessName}] FCS complete`);
+                    
 
                     // --- 🧠 AUTO-TRIGGER COMMANDER ---
                     if (await isServiceEnabled(userId, 'commander')) {
@@ -246,7 +245,6 @@ Return ONLY the exact folder name as it appears in the list, or "NO_MATCH". No e
                     console.error("⚠️ Auto-FCS/Commander Failed:", fcsErr.message);
                 }
             } else {
-                console.log("⏸️ FCS disabled for this user, skipping auto-analysis");
             }
         }
 
