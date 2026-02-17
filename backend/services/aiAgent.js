@@ -268,8 +268,6 @@ async function getGlobalPrompt(userId, currentState) {
             'NEW': 'phase_active.md',
             'DRIP': 'phase_active.md',
             'ACTIVE': 'phase_active.md',
-            'QUALIFIED': 'phase_qualified.md',
-            'PITCH_READY': 'phase_pitch.md',
             'READY_TO_SUBMIT': 'phase_ready_to_submit.md',
             'SUBMITTED': 'phase_submitted.md',
             'CLOSING': 'phase_closing.md'
@@ -422,8 +420,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             'STRATEGIZED', 'HOT_LEAD', 'VETTING', 'SUBMITTED',  // Agent 2's territory
             'OFFER_RECEIVED', 'NEGOTIATING',  // Agent 3's territory
             // Cold drip - dispatcher owns these, AI stays out
-            'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4',
-            'READY_TO_SUBMIT'
+            'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4'
         ];
 
         // If it's a manual command (systemInstruction has value), we ignore the lock.
@@ -478,8 +475,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // Only inject the 'generate_offer' tool if explicitly authorized
         // =================================================================
         let availableTools = [...BASE_TOOLS];
-        // Remove consult_analyst if already qualified
-        if (['QUALIFIED', 'SUBMITTED', 'CLOSING'].includes(currentState)) {
+        // Remove consult_analyst if already past qualification (has strategy)
+        if (['SUBMITTED', 'CLOSING', 'READY_TO_SUBMIT'].includes(currentState) || gamePlan) {
             availableTools = availableTools.filter(t => t.function.name !== 'consult_analyst');
         }
 
@@ -875,23 +872,14 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         
         ACTIONS:
         - "respond": Standard reply or question.
-        - "qualify": You have ALL checks (Email + Credit + Funding + MTD if needed). Move to QUALIFIED.
-        - "mark_dead": Lead said stop/remove/not interested.
+        - "qualify": You have enough info (email + funding status at minimum). Triggers analysis on their file. You stay in ACTIVE and come back with numbers.
+        - "mark_dead": Lead said stop/remove/not interested/wrong person.
         - "sync_drive": Lead JUST provided email address.
-        - "no_response": Lead said "ok", "thanks", or acknowledged. No reply needed. (NOT if state is PITCH_READY)
-        - "ready_to_submit": Lead accepted the offer. Ask for docs and move to submission.
+        - "no_response": Lead acknowledged with "ok", "thanks", emoji, etc. No reply needed. Stay silent.
+        - "ready_to_submit": Lead accepted the pitch and is ready to move forward. Ask for docs and move to submission.
         `;
 
-        // Skip AI call if just waiting for MTD
-        if (currentState === 'QUALIFIED') {
-            const waitingPhrases = ['later', 'will send', 'tonight', 'tomorrow', 'when i can', 'give me', 'few hours', 'after work'];
-
-            if (waitingPhrases.some(p => lastInbound.includes(p))) {
-                console.log(`⏸️ Lead said they'll send later - skipping AI call`);
-                return { shouldReply: false };
-            }
-        }
-
+        
         // 🛡️ ATOMIC CLAIM - Same pattern as processorAgent
         // Prevents race conditions between dispatcher + webhook
         const lastInboundMsg = await db.query(`
@@ -1012,10 +1000,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             if (!facts.email) {
                 console.log(`🚫 [${leadName}] Tried to qualify without email - blocking`);
                 responseContent = "whats the best email to send the offer to?";
-            } else if (!['QUALIFIED', 'SUBMITTED', 'CLOSING', 'PITCH_READY', 'READY_TO_SUBMIT'].includes(currentState)) {
-                await updateState(conversationId, 'QUALIFIED', 'ai_agent');
+            } else if (!['SUBMITTED', 'CLOSING', 'READY_TO_SUBMIT'].includes(currentState)) {
+                // Stay in ACTIVE — Commander saves strategy, AI reads it next turn
                 await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
-                stateAfter = 'QUALIFIED';
 
                 responseContent = "got it. give me a few minutes to run the numbers and ill text you back shortly";
 
@@ -1051,26 +1038,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             WHERE conversation_id = $1 AND direction = 'outbound'
             ORDER BY timestamp DESC LIMIT 5
         `, [conversationId]);
-
-        if (currentState === 'PITCH_READY' && gamePlan?.offer_range) {
-            const min = gamePlan.offer_range.min?.toLocaleString();
-            const max = gamePlan.offer_range.max?.toLocaleString();
-
-            const alreadyPitched = recentOutbound.rows.some(m => {
-                const c = m.content.toLowerCase();
-                return c.includes('$') || c.includes('offer') || c.includes('get you') 
-                    || /does\s+\d+k\s+work/i.test(c)
-                    || /\b\d+k\b/.test(c)
-                    || c.includes('im looking at');
-            });
-
-            if (!alreadyPitched) {
-                const pitchAmount = gamePlan.offer_range.aggressive || gamePlan.offer_range.max;
-                const rounded = Math.round(pitchAmount / 1000) + 'k';
-                console.log(`🎯 Forcing pitch - ${rounded}`);
-                responseContent = `does ${rounded} work?`;
-            }
-        }
 
         const isDuplicate = recentOutbound.rows.some(m =>
             m.content.toLowerCase().includes(responseContent.toLowerCase().substring(0, 30))
