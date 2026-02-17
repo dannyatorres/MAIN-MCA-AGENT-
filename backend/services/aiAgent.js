@@ -677,6 +677,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - Recent Funding: ${facts.recent_funding || 'NOT COLLECTED'}
         - Desired Amount: ${facts.desired_amount || 'NOT COLLECTED'}
         - Pitch Sent: ${facts.pitch_sent ? '✅ Already pitched' : '❌ NOT PITCHED YET'}
+        - Pitch Accepted: ${facts.pitch_accepted ? '✅ Yes' : '❌ Not yet'}
         ${mtdStatusLine}
         ${statementsCurrentLine}
         ${needsMTD ? '⚠️ DO NOT qualify until MTD is received.' : ''}
@@ -696,7 +697,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                "desired_amount": "amount they want if mentioned, else null",
                "statements_current": "month name if confirmed sent, else null",
                "mtd_sent": "true if confirmed, else null",
-               "pitch_sent": "true if you just pitched an offer amount, else null"
+               "pitch_sent": "true if you just pitched an offer amount, else null",
+               "pitch_accepted": "true if lead just said yes to the offer amount, else null"
            }
         }
         
@@ -802,10 +804,17 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             stateAfter = 'DEAD';
         }
         else if (decision.action === 'ready_to_submit') {
-            await updateState(conversationId, 'READY_TO_SUBMIT', 'ai_agent');
-            await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
-            stateAfter = 'READY_TO_SUBMIT';
-            console.log(`🎯 [${leadName}] Accepted offer - READY_TO_SUBMIT`);
+            const facts = await getLeadFacts(conversationId);
+            if (!facts.pitch_accepted) {
+                console.log(`⏳ [${leadName}] Pitch accepted not confirmed — holding response`);
+                responseContent = "perfect, give me a few to get everything together";
+                decision.action = 'respond';
+            } else {
+                await updateState(conversationId, 'READY_TO_SUBMIT', 'ai_agent');
+                await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
+                stateAfter = 'READY_TO_SUBMIT';
+                console.log(`🎯 [${leadName}] Accepted offer - READY_TO_SUBMIT`);
+            }
         }
         else if (decision.action === 'qualify') {
             const facts = await getLeadFacts(conversationId);

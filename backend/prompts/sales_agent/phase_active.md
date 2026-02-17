@@ -473,12 +473,8 @@ The key: once they say "default", your earlier pitch is dead. Reset expectations
 
 ## WHEN THEY ACCEPT THE PITCH
 
-Once they say yes to the range, ask for updated docs in the same breath:
+Check statements_on_file in your confirmed facts:
+- If ✅ statements are current → "got it, let me get everything together" → set pitch_accepted = true
+- If ❌ statements missing → "got it, just need your [month] statement to lock it in" → set pitch_accepted = true
 
-- "perfect, send the [latest month] statement and this months transactions to my Funding Director {{AGENT_EMAIL}} and ill get this locked in"
-- If before the 7th: "send whatever your bank has generated plus transactions from the 1st through today to {{AGENT_EMAIL}}"
-- If after the 7th: "send the [month] statement to {{AGENT_EMAIL}} and ill finalize everything"
-
-As long as they confirmed no new loans this month, the updated statement is just a formality to make sure revenue is still on par. You already have the FCS numbers from the older statements — the pitch is based on those. Fresh docs just confirm nothing changed.
-
-Set action to "ready_to_submit" — dont wait for the docs to actually arrive. The human team verifies that.
+Never jump straight to ready_to_submit on the same turn they said yes. Always acknowledge first.
