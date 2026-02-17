@@ -3,9 +3,9 @@ const router = express.Router();
 const { processLeadWithAI } = require('../services/aiAgent');
 const { getDatabase } = require('../services/database');
 const { runMorningFollowUp } = require('../services/morningFollowUp');
+const { updateState } = require('../services/stateManager');
 const { runDailyAgent } = require('../services/dailyAgent');
-const twilio = require('twilio');
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const { sendSMS } = require('../services/smsSender');
 
 // POST /api/agent/trigger
 // The Dispatcher calls this URL
@@ -55,37 +55,11 @@ router.post('/trigger', async (req, res) => {
     // 2. Send SMS if AI generated a reply
     if (result.shouldReply && result.content) {
         try {
-
-            // A. Get Phone Number
-            const lead = await db.query("SELECT lead_phone FROM conversations WHERE id = $1", [conversation_id]);
-            if (lead.rows.length === 0) throw new Error("Lead not found");
-            const phone = lead.rows[0].lead_phone;
-            // Validate phone before sending
-            const cleanPhone = (phone || '').replace(/\D/g, '');
-            if (!cleanPhone || cleanPhone.length < 10) {
-                console.log(`⚠️ [${bizName}] Invalid phone: "${phone}" - skipping SMS`);
+            const sentBy = direct_message ? 'drip' : 'ai';
+            const message = await sendSMS(conversation_id, result.content, sentBy);
+            if (!message) {
                 return res.json({ success: true, action: 'skipped', reason: 'invalid_phone' });
             }
-
-            // B. Insert into DB (So we see it in the chat window)
-            const sentBy = direct_message ? 'drip' : 'ai';
-            const insert = await db.query(`
-                INSERT INTO messages (conversation_id, content, direction, message_type, status, timestamp, sent_by)
-                VALUES ($1, $2, 'outbound', 'sms', 'pending', NOW(), $3)
-                RETURNING id
-            `, [conversation_id, result.content, sentBy]);
-
-            const messageId = insert.rows[0].id;
-
-            // C. Send via Twilio
-            await twilioClient.messages.create({
-                body: result.content,
-                from: process.env.TWILIO_PHONE_NUMBER,
-                to: phone
-            });
-
-            // D. Mark Sent
-            await db.query("UPDATE messages SET status = 'sent' WHERE id = $1", [messageId]);
             console.log(`📊 [${bizName}] Updating activity (is_nudge=${req.body.is_nudge})`);
             // Update last_activity and nudge_count
             if (req.body.is_nudge) {
@@ -109,32 +83,12 @@ router.post('/trigger', async (req, res) => {
                 if (protectedStates.includes(currentState)) {
                     console.log(`🛡️ [${bizName}] State ${currentState} is protected - ignoring next_state: ${next_state}`);
                 } else {
-                    await db.query(`
-                        INSERT INTO state_history (conversation_id, old_state, new_state, changed_by)
-                        VALUES ($1, $2, $3, 'drip')
-                    `, [conversation_id, currentState, next_state]);
-                    await db.query(`UPDATE conversations SET state = $1 WHERE id = $2`, [next_state, conversation_id]);
+                    await updateState(conversation_id, next_state, 'drip');
                     console.log(`📊 [${bizName}] ${currentState} → ${next_state} (drip)`);
                 }
             }
 
-            // 🔔 Notify frontend of AI message
-            if (global.io) {
-                console.log('🔴 BACKEND EMIT: new_message (agent)', { conversation_id: conversation_id, message_id: messageId });
-                global.io.emit('new_message', {
-                    conversation_id: conversation_id,
-                    message: {
-                        id: messageId,
-                        content: result.content,
-                        direction: 'outbound',
-                        sent_by: 'ai',
-                        is_drip: !!direct_message,
-                        timestamp: new Date().toISOString()
-                    }
-                });
-            }
-
-            console.log(`✅ [${bizName}] AI Sent Message to ${phone}`);
+            console.log(`✅ [${bizName}] AI Sent Message`);
         } catch (err) {
             console.error("❌ Failed to send AI SMS:", err.message);
             return res.status(500).json({ error: "AI generated text but failed to send SMS" });

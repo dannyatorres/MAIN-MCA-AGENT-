@@ -26,6 +26,8 @@ const {
     generateOwnerAnalytics,
     buildBrokerActionBriefing 
 } = require('./services/dailyAgent');
+const { startAgentLoop } = require('./services/aiAgent');
+const { startDripLoop } = require('./services/dripCampaign');
 
 // Create Express app
 const app = express();
@@ -427,3 +429,5 @@ setTimeout(() => {
 // --- 8. START SERVER ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+startAgentLoop(30000);
+startDripLoop(30000);

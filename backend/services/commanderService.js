@@ -487,12 +487,13 @@ async function analyzeAndStrategize(conversationId) {
         }
 
         if (gamePlan) {
-            await updateState(conversationId, 'PITCH_READY', 'commander');
-            await db.query(
-                `UPDATE conversations SET last_processed_msg_id = NULL WHERE id = $1`,
-                [conversationId]
-            );
-            console.log(`🎯 [${businessName}] Strategy ready → PITCH_READY`);
+            console.log(`🎯 [${businessName}] Strategy ready - triggering AI pitch`);
+            try {
+                const { processLeadWithAI } = require('./aiAgent');
+                await processLeadWithAI(conversationId, 'COMMANDER_READY: Strategy analysis complete. You have the numbers. Pitch the offer range NOW.');
+            } catch (err) {
+                console.log(`⚠️ [${businessName}] Direct pitch failed: ${err.message}`);
+            }
         }
 
         return gamePlan;

@@ -5,7 +5,6 @@ const router = express.Router();
 const { getDatabase } = require('../services/database');
 const { trackResponseForTraining } = require('../services/aiAgent');
 const { processLeadWithAI } = require('../services/aiAgent');
-const { storeMessage } = require('../services/memoryService');
 const { updateState } = require('../services/stateManager');
 const { trackUsage } = require('../services/usageTracker');
 const multer = require('multer');
@@ -54,7 +53,7 @@ async function getAIHypothetical(conversationId, leadMessage) {
         const response = await client.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
-                { role: 'system', content: 'You are a sales rep. Write a short SMS reply (1-2 sentences max).' },
+                { role: 'system', content: context },
                 { role: 'user', content: leadMessage }
             ],
             max_tokens: 100
@@ -470,7 +469,6 @@ router.post('/webhook/receive', async (req, res) => {
 
         // Everything else runs AFTER response is sent
         setImmediate(async () => {
-            let lockSet = false;
             try {
                 // Track inbound SMS usage
                 const segmentCount = Math.ceil((Body || '').length / 160);
@@ -482,16 +480,6 @@ router.post('/webhook/receive', async (req, res) => {
                     segments: segmentCount
                 });
 
-                // Store inbound message in vector memory
-                try {
-                    await storeMessage(conversation.id, Body || '', {
-                        direction: 'inbound',
-                        state: conversation.state
-                    });
-                } catch (err) {
-                    console.error('⚠️ Memory store failed (inbound):', err.message);
-                }
-
                 const currentState = conversation.state;
 
                 // Reset nudge count and update activity on ANY inbound message
@@ -501,15 +489,11 @@ router.post('/webhook/receive', async (req, res) => {
                     WHERE id = $1
                 `, [conversation.id]);
 
-                // Move DRIP leads to ACTIVE when they reply
-                if (currentState === 'DRIP' || currentState === 'NEW') {
-                    await updateState(conversation.id, 'ACTIVE', 'webhook');
-                }
                 // DEAD leads get resurrected to ACTIVE
-                else if (currentState === 'DEAD') {
+                if (currentState === 'DEAD') {
                     await updateState(conversation.id, 'ACTIVE', 'webhook');
                 }
-                // All other states (ACTIVE, QUALIFIED, CLOSING) stay as-is
+                // NEW/DRIP/ACTIVE/CLOSING — AI loop handles state transitions
 
                 if (global.io) {
                     global.io.emit('new_message', {
@@ -579,9 +563,6 @@ router.post('/webhook/receive', async (req, res) => {
             } catch (err) {
                 console.error('❌ Post-webhook error:', err);
             } finally {
-                if (lockSet) {
-                    await db.query(`UPDATE conversations SET ai_processing = false WHERE id = $1`, [conversation.id]);
-                }
             }
         });
 

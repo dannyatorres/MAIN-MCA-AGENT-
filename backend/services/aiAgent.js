@@ -1,18 +1,16 @@
 // backend/services/aiAgent.js
 const { OpenAI } = require('openai');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
 const { syncDriveFiles } = require('./driveService');
 const commanderService = require('./commanderService');
 const { updateState } = require('./stateManager');
 const { logAIDecision } = require('./aiDecisionLogger');
-const { storeMessage, getConversationContext, getSimilarPatterns } = require('./memoryService');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-// --- FIX 1: Add Context Helpers ---
+// Lead fact helpers
 async function getLeadFacts(conversationId) {
     const db = getDatabase();
     const res = await db.query('SELECT fact_key, fact_value FROM lead_facts WHERE conversation_id = $1', [conversationId]);
@@ -37,89 +35,114 @@ async function saveExtractedFacts(conversationId, extracted) {
     }
 }
 
-async function saveLeadFact(conversationId, key, value) {
-    if (!key || !value) return;
-    const db = getDatabase();
-    await db.query(`
-        INSERT INTO lead_facts (conversation_id, fact_key, fact_value, collected_at)
-        VALUES ($1, $2, $3, NOW())
-        ON CONFLICT (conversation_id, fact_key) 
-        DO UPDATE SET fact_value = $3, collected_at = NOW()
-    `, [conversationId, key, value]);
-    console.log(`💾 Saved Fact [${conversationId}]: ${key} = ${value}`);
-}
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
-function cleanToolLeaks(content) {
-    if (!content) return content;
-    
-    // Reject if it's raw JSON/function calls
-    if (content.trim().startsWith('{') || content.includes('recipient_name') || content.includes('"function"')) {
-        console.log('⚠️ Response was raw JSON, rejecting');
-        return null;
+async function runAgentLoop() {
+    const db = getDatabase();
+    const { sendSMS } = require('./smsSender');
+
+    const now = new Date();
+    const estHour = parseInt(now.toLocaleString('en-US', {
+        timeZone: 'America/New_York', hour: 'numeric', hour12: false
+    }));
+    if (estHour < 8 || estHour >= 22) return;
+
+    try {
+        const dripReplies = await db.query(`
+            SELECT c.id, c.business_name,
+                   last_msg.direction AS last_direction
+            FROM conversations c
+            LEFT JOIN LATERAL (
+                SELECT direction FROM messages m
+                WHERE m.conversation_id = c.id
+                ORDER BY m.timestamp DESC LIMIT 1
+            ) last_msg ON true
+            WHERE c.state = 'DRIP'
+              AND c.ai_enabled != false
+              AND c.last_activity > NOW() - INTERVAL '3 days'
+              AND c.last_activity < NOW() - INTERVAL '2 minutes'
+              AND last_msg.direction = 'inbound'
+            LIMIT 100
+        `);
+
+        for (const lead of dripReplies.rows) {
+            const result = await processLeadWithAI(lead.id, '');
+            if (result.shouldReply && result.content) {
+                await sendSMS(lead.id, result.content, 'ai');
+            }
+            await new Promise(r => setTimeout(r, 2000));
+        }
+
+        const activeLeads = await db.query(`
+            SELECT c.id, c.state, c.business_name, c.nudge_count,
+                   last_msg.direction AS last_direction,
+                   EXTRACT(EPOCH FROM (NOW() - c.last_activity))/60 as minutes_idle
+            FROM conversations c
+            LEFT JOIN LATERAL (
+                SELECT direction FROM messages m
+                WHERE m.conversation_id = c.id
+                ORDER BY m.timestamp DESC LIMIT 1
+            ) last_msg ON true
+            WHERE c.state IN ('ACTIVE', 'PITCH_READY', 'CLOSING')
+              AND c.ai_enabled != false
+              AND c.last_activity > NOW() - INTERVAL '3 days'
+              AND (
+                  c.state = 'PITCH_READY'
+                  OR
+                  (last_msg.direction = 'inbound'
+                   AND c.last_activity < NOW() - INTERVAL '2 minutes')
+                  OR
+                  (last_msg.direction = 'outbound'
+                   AND c.nudge_count < 6
+                   AND c.last_activity < NOW() - make_interval(
+                       secs := CASE c.nudge_count
+                           WHEN 0 THEN 900
+                           WHEN 1 THEN 1800
+                           WHEN 2 THEN 3600
+                           WHEN 3 THEN 14400
+                           WHEN 4 THEN 28800
+                           ELSE 86400
+                       END
+                   ))
+              )
+            ORDER BY
+                CASE WHEN last_msg.direction = 'inbound' THEN 0 ELSE 1 END,
+                c.last_activity ASC
+            LIMIT 50
+        `);
+
+        for (const lead of activeLeads.rows) {
+            const isNudge = lead.last_direction !== 'inbound';
+            const result = await processLeadWithAI(lead.id, isNudge ? '' : '');
+
+            if (result.shouldReply && result.content) {
+                await sendSMS(lead.id, result.content, 'ai');
+            }
+
+            if (isNudge) {
+                await db.query(
+                    'UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1',
+                    [lead.id]
+                );
+            }
+            await new Promise(r => setTimeout(r, 2000));
+        }
+
+    } catch (err) {
+        console.error('🔥 Agent loop error:', err.message);
     }
-    
-    // Remove internal reasoning/notes that leaked
-    content = content
-        .replace(/Consult note:.*?(?=\s{2}|$)/gi, '')
-        .replace(/Internal:.*?(?=\s{2}|$)/gi, '')
-        .replace(/Note to self:.*?(?=\s{2}|$)/gi, '')
-        .replace(/Thinking:.*?(?=\s{2}|$)/gi, '')
-        .replace(/Strategy:.*?(?=\s{2}|$)/gi, '')
-        .replace(/\([^)]*(?:consult_analyst|update_lead_status|trigger_drive_sync|generate_offer|no_response_needed)[^)]*\)/gi, '')
-        .replace(/\(\s*(?:Calling|Triggered|Called|Invoking|Running|Using)\s+\w+[^)]*\)/gi, '')
-        .replace(/\(\s*\w+_\w+[^)]*\)/gi, '')
-        .replace(/^(?:Calling|Triggered|Called|Invoking)\s+\w+.*$/gim, '')
-        .replace(/\w+_\w+\s+(?:tool\s+)?(?:invoked|called|triggered)\.?/gi, '')
-        .replace(/\w+_\w+\s+(tool\s+)?invoked\.?/gi, '')
-        .replace(/\{"status"\s*:\s*"[^"]*"[^}]*\}/gi, '')
-        .replace(/\{"[^"]*"[^}]*\}/gi, '')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-
-    // If mostly cleaned away, return null
-    if (!content || content.trim().length === 0) {
-        return null;
-    }
-
-    return content;
 }
 
-function generateReasoning(toolsCalled, leadMessage, currentState, stateAfter) {
-    const reasons = [];
-    
-    if (toolsCalled.includes('trigger_drive_sync')) {
-        reasons.push('Email received - triggering Drive sync');
-    }
-    if (toolsCalled.includes('consult_analyst')) {
-        reasons.push('All qualifying info collected (email, credit score, funding status) - handing off to analyst');
-    }
-    if (toolsCalled.includes('update_lead_status')) {
-        reasons.push('Lead requested opt-out or marked for review - updating status');
-    }
-    
-    if (currentState !== stateAfter) {
-        reasons.push(`State changed: ${currentState} → ${stateAfter}`);
-    }
-    
-    if (toolsCalled.length === 0) {
-        reasons.push('Continuing qualification conversation');
-    }
-    
-    return reasons.join('. ') || 'Standard response';
+let loopInterval = null;
+function startAgentLoop(intervalMs = 30000) {
+    if (loopInterval) clearInterval(loopInterval);
+    console.log(`🚀 Agent loop started — every ${intervalMs / 1000}s`);
+    runAgentLoop();
+    loopInterval = setInterval(runAgentLoop, intervalMs);
 }
 
-// Format name to Title Case (SABRINA → Sabrina)
-function formatName(name) {
-    if (!name) return '';
-    return name
-        .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+function stopAgentLoop() {
+    if (loopInterval) { clearInterval(loopInterval); loopInterval = null; }
 }
 
 // 🕐 TEMPORAL CONTEXT ENGINE - Always-on date/time awareness
@@ -134,8 +157,6 @@ function buildTemporalContext(historyRows) {
 
     const lastMonth = new Date(estNow.getFullYear(), estNow.getMonth() - 1, 1);
     const lastMonthName = lastMonth.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
-    const twoMonthsAgo = new Date(estNow.getFullYear(), estNow.getMonth() - 2, 1);
-    const twoMonthsAgoName = twoMonthsAgo.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'long' });
 
     // Figure out conversation duration
     let convoStartDate = null;
@@ -225,108 +246,8 @@ async function trackResponseForTraining(conversationId, leadMessage, humanRespon
     }
 }
 
-// 🛠️ BASE TOOLS - MODIFIED: Removed 'generate_offer' from the default list
-const BASE_TOOLS = [
-    {
-        type: "function",
-        function: {
-            name: "update_lead_status",
-            description: "CRITICAL: Call this IMMEDIATELY with status='DEAD' if the user says 'stop', 'not interested', 'unsubscribe', 'remove me', or 'wrong number'. This shuts off the auto-nudge system.",
-            parameters: {
-                type: "object",
-                properties: {
-                    status: {
-                        type: "string",
-                        enum: ["DEAD", "HUMAN_REVIEW"],
-                        description: "The new status."
-                    }
-                },
-                required: ["status"]
-            }
-        }
-    },
-    {
-        type: "function",
-        function: {
-            name: "trigger_drive_sync",
-            description: "Call this immediately when you get an EMAIL address.",
-            parameters: { type: "object", properties: {} }
-        }
-    },
-    {
-        type: "function",
-        function: {
-            name: "consult_analyst",
-            description: "Call this ONLY when you have ALL THREE: 1. Email, 2. Credit Score, 3. Confirmed NO new funding this month OR if they have new funding, they've already sent the MTD statement. 4. Latest statements confirmed sent or not needed. NEVER call this if they said they got funded recently but haven't sent MTD yet. Always ask about new loans BEFORE asking for credit score.",
-            parameters: {
-                type: "object",
-                properties: {
-                    credit_score: { type: "string", description: "The user's stated credit score" },
-                    recent_funding: { type: "string", description: "Whether they got funded recently" },
-                    statements_current: { type: "string", description: "Whether latest statements are confirmed sent. Set to the month name if confirmed, or 'not_needed' if we already have current months" }
-                },
-                required: ["credit_score", "recent_funding"]
-            }
-        }
-    },
-    
-];
-
 // 📖 HELPER: Load Persona + Strategy (now with dynamic agent name)
-async function getGlobalPrompt(userId, currentState) {
-    try {
-        const basePath = path.join(__dirname, '../prompts/sales_agent/base.md');
-
-        const phaseMap = {
-            'NEW': 'phase_active.md',
-            'DRIP': 'phase_active.md',
-            'ACTIVE': 'phase_active.md',
-            'READY_TO_SUBMIT': 'phase_ready_to_submit.md',
-            'SUBMITTED': 'phase_submitted.md',
-            'CLOSING': 'phase_closing.md'
-        };
-
-        const phaseFile = phaseMap[currentState] || 'phase_active.md';
-        const phasePath = path.join(__dirname, `../prompts/sales_agent/${phaseFile}`);
-
-        let agentName = 'Dan Torres';
-        if (userId) {
-            const db = getDatabase();
-            const result = await db.query('SELECT agent_name FROM users WHERE id = $1', [userId]);
-            if (result.rows[0]?.agent_name) {
-                agentName = result.rows[0].agent_name;
-            }
-        }
-
-        let prompt = '';
-
-        if (fs.existsSync(basePath)) {
-            prompt = fs.readFileSync(basePath, 'utf8');
-        }
-
-        if (fs.existsSync(phasePath)) {
-            const phasePrompt = fs.readFileSync(phasePath, 'utf8');
-            prompt += '\n\n' + phasePrompt;
-        }
-
-        if (!prompt) {
-            console.log('⚠️ Missing prompt files');
-            return `You are ${agentName}, an underwriter at JMS Global. Keep texts short and professional. NEVER narrate tool calls.`;
-        }
-
-        console.log(`✅ Loaded: base.md + ${phaseFile} (Agent: ${agentName})`);
-
-        prompt = prompt.replace(/\{\{AGENT_NAME\}\}/g, agentName);
-        prompt = prompt.replace(/\{\{PHASE\}\}/g, currentState || 'ACTIVE');
-
-        return prompt;
-    } catch (err) {
-        console.error('⚠️ Error loading prompt:', err.message);
-        return 'You are an underwriter at JMS Global. Keep texts short and professional. NEVER narrate tool calls.';
-    }
-}
-
-async function getPromptForPhase(userId, currentState) {
+async function getPromptForPhase(userId, currentState, agentName, agentEmail) {
     const basePath = path.join(__dirname, '../prompts/sales_agent/base.md');
     const phasePath = path.join(__dirname, `../prompts/sales_agent/phase_${currentState.toLowerCase()}.md`);
 
@@ -335,12 +256,6 @@ async function getPromptForPhase(userId, currentState) {
     if (fs.existsSync(phasePath)) {
         prompt += '\n\n---\n\n' + fs.readFileSync(phasePath, 'utf8');
     }
-
-    // Replace placeholders
-    const db = getDatabase();
-    const result = await db.query('SELECT agent_name, email FROM users WHERE id = $1', [userId]);
-    const agentName = result.rows[0]?.agent_name || 'Dan Torres';
-    const agentEmail = result.rows[0]?.email || 'mike@jmsglobal.biz';
 
     prompt = prompt.replace(/\{\{AGENT_NAME\}\}/g, agentName);
     prompt = prompt.replace(/\{\{AGENT_EMAIL\}\}/g, agentEmail);
@@ -367,7 +282,7 @@ async function getRebuttalsPrompt() {
     }
 }
 
-async function getLearnedCorrections(leadGrade, revenueRange) {
+async function getLearnedCorrections(leadGrade) {
     const db = getDatabase();
     try {
         const result = await db.query(`
@@ -394,26 +309,20 @@ async function processLeadWithAI(conversationId, systemInstruction) {
     const db = getDatabase();
 
     try {
-        // Get lead info FIRST for logging
         const leadRes = await db.query(`
-            SELECT first_name, business_name, state, email
+            SELECT first_name, business_name, state, email, ai_enabled,
+                   created_by_user_id, assigned_user_id
             FROM conversations WHERE id = $1
         `, [conversationId]);
 
         const lead = leadRes.rows[0];
-        const leadName = lead?.business_name || lead?.first_name || 'Unknown';
+        if (!lead) return { shouldReply: false };
 
-        // =================================================================
-        // 🚨 LAYER 0: THE MANUAL MASTER SWITCH
-        // =================================================================
-        const settingsRes = await db.query(
-            'SELECT ai_enabled, state, created_by_user_id, assigned_user_id FROM conversations WHERE id = $1',
-            [conversationId]
-        );
-        const usageUserId = settingsRes.rows[0]?.assigned_user_id || settingsRes.rows[0]?.created_by_user_id || null;
+        const leadName = lead.business_name || lead.first_name || 'Unknown';
+        const currentState = lead.state;
+        const usageUserId = lead.assigned_user_id || lead.created_by_user_id || null;
 
-        // If the switch is explicitly OFF, stop everything.
-        if (settingsRes.rows.length > 0 && settingsRes.rows[0].ai_enabled === false) {
+        if (lead.ai_enabled === false) {
             console.log(`⛔ [${leadName}] AI manually disabled`);
             return { shouldReply: false };
         }
@@ -422,7 +331,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 🚨 LAYER 1: MISSION ACCOMPLISHED CHECK (Status Lock)
         // If the lead is already in a "Human" stage, DO NOT REPLY.
         // =================================================================
-        const currentState = settingsRes.rows[0]?.state;
         console.log(`\n========== AI AGENT: ${leadName} ==========`); 
         console.log(`📥 Instruction: "${(systemInstruction || 'none').substring(0, 80)}..."`);
         console.log(`📋 Current State: ${currentState}`);
@@ -431,9 +339,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const RESTRICTED_STATES = [
             'HUMAN_REVIEW', 'FCS_COMPLETE',
             'STRATEGIZED', 'HOT_LEAD', 'VETTING', 'SUBMITTED',  // Agent 2's territory
-            'OFFER_RECEIVED', 'NEGOTIATING',  // Agent 3's territory
-            // Cold drip - dispatcher owns these, AI stays out
-            'SENT_HOOK', 'SENT_FU_1', 'SENT_FU_2', 'SENT_FU_3', 'SENT_FU_4'
+            'OFFER_RECEIVED', 'NEGOTIATING'  // Agent 3's territory
         ];
 
         // If it's a manual command (systemInstruction has value), we ignore the lock.
@@ -483,36 +389,9 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
         }
 
-        // =================================================================
-        // 🚨 LAYER 3: OFFER TOOL SECURITY
-        // Only inject the 'generate_offer' tool if explicitly authorized
-        // =================================================================
-        let availableTools = [...BASE_TOOLS];
-        // Remove consult_analyst if already past qualification
-        if (['SUBMITTED', 'CLOSING', 'READY_TO_SUBMIT'].includes(currentState)) {
-            availableTools = availableTools.filter(t => t.function.name !== 'consult_analyst');
-        }
-
-        // Only allow offer generation if YOU clicked a button that puts "Generate Offer" in the instructions
-        if (systemInstruction && systemInstruction.includes("Generate Offer")) {
-            availableTools.push({
-                type: "function",
-                function: {
-                    name: "generate_offer",
-                    description: "Generates the formal offer PDF and pitch.",
-                    parameters: { type: "object", properties: {} }
-                }
-            });
-        }
-
-        // 1. GET LEAD DETAILS (simple - for templates)
-        const rawName = lead?.first_name || lead?.business_name || "there";
-        const nameToUse = formatName(rawName);
         const businessName = lead?.business_name || "Unknown Business";
 
-        // 2. TEMPLATE MODE (The "Free" Drip Campaign)
-        // Checks instructions from index.js and returns text instantly.
-        // Get agent name for templates
+        // Get agent name/email
         let agentName = 'Dan Torres'; // default
         let agentEmail = 'docs@jmsglobal.com'; // fallback
         if (usageUserId) {
@@ -525,142 +404,33 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
         }
 
-        // =================================================================
-        // 🚨 LAYER 2B: DRIP CAMPAIGN CONTEXT CHECK
-        // Before sending any drip/template message, check if lead responded
-        // =================================================================
-        const recentHistory = await db.query(`
-            SELECT direction, content FROM messages
+        const historyRes = await db.query(`
+            SELECT direction, content, timestamp FROM messages
             WHERE conversation_id = $1
-            ORDER BY timestamp DESC LIMIT 1
+            ORDER BY timestamp DESC LIMIT 40
         `, [conversationId]);
-        
-        const lastMsg = recentHistory.rows[0];
-        const isDripCampaign = systemInstruction.includes("Did you get funded") || 
-                               systemInstruction.includes("money is expensive") ||
-                               systemInstruction.includes("close the file") ||
-                               systemInstruction.includes("any response would be appreciated");
-        
-        // Only use templates if lead hasn't responded yet
-        if (!isDripCampaign || !lastMsg || lastMsg.direction === 'outbound') {
-            if (systemInstruction.includes("Underwriter Hook")) {
-                const content = `Hi ${nameToUse} my name is ${agentName} I'm one of the underwriters at JMS Global. I'm currently going over the bank statements and the application you sent in and I wanted to make an offer. What's the best email to send the offer to?`;
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_HOOK', leadName);
-                return { shouldReply: true, content };
-            }
-            if (systemInstruction.includes("Did you get funded already?")) {
-                const content = "Did you get funded already?";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_FUNDED', leadName);
-                return { shouldReply: true, content };
-            }
-            if (systemInstruction.includes("The money is expensive as is")) {
-                const content = "The money is expensive as is let me compete.";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_COMPETE', leadName);
-                return { shouldReply: true, content };
-            }
-            if (systemInstruction.includes("should i close the file out?")) {
-                const content = "Hey just following up again, should i close the file out?";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE1', leadName);
-                return { shouldReply: true, content };
-            }
-            if (systemInstruction.includes("any response would be appreciated")) {
-                const content = "hey any response would be appreciated here, close this out?";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE2', leadName);
-                return { shouldReply: true, content };
-            }
-            if (systemInstruction.includes("closing out the file")) {
-                const content = "Hey just wanted to follow up again, will be closing out the file if i dont hear a response today, ty";
-                await trackResponseForTraining(conversationId, systemInstruction, content, 'TEMPLATE_CLOSE3', leadName);
-                return { shouldReply: true, content };
-            }
-        } else if (isDripCampaign && lastMsg && lastMsg.direction === 'inbound') {
-            console.log('📬 Drip skipped - lead has responded, switching to AI mode');
-        }
 
-        // 🟢 F. THE HAIL MARY (Ballpark Offer)
-        if (systemInstruction.includes("Generate Ballpark Offer")) {
-            console.log(`🏈 AI MODE: Generating Ballpark Offer (Hail Mary)...`);
-
-            // Check if we have strategy
-            const strategyRes = await db.query(`
-                SELECT game_plan, lead_grade FROM lead_strategy
-                WHERE conversation_id = $1
-            `, [conversationId]);
-
-            let offerText = "";
-            const strategy = strategyRes.rows[0];
-
-            if (strategy?.game_plan) {
-                let gamePlan = strategy.game_plan;
-                if (typeof gamePlan === 'string') {
-                    gamePlan = JSON.parse(gamePlan);
-                }
-
-                const prompt = `
-                    You are ${agentName}. This client has ghosted you.
-
-                    CONTEXT:
-                    - Lead Grade: ${strategy.lead_grade || 'Unknown'}
-                    - Your Approach: ${gamePlan.approach || 'Standard'}
-
-                    TASK:
-                    Write a short text to wake them up. Keep it vague but compelling.
-                    - Mention you looked over their file/statements and liked what you saw
-                    - Say you wanted to make an offer before closing the file
-                    - Ask if they want you to send the numbers or close it out
-
-                    RULES:
-                    - Do NOT mention specific dollar amounts
-                    - Do NOT mention specific revenue numbers
-                    - Do NOT introduce yourself by name (they already know you)
-                    - Keep it under 160 characters if possible
-                    - Sound human, not salesy
-                `;
-
-                try {
-                    const result = await geminiModel.generateContent(prompt);
-                    offerText = result.response.text().replace(/"/g, '').trim();
-                } catch (e) {
-                    offerText = "hey looked over your file again, numbers look solid. want me to send over an offer or should i close it out?";
-                }
-            } else {
-                offerText = "hey i havent heard back — still interested or should i close the file out?";
-            }
-
-            await trackResponseForTraining(conversationId, systemInstruction, offerText, 'BALLPARK_OFFER', leadName);
-            return { shouldReply: true, content: offerText };
-        }
-
-        // 3. AI MODE (GPT-4o) - Only runs if no template matched
-        console.log("🤖 AI MODE: Reading Strategy...");
-
-        // 3.5 GET COMMANDER'S GAME PLAN (only needed for AI mode)
-        let gamePlan = null;
         const strategyRes = await db.query(`
             SELECT game_plan, lead_grade, strategy_type
-            FROM lead_strategy
-            WHERE conversation_id = $1
+            FROM lead_strategy WHERE conversation_id = $1
         `, [conversationId]);
-
-        const leadGrade = strategyRes.rows[0]?.lead_grade || null;
+        let gamePlan = null;
         if (strategyRes.rows[0]) {
             gamePlan = strategyRes.rows[0].game_plan;
             if (typeof gamePlan === 'string') {
-                try {
-                    gamePlan = JSON.parse(gamePlan);
-                } catch (e) {
-                    console.error(`⚠️ Invalid gamePlan JSON for ${conversationId}:`, e.message);
-                    gamePlan = null;
-                }
+                try { gamePlan = JSON.parse(gamePlan); } catch (e) { gamePlan = null; }
             }
+        }
+
+        // AI MODE
+        console.log("🤖 AI MODE: Reading Strategy...");
+
+        if (strategyRes.rows[0]) {
             console.log(`🎖️ Commander Orders Loaded: Grade ${strategyRes.rows[0].lead_grade} | ${strategyRes.rows[0].strategy_type}`);
         } else {
             console.log(`📋 No Commander strategy yet - using default prompts`);
         }
 
-        const fcsRes = { rows: [] }; // Disabled - fix column names later
-
-        const fcsData = fcsRes.rows[0] || null;
 
         // Get active offers for this conversation
         const offersRes = await db.query(`
@@ -672,19 +442,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         const offers = offersRes.rows;
 
-        // 4. BUILD CONVERSATION HISTORY
-        // 4. BUILD CONVERSATION HISTORY - Get LATEST 20, then reverse for chronological order
-        const historyRes = await db.query(`
-            SELECT direction, content, timestamp FROM messages
-            WHERE conversation_id = $1
-            ORDER BY timestamp DESC LIMIT 20
-        `, [conversationId]);
-
-        // Reverse to get chronological order (oldest first)
-        const history = { rows: historyRes.rows.reverse() };
+        // 4. BUILD CONVERSATION HISTORY - Get LATEST 40, then reverse for chronological order
+        const history = { rows: [...historyRes.rows].reverse() };
 
         // 4b. CHECK FOR HANDOFF ACKNOWLEDGMENT - Stay silent
-        // Use the full history (last 20) to find the absolute last outbound/inbound
+        // Find the last outbound/inbound from full history
         const lastOutbounds = history.rows.filter(m => m.direction === 'outbound');
         const lastInbounds = history.rows.filter(m => m.direction === 'inbound');
 
@@ -696,10 +458,18 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // 🚨 LAYER 4D: CLOSE FILE CONFIRMATION CHECK
         // If we asked to close and they said yes, stop immediately
         // =================================================================
-        const weAskedToClose = lastOutbound.includes('close the file') || lastOutbound.includes('close it out');
+        const closePatterns = [
+            'should i close the file',
+            'should i close it out',
+            'close this out?',
+            'closing out the file',
+            'close the file out?'
+        ];
+        const weAskedToClose = closePatterns.some(p => lastOutbound.includes(p));
+        const wasPitching = lastOutbound.match(/\d+k/) || lastOutbound.includes('offer') || lastOutbound.includes('work for you');
         const theySaidYes = ['yes', 'yeah', 'sure', 'go ahead', 'yes!', 'ok', 'okay', 'ok!'].includes(lastInbound);
 
-        if (weAskedToClose && theySaidYes) {
+        if (weAskedToClose && !wasPitching && theySaidYes) {
             console.log('📁 Lead confirmed file close - marking as dead');
             await updateState(conversationId, 'DEAD', 'ai_agent');
             return {
@@ -709,46 +479,20 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         }
 
         // 5. BUILD SYSTEM PROMPT
-        let systemPrompt = await getPromptForPhase(usageUserId, currentState);
-        systemPrompt += `\n\n## 📧 YOUR EMAIL\nIf the merchant asks where to send documents, give them: ${agentEmail}\n`;
+        let systemPrompt = await getPromptForPhase(usageUserId, currentState, agentName, agentEmail);
         // Inject temporal context FIRST (clock + statement logic)
         const temporalContext = buildTemporalContext(history.rows);
         systemPrompt = temporalContext + '\n\n' + systemPrompt;
-        systemPrompt += `\n## ⚠️ CRITICAL RULES\n- If lead says \"what?\", \"I don't understand\", \"what are you talking about\" → APOLOGIZE and explain simply\n- If lead says \"why are you repeating yourself\" → APOLOGIZE, acknowledge the issue, and change approach\n- NEVER start with \"depends on\" twice in a row\n- Before responding, mentally check: \"Did I already say this?\"\n`;
-        systemPrompt += `\n## 💪 FIGHT FOR THE DEAL\nWhen lead says \"going with another broker\" or \"found someone else\":\n- \"wait what are they offering? let me see if i can beat it\"\n- \"hold on - what numbers they give you? dont sign anything yet\"\n- \"who you going with? i can probably match or beat it\"\n\nWhen lead says \"not interested\":\n- \"what happened?\"\n- \"you get funded already?\"\n- \"what changed?\"\n\nWhen lead goes quiet after seeing numbers:\n- \"too high?\"\n- \"what payment works better?\"\n- \"talk to me\"\n\nRULES:\n- Short punchy texts. No fluff.\n- Never say \"no worries\" or \"feel free to reach out\" on first objection\n- Sound like a real person, not a bot\n- Match their energy\n- One question at a time\n- Lowercase is fine\n`;
-        systemPrompt += `\n## ⚠️ NEVER INCLUDE IN YOUR RESPONSE:\n- Internal notes or thinking (\"Consult note:\", \"Strategy:\", \"Note to self:\")\n- Reasoning about what to say\n- References to tools or functions\n- Anything the lead shouldn't see\n\nYour response goes DIRECTLY to the lead via SMS. Only include the actual message.\n`;
-        systemPrompt += `\n## FORMATTING RULES (ALWAYS FOLLOW)\n- all lowercase only\n- no emojis ever\n- no special symbols like bullets or dashes\n- no dollar signs, just say \"20k\" or \"twenty thousand\"\n- keep messages under 160 characters\n- sound like a real person texting\n`;
-
-        // Long-term memory (conversation + global patterns)
-        const longTermContext = userMessageForMemory
-            ? await getConversationContext(conversationId, userMessageForMemory, 5)
-            : [];
-        const winningPatterns = userMessageForMemory
-            ? await getSimilarPatterns(userMessageForMemory, { outcome: 'funded', direction: 'outbound' }, 3)
-            : [];
-
-        if (longTermContext.length > 0) {
-            systemPrompt += `\n\n## 🧠 EARLIER IN THIS CONVERSATION\n`;
-            longTermContext.forEach(c => {
-                systemPrompt += `- [${c.direction}]: ${c.content.substring(0, 100)}...\n`;
-            });
-        }
-
-        if (winningPatterns.length > 0) {
-            systemPrompt += `\n\n## 🏆 WHAT WORKED WITH SIMILAR LEADS\n`;
-            winningPatterns.forEach(p => {
-                systemPrompt += `- ${p.content.substring(0, 150)}...\n`;
-            });
-        }
 
         // Load rebuttals playbook
-        const rebuttals = await getRebuttalsPrompt();
+        const rebuttals = ['ACTIVE', 'DRIP', 'NEW', 'PITCH_READY'].includes(currentState)
+            ? await getRebuttalsPrompt() : '';
         if (rebuttals) {
             systemPrompt += `\n\n---\n\n${rebuttals}`;
         }
 
-        // NEW: Inject learned corrections
-        const corrections = await getLearnedCorrections(gamePlan?.lead_grade || null, null);
+        const corrections = ['ACTIVE', 'DRIP', 'PITCH_READY'].includes(currentState)
+            ? await getLearnedCorrections(gamePlan?.lead_grade || null) : [];
         if (corrections.length > 0) {
             systemPrompt += `\n\n---\n\n## 🎓 LEARNED CORRECTIONS (Follow these patterns)\n`;
             corrections.forEach(c => {
@@ -824,20 +568,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
         }
 
-        if (fcsData) {
-            systemPrompt += `\n\n---\n\n## 📊 FINANCIAL CONTEXT (Use this to negotiate)\n`;
-            systemPrompt += `**Monthly Revenue:** $${Math.round(fcsData.average_revenue || 0).toLocaleString()}\n`;
-            systemPrompt += `**Daily Balance:** $${Math.round(fcsData.average_daily_balance || 0).toLocaleString()}\n`;
-            systemPrompt += `**Current Withholding:** ${fcsData.withholding_percentage || 'Unknown'}%\n`;
-            systemPrompt += `**Negative Days:** ${fcsData.total_negative_days || 0}\n`;
-
-            if (fcsData.positions && fcsData.positions.length > 0) {
-                systemPrompt += `**Existing Positions:** ${fcsData.positions.length} active\n`;
-            }
-
-            systemPrompt += `\n**Summary:** ${fcsData.analysis_summary || 'No summary'}\n`;
-        }
-
         if (offers && offers.length > 0) {
             systemPrompt += `\n\n---\n\n## 💰 ACTIVE OFFERS (Use for negotiation)\n`;
             offers.forEach(o => {
@@ -856,7 +586,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             systemPrompt += `**Instruction:** ${systemInstruction}\n`;
         }
 
-        // --- FIX 2: Inject Context Checklist & JSON Rules ---
+        // Checklist & output format
         const facts = await getLeadFacts(conversationId);
 
         const needsMTD = facts.recent_funding &&
@@ -878,23 +608,31 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             ? (facts.mtd_requested ? '- MTD Statement: ❌ (Requested, waiting for merchant)' : '- MTD Statement: ❌ (REQUIRED - they got funded, need MTD before qualifying)')
             : '';
 
-        systemPrompt += `\n\n## 📝 DATA CHECKLIST (Status: ${currentState})
-        - Email: ${facts.email ? '✅ ' + facts.email : '❓ (Check conversation - they may have already provided it)'}
-        - Credit Score: ${facts.credit_score ? '✅ ' + facts.credit_score : '❓ (Check conversation first)'}
-        - Recent Funding: ${facts.recent_funding ? '✅ ' + facts.recent_funding : '❓ (Check conversation first)'}
+        systemPrompt += `\n\n## 📝 CONFIRMED FACTS
+        - Email: ${facts.email || 'NOT COLLECTED'}
+        - Credit Score: ${facts.credit_score || 'NOT COLLECTED'}
+        - Recent Funding: ${facts.recent_funding || 'NOT COLLECTED'}
+        - Desired Amount: ${facts.desired_amount || 'NOT COLLECTED'}
         ${mtdStatusLine}
         ${statementsCurrentLine}
-        ${needsMTD ? '⚠️ CRITICAL: DO NOT set action to "qualify" until MTD is received.' : ''}
-        
-        IMPORTANT: The checklist may be incomplete. If the merchant already provided info in the conversation above, DO NOT ask again. Use what they gave you and call the appropriate tool to save it.
+        ${needsMTD ? '⚠️ DO NOT qualify until MTD is received.' : ''}
+
+        If something says NOT COLLECTED but the merchant said it in the conversation, extract it in extracted_facts.
 
         ## ⚙️ OUTPUT FORMAT
-        You must return Valid JSON ONLY. No markdown, no thinking text.
-        Structure:
+        Return Valid JSON ONLY. No markdown, no thinking.
         {
            "action": "respond" | "qualify" | "mark_dead" | "sync_drive" | "no_response" | "ready_to_submit",
-           "message": "The exact SMS to send (lowercase, casual, <160 chars). Null if no_response.",
-           "reason": "Internal reasoning here"
+           "message": "The exact SMS to send. Null if no_response.",
+           "reason": "Why you chose this action",
+           "extracted_facts": {
+               "email": "their email if provided, else null",
+               "credit_score": "score if mentioned, else null",
+               "recent_funding": "yes or no if discussed, else null",
+               "desired_amount": "amount they want if mentioned, else null",
+               "statements_current": "month name if confirmed sent, else null",
+               "mtd_sent": "true if confirmed, else null"
+           }
         }
         
         ACTIONS:
@@ -907,31 +645,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         `;
 
         
-        // 🛡️ ATOMIC CLAIM - Same pattern as processorAgent
-        // Prevents race conditions between dispatcher + webhook
-        const lastInboundMsg = await db.query(`
-            SELECT id FROM messages 
-            WHERE conversation_id = $1 AND direction = 'inbound'
-            ORDER BY timestamp DESC LIMIT 1
-        `, [conversationId]);
-        const lastInboundMsgId = lastInboundMsg.rows[0]?.id || null;
-
-        let claimed = true;
-        if (lastInboundMsgId && currentState !== 'PITCH_READY') {
-            const claimResult = await db.query(
-                `UPDATE conversations 
-                 SET last_processed_msg_id = $1, last_activity = NOW()
-                 WHERE id = $2 AND (last_processed_msg_id IS DISTINCT FROM $1)
-                 RETURNING id`,
-                [lastInboundMsgId, conversationId]
-            );
-            claimed = claimResult.rows.length > 0;
-        }
-
-        if (!claimed) {
-            console.log(`⏭️ [${leadName}] Already processed last inbound - skipping AI call (FREE)`);
-            return { shouldReply: false };
-        }
+        // No atomic claim needed - single path per trigger type
 
         // Build the Message Chain
         let messages = [{ role: "system", content: systemPrompt }];
@@ -999,6 +713,10 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             decision = { action: "respond", message: "got it, give me one sec" };
         }
 
+        if (decision.extracted_facts) {
+            await saveExtractedFacts(conversationId, decision.extracted_facts);
+        }
+
         console.log(`🤖 [${leadName}] Decision: ${decision.action?.toUpperCase() || 'RESPOND'} | Reason: ${decision.reason || 'N/A'}`);
 
         let responseContent = decision.message;
@@ -1048,7 +766,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             }
 
             if (args.statements_current) {
-                await saveLeadFact(conversationId, 'statements_current', args.statements_current);
+                await saveExtractedFacts(conversationId, { statements_current: args.statements_current });
             }
         }
         else if (decision.action === 'sync_drive') {
@@ -1081,18 +799,17 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             return { shouldReply: false };
         }
 
-        const lastMsgRes = await db.query(`
-            SELECT content FROM messages
-            WHERE conversation_id = $1 AND direction = 'inbound'
-            ORDER BY timestamp DESC LIMIT 1
-        `, [conversationId]);
-        const userMessage = lastMsgRes.rows[0]?.content || 'N/A';
+        const userMessage = userMessageForMemory || 'N/A';
 
         await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
 
         if (currentState === 'PITCH_READY') {
             await updateState(conversationId, 'ACTIVE', 'ai_agent');
             console.log(`🎯 [${leadName}] Pitched → back to ACTIVE`);
+        }
+        if (currentState === 'DRIP' || currentState === 'NEW') {
+            await updateState(conversationId, 'ACTIVE', 'ai_agent');
+            console.log(`📬 [${leadName}] ${currentState} → ACTIVE (lead replied)`);
         }
 
         await logAIDecision({
@@ -1108,16 +825,6 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             tokensUsed: completion.usage?.total_tokens
         });
 
-        try {
-            await storeMessage(conversationId, responseContent, {
-                direction: 'outbound',
-                state: currentState,
-                lead_grade: leadGrade
-            });
-        } catch (err) {
-            console.error('⚠️ Memory store failed:', err.message);
-        }
-
         return { shouldReply: true, content: responseContent };
 
     } catch (err) {
@@ -1126,4 +833,10 @@ async function processLeadWithAI(conversationId, systemInstruction) {
     }
 }
 
-module.exports = { processLeadWithAI, trackResponseForTraining };
+module.exports = { 
+    processLeadWithAI, 
+    trackResponseForTraining,
+    startAgentLoop,
+    stopAgentLoop,
+    runAgentLoop
+};
