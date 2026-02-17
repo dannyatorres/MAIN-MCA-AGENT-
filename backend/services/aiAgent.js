@@ -475,8 +475,8 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // Only inject the 'generate_offer' tool if explicitly authorized
         // =================================================================
         let availableTools = [...BASE_TOOLS];
-        // Remove consult_analyst if already past qualification (has strategy)
-        if (['SUBMITTED', 'CLOSING', 'READY_TO_SUBMIT'].includes(currentState) || gamePlan) {
+        // Remove consult_analyst if already past qualification
+        if (['SUBMITTED', 'CLOSING', 'READY_TO_SUBMIT'].includes(currentState)) {
             availableTools = availableTools.filter(t => t.function.name !== 'consult_analyst');
         }
 
