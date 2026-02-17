@@ -352,13 +352,20 @@ class ConversationCore {
             if ((a.unread_count > 0) && !(b.unread_count > 0)) return -1;
             if (!(a.unread_count > 0) && (b.unread_count > 0)) return 1;
 
-            // Tier 3: Active engagement (lead has replied) above drip-only
+            // Tier 3: Recent touch (outbound or inbound)
+            const timeA = new Date(a.last_message_at || a.last_activity || a.created_at || 0).getTime();
+            const timeB = new Date(b.last_message_at || b.last_activity || b.created_at || 0).getTime();
+            const fiveMinAgo = Date.now() - (5 * 60 * 1000);
+            const aRecent = timeA > fiveMinAgo;
+            const bRecent = timeB > fiveMinAgo;
+            if (aRecent && !bRecent) return -1;
+            if (!aRecent && bRecent) return 1;
+
+            // Tier 4: Active engagement (lead has replied) above drip-only
             if (a.has_response && !b.has_response) return -1;
             if (!a.has_response && b.has_response) return 1;
 
-            // Tier 4: Most recent activity
-            const timeA = new Date(a.last_message_at || a.last_activity || a.created_at || 0);
-            const timeB = new Date(b.last_message_at || b.last_activity || b.created_at || 0);
+            // Tier 5: Most recent activity
             return timeB - timeA;
         });
 
@@ -563,13 +570,20 @@ class ConversationCore {
             if ((a.unread_count > 0) && !(b.unread_count > 0)) return -1;
             if (!(a.unread_count > 0) && (b.unread_count > 0)) return 1;
 
-            // Tier 3: Has inbound response (active engagement) vs drip-only
+            // Tier 3: Recent touch (outbound or inbound)
+            const timeA = new Date(a.last_message_at || a.last_activity || a.created_at || 0).getTime();
+            const timeB = new Date(b.last_message_at || b.last_activity || b.created_at || 0).getTime();
+            const fiveMinAgo = Date.now() - (5 * 60 * 1000);
+            const aRecent = timeA > fiveMinAgo;
+            const bRecent = timeB > fiveMinAgo;
+            if (aRecent && !bRecent) return -1;
+            if (!aRecent && bRecent) return 1;
+
+            // Tier 4: Has inbound response (active engagement) vs drip-only
             if (a.has_response && !b.has_response) return -1;
             if (!a.has_response && b.has_response) return 1;
 
-            // Tier 4: Time
-            const timeA = new Date(a.last_message_at || a.last_activity || a.created_at || 0);
-            const timeB = new Date(b.last_message_at || b.last_activity || b.created_at || 0);
+            // Tier 5: Time
             return timeB - timeA;
         });
 

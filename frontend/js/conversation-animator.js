@@ -26,9 +26,7 @@ class ConversationAnimator {
         if (!firstItem || firstItem === item) return; // Already at top
 
         // Get positions
-        const itemRect = item.getBoundingClientRect();
-        const firstRect = firstItem.getBoundingClientRect();
-        const distance = itemRect.top - firstRect.top;
+        const distance = item.offsetTop - firstItem.offsetTop;
 
         // Animate up
         item.style.transition = `transform ${this.animationDuration}ms ease-out`;
