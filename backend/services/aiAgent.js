@@ -915,7 +915,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const lastInboundMsgId = lastInboundMsg.rows[0]?.id || null;
 
         let claimed = true;
-        if (lastInboundMsgId) {
+        if (lastInboundMsgId && currentState !== 'PITCH_READY') {
             const claimResult = await db.query(
                 `UPDATE conversations 
                  SET last_processed_msg_id = $1, last_activity = NOW()
@@ -1087,6 +1087,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         const userMessage = lastMsgRes.rows[0]?.content || 'N/A';
 
         await trackResponseForTraining(conversationId, userMessage, responseContent, 'AI_MODE', leadName);
+
+        if (currentState === 'PITCH_READY') {
+            await updateState(conversationId, 'ACTIVE', 'ai_agent');
+            console.log(`🎯 [${leadName}] Pitched → back to ACTIVE`);
+        }
 
         await logAIDecision({
             conversationId,
