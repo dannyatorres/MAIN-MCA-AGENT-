@@ -50,6 +50,20 @@ function isAckMessage(text) {
     return acks.has(msg);
 }
 
+function isStallMessage(reason = '', message = '') {
+    const stalls = [
+        "i'll get back", "ill get back", "get back to you", "get back to me",
+        "text you tomorrow", "call you tomorrow", "call me tomorrow",
+        "let me think", "need to think", "give me a few days",
+        "check with my partner", "talk to my partner", "check with my wife",
+        "not right now", "maybe later", "reach out when ready",
+        "ill reach out", "i'll reach out", "will let you know",
+        "waiting to hear", "waiting on", "i'll text you", "ill text you"
+    ];
+    const combined = (reason + ' ' + message).toLowerCase();
+    return stalls.some(s => combined.includes(s));
+}
+
 async function runAgentLoop() {
     if (isAIRunning) {
         console.log('⭕ AI loop still running — skipping');
@@ -651,6 +665,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // Checklist & output format
         const facts = await getLeadFacts(conversationId);
+        const stallCount = parseInt(facts.stall_count || '0', 10);
 
         const needsMTD = facts.recent_funding &&
             !['none', 'no', 'n/a', 'false'].includes(facts.recent_funding.toLowerCase()) &&
@@ -711,6 +726,24 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - "ready_to_submit": Lead accepted the pitch AND confirmed they're ok with weekly payments. If they accepted the amount but you haven't asked about weekly yet, DO NOT use this action — respond first and ask "let me run the final numbers but youre good with a weekly right?" Only use ready_to_submit once they confirm weekly.
         `;
 
+        let stallGuidance = '';
+        if (stallCount >= 4) {
+            stallGuidance = `\n\n## 🚨 STALL ALERT — SEND BREAKUP MESSAGE
+This lead has stalled ${stallCount} times. Stop chasing. Send ONE breakup message:
+"hey i don't want to keep bugging you — should i just close your file?"
+Use action: "no_response" after sending this so we stop nudging. DO NOT pitch. DO NOT ask questions.`;
+        } else if (stallCount >= 3) {
+            stallGuidance = `\n\n## ⚠️ STALL ALERT — CREATE URGENCY (${stallCount} stalls)
+This lead keeps saying they'll get back to us but never does. 
+Switch strategy — create urgency. Use the urgency_angle from Commander's orders if available.
+Try: rate change warning, lender capacity angle, limited-time framing.
+Do NOT send another soft follow-up. Make them decide.`;
+        } else if (stallCount >= 1) {
+            stallGuidance = `\n\n## 📌 STALL NOTED (${stallCount} time${stallCount > 1 ? 's' : ''})
+Lead has stalled before. Keep pressure light but don't let them slip — if they stall again this call, flag it.`;
+        }
+
+        if (stallGuidance) systemPrompt += stallGuidance;
         
         // No atomic claim needed - single path per trigger type
 
@@ -792,6 +825,15 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         // Check no_response FIRST
         if (decision.action === 'no_response') {
             console.log(`😴 [${leadName}] NO_RESPONSE — parking for nudge cycle`);
+
+            // STALL COUNTER
+            if (isStallMessage(decision.reason || '', lastInbound)) {
+                const facts = await getLeadFacts(conversationId);
+                const currentStalls = parseInt(facts.stall_count || '0', 10) + 1;
+                await saveExtractedFacts(conversationId, { stall_count: String(currentStalls) });
+                console.log(`😴 [${leadName}] Stall detected — stall_count now ${currentStalls}`);
+            }
+
             await db.query(
                 `UPDATE conversations SET last_activity = NOW() + INTERVAL '13 minutes', nudge_count = 0 WHERE id = $1`,
                 [conversationId]
