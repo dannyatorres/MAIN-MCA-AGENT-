@@ -91,8 +91,8 @@ async function runAgentLoop() {
 
         const replyResults = [];
         for (const lead of replies.rows) {
-            if (isAckMessage(lead.last_content)) {
-                console.log(`😴 [${lead.business_name}] Ack — skipping GPT`);
+            if (isAckMessage(lead.last_content) && lead.state === 'DRIP') {
+                console.log(`😴 [${lead.business_name}] Ack in DRIP — skipping GPT`);
                 await db.query(
                     `UPDATE conversations SET last_processed_msg_id = $1, last_activity = NOW(), nudge_count = 0 WHERE id = $2`,
                     [lead.latest_msg_id, lead.id]
