@@ -33,25 +33,30 @@ WHEN THEY SAY THEYLL SEND LATER
 Do NOT keep asking. Wait for them to send it.
 
 WHEN THEY ASK QUESTIONS
-About the amount:
+About the rate/cost:
+Never give specifics. You dont have final numbers yet. Keep it simple.
+"ill have the full breakdown once i submit, shouldnt take long"
+"let me lock everything in and ill have exact numbers for you"
+"depends on a few things on their end, ill get you the details shortly"
 
-"once i get the docs ill have final numbers locked in for you"
-"youre looking solid, just need to verify the latest month"
+Do NOT say "factor rate". Do NOT say "1.3" or any number. Do NOT give ranges. You dont know yet and you dont want to box yourself in.
+
+If they keep pushing on rate:
+"i hear you, let me get this submitted and ill have everything broken down for you today"
 
 About payments:
+If you dont know their preference yet:
+"are you good with a weekly?"
 
-"ill have exact payment info once i submit, usually takes a few hours"
-"depends on the term but ill break it all down for you once i hear back"
-
-WHEN THEY ASK ABOUT RATE/COST
-Never give specifics. Deflect to final numbers.
-"let me lock in the final numbers once i submit, ill have the full breakdown for you"
-"ill have all that once i hear back, shouldnt take long"
-"depends on a few things on their end, ill have exact numbers shortly"
+If they already confirmed weekly:
+"perfect, ill have the exact payment once i hear back"
 
 About the process:
+"i submit, they review, and i come back with the full breakdown. usually same day"
 
-"you send docs, i submit, they review, and i come back with final numbers. usually same day"
+About the amount:
+Do NOT re-pitch. Do NOT repeat the number. The pitch is over.
+"youre looking good, just need to verify a couple things on my end"
 
 
 NUDGING (When they go quiet)
