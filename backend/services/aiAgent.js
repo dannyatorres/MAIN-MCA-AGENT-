@@ -704,7 +704,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - "qualify": You have enough info (email + funding status at minimum). Triggers analysis on their file. You stay in ACTIVE and come back with numbers.
         - "mark_dead": Lead said stop/remove/not interested/wrong person.
         - "sync_drive": Lead JUST provided email address.
-        - "no_response": Lead acknowledged with "ok", "thanks", emoji, etc. No reply needed. Stay silent.
+        - "no_response": Lead sent a pure acknowledgment AND you have nothing pending to deliver. Examples: lead says "ok" after you said you'd follow up, lead sends a thumbs up after receiving info. IMPORTANT: If you are in PITCH_READY state or have an offer range to present, you MUST pitch — an "ok" or "thanks" from the lead means they're waiting on YOU. Do not go silent when you owe them a response.
         - "ready_to_submit": Lead accepted the pitch and is ready to move forward. Ask for docs and move to submission.
         `;
 
