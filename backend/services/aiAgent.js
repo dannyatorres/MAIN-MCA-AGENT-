@@ -404,6 +404,28 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             return { shouldReply: false };
         }
 
+        const recentDecision = await db.query(`
+            SELECT last_ai_decision, last_ai_decision_at,
+                   last_processed_msg_id
+            FROM conversations WHERE id = $1
+        `, [conversationId]);
+
+        const { last_ai_decision, last_processed_msg_id } = recentDecision.rows[0] || {};
+
+        // If last decision was no_response AND no new message since then, skip
+        const latestMsg = await db.query(`
+            SELECT id FROM messages 
+            WHERE conversation_id = $1 
+              AND direction = 'inbound'
+            ORDER BY timestamp DESC LIMIT 1
+        `, [conversationId]);
+
+        if (last_ai_decision === 'no_response' &&
+            latestMsg.rows[0]?.id === last_processed_msg_id) {
+            console.log(`⏭️ [${leadName}] Skipping — no new message since last no_response`);
+            return { shouldReply: false };
+        }
+
         // =================================================================
         // 🚨 LAYER 1: MISSION ACCOMPLISHED CHECK (Status Lock)
         // If the lead is already in a "Human" stage, DO NOT REPLY.
@@ -854,6 +876,10 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
                     [conversationId]
                 );
             }
+            await db.query(
+                `UPDATE conversations SET last_ai_decision = $1, last_ai_decision_at = NOW() WHERE id = $2`,
+                [decision.action, conversationId]
+            );
             return { shouldReply: false };
         }
 
@@ -956,6 +982,10 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
             tokensUsed: completion.usage?.total_tokens
         });
 
+        await db.query(
+            `UPDATE conversations SET last_ai_decision = $1, last_ai_decision_at = NOW() WHERE id = $2`,
+            [decision.action, conversationId]
+        );
         return { shouldReply: true, content: responseContent };
 
     } catch (err) {
