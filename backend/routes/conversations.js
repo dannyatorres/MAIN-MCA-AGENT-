@@ -246,7 +246,7 @@ router.get('/:id', requireConversationAccess('id'), async (req, res) => {
             conversation.workflow_state = conversation.state;
         }
 
-        console.log(`📄 Loaded: ${conversation.business_name || 'Unknown'}`, new Error().stack.split('\n')[2]);
+        console.log(`📄 Loaded: ${conversation.business_name || 'Unknown'}`);
 
         // Return just the conversation object (matching original format)
         res.json(conversation);
@@ -476,7 +476,6 @@ router.put('/:id', requireConversationAccess('id'), requireModifyPermission, asy
     try {
         const { id } = req.params;
         const updates = req.body;
-        console.log('📥 RAW body received:', JSON.stringify(updates, null, 2));
         const db = getDatabase();
 
         console.log(`📝 Updating conversation ${id} (Smart Update)...`);
@@ -608,8 +607,6 @@ router.put('/:id', requireConversationAccess('id'), requireModifyPermission, asy
             }
         }
 
-        console.log('📥 Mapped updates:', dbUpdates);
-
         // 4. Update conversations table
         if (Object.keys(dbUpdates).length > 0) {
             const setClauses = Object.keys(dbUpdates).map((k, i) => `${k} = $${i + 2}`);
@@ -686,7 +683,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM documents WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ Documents deleted');
         } catch (err) {
             console.error('❌ Error deleting documents:', err.message);
         }
@@ -696,7 +692,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM messages WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ Messages deleted');
         } catch (err) {
             console.error('❌ Error deleting messages:', err.message);
         }
@@ -709,7 +704,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM fcs_results WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ FCS results deleted');
         } catch (err) {
             console.error('❌ Error deleting fcs_results:', err.message);
         }
@@ -720,7 +714,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM lender_submissions WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ Lender submissions deleted');
         } catch (err) {
             console.error('❌ Error deleting lender_submissions:', err.message);
         }
@@ -731,7 +724,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM lender_qualifications WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ Lender qualifications deleted');
         } catch (err) {
             console.error('❌ Error deleting lender_qualifications:', err.message);
         }
@@ -742,7 +734,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM ai_messages WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ AI messages deleted');
         } catch (err) {
             console.error('❌ Error deleting ai_messages:', err.message);
         }
@@ -753,7 +744,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM ai_chat_messages WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ AI chat messages deleted');
         } catch (err) {
             console.error('❌ Error deleting ai_chat_messages:', err.message);
         }
@@ -764,7 +754,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM lender_matches WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ Lender matches deleted');
         } catch (err) {
             console.error('❌ Error deleting lender_matches:', err.message);
         }
@@ -775,7 +764,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM agent_actions WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ Agent actions deleted');
         } catch (err) {
             console.error('❌ Error deleting agent_actions:', err.message);
         }
@@ -786,7 +774,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM usage_logs WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ Usage logs deleted');
         } catch (err) {
             console.error('❌ Error deleting usage_logs:', err.message);
         }
@@ -797,7 +784,6 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
                 `DELETE FROM state_history WHERE conversation_id IN (${placeholders})`,
                 allowedIds
             );
-            console.log('✅ State history deleted');
         } catch (err) {
             console.error('❌ Error deleting state_history:', err.message);
         }
@@ -805,85 +791,71 @@ router.post('/bulk-delete', requireModifyPermission, async (req, res) => {
         // Delete lead strategy
         try {
             await db.query(`DELETE FROM lead_strategy WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Lead strategy deleted');
         } catch (err) { console.error('❌ Error deleting lead_strategy:', err.message); }
 
         // Delete response training
         try {
             await db.query(`DELETE FROM response_training WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Response training deleted');
         } catch (err) { console.error('❌ Error deleting response_training:', err.message); }
 
         // Delete ai decisions
         try {
             await db.query(`DELETE FROM ai_decisions WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ AI decisions deleted');
         } catch (err) { console.error('❌ Error deleting ai_decisions:', err.message); }
 
         // Delete fcs analyses
         try {
             await db.query(`DELETE FROM fcs_analyses WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ FCS analyses deleted');
         } catch (err) { console.error('❌ Error deleting fcs_analyses:', err.message); }
 
         // Delete lead details
         try {
             await db.query(`DELETE FROM lead_details WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Lead details deleted');
         } catch (err) { console.error('❌ Error deleting lead_details:', err.message); }
 
         // Delete business owners
         try {
             await db.query(`DELETE FROM business_owners WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Business owners deleted');
         } catch (err) { console.error('❌ Error deleting business_owners:', err.message); }
 
         // Delete offers
         try {
             await db.query(`DELETE FROM offers WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Offers deleted');
         } catch (err) { console.error('❌ Error deleting offers:', err.message); }
 
         // Delete call logs
         try {
             await db.query(`DELETE FROM call_logs WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Call logs deleted');
         } catch (err) { console.error('❌ Error deleting call_logs:', err.message); }
 
         // Delete documents
         try {
             await db.query(`DELETE FROM documents WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Documents deleted');
         } catch (err) { console.error('❌ Error deleting documents:', err.message); }
 
         // Delete document analysis
         try {
             await db.query(`DELETE FROM document_analysis WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Document analysis deleted');
         } catch (err) { console.error('❌ Error deleting document_analysis:', err.message); }
 
         // Delete document processing queue
         try {
             await db.query(`DELETE FROM document_processing_queue WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Document processing queue deleted');
         } catch (err) { console.error('❌ Error deleting document_processing_queue:', err.message); }
 
         // Delete fcs queue
         try {
             await db.query(`DELETE FROM fcs_queue WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ FCS queue deleted');
         } catch (err) { console.error('❌ Error deleting fcs_queue:', err.message); }
 
         // Delete conversation context
         try {
             await db.query(`DELETE FROM conversation_context WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Conversation context deleted');
         } catch (err) { console.error('❌ Error deleting conversation_context:', err.message); }
 
         // Delete job queue
         try {
             await db.query(`DELETE FROM job_queue WHERE conversation_id IN (${placeholders})`, allowedIds);
-            console.log('✅ Job queue deleted');
         } catch (err) { console.error('❌ Error deleting job_queue:', err.message); }
 
         // Finally delete conversations
@@ -1130,7 +1102,6 @@ router.post('/:id/generate-pdf-document', async (req, res) => {
 
         const getRandomIp = () => Array(4).fill(0).map(() => Math.floor(Math.random() * 256)).join('.');
         const clientIp = getRandomIp();
-        console.log(`🎲 Generated Random IP for PDF: ${clientIp}`);
 
         const result = await documentService.generateLeadPDF(
             conversationId,
