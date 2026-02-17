@@ -58,7 +58,7 @@ function isStallMessage(reason = '', message = '') {
         "check with my partner", "talk to my partner", "check with my wife",
         "not right now", "maybe later", "reach out when ready",
         "ill reach out", "i'll reach out", "will let you know",
-        "waiting to hear", "waiting on", "i'll text you", "ill text you"
+        "waiting to hear", "i'll text you", "ill text you"
     ];
     const combined = (reason + ' ' + message).toLowerCase();
     return stalls.some(s => combined.includes(s));
@@ -828,7 +828,7 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
 
             // STALL COUNTER
             let isStall = false;
-            if (isStallMessage(decision.reason || '', lastInbound)) {
+            if (isStallMessage('', lastInbound)) {
                 isStall = true;
                 const facts = await getLeadFacts(conversationId);
                 const currentStalls = parseInt(facts.stall_count || '0', 10) + 1;
