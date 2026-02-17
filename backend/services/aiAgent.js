@@ -148,6 +148,12 @@ async function runAgentLoop() {
             WHERE c.state IN ('ACTIVE', 'PITCH_READY', 'CLOSING')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
+              AND EXISTS (
+                  SELECT 1 FROM messages m
+                  WHERE m.conversation_id = c.id
+                    AND m.direction = 'inbound'
+                    AND m.timestamp > NOW() - INTERVAL '3 days'
+              )
               AND (
                   c.state = 'PITCH_READY'
                   OR
