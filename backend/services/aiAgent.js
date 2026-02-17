@@ -37,6 +37,18 @@ async function saveExtractedFacts(conversationId, extracted) {
     }
 }
 
+async function saveLeadFact(conversationId, key, value) {
+    if (!key || !value) return;
+    const db = getDatabase();
+    await db.query(`
+        INSERT INTO lead_facts (conversation_id, fact_key, fact_value, collected_at)
+        VALUES ($1, $2, $3, NOW())
+        ON CONFLICT (conversation_id, fact_key) 
+        DO UPDATE SET fact_value = $3, collected_at = NOW()
+    `, [conversationId, key, value]);
+    console.log(`💾 Saved Fact [${conversationId}]: ${key} = ${value}`);
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
@@ -245,12 +257,13 @@ const BASE_TOOLS = [
         type: "function",
         function: {
             name: "consult_analyst",
-            description: "Call this ONLY when you have ALL THREE: 1. Email, 2. Credit Score, 3. Confirmed NO new funding this month OR if they have new funding, they've already sent the MTD statement. NEVER call this if they said they got funded recently but haven't sent MTD yet. Always ask about new loans BEFORE asking for credit score.",
+            description: "Call this ONLY when you have ALL THREE: 1. Email, 2. Credit Score, 3. Confirmed NO new funding this month OR if they have new funding, they've already sent the MTD statement. 4. Latest statements confirmed sent or not needed. NEVER call this if they said they got funded recently but haven't sent MTD yet. Always ask about new loans BEFORE asking for credit score.",
             parameters: {
                 type: "object",
                 properties: {
                     credit_score: { type: "string", description: "The user's stated credit score" },
-                    recent_funding: { type: "string", description: "Details on any new positions (or 'None')" }
+                    recent_funding: { type: "string", description: "Whether they got funded recently" },
+                    statements_current: { type: "string", description: "Whether latest statements are confirmed sent. Set to the month name if confirmed, or 'not_needed' if we already have current months" }
                 },
                 required: ["credit_score", "recent_funding"]
             }
@@ -850,6 +863,17 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             !['none', 'no', 'n/a', 'false'].includes(facts.recent_funding.toLowerCase()) &&
             !facts.mtd_received;
 
+        const now = new Date();
+        const dayOfMonth = now.getDate();
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthName = lastMonth.toLocaleString('en-US', { month: 'long' });
+
+        const statementsCurrentLine = facts.statements_current
+            ? `- Latest Statements: ✅ ${facts.statements_current}`
+            : dayOfMonth <= 7
+                ? `- Latest Statements: ❌ (Ask if ${lastMonthName} statement has been generated yet)`
+                : `- Latest Statements: ❌ (Ask them to send the ${lastMonthName} statement)`;
+
         const mtdStatusLine = needsMTD
             ? (facts.mtd_requested ? '- MTD Statement: ❌ (Requested, waiting for merchant)' : '- MTD Statement: ❌ (REQUIRED - they got funded, need MTD before qualifying)')
             : '';
@@ -859,6 +883,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - Credit Score: ${facts.credit_score ? '✅ ' + facts.credit_score : '❌ (Ask for this after Email)'}
         - Recent Funding: ${facts.recent_funding ? '✅ ' + facts.recent_funding : '❌ (Ask if they took new loans)'}
         ${mtdStatusLine}
+        ${statementsCurrentLine}
         ${needsMTD ? '⚠️ CRITICAL: DO NOT set action to "qualify" until MTD is received.' : ''}
         
         ## ⚙️ OUTPUT FORMAT
@@ -996,6 +1021,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         }
         else if (decision.action === 'qualify') {
             const facts = await getLeadFacts(conversationId);
+            const args = decision || {};
 
             if (!facts.email) {
                 console.log(`🚫 [${leadName}] Tried to qualify without email - blocking`);
@@ -1017,6 +1043,10 @@ async function processLeadWithAI(conversationId, systemInstruction) {
                     commanderService.analyzeAndStrategize(conversationId)
                         .catch(err => console.error('Commander auto-trigger failed:', err.message));
                 }
+            }
+
+            if (args.statements_current) {
+                await saveLeadFact(conversationId, 'statements_current', args.statements_current);
             }
         }
         else if (decision.action === 'sync_drive') {
