@@ -44,7 +44,7 @@ async function runDripLoop() {
     const estHour = parseInt(now.toLocaleString('en-US', {
         timeZone: 'America/New_York', hour: 'numeric', hour12: false
     }));
-    if (estHour < 8 || estHour >= 22) return;
+    if (estHour < 8 || estHour >= 22) { isDripRunning = false; return; }
 
     try {
         const newLeads = await db.query(`
@@ -55,6 +55,7 @@ async function runDripLoop() {
             JOIN users u ON c.assigned_user_id = u.id
             WHERE c.state = 'NEW'
               AND c.ai_enabled != false
+              AND (c.wait_until IS NULL OR c.wait_until < NOW())
               AND c.created_at < NOW() - INTERVAL '1 minute'
             LIMIT 100
         `);
@@ -79,6 +80,7 @@ async function runDripLoop() {
             ) last_msg ON true
             WHERE c.state = 'DRIP'
               AND c.ai_enabled != false
+              AND (c.wait_until IS NULL OR c.wait_until < NOW())
               AND c.last_activity > NOW() - INTERVAL '3 days'
               AND last_msg.direction = 'outbound'
               AND c.nudge_count < 4
