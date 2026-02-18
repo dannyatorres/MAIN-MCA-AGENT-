@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { processLeadWithAI } = require('../services/aiAgent');
+const { processLeadWithAI } = require('../services/salesAgent');
 const { getDatabase } = require('../services/database');
 const { runMorningFollowUp } = require('../services/morningFollowUp');
 const { updateState } = require('../services/stateManager');

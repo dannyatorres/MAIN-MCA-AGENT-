@@ -1,4 +1,4 @@
-// backend/services/aiAgent.js
+// backend/services/salesAgent.js
 const { OpenAI } = require('openai');
 const { getDatabase } = require('./database');
 const { trackUsage } = require('./usageTracker');
@@ -6,7 +6,6 @@ const { syncDriveFiles } = require('./driveService');
 const commanderService = require('./commanderService');
 const { updateState } = require('./stateManager');
 const { logAIDecision } = require('./aiDecisionLogger');
-const { sendSMS } = require('./smsSender');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -38,8 +37,6 @@ async function saveExtractedFacts(conversationId, extracted) {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-let isAIRunning = false;
-
 function isAckMessage(text) {
     if (!text) return false;
     const msg = String(text).trim().toLowerCase();
@@ -62,164 +59,6 @@ function isStallMessage(reason = '', message = '') {
     ];
     const combined = (reason + ' ' + message).toLowerCase();
     return stalls.some(s => combined.includes(s));
-}
-
-async function runAgentLoop() {
-    if (isAIRunning) {
-        console.log('⭕ AI loop still running — skipping');
-        return;
-    }
-    isAIRunning = true;
-
-    const db = getDatabase();
-    const now = new Date();
-    const estHour = parseInt(now.toLocaleString('en-US', {
-        timeZone: 'America/New_York', hour: 'numeric', hour12: false
-    }));
-    if (estHour < 8 || estHour >= 22) { isAIRunning = false; return; }
-
-    try {
-        const replies = await db.query(`
-            SELECT c.id, c.state, c.business_name, c.nudge_count,
-                   c.last_processed_msg_id,
-                   latest.id AS latest_msg_id,
-                   latest.direction AS last_direction,
-                   latest.content AS last_content
-            FROM conversations c
-            JOIN LATERAL (
-                SELECT id, direction, content FROM messages m
-                WHERE m.conversation_id = c.id
-                ORDER BY m.timestamp DESC LIMIT 1
-            ) latest ON true
-            WHERE c.state IN ('DRIP', 'ACTIVE', 'CLOSING')
-              AND c.ai_enabled != false
-              AND c.last_activity > NOW() - INTERVAL '3 days'
-              AND c.last_activity < NOW() - INTERVAL '2 minutes'
-              AND latest.direction = 'inbound'
-              AND (c.last_processed_msg_id IS NULL OR c.last_processed_msg_id != latest.id)
-            ORDER BY c.last_activity ASC
-            LIMIT 50
-        `);
-
-        console.log(`🤖 AI LOOP — ${replies.rows.length} inbound replies, checking nudges next...`);
-
-        const replyResults = [];
-        for (const lead of replies.rows) {
-            if (isAckMessage(lead.last_content) && lead.state === 'DRIP') {
-                console.log(`😴 [${lead.business_name}] Ack in DRIP — skipping GPT`);
-                await db.query(
-                    `UPDATE conversations SET last_processed_msg_id = $1, last_activity = NOW(), nudge_count = 0 WHERE id = $2`,
-                    [lead.latest_msg_id, lead.id]
-                );
-                continue;
-            }
-
-            await db.query(
-                'UPDATE conversations SET last_processed_msg_id = $1 WHERE id = $2',
-                [lead.latest_msg_id, lead.id]
-            );
-
-            const result = await processLeadWithAI(lead.id, '');
-            replyResults.push({ lead, result });
-            await new Promise(r => setTimeout(r, 2000));
-        }
-
-        for (const { lead, result } of replyResults) {
-            if (result.shouldReply && result.content) {
-                const humanDelay = 30000 + Math.floor(Math.random() * 60000);
-                console.log(`⏳ [${lead.business_name}] Waiting ${Math.round(humanDelay/1000)}s...`);
-                await new Promise(r => setTimeout(r, humanDelay));
-
-                const fresh = await db.query(`
-                    SELECT id FROM messages
-                    WHERE conversation_id = $1 AND direction = 'inbound'
-                      AND id != $2
-                    ORDER BY timestamp DESC LIMIT 1
-                `, [lead.id, lead.latest_msg_id]);
-
-                if (fresh.rows.length > 0 && fresh.rows[0].id !== lead.latest_msg_id) {
-                    console.log(`🔄 [${lead.business_name}] New message arrived — skipping stale response`);
-                    continue;
-                }
-
-                await sendSMS(lead.id, result.content, 'ai');
-            }
-
-            if (['DRIP', 'NEW'].includes(lead.state) && result.shouldReply) {
-                await updateState(lead.id, 'ACTIVE', 'ai_agent');
-            }
-        }
-
-        const nudges = await db.query(`
-            SELECT c.id, c.state, c.business_name, c.nudge_count,
-                   latest.direction AS last_direction
-            FROM conversations c
-            JOIN LATERAL (
-                SELECT direction FROM messages m
-                WHERE m.conversation_id = c.id
-                ORDER BY m.timestamp DESC LIMIT 1
-            ) latest ON true
-            WHERE c.state IN ('ACTIVE', 'CLOSING')
-              AND c.ai_enabled != false
-              AND c.last_activity > NOW() - INTERVAL '3 days'
-              AND EXISTS (
-                  SELECT 1 FROM messages m
-                  WHERE m.conversation_id = c.id
-                    AND m.direction = 'inbound'
-                    AND m.timestamp > NOW() - INTERVAL '3 days'
-              )
-              AND c.nudge_count < 6
-              AND c.last_activity < NOW() - make_interval(
-                  secs := CASE c.nudge_count
-                      WHEN 0 THEN 900
-                      WHEN 1 THEN 1800
-                      WHEN 2 THEN 3600
-                      WHEN 3 THEN 14400
-                      WHEN 4 THEN 28800
-                      ELSE 86400
-                  END
-              )
-            ORDER BY c.last_activity ASC
-            LIMIT 50
-        `);
-
-        console.log(`⏰ NUDGE LOOP — ${nudges.rows.length} leads queued`);
-
-        for (const lead of nudges.rows) {
-            const result = await processLeadWithAI(lead.id, '');
-            if (result.shouldReply && result.content) {
-                await sendSMS(lead.id, result.content, 'ai');
-                await db.query(
-                    'UPDATE conversations SET nudge_count = nudge_count + 1 WHERE id = $1',
-                    [lead.id]
-                );
-            } else {
-                console.log(`😴 [${lead.business_name}] Nudge suppressed — no response needed`);
-            }
-            await new Promise(r => setTimeout(r, 2000));
-        }
-
-    } catch (err) {
-        console.error('🔥 AI loop error:', err.message);
-    } finally {
-        isAIRunning = false;
-    }
-}
-
-let loopInterval = null;
-function startAgentLoop(intervalMs = 60000) {
-    console.log(`🤖 AI loop started — every ${intervalMs / 1000}s`);
-
-    async function tick() {
-        await runAgentLoop();
-        setTimeout(tick, intervalMs);
-    }
-
-    tick();
-}
-
-function stopAgentLoop() {
-    if (loopInterval) { clearInterval(loopInterval); loopInterval = null; }
 }
 
 // 🕐 TEMPORAL CONTEXT ENGINE - Always-on date/time awareness
@@ -388,7 +227,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
     try {
         const leadRes = await db.query(`
             SELECT first_name, business_name, state, email, ai_enabled,
-                   created_by_user_id, assigned_user_id
+                   created_by_user_id, assigned_user_id, pending_question
             FROM conversations WHERE id = $1
         `, [conversationId]);
 
@@ -436,9 +275,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // Add any statuses here where you want the AI to be completely dead
         const RESTRICTED_STATES = [
-            'HUMAN_REVIEW', 'FCS_COMPLETE',
-            'STRATEGIZED', 'HOT_LEAD', 'VETTING', 'SUBMITTED',  // Agent 2's territory
-            'OFFER_RECEIVED', 'NEGOTIATING'  // Agent 3's territory
+            'READY_TO_SUBMIT', 'SUBMITTED', 'OFFER_RECEIVED'
         ];
 
         // If it's a manual command (systemInstruction has value), we ignore the lock.
@@ -450,7 +287,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
             await logAIDecision({
                 conversationId,
                 businessName: leadName,
-                agent: 'pre_vetter',
+                agent: 'qualifier',
                 instruction: systemInstruction,
                 stateBefore: currentState,
                 actionTaken: 'blocked',
@@ -715,6 +552,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - Desired Amount: ${facts.desired_amount || 'NOT COLLECTED'}
         - Pitch Sent: ${facts.pitch_sent ? '✅ Already pitched' : '❌ NOT PITCHED YET'}
         - Pitch Accepted: ${facts.pitch_accepted ? '✅ Yes' : '❌ Not yet'}
+        - Currently waiting for: ${lead.pending_question || 'nothing specific'}
         ${mtdStatusLine}
         ${statementsCurrentLine}
         ${needsMTD ? '⚠️ DO NOT qualify until MTD is received.' : ''}
@@ -727,6 +565,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
            "action": "respond" | "qualify" | "mark_dead" | "sync_drive" | "no_response" | "ready_to_submit",
            "message": "The exact SMS to send. Null if no_response.",
            "reason": "Why you chose this action",
+           "pending_question": "what you just asked for, or null if nothing pending",
            "extracted_facts": {
                "email": "their email if provided, else null",
                "credit_score": "score if mentioned, else null",
@@ -744,7 +583,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
         - "qualify": You have enough info (email + funding status at minimum). Triggers analysis on their file. You stay in ACTIVE and come back with numbers.
         - "mark_dead": Lead said stop/remove/not interested/wrong person.
         - "sync_drive": Lead JUST provided email address.
-        - "no_response": Lead sent a pure acknowledgment AND you have nothing pending to deliver. Examples: lead says "ok" after you said you'd follow up, lead sends a thumbs up after receiving info. IMPORTANT: If you are in PITCH_READY state or have an offer range to present, you MUST pitch — an "ok" or "thanks" from the lead means they're waiting on YOU. Do not go silent when you owe them a response.
+        - "no_response": ONLY use this if ALL of the following are true: (1) lead sent a pure one-word ack like "ok", "thanks", "got it", "👍" with zero new information, AND (2) your last message did NOT ask a question, AND (3) you have nothing left to deliver. If their message contains ANY new information — a number, a name, a yes/no, an excuse, a schedule update, anything — you MUST respond. If you asked them something in your last message and they replied with ANYTHING, even vague or partial, you MUST respond. When in doubt, respond. Staying silent on an engaged lead is always worse than over-communicating.
         - "ready_to_submit": Lead accepted the pitch AND confirmed they're ok with weekly payments. If they accepted the amount but you haven't asked about weekly yet, DO NOT use this action — respond first and ask "let me run the final numbers but youre good with a weekly right?" Only use ready_to_submit once they confirm weekly.
         `;
 
@@ -838,6 +677,12 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
         if (decision.extracted_facts) {
             await saveExtractedFacts(conversationId, decision.extracted_facts);
         }
+        if (decision.pending_question !== undefined) {
+            await db.query(
+                'UPDATE conversations SET pending_question = $1 WHERE id = $2',
+                [decision.pending_question || null, conversationId]
+            );
+        }
 
         console.log(`🤖 [${leadName}] Decision: ${decision.action?.toUpperCase() || 'RESPOND'} | Reason: ${decision.reason || 'N/A'}`);
 
@@ -907,7 +752,7 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
             if (!facts.email) {
                 console.log(`🚫 [${leadName}] Tried to qualify without email - blocking`);
                 responseContent = "whats the best email to send the offer to?";
-            } else if (!['SUBMITTED', 'CLOSING', 'READY_TO_SUBMIT'].includes(currentState)) {
+            } else if (!['SUBMITTED', 'READY_TO_SUBMIT'].includes(currentState)) {
                 // Stay in ACTIVE — Commander saves strategy, AI reads it next turn
                 await db.query('UPDATE conversations SET nudge_count = 0 WHERE id = $1', [conversationId]);
 
@@ -926,8 +771,10 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
                 }
             }
 
-            if (args.statements_current) {
-                await saveExtractedFacts(conversationId, { statements_current: args.statements_current });
+            if (decision.extracted_facts?.statements_current) {
+                await saveExtractedFacts(conversationId, {
+                    statements_current: decision.extracted_facts.statements_current
+                });
             }
         }
         else if (decision.action === 'sync_drive') {
@@ -972,7 +819,7 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
         await logAIDecision({
             conversationId,
             businessName: leadName,
-            agent: 'pre_vetter',
+            agent: 'qualifier',
             leadMessage: userMessage,
             instruction: systemInstruction,
             stateBefore: currentState,
@@ -997,7 +844,5 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
 module.exports = { 
     processLeadWithAI, 
     trackResponseForTraining,
-    startAgentLoop,
-    stopAgentLoop,
-    runAgentLoop
+    isAckMessage
 };

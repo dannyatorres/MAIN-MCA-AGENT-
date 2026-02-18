@@ -492,7 +492,7 @@ async function analyzeAndStrategize(conversationId) {
         if (gamePlan) {
             console.log(`🎯 [${businessName}] Strategy ready - triggering AI pitch`);
             try {
-                const { processLeadWithAI } = require('./aiAgent');
+                const { processLeadWithAI } = require('./salesAgent');
                 await processLeadWithAI(conversationId, 'COMMANDER_READY: Strategy analysis complete. You have the numbers. Pitch the offer range NOW.');
             } catch (err) {
                 console.log(`⚠️ [${businessName}] Direct pitch failed: ${err.message}`);

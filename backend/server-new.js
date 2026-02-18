@@ -26,7 +26,7 @@ const {
     generateOwnerAnalytics,
     buildBrokerActionBriefing 
 } = require('./services/dailyAgent');
-const { startAgentLoop } = require('./services/aiAgent');
+const { startAgentLoop } = require('./services/schedulerAgent');
 const { startDripLoop } = require('./services/dripCampaign');
 
 // Create Express app
