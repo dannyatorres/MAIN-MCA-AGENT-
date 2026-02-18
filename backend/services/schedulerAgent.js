@@ -45,61 +45,49 @@ async function runAgentLoop() {
 
         console.log(`🤖 AI LOOP — ${replies.rows.length} inbound replies, checking nudges next...`);
 
-        const replyResults = [];
-        for (const lead of replies.rows) {
-            const lock = await db.query(
-                'UPDATE conversations SET ai_processing = true WHERE id = $1 AND ai_processing = false RETURNING id',
-                [lead.id]
-            );
-            if (lock.rowCount === 0) {
-                console.log(`⏭️ [${lead.business_name}] Already processing — skipping`);
-                continue;
-            }
-
-            if (isAckMessage(lead.last_content) && lead.state === 'DRIP') {
-                console.log(`😴 [${lead.business_name}] Ack in DRIP — skipping GPT`);
-                await db.query(
-                    `UPDATE conversations SET last_processed_msg_id = $1, last_activity = NOW(), nudge_count = 0 WHERE id = $2`,
-                    [lead.latest_msg_id, lead.id]
+        const replyResults = await Promise.all(
+            replies.rows.map(async (lead) => {
+                const lock = await db.query(
+                    'UPDATE conversations SET ai_processing = true WHERE id = $1 AND ai_processing = false RETURNING id',
+                    [lead.id]
                 );
-                await db.query('UPDATE conversations SET ai_processing = false WHERE id = $1', [lead.id]);
-                continue;
-            }
-
-            await db.query(
-                'UPDATE conversations SET last_processed_msg_id = $1 WHERE id = $2',
-                [lead.latest_msg_id, lead.id]
-            );
-
-            const result = await processLeadWithAI(lead.id, '');
-            replyResults.push({ lead, result });
-            await db.query('UPDATE conversations SET ai_processing = false WHERE id = $1', [lead.id]);
-            await new Promise(r => setTimeout(r, 2000));
-        }
-
-        for (const { lead, result } of replyResults) {
-            if (result.shouldReply && result.content) {
-                const humanDelay = 30000 + Math.floor(Math.random() * 60000);
-                console.log(`⏳ [${lead.business_name}] Waiting ${Math.round(humanDelay/1000)}s...`);
-                await new Promise(r => setTimeout(r, humanDelay));
-
-                const fresh = await db.query(`
-                    SELECT id FROM messages
-                    WHERE conversation_id = $1 AND direction = 'inbound'
-                      AND id != $2
-                    ORDER BY timestamp DESC LIMIT 1
-                `, [lead.id, lead.latest_msg_id]);
-
-                if (fresh.rows.length > 0 && fresh.rows[0].id !== lead.latest_msg_id) {
-                    console.log(`🔄 [${lead.business_name}] New message arrived — skipping stale response`);
-                    continue;
+                if (lock.rowCount === 0) {
+                    console.log(`⏭️ [${lead.business_name}] Already processing — skipping`);
+                    return { lead, result: null };
                 }
 
+                if (isAckMessage(lead.last_content) && lead.state === 'DRIP') {
+                    console.log(`😴 [${lead.business_name}] Ack in DRIP — skipping GPT`);
+                    await db.query(
+                        `UPDATE conversations SET last_processed_msg_id = $1, last_activity = NOW(), nudge_count = 0 WHERE id = $2`,
+                        [lead.latest_msg_id, lead.id]
+                    );
+                    await db.query('UPDATE conversations SET ai_processing = false WHERE id = $1', [lead.id]);
+                    return { lead, result: null };
+                }
+
+                await db.query(
+                    'UPDATE conversations SET last_processed_msg_id = $1 WHERE id = $2',
+                    [lead.latest_msg_id, lead.id]
+                );
+
+                const result = await processLeadWithAI(lead.id, '');
+                await db.query('UPDATE conversations SET ai_processing = false WHERE id = $1', [lead.id]);
+                return { lead, result };
+            })
+        );
+
+        let sendIndex = 0;
+        for (const { lead, result } of replyResults) {
+            if (!result?.shouldReply || !result?.content) continue;
+            const delay = (sendIndex * 15000) + Math.floor(Math.random() * 5000);
+            sendIndex++;
+            setTimeout(async () => {
                 await sendSMS(lead.id, result.content, 'ai');
                 await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [lead.id]);
-            }
+            }, delay);
 
-            if (['DRIP', 'NEW'].includes(lead.state) && result.shouldReply) {
+            if (['DRIP', 'NEW'].includes(lead.state)) {
                 await updateState(lead.id, 'ACTIVE', 'ai_agent');
             }
         }
