@@ -118,6 +118,7 @@ async function runAgentLoop() {
             WHERE c.state IN ('ACTIVE')
               AND c.ai_enabled != false
               AND c.last_activity > NOW() - INTERVAL '3 days'
+              AND (c.wait_until IS NULL OR c.wait_until < NOW())
               AND EXISTS (
                   SELECT 1 FROM messages m
                   WHERE m.conversation_id = c.id

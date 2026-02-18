@@ -566,6 +566,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
            "message": "The exact SMS to send. Null if no_response.",
            "reason": "Why you chose this action",
            "pending_question": "what you just asked for, or null if nothing pending",
+           "wait_until": "ISO timestamp of when to nudge next, or null",
            "extracted_facts": {
                "email": "their email if provided, else null",
                "credit_score": "score if mentioned, else null",
@@ -681,6 +682,12 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
             await db.query(
                 'UPDATE conversations SET pending_question = $1 WHERE id = $2',
                 [decision.pending_question || null, conversationId]
+            );
+        }
+        if (decision.wait_until !== undefined) {
+            await db.query(
+                'UPDATE conversations SET wait_until = $1 WHERE id = $2',
+                [decision.wait_until || null, conversationId]
             );
         }
 
