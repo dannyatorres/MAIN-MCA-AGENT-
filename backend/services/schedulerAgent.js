@@ -47,12 +47,22 @@ async function runAgentLoop() {
 
         const replyResults = [];
         for (const lead of replies.rows) {
+            const lock = await db.query(
+                'UPDATE conversations SET ai_processing = true WHERE id = $1 AND ai_processing = false RETURNING id',
+                [lead.id]
+            );
+            if (lock.rowCount === 0) {
+                console.log(`⏭️ [${lead.business_name}] Already processing — skipping`);
+                continue;
+            }
+
             if (isAckMessage(lead.last_content) && lead.state === 'DRIP') {
                 console.log(`😴 [${lead.business_name}] Ack in DRIP — skipping GPT`);
                 await db.query(
                     `UPDATE conversations SET last_processed_msg_id = $1, last_activity = NOW(), nudge_count = 0 WHERE id = $2`,
                     [lead.latest_msg_id, lead.id]
                 );
+                await db.query('UPDATE conversations SET ai_processing = false WHERE id = $1', [lead.id]);
                 continue;
             }
 
@@ -63,6 +73,7 @@ async function runAgentLoop() {
 
             const result = await processLeadWithAI(lead.id, '');
             replyResults.push({ lead, result });
+            await db.query('UPDATE conversations SET ai_processing = false WHERE id = $1', [lead.id]);
             await new Promise(r => setTimeout(r, 2000));
         }
 
@@ -85,6 +96,7 @@ async function runAgentLoop() {
                 }
 
                 await sendSMS(lead.id, result.content, 'ai');
+                await db.query('UPDATE conversations SET last_activity = NOW() WHERE id = $1', [lead.id]);
             }
 
             if (['DRIP', 'NEW'].includes(lead.state) && result.shouldReply) {
@@ -131,6 +143,15 @@ async function runAgentLoop() {
         console.log(`⏰ NUDGE LOOP — ${nudgeRows.length} leads queued`);
 
         for (const lead of nudgeRows) {
+            const lock = await db.query(
+                'UPDATE conversations SET ai_processing = true WHERE id = $1 AND ai_processing = false RETURNING id',
+                [lead.id]
+            );
+            if (lock.rowCount === 0) {
+                console.log(`⏭️ [${lead.business_name}] Already processing — skipping`);
+                continue;
+            }
+
             const result = await processLeadWithAI(lead.id, '');
             if (result.shouldReply && result.content) {
                 await sendSMS(lead.id, result.content, 'ai');
@@ -141,6 +162,7 @@ async function runAgentLoop() {
             } else {
                 console.log(`😴 [${lead.business_name}] Nudge suppressed — no response needed`);
             }
+            await db.query('UPDATE conversations SET ai_processing = false WHERE id = $1', [lead.id]);
             await new Promise(r => setTimeout(r, 2000));
         }
 

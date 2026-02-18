@@ -275,7 +275,7 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         // Add any statuses here where you want the AI to be completely dead
         const RESTRICTED_STATES = [
-            'READY_TO_SUBMIT', 'SUBMITTED', 'OFFER_RECEIVED'
+            'READY_TO_SUBMIT', 'OFFER_RECEIVED'
         ];
 
         // If it's a manual command (systemInstruction has value), we ignore the lock.
