@@ -10,6 +10,8 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+const _skipLogThrottle = {};
+
 // Lead fact helpers
 async function getLeadFacts(conversationId) {
     const db = getDatabase();
@@ -261,7 +263,11 @@ async function processLeadWithAI(conversationId, systemInstruction) {
 
         if (last_ai_decision === 'no_response' &&
             latestMsg.rows[0]?.id === last_processed_msg_id) {
-            console.log(`⏭️ [${leadName}] Skipping — no new message since last no_response`);
+            const _now = Date.now();
+            if (!_skipLogThrottle[conversationId] || _now - _skipLogThrottle[conversationId] >= 3600000) {
+                _skipLogThrottle[conversationId] = _now;
+                console.log(`⏭️ [${leadName}] Skipping — no new message since last no_response`);
+            }
             return { shouldReply: false };
         }
 

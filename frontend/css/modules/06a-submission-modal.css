@@ -119,6 +119,15 @@
     outline: none;
 }
 
+.submission-powered {
+    text-align: center;
+    font-size: 10px;
+    color: #8b949e;
+    opacity: 0.35;
+    padding: 6px 0 10px;
+    letter-spacing: 0.3px;
+}
+
 .submission-col {
     display: flex;
     flex-direction: column;

@@ -4,6 +4,8 @@ const { updateState } = require('./stateManager');
 const { sendSMS } = require('./smsSender');
 const { processLeadWithAI, isAckMessage } = require('./salesAgent');
 
+const _nudgeLogThrottle = {};
+
 let isAIRunning = false;
 
 async function runAgentLoop() {
@@ -149,7 +151,11 @@ async function runAgentLoop() {
                     [lead.id]
                 );
             } else {
-                console.log(`😴 [${lead.business_name}] Nudge suppressed — no response needed`);
+                const _now = Date.now();
+                if (!_nudgeLogThrottle[lead.id] || _now - _nudgeLogThrottle[lead.id] >= 3600000) {
+                    _nudgeLogThrottle[lead.id] = _now;
+                    console.log(`😴 [${lead.business_name}] Nudge suppressed — no response needed`);
+                }
             }
             await db.query('UPDATE conversations SET ai_processing = false WHERE id = $1', [lead.id]);
             await new Promise(r => setTimeout(r, 2000));
