@@ -262,6 +262,15 @@ router.post('/send', requireModifyPermission, async (req, res) => {
                 console.error('❌ Twilio error:', twilioError.message);
                 await db.query('UPDATE messages SET status = $1 WHERE id = $2', ['failed', newMessage.id]);
                 newMessage.status = 'failed';
+
+                const deadCodes = [21211, 21214, 21612, 21614, 30003, 30004, 30005, 30006];
+                if (deadCodes.includes(twilioError.code)) {
+                    console.log(`🚫 [${business_name}] Undeliverable number (${twilioError.code}) — killing lead`);
+                    await db.query(
+                        `UPDATE conversations SET state = 'DEAD', dead_reason = $1 WHERE id = $2`,
+                        [`twilio_error_${twilioError.code}`, actualConversationId]
+                    );
+                }
             }
         }
 
@@ -540,14 +549,28 @@ router.post('/webhook/receive', async (req, res) => {
                             const twilio = require('twilio');
                             const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-                            const sentMsg = await client.messages.create({
-                                body: messageToSend,
-                                from: process.env.TWILIO_PHONE_NUMBER,
-                                to: From
-                            });
+                            try {
+                                const sentMsg = await client.messages.create({
+                                    body: messageToSend,
+                                    from: process.env.TWILIO_PHONE_NUMBER,
+                                    to: From
+                                });
 
-                            await db.query("UPDATE messages SET status = 'sent', twilio_sid = $1 WHERE id = $2",
-                                [sentMsg.sid, aiMsgResult.rows[0].id]);
+                                await db.query("UPDATE messages SET status = 'sent', twilio_sid = $1 WHERE id = $2",
+                                    [sentMsg.sid, aiMsgResult.rows[0].id]);
+                            } catch (twilioError) {
+                                console.error('❌ After-hours Twilio error:', twilioError.message);
+                                await db.query("UPDATE messages SET status = 'failed' WHERE id = $1", [aiMsgResult.rows[0].id]);
+
+                                const deadCodes = [21211, 21214, 21612, 21614, 30003, 30004, 30005, 30006];
+                                if (deadCodes.includes(twilioError.code)) {
+                                    console.log(`🚫 [${conversation.business_name}] Undeliverable number — killing lead`);
+                                    await db.query(
+                                        `UPDATE conversations SET state = 'DEAD', dead_reason = $1 WHERE id = $2`,
+                                        [`twilio_error_${twilioError.code}`, conversation.id]
+                                    );
+                                }
+                            }
 
                             console.log(`✅ [${conversation.business_name}] After hours AI sent: "${messageToSend.substring(0, 50)}..."`);
 

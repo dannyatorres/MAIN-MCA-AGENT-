@@ -60,6 +60,16 @@ async function sendSMS(conversationId, content, sentBy = 'ai') {
     } catch (err) {
         await db.query("UPDATE messages SET status = 'failed' WHERE id = $1", [message.id]);
         console.error(`❌ [${business_name}] Twilio send failed:`, err.message);
+
+        const deadCodes = [21211, 21214, 21612, 21614, 30003, 30004, 30005, 30006];
+        if (deadCodes.includes(err.code)) {
+            console.log(`🚫 [${business_name}] Undeliverable number (${err.code}) — killing lead`);
+            await db.query(
+                `UPDATE conversations SET state = 'DEAD', dead_reason = $1 WHERE id = $2`,
+                [`twilio_error_${err.code}`, conversationId]
+            );
+        }
+
         throw err;
     }
 }
