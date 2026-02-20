@@ -612,6 +612,21 @@ Lead has stalled before. Keep pressure light but don't let them slip — if they
         }
 
         if (stallGuidance) systemPrompt += stallGuidance;
+
+        // Inject FCS facts if available
+        const fcsFactLines = [];
+        if (facts.fcs_completed) {
+            fcsFactLines.push(`- FCS Status: ✅ Analysis Complete`);
+            if (facts.statements_analyzed) fcsFactLines.push(`- Statements Already Analyzed: ✅ ${facts.statements_analyzed} — DO NOT ask for these again`);
+            if (facts.avg_monthly_revenue) fcsFactLines.push(`- Avg Monthly Revenue: ${facts.avg_monthly_revenue}`);
+            if (facts.position_count !== undefined) fcsFactLines.push(`- Active Positions: ${facts.position_count}`);
+            if (facts.withholding_pct) fcsFactLines.push(`- Withholding: ${facts.withholding_pct}`);
+            if (facts.negative_days) fcsFactLines.push(`- Negative Days: ${facts.negative_days}`);
+        } else {
+            fcsFactLines.push(`- FCS Status: ❌ No analysis yet`);
+        }
+
+        systemPrompt += `\n\n## 📊 FCS ANALYSIS DATA\n${fcsFactLines.join('\n')}\n`;
         
         // No atomic claim needed - single path per trigger type
 

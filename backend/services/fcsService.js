@@ -335,6 +335,30 @@ Position Count: ${positionCount}
                 JSON.stringify(statementMonths), statementMonths.length, analysisId
             ]);
 
+            // ✅ Write FCS results into lead_facts so salesAgent knows what's already been analyzed
+            const factUpsert = async (key, value) => {
+                if (!value && value !== 0) return;
+                await db.query(`
+                    INSERT INTO lead_facts (conversation_id, fact_key, fact_value, collected_at)
+                    VALUES ($1, $2, $3, NOW())
+                    ON CONFLICT (conversation_id, fact_key)
+                    DO UPDATE SET fact_value = $3, collected_at = NOW()
+                `, [conversationId, key, String(value)]);
+            };
+
+            await factUpsert('fcs_completed', 'true');
+            await factUpsert('avg_monthly_revenue', averageRevenue ? `$${Number(averageRevenue).toLocaleString()}` : null);
+            await factUpsert('avg_bank_balance', avgBalance ? `$${Number(avgBalance).toLocaleString()}` : null);
+            await factUpsert('negative_days', negDays);
+            await factUpsert('time_in_business', tibText);
+            await factUpsert('last_mca_date', lastMca);
+            await factUpsert('withholding_pct', withholdingPct ? `${withholdingPct}%` : null);
+            await factUpsert('position_count', positionCount);
+            await factUpsert('industry', industry);
+            await factUpsert('statements_analyzed', statementMonths.join(', '));
+
+            console.log(`💾 [${businessName}] FCS facts written to lead_facts`);
+
             console.log(`✅ [${businessName}] FCS complete: $${averageRevenue}/mo, ${negDays} neg days`);
 
             // Commander auto-trigger removed — requires manual review before strategy
